@@ -57,7 +57,6 @@ check_fast5_filetype <- function(workspace, basecall_group){
   
   
   # checking whether fast5 file is single or multi
-  
   is_multifast5 <- function(selected_fast5_file_structure){
     sum(grepl('read_', selected_fast5_file_structure$name)) > 0
   }
@@ -70,7 +69,6 @@ check_fast5_filetype <- function(workspace, basecall_group){
   
   
   # checking whether the defined basecall group is present within the selected file
-  
   basecall_group_exists <- function(basecall_group, selected_fast5_file, selected_fast5_read){
     selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
     exists("selected_basecall_group")
