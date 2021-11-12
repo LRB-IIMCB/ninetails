@@ -12,7 +12,7 @@
 #' level in the Fast5 file hierarchy from which the data should be extracted.
 #' 
 #'
-#' @return
+#' @return This function provides assertions to self-test of the pipeline.
 #' @export
 #'
 #' @examples 
@@ -22,6 +22,8 @@
 #'                                  basecalled_group = 'Basecall_1D_000')
 #'}
 #'
+#' This lookup function is inspired by adnaniazi's explore-basecaller-and-fast5type.R from tailfindr
+#' https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R
 
 check_fast5_filetype <- function(workspace, basecall_group){
   
@@ -51,10 +53,11 @@ check_fast5_filetype <- function(workspace, basecall_group){
   
   selected_fast5_read <- selected_fast5_file_structure$name[1]
   
+  cat(paste0('Analyzing one of the given fast5 files to check if the data are in required format... \n'))
   
-  cat(paste0('Checking if given fast5 files are in required format.\n'))
   
   # checking whether fast5 file is single or multi
+  
   is_multifast5 <- function(selected_fast5_file_structure){
     sum(grepl('read_', selected_fast5_file_structure$name)) > 0
   }
@@ -66,9 +69,7 @@ check_fast5_filetype <- function(workspace, basecall_group){
   assertthat::assert_that(is_multifast5(selected_fast5_file_structure))
   
   
-  cat(paste0('Provided multifast5 file.\n'))
-  
-  # checking whether the selected basecall group is present within the selected file
+  # checking whether the defined basecall group is present within the selected file
   
   basecall_group_exists <- function(basecall_group, selected_fast5_file, selected_fast5_read){
     selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
@@ -76,16 +77,42 @@ check_fast5_filetype <- function(workspace, basecall_group){
   }
   
   assertthat::on_failure(basecall_group_exists) <- function(call, env) {
-    paste0('Provided basecall_group is absent from the previewed fast5 file. Please provide correct basecall_group argument.')
   }
   
   assertthat::assert_that(basecall_group_exists(basecall_group, selected_fast5_file, selected_fast5_read))  
-  cat(paste0('Checked fast5 file fulfills analysis requirements.\n')) 
+  
+  # checking whether the fast5 file contains RNA ONT reads
+  is_RNA <- function(selected_fast5_file, selected_fast5_read){
+    read_context_tags <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/context_tags"))
+    read_context_tags$experiment_type == "rna"
+    
+  }
+  
+  assertthat::on_failure(is_RNA) <- function(call, env) {
+    paste0("The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.")
+  }
+  
+  assertthat::assert_that(is_RNA(selected_fast5_file, selected_fast5_read))
+  
+  
+  # retrieve basecaller & basecalling model (read attributes)
+  selected_basecall_group <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
+  basecaller_used <- selected_basecall_group$name
+  model_used <- selected_basecall_group$model_type
+  
+  # retrieve guppy basecaller version (read attributes)
+  path_to_guppy_version <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/tracking_id"))
+  guppy_version <- path_to_guppy_version$guppy_version
   
   # close all handled instances (groups, attrs) of fast5 file
   rhdf5::h5closeAll()
   
-  return(TRUE)
+  cat('Retrieved previewed fast5 file parameters:\n')
+  cat('    data type: RNA \n')
+  cat('    fast5 file type: multifast5 \n')
+  cat('    basecaller used:',basecaller_used,' \n')
+  cat('    basecaller version:',guppy_version,' \n')
+  cat('    basecalling model:',model_used,' \n')
   
-} # check_fast5_filetype
 
+} 
