@@ -1,4 +1,8 @@
-#' Creates signal dataframe for signal segmentation & visualisation.
+#########################################################################
+#   CREATE_SIGNAL_DATAFRAME 
+#########################################################################
+
+#' Creates signal dataframe based on retrieved features.
 #' @param readname character string. Name of the given read within the
 #' analyzed dataset. 
 #'
@@ -6,7 +10,7 @@
 #' from nanopolish polya output, sequencing_summary and basecalled fast5
 #' files. 
 #'
-#' @return A dataframe containing signal values, positions, moves, traces, 
+#' @return A dataframe containing signal values, positions, moves, 
 #' read segmentation (fctr: adapter, polya, transcript body). 
 #' @export
 #'
@@ -79,15 +83,15 @@ create_signal_dataframe <- function(readname, feature_list){
   
   # signal segmentation factor
   #adapter sequence
-  signal_df$segment[signal_df$position < polya_end_position +1] <- "adapter"
-  #polya sequence
-  signal_df$segment[signal_df$position>polya_start_position -1 & signal_df$position<polya_end_position +1] <- "poly(A)"
+  signal_df$segment[signal_df$position < polya_end_position +1] <- "adapter"  
   #transcript sequence
   signal_df$segment[signal_df$position > polya_start_position] <- "transcript"
+  #polya sequence
+  signal_df$segment[signal_df$position>polya_start_position -1 & signal_df$position<polya_end_position +1] <- "poly(A)"
+  
   
   signal_df$segment <- as.factor(signal_df$segment)
   
   return(signal_df)
   
 }
-
