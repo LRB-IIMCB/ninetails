@@ -8,7 +8,7 @@
 #'
 #' @return A dataframe containing signal values, positions, moves, 
 #' read segmentation (fctr: adapter, polya, transcript body) within
-#' the tail range defined as poly(A) tail +/- 2 times stride. 
+#' the tail range defined as poly(A) tail +/- stride. 
 #' @export
 #'
 #' @examples
@@ -34,9 +34,15 @@ create_tail_dataframe <- function(readname, feature_list){
   assertthat::assert_that(assertive::is_list(feature_list), msg=paste("Given feature_list object is not a list. Please provide a valid argument."))
   assertthat::assert_that(readname %in% names(feature_list),msg = "Given feature_list does not contain provided readname. Please provide a valid readname argument.")
   
+  #retrieve stride value
+  stride <- feature_list[[readname]][[15]]
+  
   #retrieve polya coordinates
-  polya_end_position <- feature_list[[readname]][[3]]
+  transcript_start_position <- feature_list[[readname]][[3]]
   polya_start_position <- feature_list[[readname]][[2]]
+  
+  #define polya end position
+  polya_end_position <- transcript_start_position -1
   
   #construct signal dataframe
   signal_df <- create_signal_dataframe(readname, feature_list)
@@ -47,10 +53,10 @@ create_tail_dataframe <- function(readname, feature_list){
   #combine dataframes
   merged_df <- dplyr::full_join(signal_df, trace_df, by="position")
   
-  #subset signal dataframe to tail region
-  #plus/minus 10 positions down- and upstream from tail
+  #subset merged dataframe to tail region
+  #plus/minus stride distance down- and upstream from tail
   
-  tail_range_df <- subset(merged_df, position>polya_start_position -11 & position<polya_end_position +11)
+  tail_range_df <- subset(merged_df, position>polya_start_position - stride & position<transcript_start_position + stride)
   
   
   return(tail_range_df)
