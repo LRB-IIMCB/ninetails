@@ -25,28 +25,28 @@
 #' the long list will be printed to the console, which may crash your R session.
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' check_tails(nanopolish = '/path/to/file',
-#'             sequencing_summary = '/path/to/file',
-#'             workspace = '/path/to/guppy/workspace',
-#'             num_cores = 10,
-#'             basecalled_group = 'Basecall_1D_000',
-#'             pass_only=TRUE)
+#' check_signals(nanopolish = '/path/to/file',
+#'               sequencing_summary = '/path/to/file',
+#'               workspace = '/path/to/guppy/workspace',
+#'               num_cores = 10,
+#'               basecalled_group = 'Basecall_1D_000',
+#'               pass_only=TRUE)
 #'
 #' }
 
 
-check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE){
+check_signals <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE){
 
   cat('Welcome to Ninetails v.0.0.4 (beta)\n',
       'Pipeline initialized:', as.character(Sys.time()),'\n','\n')
 
   feature_list <- create_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE)
   tail_chunk_list <- create_chunk_list(feature_list, num_cores)
-  gasf_list <- create_gasf_list(tail_chunk_list, num_cores)
+  #gasf_list <- create_gasf_list(tail_chunk_list, num_cores)
 
   cat('Processing finished. ***** ***')
 
-  return(gasf_list)
+  return(tail_chunk_list)
 }
