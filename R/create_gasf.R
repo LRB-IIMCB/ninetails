@@ -40,7 +40,7 @@ create_gasf <- function(chunkname, tail_chunk_list){
   gasf_matrix <- resize_gasf(gasf_matrix, c(100,100))
 
   # assign HEX color values to gasf matrix
-  gasf_matrix <- color_matrix_hex(gasf_matrix, colors=rainbow(100))
+  gasf_matrix <- paintmap::color_matrix(gasf_matrix, colors=rainbow(100))
 
   #split color values to RGB channels
   gasf_matrix <- grDevices::col2rgb(gasf_matrix, alpha = FALSE)
