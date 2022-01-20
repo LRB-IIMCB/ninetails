@@ -20,6 +20,8 @@
 #' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
 #' As a default, "TRUE" value is set.
 #'
+#' @export
+#'
 #' @return A list containing read information organized by the read ID
 #' is returned. Always assign this returned list to a variable, otherwise
 #' the long list will be printed to the console, which may crash your R session.
@@ -39,14 +41,15 @@
 
 check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE){
 
-  cat('Welcome to Ninetails v.0.0.4 (beta)\n',
+  cat('Welcome to Ninetails', as.character(utils::packageVersion("ninetails")), '\n',
       'Pipeline initialized:', as.character(Sys.time()),'\n','\n')
 
-  feature_list <- create_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE)
-  tail_chunk_list <- create_chunk_list(feature_list, num_cores)
+
+  tail_feature_list <- create_tail_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE)
+  tail_chunk_list <- create_tail_chunk_list(tail_feature_list, num_cores)
   gasf_list <- create_gasf_list(tail_chunk_list, num_cores)
 
-  cat('Processing finished. ***** ***')
+  cat('Processing finished.')
 
   return(gasf_list)
 }

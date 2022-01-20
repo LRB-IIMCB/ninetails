@@ -38,6 +38,9 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 
   assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste("Declared core number must be numeric. Please provide a valid argument."))
 
+  # avoiding 'no visible binding for global variable' error
+  readname <- NULL
+
   # creating cluster for parallel computing
   doParallel::registerDoParallel(cores = num_cores)
 
@@ -63,7 +66,7 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 
 
 
-    setTxtProgressBar(pb, indx)
+    utils::setTxtProgressBar(pb, indx)
 
   }
 

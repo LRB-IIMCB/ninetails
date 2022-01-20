@@ -11,19 +11,21 @@
 #' @param basecall_group character string ["Basecall_1D_000"]. Name of the
 #' level in the Fast5 file hierarchy from which the data should be extracted.
 #'
-#'
 #' @return
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
 #' check_fast5_filetype <- function(workspace = '/path/to/guppy/workspace',
 #'                                  basecalled_group = 'Basecall_1D_000')
-#'}
 #'
-#' This lookup function is inspired by adnaniazi's explore-basecaller-and-fast5type.R from tailfindr
-#' https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R
+#' }
+#'
+#'
+#'
+# This lookup function is inspired by adnaniazi's explore-basecaller-and-fast5type.R from tailfindr
+# https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R
 
 check_fast5_filetype <- function(workspace, basecall_group){
 

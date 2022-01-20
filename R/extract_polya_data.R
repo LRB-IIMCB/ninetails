@@ -1,5 +1,5 @@
 #' Extracts features of multiple RNA reads from nanopolish output
-#' & sequencing summary.
+#' & sequencing summary file.
 #'
 #' This function extracts features of poly(A) tails of selected RNA reads
 #' from the output table provided by nanopolish polya function and sequencing
@@ -24,11 +24,13 @@
 #'
 #' @export
 #'
+#'
+#'
 #' @examples
 #'\dontrun{
 #'
 #' extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
-#'                    sequencing_summary = '/path/to/sequencing_summary.tsv',
+#'                    sequencing_summary = '/path/to/sequencing_summary.txt',
 #'                    pass_only = TRUE)
 #'
 #'}
@@ -46,7 +48,7 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   }
 
 
-  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, adapter_start, leader_start, qc_tag), show_col_types = FALSE)
+  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, qc_tag), show_col_types = FALSE)
   sequencing_summary_table <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   colnames(sequencing_summary_table)[2] <- "readname"
 

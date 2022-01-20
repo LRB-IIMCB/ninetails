@@ -20,11 +20,11 @@ winsorize_signal <- function(signal){
 
 
   signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
-  minval <- signal_q[1L]
-  maxval <- signal_q[2L]
+  minimal_val <- signal_q[1L]
+  maximal_val <- signal_q[2L]
 
-  signal[signal<minval] <- minval
-  signal[signal>maxval] <- maxval
+  signal[signal<minimal_val] <- minimal_val
+  signal[signal>maximal_val] <- maximal_val
 
   winsorized_signal <- as.integer(signal)
 

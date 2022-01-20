@@ -19,35 +19,32 @@
 #'
 create_gasf <- function(chunkname, tail_chunk_list){
 
-  signal <- tail_chunk_list[[chunkname]]
+  tail_chunk <- tail_chunk_list[[chunkname]]
 
   # rescale values so that all of them fall in the interval [-1, 1]:
-  rescaled_signal <- (signal - max(signal) + (signal - min(signal))) / (max(signal) - min(signal))
+  tail_chunk <- (tail_chunk - max(tail_chunk) + (tail_chunk - min(tail_chunk))) / (max(tail_chunk) - min(tail_chunk))
 
   # calculate phi coefficient for interpolation to polar coordinates
-  rescaled_signal <- acos(rescaled_signal)
+  tail_chunk <- acos(tail_chunk)
 
   # create matrix by replicating vec
-  rescaled_signal <- cbind(replicate(length(rescaled_signal), rescaled_signal))
+  tail_chunk <- cbind(replicate(length(tail_chunk), tail_chunk))
 
   #calculate sum of phi
-  rescaled_signal <- rescaled_signal + t(rescaled_signal)
+  tail_chunk <- tail_chunk + t(tail_chunk)
 
   #calculate cosinus
-  gasf_matrix <- round(cos(rescaled_signal), 4)
-
-  #resize gasf to 100x100 matrix
-  gasf_matrix <- resize_gasf(gasf_matrix, c(100,100))
+  tail_chunk <- round(cos(tail_chunk), 4)
 
   # assign HEX color values to gasf matrix
-  gasf_matrix <- paintmap::color_matrix(gasf_matrix, colors=rainbow(100))
+  tail_chunk <- paintmap::color_matrix(tail_chunk, colors=grDevices::rainbow(100))
 
   #split color values to RGB channels
-  gasf_matrix <- grDevices::col2rgb(gasf_matrix, alpha = FALSE)
+  tail_chunk <- grDevices::col2rgb(tail_chunk, alpha = FALSE)
 
   #reshape the data into new dimensions
-  gasf_matrix <- array(t(gasf_matrix), c(100,100,3))
+  tail_chunk <- array(t(tail_chunk), c(100,100,3))
 
 
-  return(gasf_matrix)
+  return(tail_chunk)
 }
