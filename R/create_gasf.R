@@ -5,7 +5,7 @@
 #'
 #' @param tail_chunk_list list object produced by create_tail_chunk_list function.
 #'
-#' @return an array (100,100,3) with values (RGB channels) representing ONT signal.
+#' @return an array (100,100,1) with values (greyscale) representing ONT signal.
 #' @export
 #'
 #' @examples
@@ -37,13 +37,14 @@ create_gasf <- function(chunkname, tail_chunk_list){
   tail_chunk <- round(cos(tail_chunk), 4)
 
   # assign HEX color values to gasf matrix
-  tail_chunk <- paintmap::color_matrix(tail_chunk, colors=grDevices::rainbow(100))
+  #tail_chunk <- paintmap::color_matrix(tail_chunk, colors=grDevices::rainbow(100))
 
   #split color values to RGB channels
-  tail_chunk <- grDevices::col2rgb(tail_chunk, alpha = FALSE)
+  #tail_chunk <- grDevices::col2rgb(tail_chunk, alpha = FALSE)
 
   #reshape the data into new dimensions
-  tail_chunk <- array(t(tail_chunk), c(100,100,3))
+  #tail_chunk <- array(t(tail_chunk), c(100,100,3))
+  tail_chunk <- array(t(tail_chunk), c(100,100,1))
 
 
   return(tail_chunk)
