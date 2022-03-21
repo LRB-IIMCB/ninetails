@@ -71,6 +71,23 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   signal <- as.vector(signal) #vectorized sig (natively: array)
 
 
+  # retrieving moves
+  BaseCalled_template <- rhdf5::h5read(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group, "/BaseCalled_template"))
+  move <- BaseCalled_template$Move #how the basecaller "moves" through the called sequence, and allows for a mapping from basecall to raw data
+  move <- as.numeric(move) # change data type as moves are originally stored as raw
+  #move <- factor(move, levels=c(0,1))
+
+  #read parameter stored in channel_id group
+  channel_id <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/channel_id")) # parent dir for attributes (within fast5 file)
+  sampling_rate <- channel_id$sampling_rate # number of data points collected per second
+
+  #read parameters (attrs) stored in basecall_1d_template
+  basecall_1d_template <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/Analyses/Basecall_1D_000/Summary/basecall_1d_template")) # parent dir for attributes (within fast5)
+  stride <- basecall_1d_template$block_stride #  this parameter allows to sample data elements along a dimension
+  called_events <- basecall_1d_template$called_events # number of events (nanopore translocations) recorded by device for given read
+  number_of_events <- called_events * stride # number of events expanded for whole signal vec (this is estimation of signal length, however keep in mind that decimal values are ignored)
+
+
   # close all handled instances (groups, attrs) of fast5 file
   rhdf5::h5closeAll()
 
@@ -82,11 +99,18 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   polya_end_position <- transcript_start_position -1
 
 
-  # extract polya tail
+  # handle move data
+  #this is to expand moves along raw signal
+  moves_sample_wise_vector <- c(rep(move, each=stride), rep(NA, length(signal) - number_of_events))
+  moves_tail_range <- moves_sample_wise_vector[polya_start_position:polya_end_position]
+
+
+  # extract polya tail region of the signal
   signal <- signal[polya_start_position:polya_end_position]
 
-  # downsample (interpolate signal) so the computation would be faster/easier to handle.
+  # downsample (interpolate signal and moves) so the computation would be faster/easier to handle.
   signal <- round(stats::approx(signal, method = "linear", n=ceiling(0.2 * length(signal)))[[2]], digits=0)
+  moves_tail_range <- round(stats::approx(moves_tail_range, method = "linear", n=ceiling(0.2 * length(moves_tail_range)))[[2]], digits=0)
 
 
   extracted_data_single_list = list() # creating empty list for the extracted fast5 data
@@ -95,6 +119,7 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   extracted_data_single_list[["polya_start_pos"]] <- polya_start_position
   extracted_data_single_list[["transcript_start_pos"]] <- transcript_start_position
   extracted_data_single_list[["tail_signal"]] <- signal
+  extracted_data_single_list[["tail_moves"]] <- moves_tail_range
 
 
   return(extracted_data_single_list)

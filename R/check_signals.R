@@ -40,13 +40,13 @@
 #' }
 
 
-check_signals <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE){
+check_signals <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only){
 
   cat('Welcome to Ninetails', as.character(utils::packageVersion("ninetails")), '\n',
       'Pipeline initialized:', as.character(Sys.time()),'\n','\n')
 
-  tail_feature_list <- create_tail_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE)
-  tail_chunk_list <- create_tail_chunk_list(tail_feature_list, num_cores)
+  tail_feature_list <- create_tail_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only)
+  tail_chunk_list <- create_tail_chunk_list_moved(tail_feature_list, num_cores)
 
   cat('Processing finished.')
 

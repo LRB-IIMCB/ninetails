@@ -11,7 +11,7 @@
 #' @param basecall_group character string ["Basecall_1D_000"]. Name of the
 #' level in the Fast5 file hierarchy from which the data should be extracted.
 #'
-#' @return
+#' @return outputs the text info with basic characteristics of the data.
 #' @export
 #'
 #' @examples
