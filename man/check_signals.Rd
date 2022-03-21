@@ -10,7 +10,7 @@ check_signals(
   workspace,
   num_cores,
   basecall_group,
-  pass_only = TRUE
+  pass_only
 )
 }
 \arguments{

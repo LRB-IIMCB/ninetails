@@ -1,5 +1,6 @@
 #' Creates list of overlapping tail fragments extracted from
-#' nanopolish output and fast5 files.
+#' nanopolish output and fast5 files. Only fragments containing move==1
+#' are included.
 #'
 #'
 #' @param tail_feature_list list object produced by create_tail_feature_list function.
@@ -17,13 +18,14 @@
 #' @examples
 #'\dontrun{
 #'
-#' create_tail_chunk_list(tail_feature_list = '/path/to/tail_feature_list', num_cores = 10)
+#' create_tail_chunk_list_moved(tail_feature_list = '/path/to/tail_feature_list', num_cores = 10)
 #'
 #'}
 #'
 #'
 
-create_tail_chunk_list <- function(tail_feature_list, num_cores){
+
+create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 
   # Assertions
 
@@ -44,7 +46,7 @@ create_tail_chunk_list <- function(tail_feature_list, num_cores){
   index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
 
   # header for progress bar
-  cat(paste('Preprocessing poly(A) tails...', '\n', sep=''))
+  cat(paste('Filtering chunks based on move values...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
@@ -58,31 +60,32 @@ create_tail_chunk_list <- function(tail_feature_list, num_cores){
     doParallel::registerDoParallel(cores = num_cores)
 
     # work on subsets of reads in parallel
-    tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]]) %dopar% split_with_overlaps(signal = tail_feature_list[[nam]][[4]],segment = 100,overlap = 50))
+    tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
+                         %dopar% split_with_overlaps_moved(moves = tail_feature_list[[nam]][[5]],
+                                                           signal = tail_feature_list[[nam]][[4]],
+                                                           segment = 100,overlap = 50))
 
     utils::setTxtProgressBar(pb, indx)
 
   }
 
-  close(pb)
 
-  #label each signal according to corresponding read name to avoid confusion
-  squiggle_names <- names(tail_feature_list)
-  names(tail_chunk_list) <- squiggle_names
+  # label each signal according to corresponding read name to avoid confusion
+  names(tail_chunk_list) <- names(tail_feature_list)
 
-  #naming chunks based on readnames & indices
-  for (chunk in seq_along(tail_chunk_list)) {
-    names(tail_chunk_list[[chunk]]) <- paste(names(tail_chunk_list)[chunk], seq_along(tail_chunk_list[[chunk]]), sep = "_")
-  }
 
-  list_structure <- rapply(tail_chunk_list, class)
-  chunk_names <- names(list_structure)
-  chunk_names <- gsub(".*\\.", "", chunk_names)
+  # naming chunks based on readnames & indices
+  chunk_names <- paste0(rep(names(tail_chunk_list), lengths(tail_chunk_list)), '_', unlist(lapply(tail_chunk_list, names)))
+
 
   #flatten the list
   tail_chunk_list <- Reduce(c, tail_chunk_list)
 
+  # rename flattened list
   names(tail_chunk_list) <- chunk_names
+
+
+  close(pb)
 
 
   return(tail_chunk_list)

@@ -13,7 +13,7 @@ analyzed dataset.}
 \item{tail_chunk_list}{list object produced by create_tail_chunk_list function.}
 }
 \value{
-an array (100,100,3) with values (RGB channels) representing ONT signal.
+an array (100,100,1) with values (greyscale) representing ONT signal.
 }
 \description{
 Converting ONT signal to gramian angular summation field.

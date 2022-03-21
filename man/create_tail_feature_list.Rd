@@ -56,6 +56,4 @@ create_tail_feature_list(nanopolish = '/path/to/file',
                          basecalled_group = 'Basecall_1D_000')
 
 }
-
-
 }

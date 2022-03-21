@@ -14,7 +14,7 @@ basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
 level in the Fast5 file hierarchy from which the data should be extracted.}
 }
 \value{
-
+outputs the text info with basic characteristics of the data.
 }
 \description{
 This function analyses the structure of the first fast5 file in the given
