@@ -10,7 +10,8 @@
 #'
 #'
 #' @return A list of tail range chunks organized by the read ID
-#' is returned. Always assign this returned list to a variable, otherwise
+#' is returned. Only tails containing at least one move value equal to 1
+#' are included. Always assign this returned list to a variable, otherwise
 #' the long list will be printed to the console, which may crash your R session.
 #'
 #' @export
@@ -23,11 +24,9 @@
 #'}
 #'
 #'
-
-
 create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 
-  # Assertions
+  # initial assertions
 
   if (missing(num_cores)) {
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
@@ -38,9 +37,15 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
   }
 
   assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_list(tail_feature_list),
+                          msg = "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   # creating cluster for parallel computing
   doParallel::registerDoParallel(cores = num_cores)
+
+  # first remove reads with only zero moved tails
+  tail_feature_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_feature_list)
+
 
   # this is list of indexes required for parallel computing; the main list of reads is split for chunks
   index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
@@ -50,6 +55,7 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+
 
   #create empty list for extracted data
   tail_chunk_list = list()
@@ -62,8 +68,8 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
     # work on subsets of reads in parallel
     tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
                          %dopar% split_with_overlaps_moved(moves = tail_feature_list[[nam]][[5]],
-                                                           signal = tail_feature_list[[nam]][[4]],
-                                                           segment = 100,overlap = 50))
+                                                            signal = tail_feature_list[[nam]][[4]],
+                                                            segment = 100,overlap = 50))
 
     utils::setTxtProgressBar(pb, indx)
 
@@ -73,10 +79,8 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
   # label each signal according to corresponding read name to avoid confusion
   names(tail_chunk_list) <- names(tail_feature_list)
 
-
   # naming chunks based on readnames & indices
   chunk_names <- paste0(rep(names(tail_chunk_list), lengths(tail_chunk_list)), '_', unlist(lapply(tail_chunk_list, names)))
-
 
   #flatten the list
   tail_chunk_list <- Reduce(c, tail_chunk_list)

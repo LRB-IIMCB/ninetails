@@ -38,8 +38,6 @@
 #'               pass_only=TRUE)
 #'
 #' }
-
-
 check_signals <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only){
 
   cat('Welcome to Ninetails', as.character(utils::packageVersion("ninetails")), '\n',

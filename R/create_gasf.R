@@ -19,6 +19,21 @@
 #'
 create_gasf <- function(chunkname, tail_chunk_list){
 
+  #assertions
+  if (missing(chunkname)) {
+    stop("Chunkname is missing. Please provide a valid chunkname argument.", call. =FALSE)
+  }
+
+  if (missing(tail_chunk_list)) {
+    stop("List of tail signal chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_character(chunkname),
+                          msg = "Given chunkname is not a character string. Please provide a valid chunkname.")
+  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+                          msg = "Given tail_chunk_list is not a list (class). Please provide valid file format.")
+
+
   tail_chunk <- tail_chunk_list[[chunkname]]
 
   # rescale values so that all of them fall in the interval [-1, 1]:

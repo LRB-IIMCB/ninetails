@@ -16,7 +16,8 @@ the data. Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
 A list of tail range chunks organized by the read ID
-is returned. Always assign this returned list to a variable, otherwise
+is returned. Only tails containing at least one move value equal to 1
+are included. Always assign this returned list to a variable, otherwise
 the long list will be printed to the console, which may crash your R session.
 }
 \description{

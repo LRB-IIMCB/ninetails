@@ -18,6 +18,15 @@
 #'
 winsorize_signal <- function(signal){
 
+  #assertions
+
+  if (missing(signal)) {
+    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(signal), msg=paste("Signal vector must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_atomic(signal), msg=paste("Signal vector must be atomic. Please provide a valid argument."))
+
 
   signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
   minimal_val <- signal_q[1L]

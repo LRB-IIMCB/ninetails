@@ -8,10 +8,10 @@ nanopolish output and fast5 files, in which move value = 1 occurs.}
 split_with_overlaps_moved(moves, signal, segment, overlap)
 }
 \arguments{
-\item{moves}{either a numeric vector of moves or character name 
+\item{moves}{either a numeric vector of moves or character name
 of such vector.}
 
-\item{signal}{either a corresponding numeric vector of signal values 
+\item{signal}{either a corresponding numeric vector of signal values
 or a character name of such vector.}
 
 \item{segment}{numeric [1]. Length of the chunk(s) to be created.}
@@ -19,7 +19,7 @@ or a character name of such vector.}
 \item{overlap}{numeric [1]. Length of the overlap between the chunks.}
 }
 \value{
-A vector of indices of moved chunks organized by their order in 
+A vector of indices of moved chunks organized by their order in
 an original list is returned.
 }
 \description{
