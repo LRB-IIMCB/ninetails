@@ -37,9 +37,7 @@ split_with_overlaps_moved <- function(moves, signal, segment, overlap) {
   assertthat::assert_that(assertive::is_numeric(segment), msg=paste("Segment must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_numeric(overlap), msg=paste("Overlap must be numeric. Please provide a valid argument."))
 
-  assertthat::assert_that(segment <= length(signal), msg="Overlap must not exceed the signal length. Please provide a valid argument.")
   assertthat::assert_that(segment>0, msg= "Segment value must be greater than 0. Please provide a valid argument.")
-
   assertthat::assert_that(overlap>=0, msg="Overlap value must be larger than or equal to 0. Please provide a valid argument.")
   assertthat::assert_that(overlap<segment, msg="Segment value must be greater than overlap value. Please provide a valid argument.")
 

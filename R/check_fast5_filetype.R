@@ -38,7 +38,7 @@ check_fast5_filetype <- function(workspace, basecall_group){
     stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_character(workspace), msg = "Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files.")
+  assertthat::assert_that(assertive::is_character(workspace), msg = paste("Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."))
 
 
   #list fast5 files in given dir

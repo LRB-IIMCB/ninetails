@@ -58,13 +58,13 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   }
 
   assertthat::assert_that(assertive::has_rows(polya_summary),
-                          msg = "Empty data frame provided as an input (polya_summary). Please provide a valid input table.")
+                          msg = paste("Empty data frame provided as an input (polya_summary). Please provide a valid input table."))
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(workspace),
-                          msg = "Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
+                          msg = paste("Empty string provided as an input. Please provide a valid path to basecalled fast5 files."))
   assertthat::assert_that(assertive::is_character(workspace),
-                          msg = "Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files.")
+                          msg = paste("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
   assertthat::assert_that(assertive::is_character(readname),
-                          msg = "Given readname is not a character string. Please provide a valid readname argument.")
+                          msg = paste("Given readname is not a character string. Please provide a valid readname argument."))
 
   # Extract data from fast5 file
   fast5_filenames <- polya_summary$filename

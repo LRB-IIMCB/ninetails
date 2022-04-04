@@ -29,9 +29,9 @@ create_gasf <- function(chunkname, tail_chunk_list){
   }
 
   assertthat::assert_that(assertive::is_character(chunkname),
-                          msg = "Given chunkname is not a character string. Please provide a valid chunkname.")
+                          msg = paste("Given chunkname is not a character string. Please provide a valid chunkname."))
   assertthat::assert_that(assertive::is_list(tail_chunk_list),
-                          msg = "Given tail_chunk_list is not a list (class). Please provide valid file format.")
+                          msg = paste("Given tail_chunk_list is not a list (class). Please provide valid file format."))
 
 
   tail_chunk <- tail_chunk_list[[chunkname]]

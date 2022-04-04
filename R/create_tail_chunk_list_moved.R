@@ -36,9 +36,9 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste("Declared core number must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_list(tail_feature_list),
-                          msg = "Given tail_feature_list is not a list (class). Please provide valid file format.")
+                          msg = paste("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
   # creating cluster for parallel computing
   doParallel::registerDoParallel(cores = num_cores)
@@ -69,12 +69,11 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
     tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
                          %dopar% split_with_overlaps_moved(moves = tail_feature_list[[nam]][[5]],
                                                             signal = tail_feature_list[[nam]][[4]],
-                                                            segment = 100,overlap = 50))
+                                                            segment = 100, overlap = 50))
 
     utils::setTxtProgressBar(pb, indx)
 
   }
-
 
   # label each signal according to corresponding read name to avoid confusion
   names(tail_chunk_list) <- names(tail_feature_list)
@@ -88,9 +87,7 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
   # rename flattened list
   names(tail_chunk_list) <- chunk_names
 
-
   close(pb)
-
 
   return(tail_chunk_list)
 
