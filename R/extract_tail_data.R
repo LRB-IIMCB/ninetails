@@ -126,6 +126,7 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   extracted_data_single_list[["transcript_start_pos"]] <- transcript_start_position
   extracted_data_single_list[["tail_signal"]] <- signal
   extracted_data_single_list[["tail_moves"]] <- moves_tail_range
+  extracted_data_single_list[["tail_length"]] <- polya_summary$polya_length[read_id]
 
 
   return(extracted_data_single_list)

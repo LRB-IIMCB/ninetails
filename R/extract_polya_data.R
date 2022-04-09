@@ -48,9 +48,11 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   }
 
 
-  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, qc_tag), show_col_types = FALSE)
+  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag), show_col_types = FALSE)
   sequencing_summary_table <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   colnames(sequencing_summary_table)[2] <- "readname"
+  sequencing_summary_table$readname <- as.character(sequencing_summary_table$readname)
+  nanopolish_polya_table$readname <- as.character(nanopolish_polya_table$readname)
 
   #assertions
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),msg = "Empty string provided as an input. Please provide a nanopolish as a string")

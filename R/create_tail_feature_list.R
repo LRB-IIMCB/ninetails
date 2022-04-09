@@ -82,12 +82,11 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
 
+  # use selected number of cores
+  doParallel::registerDoParallel(cores = num_cores)
 
   # loop for parallel extraction
   for (indx in 1:length(index_list)){
-
-    # use selected number of cores
-    doParallel::registerDoParallel(cores = num_cores)
 
     # work on subsets of reads in parallel
     extracted_data_multiple_list <- c(extracted_data_multiple_list, foreach::foreach(nam = names(polya_summary$filename)[index_list[[indx]]]) %dopar% extract_tail_data(nam,polya_summary,workspace,basecall_group))

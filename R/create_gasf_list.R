@@ -58,13 +58,9 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 
   # loop for parallel extraction
   for (indx in 1:length(index_list)){
-    # use selected number of cores
-    doParallel::registerDoParallel(cores = num_cores)
 
     # work on subsets of signals in parallel
     gasf_list <- c(gasf_list, foreach::foreach(nam = names(tail_chunk_list)[index_list[[indx]]]) %dopar% create_gasf(nam,tail_chunk_list))
-
-
 
     utils::setTxtProgressBar(pb, indx)
 
@@ -75,7 +71,6 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
   #label each signal according to corresponding read name to avoid confusion
   gasf_names <- names(tail_chunk_list)
   names(gasf_list) <- gasf_names
-
 
 
   return(gasf_list)

@@ -2,12 +2,10 @@
 #' nanopolish output and fast5 files. Only fragments containing move==1
 #' are included.
 #'
-#'
 #' @param tail_feature_list list object produced by create_tail_feature_list function.
 #'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
-#'
 #'
 #' @return A list of tail range chunks organized by the read ID
 #' is returned. Only tails containing at least one move value equal to 1
@@ -62,30 +60,18 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 
   # loop for parallel extraction
   for (indx in 1:length(index_list)){
-    # use selected number of cores
-    doParallel::registerDoParallel(cores = num_cores)
 
     # work on subsets of reads in parallel
     tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
-                         %dopar% split_with_overlaps_moved(moves = tail_feature_list[[nam]][[5]],
-                                                            signal = tail_feature_list[[nam]][[4]],
-                                                            segment = 100, overlap = 50))
+                         %dopar% split_with_overlaps_moved(nam, tail_feature_list, segment = 100, overlap = 50))
 
     utils::setTxtProgressBar(pb, indx)
 
   }
 
-  # label each signal according to corresponding read name to avoid confusion
-  names(tail_chunk_list) <- names(tail_feature_list)
-
-  # naming chunks based on readnames & indices
-  chunk_names <- paste0(rep(names(tail_chunk_list), lengths(tail_chunk_list)), '_', unlist(lapply(tail_chunk_list, names)))
 
   #flatten the list
-  tail_chunk_list <- Reduce(c, tail_chunk_list)
-
-  # rename flattened list
-  names(tail_chunk_list) <- chunk_names
+  tail_chunk_list <- lapply(rapply(tail_chunk_list, enquote, how="unlist"), eval)
 
   close(pb)
 

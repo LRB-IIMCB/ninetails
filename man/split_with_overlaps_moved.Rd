@@ -5,14 +5,14 @@
 \title{Creates vector of overlapping tail fragments extracted from
 nanopolish output and fast5 files, in which move value = 1 occurs.}
 \usage{
-split_with_overlaps_moved(moves, signal, segment, overlap)
+split_with_overlaps_moved(readname, tail_feature_list, segment, overlap)
 }
 \arguments{
-\item{moves}{either a numeric vector of moves or character name
-of such vector.}
+\item{readname}{character string. Name of the given read within the
+analyzed dataset.}
 
-\item{signal}{either a corresponding numeric vector of signal values
-or a character name of such vector.}
+\item{tail_feature_list}{list object produced by create_tail_feature_list
+function.}
 
 \item{segment}{numeric [1]. Length of the chunk(s) to be created.}
 
@@ -29,8 +29,8 @@ nanopolish output and fast5 files, in which move value = 1 occurs.
 \examples{
 \dontrun{
 
-split_with_overlaps_moved(moves = vector_of_moves,
-                          signal = vector_of_signal_corresponding_to_moves,
+split_with_overlaps_moved(readname = "name_of_given_read_of_interest",
+                          tail_feature_list = list_of_tail_features,
                           segment = 100
                           overlap = 10)
 

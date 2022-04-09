@@ -20,7 +20,11 @@ Imports:
     foreach,
     ggplot2,
     grDevices,
+    keras,
     paintmap,
     rhdf5,
+    rlang,
     utils,
     vroom
+Depends: 
+    R (>= 2.10)
