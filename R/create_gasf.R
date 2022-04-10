@@ -49,16 +49,13 @@ create_gasf <- function(chunkname, tail_chunk_list){
   tail_chunk <- tail_chunk + t(tail_chunk)
 
   #calculate cosinus
-  tail_chunk <- round(cos(tail_chunk), 4)
-
-  # assign HEX color values to gasf matrix
-  tail_chunk <- paintmap::color_matrix(tail_chunk, colors=gray.colors(100, start=0, end=1))
-
-  #split color values to RGB channels
-  tail_chunk <- grDevices::col2rgb(tail_chunk, alpha = FALSE)
+  tail_chunk <- cos(tail_chunk)
 
   #reshape the data into new dimensions
   tail_chunk <- array(t(tail_chunk), c(100,100,1))
+
+  # rescale values so that all of them fall in the interval [0, 1]:
+  tail_chunk <- round((tail_chunk - min(tail_chunk)) / (max(tail_chunk) - min(tail_chunk)), 4)
 
 
   return(tail_chunk)
