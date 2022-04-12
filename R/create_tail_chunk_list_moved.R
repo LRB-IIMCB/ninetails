@@ -54,7 +54,6 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
 
-
   #create empty list for extracted data
   tail_chunk_list = list()
 
@@ -69,11 +68,10 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 
   }
 
-
-  #flatten the list
-  tail_chunk_list <- lapply(rapply(tail_chunk_list, enquote, how="unlist"), eval)
-
   close(pb)
+
+  #rename first level of nested list accordingly
+  names(tail_chunk_list) <- names(tail_feature_list)
 
   return(tail_chunk_list)
 

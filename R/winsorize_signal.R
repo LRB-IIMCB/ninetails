@@ -27,7 +27,6 @@ winsorize_signal <- function(signal){
   assertthat::assert_that(assertive::is_numeric(signal), msg=paste("Signal vector must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_atomic(signal), msg=paste("Signal vector must be atomic. Please provide a valid argument."))
 
-
   signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
   minimal_val <- signal_q[1L]
   maximal_val <- signal_q[2L]

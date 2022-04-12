@@ -4,16 +4,14 @@
 \alias{create_gasf}
 \title{Converting ONT signal to gramian angular summation field.}
 \usage{
-create_gasf(chunkname, tail_chunk_list)
+create_gasf(tail_chunk)
 }
 \arguments{
-\item{chunkname}{character string. Name of the given signal chunk within the
+\item{tail_chunk}{character string. Name of the given signal chunk within the
 analyzed dataset.}
-
-\item{tail_chunk_list}{list object produced by create_tail_chunk_list function.}
 }
 \value{
-an array (100,100,1) with values (greyscale) representing ONT signal.
+an array (100,100,1) with values representing ONT signal.
 }
 \description{
 Converting ONT signal to gramian angular summation field.
@@ -21,10 +19,8 @@ Converting ONT signal to gramian angular summation field.
 \examples{
 \dontrun{
 
-create_gasf(chunkname = '1234-jhgfdr54-io643gju-ouy4378989', tail_chunk_list = tail_chunk_list)
+create_gasf(tail_chunk = "1234-jhgfdr54-io643gju-ouy4378989")
 
 }
-
-
 
 }

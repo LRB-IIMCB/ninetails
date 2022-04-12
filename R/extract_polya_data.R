@@ -76,8 +76,5 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   names(polya_summary$filename) <- polya_summary$readname #named vec of filenames (names = readnames)
   attr(polya_summary, 'spec') <- NULL #drop attributes left by vroom
 
-  #take only first n reads (n= value defined in "reads" argument)
-  #polya_summary <- polya_summary[1:reads, ]
-
   return(polya_summary)
 }

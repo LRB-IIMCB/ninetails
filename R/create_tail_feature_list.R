@@ -42,8 +42,7 @@
 #'                          basecalled_group = 'Basecall_1D_000')
 #'
 #'}
-
-
+#'
 create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE){
 
   # Assertions

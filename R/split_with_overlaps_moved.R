@@ -40,7 +40,7 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
   }
 
   assertthat::assert_that(assertive::is_character(readname),
-                          msg = paste("Given chunkname is not a character string. Please provide a valid readname."))
+                          msg = paste("Given readname is not a character string. Please provide a valid readname."))
   assertthat::assert_that(assertive::is_list(tail_feature_list),
                           msg = paste("Given tail_feature_list is not a list (class). Please provide valid file format."))
 

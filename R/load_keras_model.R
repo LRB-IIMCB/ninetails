@@ -16,7 +16,7 @@
 #'
 load_keras_model <- function(keras_model_path){
   if (rlang::is_missing(keras_model_path)) {
-    path_to_default_model <- system.file("extdata", "model_grey_gasf100x100_32_64.h5", package="ninetails")
+    path_to_default_model <- system.file("extdata", "model_grey_gasf100x100_32_64_updated.h5", package="ninetails")
     keras_model <- keras::load_model_hdf5(path_to_default_model)
   } else {
     keras_model <- keras::load_model_hdf5(keras_model_path)
