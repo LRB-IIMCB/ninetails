@@ -20,9 +20,6 @@ predict_classes <- function(gasf_list){
   gasf_list <- simplify2array(gasf_list)
   gasf_list <- aperm(gasf_list, c(4,1,2,3))
 
-  #normalise the data
-  gasf_list <- gasf_list/255
-
   # Output info
   cat(paste('Classifying gramian angular summation fields...', '\n', sep=''))
 
