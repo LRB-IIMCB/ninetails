@@ -1,3 +1,105 @@
+#' Winsorizes nanopore signal - removes high cliffs (extending above & below
+#' signal range). Slightly affects signal extremes.
+#'
+#' Based on the A. Signorell's DescTools
+#' https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r
+#'
+#'
+#' @param signal character string. Name of the given ONT signal.
+#'
+#' @return winsorized signal.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' winsorize_signal <- function(signal='12fdcb3-ewfd543-34552-1234ddta345')
+#'
+#' }
+#'
+winsorize_signal <- function(signal){
+
+  #assertions
+
+  if (missing(signal)) {
+    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(signal),
+                          msg=paste("Signal vector must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_atomic(signal),
+                          msg=paste("Signal vector must be atomic. Please provide a valid argument."))
+
+  signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
+  minimal_val <- signal_q[1L]
+  maximal_val <- signal_q[2L]
+
+  signal[signal<minimal_val] <- minimal_val
+  signal[signal>maximal_val] <- maximal_val
+
+  winsorized_signal <- as.integer(signal)
+
+  return(winsorized_signal)
+
+}
+
+
+#' Counts overlapping segments created per given nanopore signal.
+#'
+#' @param signal numeric vector corresponding to the given ONT signal.
+#' @param segment numeric [1]. Length of the chunk(s) to be created.
+#' @param overlap numeric [1]. Length of the overlap between the chunks.
+#'
+#' @return number of overlapping chunks per given tail.
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#' count_overlaps(signal = signal_vector,
+#'                segment = 100
+#'                overlap = 10)
+#'}
+#'
+#'
+count_overlaps <- function(signal, segment, overlap) {
+
+  starts <- seq(1, length(signal), by=segment-overlap)
+  ends   <- starts + segment - 1
+
+  counts_overlaps <- length(lapply(1:length(starts), function(i) signal[starts[i]:ends[i]]))
+
+  return(counts_overlaps)
+}
+
+
+#' Loads keras model for multiclass signal prediction.
+#'
+#' @param keras_model_path either missing or character string. Full path of the .h5 file
+#' with keras model used to predict signal classes. If function is called without this
+#' argument(argument is missing) the default pretrained model will be loaded. Otherwise,
+#' the dir with custom model shall be provided.
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#' load_keras_model(keras_model_path = "/path/to/the/model/in/hdf5_format")
+#' }
+#'
+load_keras_model <- function(keras_model_path){
+  if (rlang::is_missing(keras_model_path)) {
+    path_to_default_model <- system.file("extdata", "model_grey_gasf100x100_32_64_updated.h5", package="ninetails")
+    keras_model <- keras::load_model_hdf5(path_to_default_model)
+  } else {
+    keras_model <- keras::load_model_hdf5(keras_model_path)
+  }
+}
+
+
+
 #' Checks if the provided directory contains fast5 files in the correct format.
 #'
 #' This function analyses the structure of the first fast5 file in the given
@@ -115,3 +217,5 @@ check_fast5_filetype <- function(workspace, basecall_group){
   cat('    basecalling model:',model_used,' \n')
 
 }
+
+

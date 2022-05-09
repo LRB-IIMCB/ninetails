@@ -1,4 +1,4 @@
-#' Creating parameters for nnet.
+#' Wrapper function for ninetails package.
 #'
 #' @param nanopolish character string. Full path of the .tsv file produced
 #' by nanopolish polya function.
@@ -20,33 +20,41 @@
 #' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
 #' As a default, "TRUE" value is set.
 #'
+#' @export
 #'
 #' @return A list containing read information organized by the read ID
 #' is returned. Always assign this returned list to a variable, otherwise
 #' the long list will be printed to the console, which may crash your R session.
 #'
-#' @export
-#'
 #' @examples
-#' \dontrun{
+#'\dontrun{
 #'
-#' check_signals(nanopolish = '/path/to/file',
-#'               sequencing_summary = '/path/to/file',
-#'               workspace = '/path/to/guppy/workspace',
-#'               num_cores = 10,
-#'               basecalled_group = 'Basecall_1D_000',
-#'               pass_only=TRUE)
+#' check_tails(nanopolish = '/path/to/file',
+#'             sequencing_summary = '/path/to/file',
+#'             workspace = '/path/to/guppy/workspace',
+#'             num_cores = 10,
+#'             basecalled_group = 'Basecall_1D_000',
+#'             pass_only=TRUE)
 #'
 #' }
-check_signals <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only){
 
+
+check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only){
+  
   cat('Welcome to Ninetails', as.character(utils::packageVersion("ninetails")), '\n',
       'Pipeline initialized:', as.character(Sys.time()),'\n','\n')
-
+  
+  
   tail_feature_list <- create_tail_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only)
   tail_chunk_list <- create_tail_chunk_list_moved(tail_feature_list, num_cores)
-
+  gasf_list <- create_gasf_list(tail_chunk_list, num_cores)
+  predicted_list <- predict_classes(gasf_list)
+  coordinate_df <- create_coordinate_dataframe(tail_feature_list, num_cores)
+  ninetails_output <- analyze_results(coordinate_df, predicted_list, num_cores)
+  
+  
   cat('Processing finished.')
-
-  return(tail_chunk_list)
+  cat('Thank you for using Ninetails.')
+  
+  return(ninetails_output)
 }
