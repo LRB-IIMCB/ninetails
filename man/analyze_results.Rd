@@ -7,16 +7,13 @@
 modified - containing non-adenosine residue(s) and unmodified - with adenosines
 exclusively).}
 \usage{
-analyze_results(coordinate_df, predicted_list, num_cores)
+analyze_results(coordinate_df, predicted_list)
 }
 \arguments{
 \item{coordinate_df}{a data frame object produced by create_coordinate_df
 function.}
 
 \item{predicted_list}{a list object produced by predict_classes function.}
-
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
 a list of 2 dataframes with prediction results. First dataframe contains
@@ -34,8 +31,7 @@ exclusively).
 \dontrun{
 
 analyze_results(coordinate_df = '/path/to/coordinate_df',
-                predicted_list = '/path/to/predicted_list',
-                num_cores = 10)
+                predicted_list = '/path/to/predicted_list')
 
 }
 

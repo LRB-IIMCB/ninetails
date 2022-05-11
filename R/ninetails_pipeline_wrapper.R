@@ -40,21 +40,21 @@
 
 
 check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only){
-  
+
   cat('Welcome to Ninetails', as.character(utils::packageVersion("ninetails")), '\n',
       'Pipeline initialized:', as.character(Sys.time()),'\n','\n')
-  
-  
+
+
   tail_feature_list <- create_tail_feature_list(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only)
   tail_chunk_list <- create_tail_chunk_list_moved(tail_feature_list, num_cores)
   gasf_list <- create_gasf_list(tail_chunk_list, num_cores)
   predicted_list <- predict_classes(gasf_list)
   coordinate_df <- create_coordinate_dataframe(tail_feature_list, num_cores)
-  ninetails_output <- analyze_results(coordinate_df, predicted_list, num_cores)
-  
-  
+  ninetails_output <- analyze_results(coordinate_df, predicted_list)
+
+
   cat('Processing finished.')
   cat('Thank you for using Ninetails.')
-  
+
   return(ninetails_output)
 }

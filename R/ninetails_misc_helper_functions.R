@@ -80,7 +80,6 @@ count_overlaps <- function(signal, segment, overlap) {
 #' argument(argument is missing) the default pretrained model will be loaded. Otherwise,
 #' the dir with custom model shall be provided.
 #'
-#' @return
 #' @export
 #'
 #' @examples

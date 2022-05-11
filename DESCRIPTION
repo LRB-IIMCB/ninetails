@@ -7,7 +7,7 @@ Maintainer: The package maintainer <nguminska@iimcb.gov.pl>
 Description: Finds noncanonical (nonadenosine) nucleotides 
     in poly(A) tails of Oxford Nanopore direct RNA sequencing reads
     using convolutional neural network based on raw current signal.
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.2

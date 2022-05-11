@@ -25,7 +25,8 @@ non-adenosine position estimation.
 \examples{
 \dontrun{
 
-create_coordinate_dataframe(tail_feature_list = '/path/to/tail_feature_list', num_cores = 10)
+create_coordinate_dataframe(tail_feature_list = '/path/to/tail_feature_list',
+                            num_cores = 10)
 
 }
 

@@ -10,20 +10,25 @@
 #' per given tail (total_chunk) and poly(A) tail length (tail_length) estimated by
 #' nanopolish.
 #'
+#' @importFrom foreach %dopar%
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' create_coordinate_dataframe(tail_feature_list = '/path/to/tail_feature_list', num_cores = 10)
+#' create_coordinate_dataframe(tail_feature_list = '/path/to/tail_feature_list',
+#'                             num_cores = 10)
 #'
 #'}
 #'
 #'
 create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 
-  #assertions
+  # variable binding (suppressing R CMD check from throwing an error)
+  nam <- NULL
 
+  #assertions
   if (missing(num_cores)) {
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
@@ -88,6 +93,9 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 
   close(pb)
 
+  #stop cluster
+  doParallel::stopImplicitCluster()
+
 
   # coerce to df, add names
   overlap_count_list <- do.call("rbind.data.frame", overlap_count_list)
@@ -116,13 +124,14 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 #' @param coordinate_df a data frame object produced by create_coordinate_df
 #' function.
 #' @param predicted_list a list object produced by predict_classes function.
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
 #'
 #' @return a list of 2 dataframes with prediction results. First dataframe contains
 #' detailed info on type and estimated positions of non-adenosine residues detected.
 #' The second dataframe contains initial indications, whether the given read was
 #' recognized as modified (containing non-adenosine residue) or not.
+#'
+#' @importFrom foreach %dopar%
+#' @importFrom dplyr %>%
 #'
 #' @export
 #'
@@ -130,12 +139,14 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 #'\dontrun{
 #'
 #' analyze_results(coordinate_df = '/path/to/coordinate_df',
-#'                 predicted_list = '/path/to/predicted_list',
-#'                 num_cores = 10)
+#'                 predicted_list = '/path/to/predicted_list')
 #'
 #'}
 #'
-analyze_results <- function(coordinate_df, predicted_list, num_cores){
+analyze_results <- function(coordinate_df, predicted_list){
+
+  # variable binding (suppressing R CMD check from throwing an error)
+  chunk <- total_chunk <- tail_length <- init <- NULL
 
   #assertions
   if (missing(coordinate_df)) {
@@ -146,17 +157,12 @@ analyze_results <- function(coordinate_df, predicted_list, num_cores){
     stop("List of predictions is missing. Please provide a valid predicted_list argument.", call. =FALSE)
   }
 
-  if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
-  }
+
 
   assertthat::assert_that(assertive::is_data.frame(coordinate_df),
                           msg = paste("Given coordinate_df is not a data frame (class). Please provide valid file format."))
   assertthat::assert_that(assertive::is_list(predicted_list),
                           msg = paste("Given predicted_list is not a list (class). Please provide valid file format."))
-  assertthat::assert_that(assertive::is_numeric(num_cores),
-                          msg = paste("Declared core number must be numeric. Please provide a valid argument."))
-
 
 
   #FIRST LIST
@@ -215,9 +221,9 @@ analyze_results <- function(coordinate_df, predicted_list, num_cores){
   preliminary_classification$class <- factor(preliminary_classification$class, levels=c("unmodified", "modified"))
 
   #create final output
-  file_list <- list(moved_chunks_table, preliminary_classification)
+  analyzed_results_list <- list(moved_chunks_table, preliminary_classification)
 
-  return(file_list)
+  return(analyzed_results_list)
 }
 
 
@@ -235,24 +241,52 @@ analyze_results <- function(coordinate_df, predicted_list, num_cores){
 #' by the user (reads marked by nanopolish as "SUFFCLIP" may be included/excluded,
 #' depending on user's preference).
 #'
-#' @param predicted_list a list object produced by predict_classes function.
+#' @param analyzed_results_list a list object produced by analyze_results function.
 #' @param nanopolish character string. Full path of the .tsv file produced
 #' by nanopolish polya function.
 #'
-#' @return
+#' @return a dataframe with characteristics of reads excluded from ninetails
+#' analysis. The object contains readnames and classification - column containing
+#' the reason why the particular read was discarded.
+#'
+#' @importFrom dplyr %>%
+#'
 #' @export
 #'
 #' @examples
 #'\dontrun{
 #'
-#' handle_discarded_reads(predicted_list = list_object,
+#' handle_discarded_reads(analyzed_results_list = list_object,
 #'                        nanopolish = "path/to/nanopolish.tsv/file")
 #'
 #'}
 #'
-handle_discarded_reads<- function(predicted_list, nanopolish){
+handle_discarded_reads<- function(analyzed_results_list, nanopolish){
 
+  # variable binding (suppressing R CMD check from throwing an error)
+  readname <- polya_length <- qc_tag  <- predicted_list <- NULL
+
+  #assertions
+  if (missing(nanopolish)) {
+    stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
+  }
+
+  if (missing(analyzed_results_list)) {
+    stop("Analyzed_results_list object is missing. Please provide a valid analyzed_results_list argument.", .call = FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_list(analyzed_results_list),
+                          msg = paste("Given analyzed_results_list is not a list (class). Please provide valid object."))
+
+  #read nanopolish polya
   nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_length, qc_tag), show_col_types = FALSE)
+
+
+  #assertions
+  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),msg = "Empty string provided as an input. Please provide a nanopolish as a string")
+  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste("File ",nanopolish," does not exist",sep=""))
+  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table), msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
+
 
   preliminary_classification <- predicted_list[[2]]
 
@@ -260,7 +294,7 @@ handle_discarded_reads<- function(predicted_list, nanopolish){
   classified_reads <- preliminary_classification$readname
 
   discarded_reads <- nanopolish_polya_table %>%
-    dplyr::filter(!readname %in%classified_reads) %>%
+    dplyr::filter(!readname %in% classified_reads) %>%
     dplyr::mutate(class = dplyr::case_when(polya_length < 10 ~ "unclassified - insufficient read length",
                                            qc_tag == "SUFFCLIP" ~ "unclassified - nanopolish qc failed (suffclip)",
                                            qc_tag == "ADAPTER" ~ "unclassified - nanopolish qc failed (adapter)",

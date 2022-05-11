@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_plotting_functions.R
 \name{plot_tail_range}
 \alias{plot_tail_range}
-\title{Draws tail range squiggle for given read}
+\title{Draws tail range squiggle for given read.}
 \usage{
 plot_tail_range(
   readname,
@@ -10,7 +10,8 @@ plot_tail_range(
   sequencing_summary,
   workspace,
   basecall_group = "Basecall_1D_000",
-  moves = FALSE
+  moves = FALSE,
+  rescale = FALSE
 )
 }
 \arguments{
@@ -35,15 +36,29 @@ the background as vertical bars/gaps (for values 0/1, respectively)
 and the signal (squiggle) would be plotted in the foreground.
 Otherwise, only the signal would be plotted. As a default,
 "FALSE" value is set.}
+
+\item{rescale}{logical [TRUE/FALSE]. If TRUE, the signal will be rescaled for
+picoamps (pA) per second (s). If FALSE, raw signal per position will be
+plotted. As a default, the "FALSE" value is set.}
 }
 \value{
-ggplot2 object with squiggle plot
+ggplot2 object with squiggle plot centered on tail range.
 }
 \description{
-Creates segmented plot of raw ONT RNA signal (with or without moves).
+Creates segmented plot of raw/rescaled ONT RNA signal (with or without moves).
+A standalone function; does not rely on any other preprocessing, depends
+solely on Nanopolish, Guppy and fast5 input.
+}
+\details{
+The output plot includes an entire tail region (orange) and +/- 150 positions
+flanks of adapter (blue) and transcript body (black) regions. Vertical lines
+mark the 5' (navy blue) and 3' (red) termini of polyA tail according to the
+Nanopolish polyA function. In order to maintain readability of the graph
+(and to avoid plotting high cliffs - e.g. jets of the signal caused
+by a sudden surge of current in the sensor) the signal is winsorised.
+
 Moves may be plotted only for reads basecalled by Guppy basecaller.
-A standalone function; does not rely on any other preprocessing,
-depends solely on Nanopolish, Guppy and fast5 input.
+Otherwise the function will throw an error.
 }
 \examples{
 \dontrun{
@@ -52,7 +67,7 @@ plot_tail_range(nanopolish = '/path/to/file',
                 sequencing_summary = '/path/to/file',
                 workspace = '/path/to/guppy/workspace',
                 basecalled_group = 'Basecall_1D_000',
-                num_cores = 3, moves=TRUE)
+                num_cores = 3, moves=TRUE, rescale=TRUE)
 
 }
 }

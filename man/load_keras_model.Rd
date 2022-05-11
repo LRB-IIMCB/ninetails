@@ -12,9 +12,6 @@ with keras model used to predict signal classes. If function is called without t
 argument(argument is missing) the default pretrained model will be loaded. Otherwise,
 the dir with custom model shall be provided.}
 }
-\value{
-
-}
 \description{
 Loads keras model for multiclass signal prediction.
 }

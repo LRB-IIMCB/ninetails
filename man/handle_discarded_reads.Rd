@@ -4,16 +4,18 @@
 \alias{handle_discarded_reads}
 \title{Classifies a dataframe containing classification of discarded reads.}
 \usage{
-handle_discarded_reads(predicted_list, nanopolish)
+handle_discarded_reads(analyzed_results_list, nanopolish)
 }
 \arguments{
-\item{predicted_list}{a list object produced by predict_classes function.}
+\item{analyzed_results_list}{a list object produced by analyze_results function.}
 
 \item{nanopolish}{character string. Full path of the .tsv file produced
 by nanopolish polya function.}
 }
 \value{
-
+a dataframe with characteristics of reads excluded from ninetails
+analysis. The object contains readnames and classification - column containing
+the reason why the particular read was discarded.
 }
 \description{
 The output dataframe includes reads which were not taken into consideration
@@ -32,7 +34,7 @@ depending on user's preference).
 \examples{
 \dontrun{
 
-handle_discarded_reads(predicted_list = list_object,
+handle_discarded_reads(analyzed_results_list = list_object,
                        nanopolish = "path/to/nanopolish.tsv/file")
 
 }

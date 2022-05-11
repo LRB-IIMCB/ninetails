@@ -1,9 +1,18 @@
-#' Draws tail range squiggle for given read
+#' Draws tail range squiggle for given read.
 #'
-#' Creates segmented plot of raw ONT RNA signal (with or without moves).
+#' Creates segmented plot of raw/rescaled ONT RNA signal (with or without moves).
+#' A standalone function; does not rely on any other preprocessing, depends
+#' solely on Nanopolish, Guppy and fast5 input.
+#'
+#' The output plot includes an entire tail region (orange) and +/- 150 positions
+#' flanks of adapter (blue) and transcript body (black) regions. Vertical lines
+#' mark the 5' (navy blue) and 3' (red) termini of polyA tail according to the
+#' Nanopolish polyA function. In order to maintain readability of the graph
+#' (and to avoid plotting high cliffs - e.g. jets of the signal caused
+#' by a sudden surge of current in the sensor) the signal is winsorised.
+#'
 #' Moves may be plotted only for reads basecalled by Guppy basecaller.
-#' A standalone function; does not rely on any other preprocessing,
-#' depends solely on Nanopolish, Guppy and fast5 input.
+#' Otherwise the function will throw an error.
 #'
 #' @param readname character string. Name of the given read within the
 #' analyzed dataset.
@@ -27,7 +36,11 @@
 #' Otherwise, only the signal would be plotted. As a default,
 #' "FALSE" value is set.
 #'
-#' @return ggplot2 object with squiggle plot
+#' @param rescale logical [TRUE/FALSE]. If TRUE, the signal will be rescaled for
+#' picoamps (pA) per second (s). If FALSE, raw signal per position will be
+#' plotted. As a default, the "FALSE" value is set.
+#'
+#' @return ggplot2 object with squiggle plot centered on tail range.
 #' @export
 #'
 #' @examples
@@ -37,12 +50,17 @@
 #'                 sequencing_summary = '/path/to/file',
 #'                 workspace = '/path/to/guppy/workspace',
 #'                 basecalled_group = 'Basecall_1D_000',
-#'                 num_cores = 3, moves=TRUE)
+#'                 num_cores = 3, moves=TRUE, rescale=TRUE)
 #'
 #'}
 #
 # TO DO : add rescaling module (ifelse)
-plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace, basecall_group = "Basecall_1D_000", moves=FALSE){
+plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace, basecall_group = "Basecall_1D_000", moves=FALSE, rescale=FALSE){
+
+  # variable binding (suppressing R CMD check from throwing an error)
+  polya_start <- transcript_start <- adapter_start <- leader_start <- filename <- read_id <- position <- time <- pA <- segment <- NULL
+
+
   #Assertions
   if (missing(readname)) {
     stop("Readname [string] is missing. Please provide a valid readname argument.", call. =FALSE)
@@ -106,15 +124,15 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
   move <- as.numeric(move) # change data type as moves are originally stored as raw
 
   #read parameters stored in channel_id group
-  #channel_id <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/channel_id")) # parent dir for attributes (within fast5 file)
-  #digitisation <- channel_id$digitisation # number of quantisation levels in the analog to digital converter
-  #digitisation <- as.integer(digitisation)
-  #offset <- channel_id$offset # analog to digital signal error
-  #offset <- as.integer(offset)
-  #range <- channel_id$range # difference between the smallest and greatest values
-  #range <- as.integer(range)
-  #sampling_rate <- channel_id$sampling_rate # number of data points collected per second
-  #sampling_rate <- as.integer(sampling_rate)
+  channel_id <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/channel_id")) # parent dir for attributes (within fast5 file)
+  digitisation <- channel_id$digitisation # number of quantisation levels in the analog to digital converter
+  digitisation <- as.integer(digitisation)
+  offset <- channel_id$offset # analog to digital signal error
+  offset <- as.integer(offset)
+  range <- channel_id$range # difference between the smallest and greatest values
+  range <- as.integer(range)
+  sampling_rate <- channel_id$sampling_rate # number of data points collected per second
+  sampling_rate <- as.integer(sampling_rate)
 
   #read parameters (attrs) stored in basecall_1d_template
   basecall_1d_template <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group, "/Summary/basecall_1d_template")) # parent dir for attributes (within fast5)
@@ -124,14 +142,12 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
   # close all handled instances (groups, attrs) of fast5 file
   rhdf5::h5closeAll()
 
-
   #winsorize signal (remove cliffs) thanks to this, all signals are plotted without current jets
   signal_q <- stats::quantile(x=signal, probs=c(0.002, 0.998), na.rm=TRUE, type=7)
   minimal_val <- signal_q[1L]
   maximal_val <- signal_q[2L]
   signal[signal<minimal_val] <- minimal_val
   signal[signal>maximal_val] <- maximal_val
-
   signal <- as.integer(signal)
 
 
@@ -142,11 +158,9 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
   #handling move data
   moves_sample_wise_vector <- c(rep(move, each=stride), rep(NA, signal_length - number_of_events))
 
-
   #creating signal df
   signal_df <- data.frame(position=seq(1,signal_length,1), signal=signal[1:signal_length], moves=moves_sample_wise_vector) # this is signal converted to dframe
-  #signal_df <- dplyr::mutate(signal_df, time = position/sampling_rate)
-  #signal_df <- dplyr::mutate(signal_df, pA = ((signal + offset) * (range/digitisation)))
+
 
   # signal segmentation factor
   #adapter sequence
@@ -155,27 +169,43 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
   signal_df$segment[signal_df$position >= transcript_start_position] <- "transcript"
   #polya sequence
   signal_df$segment[signal_df$position >= polya_start_position & signal_df$position <= polya_end_position] <- "poly(A)"
-
   signal_df$segment <- as.factor(signal_df$segment)
 
-
   # trim tail region:
-  trim_position_upstream <- polya_start_position -50
-  trim_poition_downstream <- transcript_start_position +50
+  trim_position_upstream <- polya_start_position -150
+  trim_position_downstream <- transcript_start_position +150
 
-  signal_df <- signal_df[trim_position_upstream:trim_poition_downstream,]
-
+  signal_df <- signal_df[trim_position_upstream:trim_position_downstream,]
 
   # plotting squiggle
 
-  squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position)) + ggplot2::geom_line(ggplot2::aes(y = signal, color = segment)) + ggplot2::theme_bw() + ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
-  g.line <- ggplot2::geom_vline(xintercept = polya_start_position, color = "#700f25")
-  g.line2 <- ggplot2::geom_vline(xintercept = polya_end_position, color = "#0f3473")
-  g.labs <- ggplot2::labs(title= paste0("Read ", readname),
-                          x="position",
-                          y= "signal [raw]")
-  g.moves <- ggplot2::geom_line(ggplot2::aes(y = moves * 1000), alpha = 0.3)
+  if (rescale==TRUE) {
+    #additional df cols need for rescaling data
+    signal_df <- dplyr::mutate(signal_df, time = position/sampling_rate)
+    signal_df <- dplyr::mutate(signal_df, pA = ((signal + offset) * (range/digitisation)))
+    #plotting signal rescaled to picoamps per second
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time)) +
+      ggplot2::geom_line(ggplot2::aes(y = pA, color = segment)) + ggplot2::theme_bw() +
+      ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
+    g.line <- ggplot2::geom_vline(xintercept = polya_start_position/sampling_rate, color = "#700f25")
+    g.line2 <- ggplot2::geom_vline(xintercept = polya_end_position/sampling_rate, color = "#0f3473")
+    g.labs <- ggplot2::labs(title= paste0("Read ", readname),
+                            x="time [s]",
+                            y= "signal [pA]")
+    g.moves <- ggplot2::geom_line(ggplot2::aes(y = moves * 150), alpha = 0.3)
 
+  } else if (rescale==FALSE) {
+    #plotting raw signal
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position)) +
+      ggplot2::geom_line(ggplot2::aes(y = signal, color = segment)) + ggplot2::theme_bw() +
+      ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
+    g.line <- ggplot2::geom_vline(xintercept = polya_start_position, color = "#700f25")
+    g.line2 <- ggplot2::geom_vline(xintercept = polya_end_position, color = "#0f3473")
+    g.labs <- ggplot2::labs(title= paste0("Read ", readname),
+                            x="position",
+                            y= "signal [raw]")
+    g.moves <- ggplot2::geom_line(ggplot2::aes(y = moves * 1000), alpha = 0.3)
+  }
 
   if (moves==TRUE) {
     plot_squiggle <- squiggle + g.line + g.line2 + g.labs + g.moves
@@ -184,7 +214,10 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
     plot_squiggle <- squiggle + g.line + g.line2 + g.labs
   }
 
-
   return(plot_squiggle)
 
 }
+
+
+
+
