@@ -81,7 +81,7 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
   if (checkmate::test_string(nanopolish)) {
     # if string provided as an argument, read from file
     # handle nanopolish
-    assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste("File ",nanopolish," does not exist",sep=""))
+    assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste0("File ",nanopolish," does not exist",sep=""))
     nanopolish <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, adapter_start, leader_start), show_col_types = FALSE)
     colnames(nanopolish)[1] <- "read_id" #because there was conflict with the same vars
   }
@@ -101,7 +101,7 @@ plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace,
 
   if (checkmate::test_string(sequencing_summary)) {
     #handle sequencing summary
-    assertthat::assert_that(assertive::is_existing_file(sequencing_summary), msg=paste("File ",sequencing_summary," does not exist",sep=""))
+    assertthat::assert_that(assertive::is_existing_file(sequencing_summary), msg=paste0("File ",sequencing_summary," does not exist",sep=""))
     sequencing_summary <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   }
 

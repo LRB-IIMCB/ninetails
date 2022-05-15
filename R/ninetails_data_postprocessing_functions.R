@@ -37,9 +37,9 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_list(tail_feature_list),
-                          msg = paste("Given tail_feature_list is not a list (class). Please provide valid file format."))
+                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
   # creating cluster for parallel computing
   doParallel::registerDoParallel(cores = num_cores)
@@ -49,7 +49,7 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 
   # OVERLAP COUNT LIST
   # header for progress bar
-  cat(paste('Retrieving segmentation data...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving segmentation data...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
@@ -70,9 +70,12 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 
   close(pb)
 
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+
   ### TAIL LENGTH LIST
   # header for progress bar
-  cat(paste('Retrieving position calibrating data...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
@@ -108,6 +111,9 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 
   #produce final output
   coordinate_df <- merge(overlap_count_list, tail_length_list)
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
 
   return(coordinate_df)
@@ -160,9 +166,9 @@ analyze_results <- function(coordinate_df, predicted_list){
 
 
   assertthat::assert_that(assertive::is_data.frame(coordinate_df),
-                          msg = paste("Given coordinate_df is not a data frame (class). Please provide valid file format."))
+                          msg = paste0("Given coordinate_df is not a data frame (class). Please provide valid file format."))
   assertthat::assert_that(assertive::is_list(predicted_list),
-                          msg = paste("Given predicted_list is not a list (class). Please provide valid file format."))
+                          msg = paste0("Given predicted_list is not a list (class). Please provide valid file format."))
 
 
   #FIRST LIST
@@ -276,7 +282,7 @@ handle_discarded_reads<- function(analyzed_results_list, nanopolish){
   }
 
   assertthat::assert_that(assertive::is_list(analyzed_results_list),
-                          msg = paste("Given analyzed_results_list is not a list (class). Please provide valid object."))
+                          msg = paste0("Given analyzed_results_list is not a list (class). Please provide valid object."))
 
   #read nanopolish polya
   nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_length, qc_tag), show_col_types = FALSE)
@@ -284,7 +290,7 @@ handle_discarded_reads<- function(analyzed_results_list, nanopolish){
 
   #assertions
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste("File ",nanopolish," does not exist",sep=""))
+  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste0("File ",nanopolish," does not exist",sep=""))
   assertthat::assert_that(assertive::has_rows(nanopolish_polya_table), msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
 

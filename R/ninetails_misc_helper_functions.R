@@ -26,9 +26,9 @@ winsorize_signal <- function(signal){
   }
 
   assertthat::assert_that(assertive::is_numeric(signal),
-                          msg=paste("Signal vector must be numeric. Please provide a valid argument."))
+                          msg=paste0("Signal vector must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_atomic(signal),
-                          msg=paste("Signal vector must be atomic. Please provide a valid argument."))
+                          msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
 
   signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
   minimal_val <- signal_q[1L]
@@ -139,7 +139,7 @@ check_fast5_filetype <- function(workspace, basecall_group){
     stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_character(workspace), msg = paste("Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."))
+  assertthat::assert_that(assertive::is_character(workspace), msg = paste0("Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."))
 
 
   #list fast5 files in given dir
@@ -148,7 +148,7 @@ check_fast5_filetype <- function(workspace, basecall_group){
   #count fast5 files
   num_fast5_files <- length(fast5_files_list)
 
-  cat(paste0('Found ', num_fast5_files, ' fast5 file(s) in provided directory.\n'))
+  cat(paste0('[', as.character(Sys.time()), '] ','Found ', num_fast5_files, ' fast5 file(s) in provided directory.\n'))
 
   #closer look into the first file on the list
   selected_fast5_file <-fast5_files_list[1]
@@ -156,7 +156,7 @@ check_fast5_filetype <- function(workspace, basecall_group){
 
   selected_fast5_read <- selected_fast5_file_structure$name[1]
 
-  cat(paste0('Analyzing one of the given fast5 files to check if the data are in required format... \n'))
+  cat(paste0('[', as.character(Sys.time()), '] ','Analyzing one of the given fast5 files to check', '\n','if the data are in required format... \n'))
 
 
   # checking whether fast5 file is single or multi
@@ -208,12 +208,12 @@ check_fast5_filetype <- function(workspace, basecall_group){
   # close all handled instances (groups, attrs) of fast5 file
   rhdf5::h5closeAll()
 
-  cat('Previewed fast5 file parameters:\n')
+  cat('  Previewed fast5 file parameters:\n')
   cat('    data type: RNA \n')
   cat('    fast5 file type: multifast5 \n')
   cat('    basecaller used:',basecaller_used,' \n')
   cat('    basecaller version:',guppy_version,' \n')
-  cat('    basecalling model:',model_used,' \n')
+  cat('    basecalling model:',model_used,' \n',' \n')
 
 }
 

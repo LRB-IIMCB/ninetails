@@ -10,7 +10,8 @@ check_tails(
   workspace,
   num_cores,
   basecall_group,
-  pass_only
+  pass_only,
+  save_dir
 )
 }
 \arguments{
@@ -33,14 +34,32 @@ level in the Fast5 file hierarchy from which the data should be extracted.}
 nanopolish as "PASS" would be taken into consideration. Otherwise, reads
 tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
 As a default, "TRUE" value is set.}
+
+\item{save_dir}{character string. Full path of the directory where the output
+files containing the tail composition information should be stored.}
 }
 \value{
-A list containing read information organized by the read ID
+A list containing tail information organized by the read ID
 is returned. Always assign this returned list to a variable, otherwise
 the long list will be printed to the console, which may crash your R session.
 }
 \description{
-Wrapper function for ninetails package.
+This function allows to perform all of the steps required to discover
+nonadenosine nucleotides within the given dataset using ninetails.
+Please keep in mind, that during computations the function creates large
+segmentation data. Therefore it may be wise to split the nanopolish table
+beforehand and then run this function on nanopolish table chunks.
+}
+\details{
+The output of this function is a list of 3 dataframes, containing: a) binary
+classification of reads satisfying filtering criteria*, b) detailed positional
+info regarding all potential nonadenosine residues detected, c) info
+regarding discarded reads (the reason why the following read has been omitted
+from the analysis).
+
+The filtering criteria applied by ninetails are as follows: move of value =1
+present, qc_tag = "PASS" or "PASS" & "SUFFCLIP", length estimated
+by nanopolish >=10 nt).
 }
 \examples{
 \dontrun{
@@ -50,7 +69,8 @@ check_tails(nanopolish = '/path/to/file',
             workspace = '/path/to/guppy/workspace',
             num_cores = 10,
             basecalled_group = 'Basecall_1D_000',
-            pass_only=TRUE)
+            pass_only=TRUE,
+            save_dir = '/directory/where/output/shall/be/stored')
 
 }
 }

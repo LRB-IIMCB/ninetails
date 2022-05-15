@@ -60,11 +60,11 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
 
   #assertions
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste("File ",nanopolish," does not exist",sep=""))
+  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste0("File ",nanopolish," does not exist",sep=""))
   assertthat::assert_that(assertive::has_rows(nanopolish_polya_table), msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(sequencing_summary),msg = "Empty string provided as an input. Please provide a sequencing_summary as a string")
-  assertthat::assert_that(assertive::is_existing_file(sequencing_summary), msg=paste("File ",sequencing_summary," does not exist",sep=""))
+  assertthat::assert_that(assertive::is_existing_file(sequencing_summary), msg=paste0("File ",sequencing_summary," does not exist",sep=""))
   assertthat::assert_that(assertive::has_rows(sequencing_summary_table), msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
 
   assertthat::assert_that(assertive::is_a_bool(pass_only),msg="Please provide TRUE/FALSE values for pass_only parameter")
@@ -146,13 +146,13 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   }
 
   assertthat::assert_that(assertive::has_rows(polya_summary),
-                          msg = paste("Empty data frame provided as an input (polya_summary). Please provide a valid input table."))
+                          msg = paste0("Empty data frame provided as an input (polya_summary). Please provide a valid input table."))
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(workspace),
-                          msg = paste("Empty string provided as an input. Please provide a valid path to basecalled fast5 files."))
+                          msg = paste0("Empty string provided as an input. Please provide a valid path to basecalled fast5 files."))
   assertthat::assert_that(assertive::is_character(workspace),
-                          msg = paste("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
+                          msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
   assertthat::assert_that(assertive::is_character(readname),
-                          msg = paste("Given readname is not a character string. Please provide a valid readname argument."))
+                          msg = paste0("Given readname is not a character string. Please provide a valid readname argument."))
 
   # Extract data from fast5 file
   fast5_filenames <- polya_summary$filename
@@ -287,7 +287,7 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
   # Extracting and processing polya & sequencing summary data
   polya_summary <- extract_polya_data(nanopolish, sequencing_summary, pass_only)
@@ -302,7 +302,7 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
   tail_feature_list = list()
 
   # header for progress bar
-  cat(paste('Extracting features of provided reads...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
@@ -331,6 +331,9 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
 
   # remove reads with only zero moved tails
   tail_feature_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_feature_list)
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   return(tail_feature_list)
 
@@ -380,12 +383,12 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
   }
 
   assertthat::assert_that(assertive::is_character(readname),
-                          msg = paste("Given readname is not a character string. Please provide a valid readname."))
+                          msg = paste0("Given readname is not a character string. Please provide a valid readname."))
   assertthat::assert_that(assertive::is_list(tail_feature_list),
-                          msg = paste("Given tail_feature_list is not a list (class). Please provide valid file format."))
+                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
-  assertthat::assert_that(assertive::is_numeric(segment), msg=paste("Segment must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(overlap), msg=paste("Overlap must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(segment), msg=paste0("Segment must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(overlap), msg=paste0("Overlap must be numeric. Please provide a valid argument."))
 
   assertthat::assert_that(segment>0, msg= "Segment value must be greater than 0. Please provide a valid argument.")
   assertthat::assert_that(overlap>=0, msg="Overlap value must be larger than or equal to 0. Please provide a valid argument.")
@@ -473,9 +476,9 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_list(tail_feature_list),
-                          msg = paste("Given tail_feature_list is not a list (class). Please provide valid file format."))
+                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
   # creating cluster for parallel computing
   doParallel::registerDoParallel(cores = num_cores)
@@ -484,7 +487,7 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
   index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
 
   # header for progress bar
-  cat(paste('Creating tail segmentation data...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
@@ -510,6 +513,9 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list)
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   return(tail_chunk_list)
 
@@ -601,7 +607,7 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
     stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
 
   #register cores for parallelization
@@ -614,7 +620,7 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
   gasf_list = list()
 
   #set progressbar
-  cat(paste('Computing gramian angular summation fields...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular summation fields...', '\n', sep=''))
   pb <- utils::txtProgressBar(min = 0, max = length(tail_chunk_list), style = 3, width = 50, char = "=")
 
   #loop through the nested list
@@ -633,6 +639,9 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 
   #restore names in the list
   names(gasf_list) <- chunknames
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   return(gasf_list)
 
@@ -663,7 +672,7 @@ predict_classes <- function(gasf_list){
   gasf_list <- aperm(gasf_list, c(4,1,2,3))
 
   # Output info
-  cat(paste('Classifying gramian angular summation fields...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Classifying gramian angular summation fields...', '\n', sep=''))
 
 
   keras_model <- load_keras_model()
@@ -678,7 +687,7 @@ predict_classes <- function(gasf_list){
   predicted_list[["prediction"]] <- predicted_gasf_classes
 
   # Output info
-  cat(paste('Tensorflow finished predictions.', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
 
   return(predicted_list)
