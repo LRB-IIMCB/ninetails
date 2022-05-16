@@ -21,6 +21,14 @@ devtools::install_github('LRB-IIMCB/ninetails')
 library(ninetails)
 ```
 
+## Usage
+
+### Classification of reads using wrapper function
+
+### Classification of reads using standalone functions
+
+### Visual inspection of reads of interest
+
 ## Citation
 
 Please cite ninetails as: Gumińska N et al., Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing
