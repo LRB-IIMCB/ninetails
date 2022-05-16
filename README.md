@@ -9,7 +9,7 @@
 * It requires tail delimitation data produced by Nanopolish software
 * It allows both for the detection of non-Adenosine residues within the poly(A) tails and visual inspection of  read signals
 
-The software is still in the development phase so all suggestions are welcome. Please also expect the code to be changed frequently, so use it with caution.
+The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
 
 ## Prerequisites
 
