@@ -1,6 +1,6 @@
 # ninetails
 
-**An R package for finding non-Adenosine poly(A) residues in Oxford Nanopore direct RNA sequencing reads.**
+**An R package for finding non-adenosine poly(A) residues in Oxford Nanopore direct RNA sequencing reads.**
 
 <img align="right" width="200" height="220" src="https://user-images.githubusercontent.com/68285258/168554098-a5a5dee9-2c8f-4351-86b4-e6420a5b8ced.png">
 
