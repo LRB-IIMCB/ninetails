@@ -122,19 +122,44 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 
 
 
-#' Summarizes classification results into list of 2 dataframes containing detailed
-#' (per each position) and preliminary output (binary classification of reads for
-#' modified - containing non-adenosine residue(s) and unmodified - with adenosines
-#' exclusively).
+#' Summarizes classification results into list of 2 dataframes containing two
+#' types of outputs (read type classification and detailed positional info).
+#'
+#' First dataframe contains classification of ONT sequencing reads based on
+#' their type. This means that reads are assigned to one of the following
+#' classes: [1] "modified" - if they meet initial conditions for analysis and
+#' contain potential non-Adenosine residue, [2] "unmodified" - if they contain
+#' no move =1 (only 0s) or contain move =1 but were classified as "A" containing
+#' exclusively by neural network, [3] "unclassified - insufficient read length"
+#' if their length estimated by nanopolish polya function was lower or equal
+#' to 10 nt, [4] other unclassified cases which may appear in the dataset were
+#' excluded from the analysis due to their nanopolish qc tag - the reason for
+#' this is given within the comment.
+#'
+#' Second dataframe contains detailed positions of detected modifications.
+#'
+#' @param nanopolish character string. Full path of the .tsv file produced
+#' by nanopolish polya function.
 #'
 #' @param coordinate_df a data frame object produced by create_coordinate_df
 #' function.
 #' @param predicted_list a list object produced by predict_classes function.
 #'
-#' @return a list of 2 dataframes with prediction results. First dataframe contains
-#' detailed info on type and estimated positions of non-adenosine residues detected.
-#' The second dataframe contains initial indications, whether the given read was
-#' recognized as modified (containing non-adenosine residue) or not.
+#' @param pass_only logical [TRUE/FALSE]. This must be consistent with the
+#' parameter set while using previous functions requiring that option in an
+#' entire analysis. This means, if in previously used create_tail_feature_list()
+#' function parameter pass_only was set to "FALSE" it shall be set to "FALSE" in
+#' analyze_results() function either. If TRUE, only reads tagged by
+#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
+#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
+#' As a default, "TRUE" value is set.
+#'
+#' @return a list of 2 dataframes with prediction results. First dataframe
+#' contains initial indications, whether the given read was recognized as
+#' modified (containing non-adenosine residue) or not.  The second dataframe
+#' contains detailed info on type and estimated positions of non-adenosine
+#' residues detected.
+#'
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom dplyr %>%
@@ -144,15 +169,17 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 #' @examples
 #'\dontrun{
 #'
-#' analyze_results(coordinate_df = '/path/to/coordinate_df',
-#'                 predicted_list = '/path/to/predicted_list')
+#' analyze_results(nanopolish = '/path/to/nanopolish_output.tsv',
+#'                 coordinate_df = '/path/to/coordinate_df',
+#'                 predicted_list = '/path/to/predicted_list',
+#'                 pass_only=TRUE)
 #'
 #'}
 #'
-analyze_results <- function(coordinate_df, predicted_list){
+analyze_results <- function(nanopolish, coordinate_df, predicted_list, pass_only = TRUE){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  chunk <- total_chunk <- tail_length <- init <- NULL
+  chunk <- total_chunk <- tail_length <- init <- readname <- NULL
 
   #assertions
   if (missing(coordinate_df)) {
@@ -163,8 +190,17 @@ analyze_results <- function(coordinate_df, predicted_list){
     stop("List of predictions is missing. Please provide a valid predicted_list argument.", call. =FALSE)
   }
 
+  #read nanopolish polya
+  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_length, qc_tag), show_col_types = FALSE)
 
 
+  #assertions
+  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
+                          msg = "Empty string provided as an input. Please provide a nanopolish as a string")
+  assertthat::assert_that(assertive::is_existing_file(nanopolish),
+                          msg=paste0("File ",nanopolish," does not exist",sep=""))
+  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
+                          msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
   assertthat::assert_that(assertive::is_data.frame(coordinate_df),
                           msg = paste0("Given coordinate_df is not a data frame (class). Please provide valid file format."))
   assertthat::assert_that(assertive::is_list(predicted_list),
@@ -209,8 +245,10 @@ analyze_results <- function(coordinate_df, predicted_list){
                                                                       chunk < 2*(total_chunk/3) ~ "center",
                                                                       chunk==total_chunk ~ "5'end",
                                                                       TRUE ~ "5'distal")))
-  #estimated hit centered_position
-  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_position = round(((tail_length/total_chunk)*chunk),2))
+  #estimated hit centered_position (from 5' end)
+  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos_from5 = round((tail_length - ((tail_length/total_chunk)*chunk)),2))
+  #estimated hit centered_position (from 3' end)
+  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos_from3 = round((tail_length/total_chunk)*chunk),2)
 
   ## SECOND LIST
   # handle unmodified IDs
@@ -220,94 +258,38 @@ analyze_results <- function(coordinate_df, predicted_list){
   preliminary_classification <- preliminary_classification %>%
     dplyr::mutate(class = ifelse((readname %in% unmodified_readnames), "unmodified", "modified"))
 
+
+  # Add filtering criterion: select only pass or pass $ suffclip
+  if(pass_only == TRUE){
+    discarded_reads <- nanopolish_polya_table %>%
+      dplyr::filter(!readname %in% preliminary_classification$readname) %>%
+      dplyr::mutate(class = dplyr::case_when(polya_length < 10 ~ "unclassified - insufficient read length",
+                                             qc_tag == "SUFFCLIP" ~ "unclassified - nanopolish qc failed (suffclip)",
+                                             qc_tag == "ADAPTER" ~ "unclassified - nanopolish qc failed (adapter)",
+                                             qc_tag == "NOREGION" ~ "unclassified - nanopolish qc failed (noregion)",
+                                             qc_tag == "READ_FAILED_LOAD" ~ "unclassified - nanopolish qc failed (read_failed_load)",
+                                             TRUE ~ "unmodified")) %>% dplyr::select(-c(qc_tag, polya_length))
+  } else {
+    discarded_reads <- nanopolish_polya_table %>%
+      dplyr::filter(!readname %in% preliminary_classification$readname) %>%
+      dplyr::mutate(class = dplyr::case_when(polya_length < 10 ~ "unclassified - insufficient read length",
+                                             qc_tag == "ADAPTER" ~ "unclassified - nanopolish qc failed (adapter)",
+                                             qc_tag == "NOREGION" ~ "unclassified - nanopolish qc failed (noregion)",
+                                             qc_tag == "READ_FAILED_LOAD" ~ "unclassified - nanopolish qc failed (read_failed_load)",
+                                             TRUE ~ "unmodified")) %>% dplyr::select(-c(qc_tag, polya_length))
+  }
+
+  preliminary_classification <- rbind(preliminary_classification, discarded_reads)
+
   # factorize variables:
   moved_chunks_table$interval <- factor(moved_chunks_table$interval, levels= c("3'end", "3'distal", "center", "5'distal", "5'end"))
   moved_chunks_table$prediction <- factor(moved_chunks_table$prediction, levels= c("C", "G", "U")) # add "A" if drop A would be commented out
 
-  preliminary_classification$class <- factor(preliminary_classification$class, levels=c("unmodified", "modified"))
 
   #create final output
-  analyzed_results_list <- list(moved_chunks_table, preliminary_classification)
+  analyzed_results_list <- list(preliminary_classification, moved_chunks_table)
+
 
   return(analyzed_results_list)
 }
 
-
-#' Classifies a dataframe containing classification of discarded reads.
-#'
-#' The output dataframe includes reads which were not taken into consideration
-#' in ninetails classification pipeline (i.e. reads, which did not fulfill
-#' the analysis requirements).
-#'
-#' The output dataframe consists of 2 columns: readname and class. Class column
-#' contains short explanation of main reason why the given read was omitted.
-#' The reason behind this could be (1) insufficient read quality according to the
-#' nanopolish polya function, (2) insufficient polyA tail length, which makes
-#' segmentation and classification impossible, (3) filtering criterion applied
-#' by the user (reads marked by nanopolish as "SUFFCLIP" may be included/excluded,
-#' depending on user's preference).
-#'
-#' @param analyzed_results_list a list object produced by analyze_results function.
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
-#'
-#' @return a dataframe with characteristics of reads excluded from ninetails
-#' analysis. The object contains readnames and classification - column containing
-#' the reason why the particular read was discarded.
-#'
-#' @importFrom dplyr %>%
-#'
-#' @export
-#'
-#' @examples
-#'\dontrun{
-#'
-#' handle_discarded_reads(analyzed_results_list = list_object,
-#'                        nanopolish = "path/to/nanopolish.tsv/file")
-#'
-#'}
-#'
-handle_discarded_reads<- function(analyzed_results_list, nanopolish){
-
-  # variable binding (suppressing R CMD check from throwing an error)
-  readname <- polya_length <- qc_tag  <- predicted_list <- NULL
-
-  #assertions
-  if (missing(nanopolish)) {
-    stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
-  }
-
-  if (missing(analyzed_results_list)) {
-    stop("Analyzed_results_list object is missing. Please provide a valid analyzed_results_list argument.", .call = FALSE)
-  }
-
-  assertthat::assert_that(assertive::is_list(analyzed_results_list),
-                          msg = paste0("Given analyzed_results_list is not a list (class). Please provide valid object."))
-
-  #read nanopolish polya
-  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_length, qc_tag), show_col_types = FALSE)
-
-
-  #assertions
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste0("File ",nanopolish," does not exist",sep=""))
-  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table), msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
-
-
-  preliminary_classification <- predicted_list[[2]]
-
-  #reads with sufficient tail length and move==1
-  classified_reads <- preliminary_classification$readname
-
-  discarded_reads <- nanopolish_polya_table %>%
-    dplyr::filter(!readname %in% classified_reads) %>%
-    dplyr::mutate(class = dplyr::case_when(polya_length < 10 ~ "unclassified - insufficient read length",
-                                           qc_tag == "SUFFCLIP" ~ "unclassified - nanopolish qc failed (suffclip)",
-                                           qc_tag == "ADAPTER" ~ "unclassified - nanopolish qc failed (adapter)",
-                                           qc_tag == "NOREGION" ~ "unclassified - nanopolish qc failed (noregion)",
-                                           qc_tag == "READ_FAILED_LOAD" ~ "unclassified - nanopolish qc failed (read_failed_load)",
-                                           TRUE ~ "unclassified - required move not found")) %>%
-    dplyr::select(-c(qc_tag, polya_length))
-
-  return(discarded_reads)
-}

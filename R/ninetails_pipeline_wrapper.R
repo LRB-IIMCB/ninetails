@@ -391,24 +391,14 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   #header for function
   cat(paste0('[', as.character(Sys.time()), '] ','Merging predictions...', '\n', sep=''))
 
-  results <- analyze_results(coordinate_df, predicted_list)
+  results <- analyze_results(nanopolish, coordinate_df, predicted_list, pass_only=pass_only)
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
-  #####################################################
-  # HANDLE DISCARDED READS
-  #####################################################
-
-  #header for function
-  cat(paste0('[', as.character(Sys.time()), '] ','Handling discarded reads...', '\n', sep=''))
-
-  results_w_discarded <- handle_discarded_reads(predicted_list, nanopolish)
-
-  results[[3]] <- results_w_discarded
 
   #dump output to files:
-  names(results) <- c("binary_classified_reads", "detailed_positional_nonadenosine_residues", "discarded_reads")
+  names(results) <- c("binary_classified_reads", "detailed_positional_nonadenosine_residues")
   mapply(function (x,y) utils::write.table(x, file = file.path(save_dir, paste0(as.character(Sys.time()), '_', y, '.tsv')),
                                     row.names = F, sep="\t", quote = F), results, names(results))
 
