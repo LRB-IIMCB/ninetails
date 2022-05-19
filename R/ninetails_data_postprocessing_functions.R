@@ -179,7 +179,7 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
 analyze_results <- function(nanopolish, coordinate_df, predicted_list, pass_only = TRUE){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  chunk <- total_chunk <- tail_length <- init <- readname <- NULL
+  chunk <- total_chunk <- tail_length <- init <- readname <- polya_length <- qc_tag <- NULL
 
   #assertions
   if (missing(coordinate_df)) {

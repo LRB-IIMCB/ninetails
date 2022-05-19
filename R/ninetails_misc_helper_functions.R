@@ -90,7 +90,7 @@ count_overlaps <- function(signal, segment, overlap) {
 #'
 load_keras_model <- function(keras_model_path){
   if (rlang::is_missing(keras_model_path)) {
-    path_to_default_model <- system.file("extdata", "model_grey_gasf100x100_32_64_updated.h5", package="ninetails")
+    path_to_default_model <- system.file("extdata", "cnn_model", "model_grey_gasf100x100_32_64_updated.h5", package="ninetails")
     keras_model <- keras::load_model_hdf5(path_to_default_model)
   } else {
     keras_model <- keras::load_model_hdf5(keras_model_path)
@@ -170,50 +170,46 @@ check_fast5_filetype <- function(workspace, basecall_group){
 
   assertthat::assert_that(is_multifast5(selected_fast5_file_structure))
 
+  # check whether file is basecalled or not
+  tryCatch(selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group)), error = function(e) { cat("The previewed fast5 file is not a basecalled one. Ninetails requires fast5 files basecalled by Guppy.") })
 
-  # checking whether the defined basecall group is present within the selected file
-  basecall_group_exists <- function(basecall_group, selected_fast5_file, selected_fast5_read){
-    selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
-    exists("selected_basecall_group")
+  if (exists('selected_basecall_group')) {
+    # checking whether the fast5 file contains RNA ONT reads
+    is_RNA <- function(selected_fast5_file, selected_fast5_read){
+      read_context_tags <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/context_tags"))
+      read_context_tags$experiment_type == "rna"
+    }
+
+    assertthat::on_failure(is_RNA) <- function(call, env) {
+      paste0("The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.")
+    }
+    assertthat::assert_that(is_RNA(selected_fast5_file, selected_fast5_read))
+
+
+    # retrieve basecaller & basecalling model (read attributes)
+    selected_basecall_group <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
+    basecaller_used <- selected_basecall_group$name
+    model_used <- selected_basecall_group$model_type
+
+    # retrieve guppy basecaller version (read attributes)
+    path_to_guppy_version <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/tracking_id"))
+    guppy_version <- path_to_guppy_version$guppy_version
+
+    # close all handled instances (groups, attrs) of fast5 file
+    rhdf5::h5closeAll()
+
+    cat('  Previewed fast5 file parameters:\n')
+    cat('    data type: RNA \n')
+    cat('    fast5 file type: multifast5 \n')
+    cat('    basecaller used:',basecaller_used,' \n')
+    cat('    basecaller version:',guppy_version,' \n')
+    cat('    basecalling model:',model_used,' \n',' \n')
+
+  } else {
+    # close all handled instances (groups, attrs) of fast5 file
+    rhdf5::h5closeAll()
+    stop(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Please provide fast5 files basecalled by Guppy software. '))
   }
-
-  assertthat::on_failure(basecall_group_exists) <- function(call, env) {
-  }
-
-  assertthat::assert_that(basecall_group_exists(basecall_group, selected_fast5_file, selected_fast5_read))
-
-  # checking whether the fast5 file contains RNA ONT reads
-  is_RNA <- function(selected_fast5_file, selected_fast5_read){
-    read_context_tags <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/context_tags"))
-    read_context_tags$experiment_type == "rna"
-
-  }
-
-  assertthat::on_failure(is_RNA) <- function(call, env) {
-    paste0("The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.")
-  }
-
-  assertthat::assert_that(is_RNA(selected_fast5_file, selected_fast5_read))
-
-
-  # retrieve basecaller & basecalling model (read attributes)
-  selected_basecall_group <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
-  basecaller_used <- selected_basecall_group$name
-  model_used <- selected_basecall_group$model_type
-
-  # retrieve guppy basecaller version (read attributes)
-  path_to_guppy_version <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/tracking_id"))
-  guppy_version <- path_to_guppy_version$guppy_version
-
-  # close all handled instances (groups, attrs) of fast5 file
-  rhdf5::h5closeAll()
-
-  cat('  Previewed fast5 file parameters:\n')
-  cat('    data type: RNA \n')
-  cat('    fast5 file type: multifast5 \n')
-  cat('    basecaller used:',basecaller_used,' \n')
-  cat('    basecaller version:',guppy_version,' \n')
-  cat('    basecalling model:',model_used,' \n',' \n')
 
 }
 

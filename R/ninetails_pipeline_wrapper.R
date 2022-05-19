@@ -66,6 +66,9 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   # variable binding (suppressing R CMD check from throwing an error)
   nam <- NULL
 
+  #Show console message
+  cat(paste0('Welcome to Ninetails ', as.character(utils::packageVersion("ninetails")), '\n', '\n', sep = ""))
+
   # Create a log file
   if (dir.exists(file.path(save_dir))) {
     log_filename <- paste0(format(Sys.time(), "%Y-%m-%d_%H-%M-%S"), "_ninetails.log", sep = "")
@@ -74,21 +77,6 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
     sink(log_file, append=TRUE, split = TRUE, type='output')
     on.exit(sink(file=NULL, type = 'output'))
   }
-
-  #Show console message
-  cat(paste0('Welcome to Ninetails ', as.character(utils::packageVersion("ninetails")), '\n', '\n', sep = ""))
-
-  # user-specified options
-  cat(paste(' Ninetails was launched with following options:', '\n', sep=''))
-  cat(paste(' nanopolish output file:       ', nanopolish, '\n', sep=''))
-  cat(paste(' sequencing sumary file:       ', sequencing_summary, '\n', sep=''))
-  cat(paste(' fast5 files directory:        ', workspace, '\n', sep=''))
-  cat(paste(' number of cores:              ', num_cores, '\n', sep=''))
-  cat(paste(' basecall group:               ', basecall_group, '\n', sep=''))
-  cat(paste(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
-  cat(paste(' output directory:             ', save_dir, '\n', '\n', '\n'))
-
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
 
 
   # Handle if save dir does not exist
@@ -107,6 +95,19 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
     sink(log_file, append=TRUE, split = TRUE, type='output')
     on.exit(sink(file=NULL, type = 'output'))
   }
+
+
+  # user-specified options
+  cat(paste(' Ninetails was launched with following options:', '\n', sep=''))
+  cat(paste(' nanopolish output file:       ', nanopolish, '\n', sep=''))
+  cat(paste(' sequencing sumary file:       ', sequencing_summary, '\n', sep=''))
+  cat(paste(' fast5 files directory:        ', workspace, '\n', sep=''))
+  cat(paste(' number of cores:              ', num_cores, '\n', sep=''))
+  cat(paste(' basecall group:               ', basecall_group, '\n', sep=''))
+  cat(paste(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
+  cat(paste(' output directory:             ', save_dir, '\n', '\n', '\n'))
+
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
 
 
   # Assertions
@@ -392,9 +393,6 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   cat(paste0('[', as.character(Sys.time()), '] ','Merging predictions...', '\n', sep=''))
 
   results <- analyze_results(nanopolish, coordinate_df, predicted_list, pass_only=pass_only)
-
-  # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
 
   #dump output to files:
