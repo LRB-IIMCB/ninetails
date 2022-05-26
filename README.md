@@ -71,7 +71,7 @@ Moreover, the function also creates a log file in the directory specified by the
 
 ### Classification of reads using standalone functions
 
-The **ninetails** pipeline may be also launched without the wrapper - as sometimes it might be useful, especially if the input files are large. 
+The **ninetails** pipeline may be also launched without the wrapper - as sometimes it might be useful, especially if the input files are large and/or you would like to plot some produced matrices. 
 
 The first function in processing pipeline is ```create_tail_feature_list()```. It extracts the read data from the provided outputs and merges them based on read identifiers (readnames).  This function works as follows:
 
