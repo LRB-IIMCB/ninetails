@@ -20,6 +20,8 @@ Imports:
     foreach,
     ggplot2,
     keras,
+    magrittr,
+    reshape2,
     rhdf5,
     rlang,
     tidyr,

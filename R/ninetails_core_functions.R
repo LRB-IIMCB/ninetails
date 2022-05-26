@@ -287,7 +287,8 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
   # Extracting and processing polya & sequencing summary data
   polya_summary <- extract_polya_data(nanopolish, sequencing_summary, pass_only)
@@ -436,6 +437,7 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
 
 #' Creates list of overlapping tail fragments extracted from
 #' nanopolish output and fast5 files based on provided feature list.
+#'
 #' Only fragments containing move==1 are included
 #' (as create_tail_feature_list function performs prefiltering according to this criterion).
 #'
@@ -573,7 +575,7 @@ create_gasf <- function(tail_chunk){
 #' Creates list of gramian angular summation matrices produced based on
 #' list of splitted tails (tail chunks).
 #'
-#' @param tail_chunk_list character string. Full path of the list object produced
+#' @param tail_chunk_list character string. The list object produced
 #' by create_chunk_list function.
 #'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
@@ -653,7 +655,6 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 #'
 #' @return a list of gasfs predictions based on used model.
 #'
-#' @importFrom dplyr %>%
 #'
 #' @export
 #'

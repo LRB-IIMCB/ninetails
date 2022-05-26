@@ -246,9 +246,10 @@ analyze_results <- function(nanopolish, coordinate_df, predicted_list, pass_only
                                                                       chunk==total_chunk ~ "5'end",
                                                                       TRUE ~ "5'distal")))
   #estimated hit centered_position (from 5' end)
-  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos_from5 = round((tail_length - ((tail_length/total_chunk)*chunk)),2))
+  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos = round((tail_length - ((tail_length/total_chunk)*chunk)),2))
+
   #estimated hit centered_position (from 3' end)
-  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos_from3 = round((tail_length/total_chunk)*chunk),2)
+  #moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos = round((tail_length/total_chunk)*chunk)),2)
 
   ## SECOND LIST
   # handle unmodified IDs

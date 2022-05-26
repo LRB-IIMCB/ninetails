@@ -3,9 +3,7 @@
 \name{create_tail_chunk_list_moved}
 \alias{create_tail_chunk_list_moved}
 \title{Creates list of overlapping tail fragments extracted from
-nanopolish output and fast5 files based on provided feature list.
-Only fragments containing move==1 are included
-(as create_tail_feature_list function performs prefiltering according to this criterion).}
+nanopolish output and fast5 files based on provided feature list.}
 \usage{
 create_tail_chunk_list_moved(tail_feature_list, num_cores)
 }
@@ -23,8 +21,6 @@ are included. Always assign this returned list to a variable, otherwise
 the long list will be printed to the console, which may crash your R session.
 }
 \description{
-Creates list of overlapping tail fragments extracted from
-nanopolish output and fast5 files based on provided feature list.
 Only fragments containing move==1 are included
 (as create_tail_feature_list function performs prefiltering according to this criterion).
 }

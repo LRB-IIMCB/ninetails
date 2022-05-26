@@ -8,7 +8,7 @@ list of splitted tails (tail chunks).}
 create_gasf_list(tail_chunk_list, num_cores)
 }
 \arguments{
-\item{tail_chunk_list}{character string. Full path of the list object produced
+\item{tail_chunk_list}{character string. The list object produced
 by create_chunk_list function.}
 
 \item{num_cores}{numeric [1]. Number of physical cores to use in processing
