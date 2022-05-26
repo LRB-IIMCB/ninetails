@@ -13,7 +13,7 @@ The software is still under development, so all suggestions to improving it are 
 
 ## Prerequisites
 
-Ninetails requires the following input data to operate:
+**Ninetails** requires the following input data to operate:
 * multifast5 files basecalled by ```Guppy``` - for the signal data extraction 
 * sequencing_summary.txt file - for file ID extraction
 * an output of ```Nanopolish``` polya function (tsv file) - to obtain the tail segmentation data
@@ -21,6 +21,11 @@ Ninetails requires the following input data to operate:
 Therefore, please make sure that the third-party software necessary for the steps preceding the use of **ninetails** is installed (```Nanopolish```, ```Guppy```) and/or that you have all the required input files.
 
 Currently, **ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
+
+The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install this package before running the program. 
+
+Instructions for installing tensorflow can be found here:
+https://tensorflow.rstudio.com/installation/
 
 
 ## Installation
@@ -48,8 +53,6 @@ library(ninetails)
 Below is an example of how to use ```check_tails()``` function:
 
 ```r
-library(ninetails)
-
 results <- check_tails(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
                                                 package = 'ninetails'),
                        sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
@@ -67,6 +70,62 @@ This function returns a list consisting of two tables: **binary_classified_reads
 Moreover, the function also creates a log file in the directory specified by the user.
 
 ### Classification of reads using standalone functions
+
+The **ninetails** pipeline may be also launched without the wrapper - as sometimes it might be useful, especially if the input files are large. 
+
+The first function in processing pipeline is ```create_tail_feature_list()```. It extracts the read data from the provided outputs and merges them based on read identifiers (readnames).  This function works as follows:
+
+```r
+tfl <- create_tail_feature_list(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                         package = 'ninetails'),
+                                sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+                                                                 package = 'ninetails'),
+                                workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                                        package = 'ninetails'),
+                                num_cores = 10,
+                                basecall_group = 'Basecall_1D_000',
+                                pass_only=TRUE)
+```
+
+The second function, ```create_tail_chunk_list_moved()```,  segments the reads and produces a list of segments in which a change of state (move = 1) has been recorded, possibly indicating the presence of a non-adenosine residue.
+
+```r
+tcl <- create_tail_chunk_list_moved(tail_feature_list = tfl, 
+                                    num_cores = 10)
+```
+The list of fragments should be then passed to the function ```create_gasf_list()```, which transforms the signals into gramian angular summation fields. The function outputs a list of GASF matrices. 
+
+```r
+gl <- create_gasf_list(tail_chunk_list = tcl, 
+                       num_cores = 10)
+```
+
+The list of matrices should then be passed to the ```predict_classes()``` function, which launches the neural network to classify the input data. This function uses the tensorflow backend.
+
+```r
+pl <- predict_classes(gl)
+```
+
+The penultimate function, ```create_coordinate_dataframe()```,  creates a table with data necessary to estimate the position of individual modifications within the tails harboring them. 
+
+```r
+cdf <- create_coordinate_dataframe(tail_feature_list=tfl,
+                                   num_cores=10)
+```
+The last function, ```analyze_results()```,  allows to obtain the final output: a list composed of **binary_classified_reads** and **detailed_positional_nonadenosine_residues** data frames. Note that in this form the function does not automatically save data to files.
+
+```r
+results <- analyze_results(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                    package = 'ninetails'), 
+                           coordinate_df=cdf, 
+                           predicted_list=pl, 
+                           pass_only=TRUE)
+```
+
+
+
+
+
 
 ### Output explanation
 
@@ -89,6 +148,15 @@ The ```class``` column contains information whether the given read was recognize
 
 The **detailed_positional_nonadenosine_residues** dataframe (file) contains following columns:
 
+| column name  | content |
+| ------------- | ------------- |
+| readname  | an identifier of a given read  (36 characters)|
+| chunk	  | number of tail segment in which the given non-adenosine residue was spotted; reported from 3' end  |
+| prediction  | the result of classification (basic model: C, G, U assignment)  |
+| total_chunk  | total number of segments per given tail |
+| tail_length  | the tail length estimated according to Nanopolish polya function  |
+| interval  | the approximate region of the poly(A) tail where the modification is to be expected |
+| centered_pos  | the approximate nucleotide position in the centre of a given tail segment where modifications are to be expected; reported from 5' end |
 
 
 
@@ -98,7 +166,7 @@ The **detailed_positional_nonadenosine_residues** dataframe (file) contains foll
 
 With their help you can visualise:
 * raw signal (```rescale=FALSE```)
-* signal scaled to picocamperes [pA] per second [s] (```rescale=TRUE```)
+* signal scaled to picoamperes [pA] per second [s] (```rescale=TRUE```)
 
 In addition, the graphs can depict only signal data (```moves=FALSE```) or they can also contain informations regarding the change of state between the subsequent k-mers (moves) (```moves=TRUE```).
 
@@ -107,8 +175,6 @@ In addition, the graphs can depict only signal data (```moves=FALSE```) or they 
 The following example demonstrates how to use the ```plot_squiggle()``` function:
 
 ```r
-library(ninetails)
-
 plot <- plot_squiggle(readname = "cd6c7f1d-6ef4-45a0-a67a-0a2853967e5b",
                       nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
                                                 package = 'ninetails'),
