@@ -14,11 +14,11 @@ The software is still under development, so all suggestions to improving it are 
 ## Prerequisites
 
 Ninetails requires the following input data to operate:
-* multifast5 files basecalled by Guppy - for the signal data extraction 
+* multifast5 files basecalled by ```Guppy``` - for the signal data extraction 
 * sequencing_summary.txt file - for file ID extraction
-* an output of Nanopolish polya function (tsv file) - to obtain the tail segmentation data
+* an output of ```Nanopolish``` polya function (tsv file) - to obtain the tail segmentation data
 
-Therefore, please make sure that the third-party software necessary for the steps preceding the use of **ninetails** is installed (Nanopolish, Guppy) and/or that you have all the required input files.
+Therefore, please make sure that the third-party software necessary for the steps preceding the use of **ninetails** is installed (```Nanopolish```, ```Guppy```) and/or that you have all the required input files.
 
 Currently, **ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
 
