@@ -224,7 +224,54 @@ Which outputs:
 Or below, if the (```moves=TRUE```) argument is passed:
 ![moves_true_tail_sig](https://user-images.githubusercontent.com/68285258/170458256-c850e981-b8b0-4c29-bce0-2094ab9136e2.png)
 
+#### Plotting the tail segment of interest
 
+
+
+
+
+### Plotting the gramian angular summation fields
+
+The package allows to create a visual representation of gramian angular summation fields (GASFs) using ```ggplot2```. 
+
+#### Plotting single GASF of interest
+
+The ```plot_gasf()``` function draws a single matrix of interest. It requires the name of a particular segment and a list of matrices produced by the ```create_gasf_list()``` function as an input. 
+
+Below is an example of the usage of the ```plot_gasf()``` function. Please note that in order for this example to work properly, one must first execute the 3 first commands from the **Classification of reads using standalone functions** section.  
+
+```r
+
+example_gasf <- plot_gasf(gasf_name = "1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5",
+                          gasf_list = gl, 
+                          save_file = TRUE)
+
+print(example_gasf)
+```
+And here is an example output:
+
+
+![1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5](https://user-images.githubusercontent.com/68285258/170500508-b27289fa-e62c-4a14-9e50-ff1a8798dfa7.png)
+
+
+
+#### Plotting multiple GASFs
+
+**Ninetails** also allows the user to plot the entire list of matrices produced by the ```create_gasf_list()``` function at once. The files will be saved in the current working directory. An example of usage is given below:
+
+```r
+plot_multiple_gasf(gasf_list = gl, num_cores = 10)
+
+```
+And this results in multiple plots, like this: 
+
+![drawing](https://user-images.githubusercontent.com/68285258/170512100-ddfb03dc-63c8-449e-8339-57a4ec16ce43.png)
+
+
+
+
+
+However, it is advisable to use this function with caution. The data contained in a ```gasf_list``` object tends to be large. Drawing multiple graphs at once may overload the system and cause it to crash.
 
 
 ## Citation
@@ -234,6 +281,9 @@ Please cite **ninetails** as: Gumińska N et al., Direct detection of non-adenos
 Preprint is in the preparation.
 
 ## Future plans
+* model finetuning
+* optimized positioning (position calibration)
+* port to Python
 
 ## Troubleshooting
 
