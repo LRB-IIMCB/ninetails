@@ -287,7 +287,7 @@ Preprint is in the preparation.
 
 ## Troubleshooting
 
-If you encounter a bug, please post it on github. To help diagnose the problem, send a minimal reproducible example (required inputs covering around 5-10 reads), so I will be able to reproduce the error and fix it for you.
+If you encounter a bug, please post it on github. To help diagnose the problem, send a minimal reproducible example (required inputs covering around 5-10 reads + corresponding nanopolish output & sequencing summary), so I will be able to reproduce the error and fix it for you.
 
 ## Maintainer
 
