@@ -70,6 +70,28 @@ Moreover, the function also creates a log file in the directory specified by the
 
 ### Output explanation
 
+The **binary_classified_reads** dataframe (file) contains following columns:
+
+| column name  | content |
+| ------------- | ------------- |
+| readname  | an identifier of a given read  (36 characters)|
+| class  | the crude result of classification  |
+
+The ```class``` column contains information whether the given read was recognized as modified (containing non-adenosine residue) or not. Additionally, it contains information about reads discarded from classification - the reason for this is also included. This column may contain a following content:
+
+| class column content  | explanation |
+| ------------- | ------------- |
+| modified | read recognized as containing non-adenosine residue within poly(A) tail|
+|  unmodified | read containing only adenosines in poly(A) tail  |
+|  unclassified - insufficient read length | read length estimated by Nanopolish as <10 nt (insufficient for proper tail segmentation)|
+|  unclassified - nanopolish qc failed (adapter) | insufficient read quality assigned by Nanopolish |
+|  unclassified - nanopolish qc failed (suffclip) | insufficient read quality assigned by Nanopolish. This category shows only if ```pass_only=TRUE``` was passed to the processing function, so reads tagged by Nanopolish as "suffclip" were excluded from the analysis|
+
+The **detailed_positional_nonadenosine_residues** dataframe (file) contains following columns:
+
+
+
+
 ### Visual inspection of reads of interest
 
 **Ninetails** has built-in functions ```plot_squiggle()``` and ```plot_tail_range()``` for plotting whole reads and the poly(A) tail region, respectively.
@@ -154,6 +176,4 @@ If you encounter a bug, please post it on github. To help diagnose the problem, 
 ## Maintainer
 
 Any issues regarding the **ninetails** should be addressed to Natalia Gumińska (nguminska (at) iimcb.gov.pl).
-
-## License
 
