@@ -292,7 +292,7 @@ However, it is advisable to use this function with caution. The data contained i
 
 ## Citation
 
-Please cite **ninetails** as: Gumińska N et al., Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing
+Please cite **ninetails** as: Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. (2022), Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing, 
 
 Preprint is in the preparation.
 
