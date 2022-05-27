@@ -5,15 +5,15 @@
 #' https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r
 #'
 #'
-#' @param signal character string. Name of the given ONT signal.
+#' @param signal numeric vector. A vector corresponding to given ONT signal.
 #'
-#' @return winsorized signal.
+#' @return winsorized signal (numeric vector).
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' winsorize_signal <- function(signal='12fdcb3-ewfd543-34552-1234ddta345')
+#' winsorized_signal <- winsorize_signal(signal= sample(200:300))
 #'
 #' }
 #'
@@ -29,6 +29,10 @@ winsorize_signal <- function(signal){
                           msg=paste0("Signal vector must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_atomic(signal),
                           msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_atomic(signal),
+                          msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
+  assertthat::assert_that(assertthat::noNA(signal),
+                          msg="Signal vector must not contain missing values. Please provide a valid argument.")
 
   signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
   minimal_val <- signal_q[1L]
@@ -63,6 +67,69 @@ winsorize_signal <- function(signal){
 #'
 #'
 count_overlaps <- function(signal, segment, overlap) {
+  # avoiding 'no visible binding for global variable' error
+  x <- NULL
+
+  #Assertions
+  if (missing(signal)) {
+    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
+  }
+
+  if (missing(segment)) {
+    stop("Segment number is missing. Please provide a valid segment argument.", .call = FALSE)
+  }
+
+  if (missing(overlap)) {
+    stop("Overlap vector is missing. Please provide a valid overlap argument.", .call = FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(signal),
+                          msg=paste0("Signal vector must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_atomic(signal),
+                          msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
+  assertthat::assert_that(overlap<segment,
+                          msg="Segment value must be greater than overlap value. Please provide a valid argument.")
+
+  checkmate::assert_integerish(segment,
+                               tol = sqrt(.Machine$double.eps),
+                               lower = 1,
+                               upper = Inf,
+                               any.missing = TRUE,
+                               all.missing = TRUE,
+                               len = NULL,
+                               min.len = 1L,
+                               max.len = 1,
+                               unique = FALSE,
+                               sorted = FALSE,
+                               names = NULL,
+                               typed.missing = FALSE,
+                               null.ok = FALSE,
+                               coerce = FALSE,
+                               .var.name = checkmate::vname(x),
+                               add = NULL
+                               )
+
+  checkmate::assert_integerish(overlap,
+                               tol = sqrt(.Machine$double.eps),
+                               lower = 0,
+                               upper = Inf,
+                               any.missing = TRUE,
+                               all.missing = TRUE,
+                               len = NULL,
+                               min.len = 1L,
+                               max.len = 1,
+                               unique = FALSE,
+                               sorted = FALSE,
+                               names = NULL,
+                               typed.missing = FALSE,
+                               null.ok = FALSE,
+                               coerce = FALSE,
+                               .var.name = checkmate::vname(x),
+                               add = NULL)
+
+
+
+
 
   starts <- seq(1, length(signal), by=segment-overlap)
   ends   <- starts + segment - 1

@@ -265,7 +265,7 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
 #'                          sequencing_summary = '/path/to/file',
 #'                          workspace = '/path/to/guppy/workspace',
 #'                          num_cores = 10,
-#'                          basecalled_group = 'Basecall_1D_000')
+#'                          basecall_group = 'Basecall_1D_000')
 #'
 #'}
 #'
@@ -294,7 +294,8 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
   polya_summary <- extract_polya_data(nanopolish, sequencing_summary, pass_only)
 
   # this is list of indexes required for parallel computing; the main list of reads is split for chunks (does not accept readname)
-  index_list = split(1:length(names(polya_summary$filename)), ceiling(1:length(names(polya_summary$filename))/100))
+  index_list = split(1:length(names(polya_summary$filename)),
+                     ceiling(1:length(names(polya_summary$filename))/100))
 
   #checking data format
   check_fast5_filetype(workspace, basecall_group)
@@ -373,6 +374,8 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
 #'
 #'
 split_with_overlaps_moved <- function(readname, tail_feature_list, segment, overlap) {
+  # avoiding 'no visible binding for global variable' error
+  x <- NULL
 
   #assertions
   if (missing(readname)) {
@@ -388,11 +391,43 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
   assertthat::assert_that(assertive::is_list(tail_feature_list),
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
-  assertthat::assert_that(assertive::is_numeric(segment), msg=paste0("Segment must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(overlap), msg=paste0("Overlap must be numeric. Please provide a valid argument."))
+  checkmate::assert_integerish(segment,
+                               tol = sqrt(.Machine$double.eps),
+                               lower = 1,
+                               upper = Inf,
+                               any.missing = TRUE,
+                               all.missing = TRUE,
+                               len = NULL,
+                               min.len = 1L,
+                               max.len = 1,
+                               unique = FALSE,
+                               sorted = FALSE,
+                               names = NULL,
+                               typed.missing = FALSE,
+                               null.ok = FALSE,
+                               coerce = FALSE,
+                               .var.name = checkmate::vname(x),
+                               add = NULL)
 
-  assertthat::assert_that(segment>0, msg= "Segment value must be greater than 0. Please provide a valid argument.")
-  assertthat::assert_that(overlap>=0, msg="Overlap value must be larger than or equal to 0. Please provide a valid argument.")
+  checkmate::assert_integerish(overlap,
+                               tol = sqrt(.Machine$double.eps),
+                               lower = 0,
+                               upper = Inf,
+                               any.missing = TRUE,
+                               all.missing = TRUE,
+                               len = NULL,
+                               min.len = 1L,
+                               max.len = 1,
+                               unique = FALSE,
+                               sorted = FALSE,
+                               names = NULL,
+                               typed.missing = FALSE,
+                               null.ok = FALSE,
+                               coerce = FALSE,
+                               .var.name = checkmate::vname(x),
+                               add = NULL)
+
+
   assertthat::assert_that(overlap<segment, msg="Segment value must be greater than overlap value. Please provide a valid argument.")
 
 
@@ -409,7 +444,8 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
   end_coordinates_total   <- start_coordinates_total + segment - 1
 
   #extract indices of "moved" chunks
-  moved_chunks_indices <- lapply(1:length(start_coordinates_total), function(i) 1 %in% moves[start_coordinates_total[i]:end_coordinates_total[i]])
+  moved_chunks_indices <- lapply(1:length(start_coordinates_total),
+                                 function(i) 1 %in% moves[start_coordinates_total[i]:end_coordinates_total[i]])
   moved_chunks_indices <- which(unlist(moved_chunks_indices))
 
   #coordinates of selected "moved" chunks
@@ -417,12 +453,14 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
   end_coordinates_selected <- start_coordinates_selected + segment - 1
 
   #extract ONLY "moved" signal chunks
-  extracted_moved_signals <- lapply(1:length(start_coordinates_selected), function(i) signal[start_coordinates_selected[i]:end_coordinates_selected[i]])
+  extracted_moved_signals <- lapply(1:length(start_coordinates_selected),
+                                    function(i) signal[start_coordinates_selected[i]:end_coordinates_selected[i]])
   # replace NAs with 3 most frequent values (randomly sampled)
   # if all values would be equal, so the breaks would not be unique
 
   most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:3]))
-  extracted_moved_signals <- lapply(extracted_moved_signals, function(n) replace(n, is.na(n), sample(most_freq_vals,sum(is.na(n)),TRUE)))
+  extracted_moved_signals <- lapply(extracted_moved_signals,
+                                    function(n) replace(n, is.na(n), sample(most_freq_vals,sum(is.na(n)),TRUE)))
 
   # naming chunks based on readnames & indices
   chunk_names <- paste0(rep(readname, length(extracted_moved_signals)), '_', unlist(moved_chunks_indices))
@@ -478,7 +516,8 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_list(tail_feature_list),
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
@@ -492,7 +531,11 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
   cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=")
 
   #create empty list for extracted data
   tail_chunk_list = list()

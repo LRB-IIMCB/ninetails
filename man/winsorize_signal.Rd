@@ -8,10 +8,10 @@ signal range). Slightly affects signal extremes.}
 winsorize_signal(signal)
 }
 \arguments{
-\item{signal}{character string. Name of the given ONT signal.}
+\item{signal}{numeric vector. A vector corresponding to given ONT signal.}
 }
 \value{
-winsorized signal.
+winsorized signal (numeric vector).
 }
 \description{
 Based on the A. Signorell's DescTools
@@ -20,7 +20,7 @@ https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r
 \examples{
 \dontrun{
 
-winsorize_signal <- function(signal='12fdcb3-ewfd543-34552-1234ddta345')
+winsorized_signal <- winsorize_signal(signal= sample(200:300))
 
 }
 

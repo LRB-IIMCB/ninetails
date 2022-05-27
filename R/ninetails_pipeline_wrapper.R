@@ -162,7 +162,11 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   close(log_file)
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=")
 
 
   # loop for parallel extraction
@@ -208,7 +212,11 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
 
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=")
 
   #create empty list for extracted data
   tail_chunk_list = list()
@@ -257,7 +265,11 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   close(log_file)
 
   #set progressbar
-  pb <- utils::txtProgressBar(min = 0, max = length(tail_chunk_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(tail_chunk_list),
+                              style = 3,
+                              width = 50,
+                              char = "=")
 
   #loop through the nested list
   for (read in seq_along(tail_chunk_list)){
@@ -308,7 +320,11 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   close(log_file)
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=")
 
   #create empty lists for extracted data
   overlap_count_list = list()
@@ -345,7 +361,11 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
 
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=")
 
   #create empty list for extracted data
   tail_length_list = list()
