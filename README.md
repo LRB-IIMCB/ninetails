@@ -15,6 +15,10 @@ Currently, **ninetails** can distinguish characteristic signatures of four types
 
 The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
 
+## Important note
+
+Please be aware that signal transformations performed during analysis can place a heavy load on memory. This is especially true if your data covers the entire sequencing run. For the moment, **ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the ```Nanopolish``` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
+
 ## Prerequisites
 
 **Ninetails** requires the following input data to operate:
