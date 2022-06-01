@@ -1,3 +1,4 @@
+
 #' Wrapper function for ninetails package.
 #'
 #' This function allows to perform all of the steps required to discover
@@ -139,6 +140,24 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   #####################################################
   # CREATE TAIL FEATURE LIST
   #####################################################
+
+  # Assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
+
+  if (missing(basecall_group)) {
+    stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
+  }
+
+  if (missing(workspace)) {
+    stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+
+
   # Extracting and processing polya & sequencing summary data
   polya_summary <- extract_polya_data(nanopolish, sequencing_summary, pass_only)
 
@@ -166,7 +185,8 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
                               max = length(index_list),
                               style = 3,
                               width = 50,
-                              char = "=")
+                              char = "=",
+                              file= stderr())
 
 
   # loop for parallel extraction
@@ -199,6 +219,21 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   # CREATE TAIL CHUNK LIST
   #####################################################
 
+  # initial assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
+
+  if (missing(tail_feature_list)) {
+    stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_list(tail_feature_list),
+                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+
+
 
   # this is list of indexes required for parallel computing; the main list of reads is split for chunks
   index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
@@ -216,7 +251,8 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
                               max = length(index_list),
                               style = 3,
                               width = 50,
-                              char = "=")
+                              char = "=",
+                              file= stderr())
 
   #create empty list for extracted data
   tail_chunk_list = list()
@@ -251,6 +287,22 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   # CREATE GASF LIST
   #####################################################
 
+  # Assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
+
+  if (missing(tail_chunk_list)) {
+    stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid file format."))
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+
+
+
   #retrieve chunknames
   chunknames <- gsub(".*?\\.","",names(rapply(tail_chunk_list, function(x) head(x, 1))))
 
@@ -269,7 +321,8 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
                               max = length(tail_chunk_list),
                               style = 3,
                               width = 50,
-                              char = "=")
+                              char = "=",
+                              file= stderr())
 
   #loop through the nested list
   for (read in seq_along(tail_chunk_list)){
@@ -324,7 +377,8 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
                               max = length(index_list),
                               style = 3,
                               width = 50,
-                              char = "=")
+                              char = "=",
+                              file= stderr())
 
   #create empty lists for extracted data
   overlap_count_list = list()
@@ -365,7 +419,8 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
                               max = length(index_list),
                               style = 3,
                               width = 50,
-                              char = "=")
+                              char = "=",
+                              file= stderr())
 
   #create empty list for extracted data
   tail_length_list = list()
@@ -418,7 +473,7 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, ba
   #dump output to files:
   names(results) <- c("binary_classified_reads", "detailed_positional_nonadenosine_residues")
   mapply(function (x,y) utils::write.table(x, file = file.path(save_dir, paste0(as.character(Sys.time()), '_', y, '.tsv')),
-                                    row.names = F, sep="\t", quote = F), results, names(results))
+                                           row.names = F, sep="\t", quote = F), results, names(results))
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))

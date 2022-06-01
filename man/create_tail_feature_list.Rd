@@ -53,7 +53,7 @@ create_tail_feature_list(nanopolish = '/path/to/file',
                          sequencing_summary = '/path/to/file',
                          workspace = '/path/to/guppy/workspace',
                          num_cores = 10,
-                         basecalled_group = 'Basecall_1D_000')
+                         basecall_group = 'Basecall_1D_000')
 
 }
 

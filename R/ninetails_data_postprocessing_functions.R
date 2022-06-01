@@ -52,7 +52,12 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
   cat(paste0('[', as.character(Sys.time()), '] ','Retrieving segmentation data...', '\n', sep=''))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
 
   #create empty lists for extracted data
   overlap_count_list = list()
@@ -78,7 +83,12 @@ create_coordinate_dataframe <- function(tail_feature_list, num_cores){
   cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
 
   #create empty list for extracted data
   tail_length_list = list()

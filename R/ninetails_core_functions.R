@@ -52,29 +52,43 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   }
 
 
-  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag), show_col_types = FALSE)
-  sequencing_summary_table <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
+  nanopolish_polya_table <- vroom::vroom(nanopolish,
+                                         col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
+                                         show_col_types = FALSE)
+  sequencing_summary_table <- vroom::vroom(sequencing_summary,
+                                           col_select = c(filename, read_id),
+                                           show_col_types = FALSE)
   colnames(sequencing_summary_table)[2] <- "readname"
   sequencing_summary_table$readname <- as.character(sequencing_summary_table$readname)
   nanopolish_polya_table$readname <- as.character(nanopolish_polya_table$readname)
 
   #assertions
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste0("File ",nanopolish," does not exist",sep=""))
-  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table), msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
+  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
+                          msg = "Empty string provided as an input. Please provide a nanopolish as a string")
+  assertthat::assert_that(assertive::is_existing_file(nanopolish),
+                          msg=paste0("File ",nanopolish," does not exist",sep=""))
+  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
+                          msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(sequencing_summary),msg = "Empty string provided as an input. Please provide a sequencing_summary as a string")
-  assertthat::assert_that(assertive::is_existing_file(sequencing_summary), msg=paste0("File ",sequencing_summary," does not exist",sep=""))
-  assertthat::assert_that(assertive::has_rows(sequencing_summary_table), msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
+  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(sequencing_summary),
+                          msg = "Empty string provided as an input. Please provide a sequencing_summary as a string")
+  assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
+                          msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+  assertthat::assert_that(assertive::has_rows(sequencing_summary_table),
+                          msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
 
   assertthat::assert_that(assertive::is_a_bool(pass_only),msg="Please provide TRUE/FALSE values for pass_only parameter")
 
 
   # Add filtering criterion: select only pass or pass $ suffclip
   if(pass_only == TRUE){
-    polya_summary <- dplyr::left_join(nanopolish_polya_table[which(nanopolish_polya_table$qc_tag=="PASS"),], sequencing_summary_table, by="readname")
+    polya_summary <- dplyr::left_join(nanopolish_polya_table[which(nanopolish_polya_table$qc_tag=="PASS"),],
+                                      sequencing_summary_table,
+                                      by="readname")
   } else {
-    polya_summary <- dplyr::left_join(nanopolish_polya_table[which(nanopolish_polya_table$qc_tag %in% c("PASS", "SUFFCLIP")),], sequencing_summary_table, by="readname")
+    polya_summary <- dplyr::left_join(nanopolish_polya_table[which(nanopolish_polya_table$qc_tag %in% c("PASS", "SUFFCLIP")),],
+                                      sequencing_summary_table,
+                                      by="readname")
   }
 
   # Add filtering criterion: tail length >= 10 nt
@@ -297,9 +311,6 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
   index_list = split(1:length(names(polya_summary$filename)),
                      ceiling(1:length(names(polya_summary$filename))/100))
 
-  #checking data format
-  check_fast5_filetype(workspace, basecall_group)
-
   #create empty list for extracted fast5 data
   tail_feature_list = list()
 
@@ -307,7 +318,12 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0, max = length(index_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
 
   # use selected number of cores
   doParallel::registerDoParallel(cores = num_cores)
@@ -535,7 +551,8 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
                               max = length(index_list),
                               style = 3,
                               width = 50,
-                              char = "=")
+                              char = "=",
+                              file= stderr())
 
   #create empty list for extracted data
   tail_chunk_list = list()
@@ -583,11 +600,32 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
 #'}
 #'
 create_gasf <- function(tail_chunk){
+  x <- NULL
 
   #assertions
   if (missing(tail_chunk)) {
     stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
   }
+
+  checkmate::assert_integerish(tail_chunk,
+                               tol = sqrt(.Machine$double.eps),
+                               lower = -Inf,
+                               upper = Inf,
+                               any.missing = TRUE,
+                               all.missing = TRUE,
+                               len = NULL,
+                               min.len = 100L,
+                               max.len = 100,
+                               unique = FALSE,
+                               sorted = FALSE,
+                               names = NULL,
+                               typed.missing = FALSE,
+                               null.ok = FALSE,
+                               coerce = FALSE,
+                               .var.name = checkmate::vname(x),
+                               add = NULL)
+
+
 
   # rescale values so that all of them fall in the interval [-1, 1]:
   tail_chunk <- (tail_chunk-max(tail_chunk)+(tail_chunk-min(tail_chunk)))/(max(tail_chunk)-min(tail_chunk))
@@ -652,7 +690,10 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
     stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid file format."))
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
 
   #register cores for parallelization
@@ -666,7 +707,12 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 
   #set progressbar
   cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular summation fields...', '\n', sep=''))
-  pb <- utils::txtProgressBar(min = 0, max = length(tail_chunk_list), style = 3, width = 50, char = "=")
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(tail_chunk_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
 
   #loop through the nested list
   for (read in seq_along(tail_chunk_list)){
@@ -708,6 +754,14 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
 #'
 #'}
 predict_classes <- function(gasf_list){
+
+  #assertions
+  if (missing(gasf_list)) {
+    stop("List of transformed signal chunks is missing. Please provide a valid gasf_list argument.", call. =FALSE)
+  }
+
+
+
 
   chunknames <- names(gasf_list)
   names(gasf_list)  <- NULL
