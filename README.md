@@ -4,6 +4,10 @@
 
 <img align="right" width="200" height="220" src="https://user-images.githubusercontent.com/68285258/168554098-a5a5dee9-2c8f-4351-86b4-e6420a5b8ced.png">
 
+# IMPORTANT NOTE #
+**Ninetals is currently under maintenance. A major upgrade is being uploaded. Please refrain from installing it until the maintenance would be resumed. 
+Thank you for your patience.** 
+
 ## Introduction
 * It works on Oxford Nanopore direct RNA sequencing reads basecalled by Guppy software
 * It requires tail delimitation data produced by Nanopolish software
