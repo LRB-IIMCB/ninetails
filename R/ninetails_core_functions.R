@@ -52,9 +52,18 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   }
 
 
-  nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                         col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
-                                         show_col_types = FALSE)
+  if (assertive::is_character(nanopolish)) {
+    nanopolish_polya_table <- vroom::vroom(nanopolish,
+                                           col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
+                                           show_col_types = FALSE)
+  }
+  else if (assertive::has_rows(nanopolish)) {
+    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
+  }
+  else {
+    stop("Wrong nanopolish parameter")
+  }
+
   sequencing_summary_table <- vroom::vroom(sequencing_summary,
                                            col_select = c(filename, read_id),
                                            show_col_types = FALSE)
