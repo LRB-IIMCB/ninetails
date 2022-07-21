@@ -7,11 +7,13 @@
 #' summary file. Only reads with tail lengths estimated as >= 10nt by nanopolish
 #' polya function are taken into account.
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' @param nanopolish character string. Either full path of the .tsv file produced
+#' by nanopolish polya function or an environment object containing nanopolish
+#' data.
 #'
-#' @param sequencing_summary character string. Full path of the .txt file
-#' with sequencing summary.
+#' @param sequencing_summary character string. Either full path of the .txt file
+#' with sequencing summary or an environment object containing sequencing
+#' summary data.
 #'
 #' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
 #' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
@@ -43,7 +45,7 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   # variable binding (suppressing R CMD check from throwing an error)
   readname <- polya_start <- transcript_start <- polya_length <- qc_tag  <- filename <- read_id <- NULL
 
-  if (missing(nanopolish)) {
+    if (missing(nanopolish)) {
     stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
   }
 
@@ -51,34 +53,45 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
     stop("Sequencing summary file is missing. Please provide a valid sequencing_summary argument.", .call = FALSE)
   }
 
+  assertthat::assert_that(assertive::is_a_bool(pass_only),
+                          msg="Please provide TRUE/FALSE values for pass_only parameter")
 
-  nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                         col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
-                                         show_col_types = FALSE)
-  sequencing_summary_table <- vroom::vroom(sequencing_summary,
-                                           col_select = c(filename, read_id),
+  if (assertive::is_character(nanopolish)) {
+
+    assertthat::assert_that(assertive::is_existing_file(nanopolish),
+                            msg=paste0("File ",nanopolish," does not exist",sep=""))
+
+    nanopolish_polya_table <- vroom::vroom(nanopolish,
+                                           col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
                                            show_col_types = FALSE)
-  colnames(sequencing_summary_table)[2] <- "readname"
-  sequencing_summary_table$readname <- as.character(sequencing_summary_table$readname)
-  nanopolish_polya_table$readname <- as.character(nanopolish_polya_table$readname)
+  }
+  else if (assertive::has_rows(nanopolish)) {
+    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
+  }
+  else {
+    stop("Wrong nanopolish parameter. Please provide filepath or object.")
+  }
 
-  #assertions
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
-                          msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                          msg=paste0("File ",nanopolish," does not exist",sep=""))
+  #in case if smth goes wrong with rows
   assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
                           msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(sequencing_summary),
-                          msg = "Empty string provided as an input. Please provide a sequencing_summary as a string")
-  assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
-                          msg=paste0("File ",sequencing_summary," does not exist",sep=""))
-  assertthat::assert_that(assertive::has_rows(sequencing_summary_table),
-                          msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
 
-  assertthat::assert_that(assertive::is_a_bool(pass_only),msg="Please provide TRUE/FALSE values for pass_only parameter")
+  if (assertive::is_character(sequencing_summary)) {
 
+    assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
+                            msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+
+    sequencing_summary_table <- vroom::vroom(sequencing_summary,
+                                             col_select = c(filename, read_id),
+                                             show_col_types = FALSE)
+  }
+  else if (assertive::has_rows(sequencing_summary)) {
+    sequencing_summary_table <- sequencing_summary
+  }
+  else {
+    stop("Wrong sequencing_summary parameter. Please provide filepath or object.")
+  }
 
   # Add filtering criterion: select only pass or pass $ suffclip
   if(pass_only == TRUE){
