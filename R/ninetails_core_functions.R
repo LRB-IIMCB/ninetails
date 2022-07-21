@@ -45,7 +45,7 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
   # variable binding (suppressing R CMD check from throwing an error)
   readname <- polya_start <- transcript_start <- polya_length <- qc_tag  <- filename <- read_id <- NULL
 
-    if (missing(nanopolish)) {
+  if (missing(nanopolish)) {
     stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
   }
 
