@@ -31,6 +31,7 @@
 #'
 #' @param basecall_group character string ["Basecall_1D_000"]. Name of the
 #' level in the Fast5 file hierarchy from which the data should be extracted.
+#' The "Basecall_1D_000" is set by default.
 #'
 #' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
 #' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
@@ -62,7 +63,7 @@
 #'
 #' }
 
-check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only, save_dir){
+check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, basecall_group="Basecall_1D_000", pass_only=TRUE, save_dir){
 
   # variable binding (suppressing R CMD check from throwing an error)
   nam <- NULL
