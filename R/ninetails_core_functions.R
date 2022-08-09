@@ -30,7 +30,7 @@
 #' @examples
 #'\dontrun{
 #'
-#' extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
+#' ninetails::extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
 #'                    sequencing_summary = '/path/to/sequencing_summary.txt',
 #'                    pass_only = TRUE)
 #'
@@ -137,10 +137,10 @@ extract_polya_data <- function(nanopolish,
 #' @examples
 #'\dontrun{
 #'
-#' extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
-#'                  polya_summary = polya_summary_table,
-#'                  workspace = '/path/to/folder/containing/multifast5s',
-#'                  basecall_group = 'Basecall_1D_000')
+#' ninetails::extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
+#'                              polya_summary = polya_summary_table,
+#'                              workspace = '/path/to/folder/containing/multifast5s',
+#'                              basecall_group = 'Basecall_1D_000')
 #'
 #'}
 extract_tail_data <- function(readname,
@@ -279,11 +279,15 @@ extract_tail_data <- function(readname,
 #' @examples
 #'\dontrun{
 #'
-#' create_tail_feature_list(nanopolish = '/path/to/file',
-#'                          sequencing_summary = '/path/to/file',
-#'                          workspace = '/path/to/guppy/workspace',
-#'                          num_cores = 10,
-#'                          basecall_group = 'Basecall_1D_000')
+#'tfl <- ninetails::create_tail_feature_list(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
+#'                                                                    package = 'ninetails'),
+#'                                           sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+#'                                                                            package = 'ninetails'),
+#'                                           workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
+#'                                                                   package = 'ninetails'),
+#'                                           num_cores = 2,
+#'                                           basecall_group = 'Basecall_1D_000',
+#'                                           pass_only=TRUE)
 #'
 #'}
 #'
@@ -414,7 +418,7 @@ create_tail_feature_list <- function(nanopolish,
 #' @examples
 #' \dontrun{
 #'
-#' filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+#' ninetails::filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
 #'
 #'}
 filter_signal_by_threshold <- function(signal) {
@@ -517,7 +521,7 @@ filter_signal_by_threshold <- function(signal) {
 #' @examples
 #' \dontrun{
 #'
-#' split_tail_centered(readname= "1234-anexample-r3adn4m3",
+#' ninetails::split_tail_centered(readname= "1234-anexample-r3adn4m3",
 #'                     tail_feature_list = tail_feature_list)
 #'
 #'}
@@ -604,8 +608,8 @@ split_tail_centered <- function(readname,
 #' @examples
 #' \dontrun{
 #'
-#' create_tail_chunk_list(tail_feature_list = tail_feature_list,
-#'                        num_cores = 2)
+#' tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl,
+#'                                          num_cores = 3)
 #'
 #'}
 create_tail_chunk_list <- function(tail_feature_list,
@@ -693,8 +697,8 @@ create_tail_chunk_list <- function(tail_feature_list,
 #' @examples
 #' \dontrun{
 #'
-#' create_gaf(tail_chunk = tail_chunk,
-#'            method="s")
+#' ninetails::create_gaf(tail_chunk = tail_chunk,
+#'                       method="s")
 #'
 #'}
 
@@ -770,7 +774,7 @@ create_gaf <- function(tail_chunk, method="s"){
 #' @examples
 #' \dontrun{
 #'
-#' combine_gafs(tail_chunk = tail_chunk)
+#' ninetails::combine_gafs(tail_chunk = tail_chunk)
 #'
 #'}
 combine_gafs <- function(tail_chunk){
@@ -816,7 +820,8 @@ combine_gafs <- function(tail_chunk){
 #' @examples
 #'\dontrun{
 #'
-#' create_gaf_list(tail_chunk_list = tail_chunk_list, num_cores = 10)
+#' gl <- ninetails::create_gaf_list(tail_chunk_list = tcl,
+#'                                  num_cores = 2)
 #'
 #'}
 create_gaf_list <- function(tail_chunk_list,
@@ -893,7 +898,7 @@ create_gaf_list <- function(tail_chunk_list,
 #' @examples
 #'\dontrun{
 #'
-#' predict_gaf_classes(gaf_list = gaf_list, keras_model = "/path/to/the_model.h5")
+#' pl <- ninetails::predict_gaf_classes(gl)
 #'
 #'}
 predict_gaf_classes <- function(gaf_list){

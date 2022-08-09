@@ -51,13 +51,16 @@
 #' @examples
 #'\dontrun{
 #'
-#' check_tails(nanopolish = '/path/to/file',
-#'             sequencing_summary = '/path/to/file',
-#'             workspace = '/path/to/guppy/workspace',
-#'             num_cores = 1,
-#'             basecalled_group = 'Basecall_1D_000',
-#'             pass_only=TRUE,
-#'             save_dir = '/directory/where/output/shall/be/stored')
+#'results <- ninetails::check_tails(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
+#'                                                           package = 'ninetails'),
+#'                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+#'                                                                   package = 'ninetails'),
+#'                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
+#'                                                          package = 'ninetails'),
+#'                                  num_cores = 2,
+#'                                  basecall_group = 'Basecall_1D_000',
+#'                                  pass_only=TRUE,
+#'                                  save_dir = '~/Downloads')
 #'
 #' }
 
