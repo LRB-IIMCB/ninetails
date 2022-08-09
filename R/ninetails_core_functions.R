@@ -53,9 +53,15 @@ extract_polya_data <- function(nanopolish,
 
   assertthat::assert_that(assertive::is_a_bool(pass_only),
                           msg="Please provide TRUE/FALSE values for pass_only parameter")
+<<<<<<< HEAD
 
   if (assertive::is_character(nanopolish)) {
 
+=======
+
+  if (assertive::is_character(nanopolish)) {
+
+>>>>>>> 46fa55a5b9b1a4d630c8f2001f624b21c0f19060
     assertthat::assert_that(assertive::is_existing_file(nanopolish),
                             msg=paste0("File ",nanopolish," does not exist",sep=""))
 
@@ -74,6 +80,7 @@ extract_polya_data <- function(nanopolish,
   assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
                           msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
+<<<<<<< HEAD
 
   if (assertive::is_character(sequencing_summary)) {
 
@@ -98,7 +105,24 @@ extract_polya_data <- function(nanopolish,
   colnames(sequencing_summary_table)[2] <- "readname"
   sequencing_summary_table$readname <- as.character(sequencing_summary_table$readname)
   nanopolish_polya_table$readname <- as.character(nanopolish_polya_table$readname)
+=======
 
+  if (assertive::is_character(sequencing_summary)) {
+
+    assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
+                            msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+>>>>>>> 46fa55a5b9b1a4d630c8f2001f624b21c0f19060
+
+    sequencing_summary_table <- vroom::vroom(sequencing_summary,
+                                             col_select = c(filename, read_id),
+                                             show_col_types = FALSE)
+  }
+  else if (assertive::has_rows(sequencing_summary)) {
+    sequencing_summary_table <- sequencing_summary
+  }
+  else {
+    stop("Wrong sequencing_summary parameter. Please provide filepath or object.")
+  }
 
   # Add filtering criterion: select only pass or pass $ suffclip
   if(pass_only == TRUE){
