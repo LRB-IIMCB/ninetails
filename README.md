@@ -128,7 +128,7 @@ out <- ninetails::create_outputs(tail_feature_list = tfl,
 
 ### Output explanation
 
-The **read_classes** dataframe (file) contains following columns:
+#### The **read_classes** dataframe (file) contains following columns:
 
 | column name  | content |
 | ------------- | ------------- |
@@ -149,17 +149,15 @@ The ```class``` column contains information whether the given read was recognize
 | unclassified  | not included in the analysis (pass only = T) |
 | unclassified  | insufficient read length |
 
-The **nonadenosine_residues** dataframe (file) contains following columns:
+#### The **nonadenosine_residues** dataframe (file) contains following columns:
 
 | column name  | content |
 | ------------- | ------------- |
-| readname  | an identifier of a given read  (36 characters)|
-| chunk	  | number of tail segment in which the given non-adenosine residue was spotted; reported from 3' end  |
+| readname  | an identifier of a given read  (36 characters)  |
 | prediction  | the result of classification (basic model: C, G, U assignment)  |
-| total_chunk  | total number of segments per given tail |
-| tail_length  | the tail length estimated according to Nanopolish polya function  |
-| interval  | the approximate region of the poly(A) tail where the modification is to be expected |
-| centered_pos  | the approximate nucleotide position in the centre of a given tail segment where modifications are to be expected; reported from 5' end |
+| est_nonA_pos  | the approximate nucleotide position where nonadenosine is to be expected; reported from 5' end |
+| polya_length  | the tail length estimated according to Nanopolish polya function  |
+| qc_tag  | quality tag assigned by nanopolish polya function  |
 
 
 
@@ -178,25 +176,27 @@ In addition, the graphs can depict only signal data (```moves=FALSE```) or they 
 The following example demonstrates how to use the ```plot_squiggle()``` function:
 
 ```r
-plot <- plot_squiggle(readname = "cd6c7f1d-6ef4-45a0-a67a-0a2853967e5b",
-                      nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                package = 'ninetails'),
-                      sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
-                                                        package = 'ninetails'),
-                      workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                               package = 'ninetails'),
-                      basecall_group = 'Basecall_1D_000',
-                      moves = FALSE,
-                      rescale = TRUE)
+plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+                                 nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                          package = 'ninetails'),
+                                 sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',  
+                                                                  package = 'ninetails'), 
+                                 workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                                         package = 'ninetails'),
+                                 basecall_group = 'Basecall_1D_000',
+                                 moves = FALSE,
+                                 rescale = TRUE)
 
 print(plot)
 ```
 
 The output of the above command is the following graph:
-![moves_false_whole_sig](https://user-images.githubusercontent.com/68285258/170456526-e4b05d2a-1fda-45f4-b1f2-f4dfa82b751c.png)
+![plot_squiggle](https://user-images.githubusercontent.com/68285258/183749085-633a8b95-f36a-4484-bb47-4916807b05e5.png)
+
+
 
 If the (```moves=TRUE```) argument is passed, then the graph also contains information regarding moves, which looks as follows:
-![moves_true_whole_sig](https://user-images.githubusercontent.com/68285258/170457349-d3adcf55-37e3-4a70-b8e1-689ed9f05182.png)
+![plot_squiggle_moves](https://user-images.githubusercontent.com/68285258/183749261-162683a1-b13c-4cab-b2b8-e8a360831fb2.png)
 
 
 
@@ -205,27 +205,28 @@ If the (```moves=TRUE```) argument is passed, then the graph also contains infor
 The ```plot_tail_range()``` function accepts the same arguments as the abovementioned function. An example usage looks as follows:
 
 ```r
-
-library(ninetails)
-
-plot <- plot_tail_range(readname = "cd6c7f1d-6ef4-45a0-a67a-0a2853967e5b",
-                        nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                 package = 'ninetails'),
-                        sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
-                                                         package = 'ninetails'),
-                        workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                package = 'ninetails'),
-                        basecall_group = 'Basecall_1D_000',
-                        moves = FALSE,
-                        rescale = TRUE)
+plot <- ninetails::plot_tail_range(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+                                   nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                            package = 'ninetails'),
+                                   sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
+                                                                    package = 'ninetails'),
+                                   workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                                           package = 'ninetails'),
+                                   basecall_group = 'Basecall_1D_000',
+                                   moves = TRUE,
+                                   rescale = TRUE)
 
 print(plot)
 ```
 Which outputs:
-![moves_false_tail_sig](https://user-images.githubusercontent.com/68285258/170458080-1c550bc3-488c-4c14-8390-688d613f2ca4.png)
+![tail_range](https://user-images.githubusercontent.com/68285258/183749972-58b40238-d2e6-4f2a-b134-c462c3b0bbc2.png)
+
 
 Or below, if the (```moves=TRUE```) argument is passed:
-![moves_true_tail_sig](https://user-images.githubusercontent.com/68285258/170458256-c850e981-b8b0-4c29-bce0-2094ab9136e2.png)
+![tail_range_moves](https://user-images.githubusercontent.com/68285258/183749982-e8dc21fd-2220-4256-85c3-c60b0b25afe8.png)
+
+
+
 
 #### Plotting the tail segment of interest
 
@@ -233,16 +234,16 @@ Ninetails allows you to visualise a particular fragment among the list of fragme
 
 An example of how the ```plot_tail_chunk()``` function works:
 ```r
-
-example <- plot_tail_chunk(chunk_name = "1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5",
-                          tail_chunk_list = tcl)
+example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+                                      tail_chunk_list = tcl)
 
 print(example)
 ```
 
 And an example output:
 
-![00001a](https://user-images.githubusercontent.com/68285258/170530349-fd36cf05-776d-4236-989c-ca7c22492c1e.png)
+![chunk](https://user-images.githubusercontent.com/68285258/183750409-9b89eb98-790c-4cb8-8e61-a69d728d0476.png)
+
 
 
 ### Plotting the gramian angular fields
@@ -256,17 +257,17 @@ The ```plot_gaf()``` function draws a single matrix of interest. It requires the
 Below is an example of the usage of the ```plot_gaf()``` function. Please note that in order for this example to work properly, one must first execute the 3 first commands from the **Classification of reads using standalone functions** section.  
 
 ```r
-
-example_gaf <- plot_gaf(gaf_name = "1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5",
-                          gaf_list = gl, 
-                          save_file = TRUE)
+example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+                                   gaf_list = gl, 
+                                   save_file = TRUE)
 
 print(example_gaf)
 ```
 And here is an example output:
 
+![test_gaf_2channel](https://user-images.githubusercontent.com/68285258/183750865-9ab4b705-230b-4e5e-9f0a-d29acec08bfc.png)
 
-![1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5](https://user-images.githubusercontent.com/68285258/170500508-b27289fa-e62c-4a14-9e50-ff1a8798dfa7.png)
+
 
 
 
@@ -275,15 +276,14 @@ And here is an example output:
 **Ninetails** also allows the user to plot the entire list of matrices produced by the ```create_gaf_list()``` function at once. The files will be saved in the current working directory. An example of usage is given below:
 
 ```r
-plot_multiple_gaf(gaf_list = gl, num_cores = 10)
+ninetails::plot_multiple_gaf(gaf_list = gl, 
+                             num_cores = 10)
 
 ```
 And this results in multiple plots, like this: 
 
-![drawing](https://user-images.githubusercontent.com/68285258/170512100-ddfb03dc-63c8-449e-8339-57a4ec16ce43.png)
 
-
-
+![gafs](https://user-images.githubusercontent.com/68285258/183752592-177fe651-8791-4b4d-8c1e-49273a9c8283.png)
 
 
 However, it is advisable to use this function with caution. The data contained in a ```gaf_list``` object tends to be large. Drawing multiple graphs at once may overload the system and cause it to crash.
@@ -291,7 +291,8 @@ However, it is advisable to use this function with caution. The data contained i
 
 ## Citation
 
-Please cite **ninetails** as: Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing, 27th Annual Meeting of the RNA Society, Boulder, Colorado, May 31 to June 5, 2022.
+Please cite **ninetails** as: 
+Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing, 27th Annual Meeting of the RNA Society, Boulder, Colorado, May 31 to June 5, 2022.
 
 Preprint is in the preparation.
 
