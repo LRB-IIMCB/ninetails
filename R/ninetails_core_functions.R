@@ -67,9 +67,6 @@ extract_polya_data <- function(nanopolish,
     stop("Wrong nanopolish parameter. Please provide filepath or object.")
   }
 
-  #in case if smth goes wrong with rows
-  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
-                          msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
   if (assertive::is_character(sequencing_summary)) {
     assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
@@ -86,6 +83,8 @@ extract_polya_data <- function(nanopolish,
     stop("Wrong sequencing_summary parameter. Please provide filepath or object.")
   }
 
+  #rename read id column
+  names(sequencing_summary_table)[names(sequencing_summary_table) == "read_id"] <- "readname"
 
   # Add filtering criterion: select only pass or pass $ suffclip
   if(pass_only == TRUE){
