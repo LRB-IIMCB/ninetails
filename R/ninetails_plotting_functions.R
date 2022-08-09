@@ -47,12 +47,18 @@
 #' @examples
 #' \dontrun{
 #'
-#' plot_squiggle(readname = 'name-of-read-to-be-plotted',
-#'               nanopolish = '/path/to/file',
-#'               sequencing_summary = '/path/to/file',
-#'               workspace = '/path/to/guppy/workspace',
-#'               basecalled_group = 'Basecall_1D_000',
-#'               moves=TRUE, rescale=TRUE)
+#' plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+#'                                  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
+#'                                                           package = 'ninetails'),
+#'                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+#'                                                                   package = 'ninetails'),
+#'                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
+#'                                                          package = 'ninetails'),
+#'                                  basecall_group = 'Basecall_1D_000',
+#'                                  moves = FALSE,
+#'                                  rescale = TRUE)
+#'
+#' print(plot)
 #'
 #'}
 #
@@ -222,7 +228,6 @@ plot_squiggle <- function(readname,
 }
 
 
-
 #' Draws tail range squiggle for given read.
 #'
 #' Creates segmented plot of raw/rescaled ONT RNA signal (with or without moves).
@@ -271,12 +276,17 @@ plot_squiggle <- function(readname,
 #' @examples
 #' \dontrun{
 #'
-#' plot_tail_range(readname = 'name-of-read-to-be-plotted',
-#'                 nanopolish = '/path/to/file',
-#'                 sequencing_summary = '/path/to/file',
-#'                 workspace = '/path/to/guppy/workspace',
-#'                 basecalled_group = 'Basecall_1D_000',
-#'                 num_cores = 3, moves=TRUE, rescale=TRUE)
+#' plot <- ninetails::plot_tail_range(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+#'                                    nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
+#'                                                             package = 'ninetails'),
+#'                                    sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+#'                                                                     package = 'ninetails'),
+#'                                    workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
+#'                                                            package = 'ninetails'),
+#'                                    basecall_group = 'Basecall_1D_000',
+#'                                    moves = TRUE,
+#'                                    rescale = TRUE)
+#' print(plot)
 #'
 #'}
 #
@@ -483,8 +493,10 @@ plot_tail_range <- function(readname,
 #' @examples
 #'\dontrun{
 #'
-#' plot_tail_chunk(chunk_name = "3039111f-baf1-450c-f26ca4b047b4_1",
-#'                 tail_chunk_list = list_of_tail_chunks)
+#' example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+#'                                       tail_chunk_list = tcl)
+#'
+#' print(example)
 #'
 #'}
 
@@ -567,9 +579,10 @@ plot_tail_chunk <- function(chunk_name,
 #' @examples
 #' \dontrun{
 #'
-#' plot_gaf(gaf_name = "n4m3-of-giv3n-r3ad_11",
-#'          gaf_list = list_of_gafs,
-#'          save_file = FALSE)
+#' example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+#'                                    gaf_list = gl,
+#'                                    save_file = TRUE)
+#' print(example_gaf)
 #'
 #'}
 plot_gaf <- function(gaf_name,
@@ -651,8 +664,7 @@ plot_gaf <- function(gaf_name,
 #' @examples
 #' \dontrun{
 #'
-#' plot_multiple_gaf(gaf_list = list_of_gafs,
-#'                    num_cores = 4)
+#' ninetails::plot_multiple_gaf(gaf_list = gl, num_cores = 10)
 #'
 #'}
 
