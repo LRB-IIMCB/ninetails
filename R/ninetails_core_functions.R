@@ -7,11 +7,13 @@
 #' summary file. Only reads with tail lengths estimated as >= 10nt by nanopolish
 #' polya function are taken into account.
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' @param nanopolish character string. Either full path of the .tsv file produced
+#' by nanopolish polya function or an environment object containing nanopolish
+#' data.
 #'
-#' @param sequencing_summary character string. Full path of the .txt file
-#' with sequencing summary.
+#' @param sequencing_summary character string. Either full path of the .txt file
+#' with sequencing summary or an environment object containing sequencing
+#' summary data.
 #'
 #' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
 #' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
@@ -25,8 +27,6 @@
 #'
 #' @export
 #'
-#'
-#'
 #' @examples
 #'\dontrun{
 #'
@@ -35,13 +35,13 @@
 #'                    pass_only = TRUE)
 #'
 #'}
-#'
-#'
-
-extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE){
+extract_polya_data <- function(nanopolish,
+                               sequencing_summary,
+                               pass_only = TRUE){
 
   # variable binding (suppressing R CMD check from throwing an error)
   readname <- polya_start <- transcript_start <- polya_length <- qc_tag  <- filename <- read_id <- NULL
+
 
   if (missing(nanopolish)) {
     stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
@@ -51,33 +51,53 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
     stop("Sequencing summary file is missing. Please provide a valid sequencing_summary argument.", .call = FALSE)
   }
 
+  assertthat::assert_that(assertive::is_a_bool(pass_only),
+                          msg="Please provide TRUE/FALSE values for pass_only parameter")
 
-  nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                         col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
-                                         show_col_types = FALSE)
-  sequencing_summary_table <- vroom::vroom(sequencing_summary,
-                                           col_select = c(filename, read_id),
+  if (assertive::is_character(nanopolish)) {
+
+    assertthat::assert_that(assertive::is_existing_file(nanopolish),
+                            msg=paste0("File ",nanopolish," does not exist",sep=""))
+
+    nanopolish_polya_table <- vroom::vroom(nanopolish,
+                                           col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
                                            show_col_types = FALSE)
-  colnames(sequencing_summary_table)[2] <- "readname"
-  sequencing_summary_table$readname <- as.character(sequencing_summary_table$readname)
-  nanopolish_polya_table$readname <- as.character(nanopolish_polya_table$readname)
+  }
+  else if (assertive::has_rows(nanopolish)) {
+    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
+  }
+  else {
+    stop("Wrong nanopolish parameter. Please provide filepath or object.")
+  }
 
-  #assertions
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
-                          msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                          msg=paste0("File ",nanopolish," does not exist",sep=""))
+  #in case if smth goes wrong with rows
   assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
                           msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
 
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(sequencing_summary),
-                          msg = "Empty string provided as an input. Please provide a sequencing_summary as a string")
-  assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
-                          msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+
+  if (assertive::is_character(sequencing_summary)) {
+
+    assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
+                            msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+
+    sequencing_summary_table <- vroom::vroom(sequencing_summary,
+                                             col_select = c(filename, read_id),
+                                             show_col_types = FALSE)
+  }
+  else if (assertive::has_rows(sequencing_summary)) {
+    sequencing_summary_table <- sequencing_summary
+  }
+  else {
+    stop("Wrong sequencing_summary parameter. Please provide filepath or object.")
+  }
+
+  #in case if smth goes wrong with rows
   assertthat::assert_that(assertive::has_rows(sequencing_summary_table),
                           msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
 
-  assertthat::assert_that(assertive::is_a_bool(pass_only),msg="Please provide TRUE/FALSE values for pass_only parameter")
+  colnames(sequencing_summary_table)[2] <- "readname"
+  sequencing_summary_table$readname <- as.character(sequencing_summary_table$readname)
+  nanopolish_polya_table$readname <- as.character(nanopolish_polya_table$readname)
 
 
   # Add filtering criterion: select only pass or pass $ suffclip
@@ -137,11 +157,10 @@ extract_polya_data <- function(nanopolish, sequencing_summary, pass_only = TRUE)
 #'                  basecall_group = 'Basecall_1D_000')
 #'
 #'}
-#'
-#'
-
-extract_tail_data <- function(readname, polya_summary, workspace, basecall_group){
-
+extract_tail_data <- function(readname,
+                              polya_summary,
+                              workspace,
+                              basecall_group){
   #Assertions
   if (missing(readname)) {
     stop("Readname is missing. Please provide a valid readname argument.", call. =FALSE)
@@ -174,10 +193,8 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   fast5_file <- fast5_filenames[readname] # particular file name (eg. FAO12345.fast5)
   fast5_file_path <-file.path(workspace, fast5_file) #path to browsed fast5 file
 
-
   signal <- rhdf5::h5read(file.path(fast5_file_path),paste0(fast5_readname,"/Raw/Signal"))
   signal <- as.vector(signal) #vectorized sig (natively: array)
-
 
   # retrieving moves
   BaseCalled_template <- rhdf5::h5read(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group, "/BaseCalled_template"))
@@ -195,7 +212,6 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   called_events <- basecall_1d_template$called_events # number of events (nanopore translocations) recorded by device for given read
   number_of_events <- called_events * stride # number of events expanded for whole signal vec (this is estimation of signal length, however keep in mind that decimal values are ignored)
 
-
   # close all handled instances (groups, attrs) of fast5 file
   rhdf5::h5closeAll()
 
@@ -206,33 +222,35 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
   #define polya end position
   polya_end_position <- transcript_start_position -1
 
-
   # handle move data
   #this is to expand moves along raw signal
   moves_sample_wise_vector <- c(rep(move, each=stride), rep(NA, length(signal) - number_of_events))
   moves_tail_range <- moves_sample_wise_vector[polya_start_position:polya_end_position]
 
-
   # extract polya tail region of the signal
-  signal <- signal[polya_start_position:polya_end_position]
+  # signal is winsorized here!
+  signal <- ninetails::winsorize_signal(signal[polya_start_position:polya_end_position])
 
   # downsample (interpolate signal and moves) so the computation would be faster/easier to handle.
   signal <- round(stats::approx(signal, method = "linear", n=ceiling(0.2 * length(signal)))[[2]], digits=0)
   moves_tail_range <- round(stats::approx(moves_tail_range, method = "linear", n=ceiling(0.2 * length(moves_tail_range)))[[2]], digits=0)
 
+  # filter signal to find local minima & maxima corresponding to potential C, G, U modifications
+  pseudomoves <- filter_signal_by_threshold(signal)
 
   extracted_data_single_list = list() # creating empty list for the extracted fast5 data
 
   extracted_data_single_list[["fast5_filename"]] <- polya_summary$filename[read_idx]
-  extracted_data_single_list[["polya_start_pos"]] <- polya_start_position
-  extracted_data_single_list[["transcript_start_pos"]] <- transcript_start_position
   extracted_data_single_list[["tail_signal"]] <- signal
   extracted_data_single_list[["tail_moves"]] <- moves_tail_range
-  extracted_data_single_list[["tail_length"]] <- polya_summary$polya_length[read_idx]
-
+  #added for robustness
+  extracted_data_single_list[["tail_pseudomoves"]] <- pseudomoves
+  # excluded to reduce the output
+  #extracted_data_single_list[["polya_start_pos"]] <- polya_start_position
+  #extracted_data_single_list[["transcript_start_pos"]] <- transcript_start_position
+  #extracted_data_single_list[["tail_length"]] <- polya_summary$polya_length[read_idx]
 
   return(extracted_data_single_list)
-
 }
 
 
@@ -283,10 +301,15 @@ extract_tail_data <- function(readname, polya_summary, workspace, basecall_group
 #'
 #'}
 #'
-create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only=TRUE){
+create_tail_feature_list <- function(nanopolish,
+                                     sequencing_summary,
+                                     workspace,
+                                     num_cores,
+                                     basecall_group,
+                                     pass_only=TRUE){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  nam <- NULL
+  i <- NULL
 
   # Assertions
   if (missing(num_cores)) {
@@ -305,63 +328,192 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
                           msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
   # Extracting and processing polya & sequencing summary data
-  polya_summary <- extract_polya_data(nanopolish, sequencing_summary, pass_only)
-
-  # this is list of indexes required for parallel computing; the main list of reads is split for chunks (does not accept readname)
-  index_list = split(1:length(names(polya_summary$filename)),
-                     ceiling(1:length(names(polya_summary$filename))/100))
+  polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
 
   #create empty list for extracted fast5 data
-  tail_feature_list = list()
+  tail_features_list = list()
+
+  # creating cluster for parallel computing
+  my_cluster <- parallel::makeCluster(num_cores)
+  on.exit(parallel::stopCluster(my_cluster))
+  doSNOW::registerDoSNOW(my_cluster)
+  `%dopar%` <- foreach::`%dopar%`
+  `%do%` <- foreach::`%do%`
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(index_list),
+                              max = length(polya_summary$filename),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file= stderr())
+                              file = stderr())
+  progress <- function(n) utils::setTxtProgressBar(pb, n)
+  opts <- list(progress = progress)
 
-  # use selected number of cores
-  doParallel::registerDoParallel(cores = num_cores)
 
-  # loop for parallel extraction
-  for (indx in 1:length(index_list)){
-
-    # work on subsets of reads in parallel
-    tail_feature_list <- c(tail_feature_list, foreach::foreach(nam = names(polya_summary$filename)[index_list[[indx]]]) %dopar% extract_tail_data(nam,polya_summary,workspace,basecall_group))
-
-    utils::setTxtProgressBar(pb, indx)
-
-  }
+  # parallel extraction
+  tail_features_list <- foreach::foreach(i = seq_along(polya_summary$readname),
+                                         .combine = c, .inorder = TRUE,
+                                         .errorhandling = 'pass',
+                                         .options.snow = opts) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
 
   close(pb)
 
-  #stop cluster
-  doParallel::stopImplicitCluster()
-
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
-  names(tail_feature_list) <- squiggle_names
+  names(tail_features_list) <- squiggle_names
 
   # remove reads with only zero moved tails
-  tail_feature_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_feature_list)
+  tail_features_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_features_list)
+  zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
+
+  # prevent from running on reads which do not fulfill the pseudomove condition
+  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=4)), tail_features_list)
+
+  # reads discarded because of unmet pseudomove condition
+  #in this reads reported pseudomove chain is too short to be considered as potential modification
+  nonpseudomoved_readnames <- squiggle_names[!(squiggle_names %in% c(zeromoved_readnames, names(tail_features_list)))]
+
+  #create final output
+  tail_feature_list <- list()
+
+  tail_feature_list[["tail_feature_list"]] <- tail_features_list
+  tail_feature_list[["zeromoved_readnames"]] <- zeromoved_readnames
+  tail_feature_list[["nonpseudomoved_readnames"]] <- nonpseudomoved_readnames
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   return(tail_feature_list)
-
 }
 
 
-
-#' Creates vector of overlapping tail fragments extracted from
-#' nanopolish output and fast5 files, in which move value = 1 occurs.
+#' Detection of outliers (peaks & valleys) in ONT signal using z-scores.
 #'
+#' The function enables detection in the signal corresponding to the poly(A)
+#' tail of areas in which the signal value significantly deviates from the
+#' values typical of an adenosine homopolymer.
+#'
+#' The function results in a vector of "pseudomoves" with values in the range
+#' -1:1, where -1 corresponds to signals that are significantly less than the
+#' mean and standard deviation of the typical A-homopolymer, 1 corresponds to
+#' signals that are significantly higher than the mean and standard deviation
+#' of the typical A-homopolymer, and 0 corresponds to the typical values
+#' for the A-homopolymer.
+#'
+#' The "pseudomoves" vector allows more accurate calibration of the nucleotide
+#' positions of potential non-adenosine residues than the moves produced
+#' by the guppy basecaller.
+#'
+#' The function created based on the following source:
+#' Brakel, J.P.G. van (2014). "Robust peak detection algorithm using z-scores".
+#' Stack Overflow. Available at:
+#' https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362
+#' (version: 2020-11-08).
+#'
+#'
+#' @param signal numeric vector. An ONT read fragment corresponding to the tail
+#' region of the read of interest as delimited by nanopolish polya function (the
+#' fragments are stored in tail_feature_list[[1]] produced by the
+#' create_tail_feature_list() function.
+#'
+#' @return numeric vector of "pseudomoves" corresponding to the analyzed tail
+#' region; containing values ranging from -1 to 1.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+#'
+#'}
+filter_signal_by_threshold <- function(signal) {
+
+  # variable binding
+  x <- sd <- baseline <- std_cutoff <- NULL
+
+  #assertions
+  if (missing(signal)) {
+    stop("Signal is missing. Please provide a valid signal argument [numeric vec].", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(signal),
+                          msg=paste0("Signal must be numeric. Please provide a valid argument."))
+
+  # reproducibility
+  set.seed(123)
+
+  # calibrate the algo on the sampled vals
+  start_vals <- signal[1:10]
+  most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:20]))
+  adjusted_signal <- c(sample(c(most_freq_vals, start_vals), 100, replace=TRUE), signal)
+
+  #interpolatedsignal <- round(stats::approx(signal, method = "linear", n=ceiling(0.05 * length(signal)))[[2]], digits=0)
+  #adjusted_signal <- c(sample(interpolatedsignal, 100, replace=TRUE), signal)
+
+  # Empyrical parameters:
+  adaptive_sampling_window <- 100 # datapoints window for adjusting algo
+  SD_threshold <- 3.5 # how many SD tresholds from avg signal pseudomove should be reported
+
+  pseudomoves <- rep(0,length(adjusted_signal))
+  #filtered_signal <- adjusted_signal[1:adaptive_sampling_window] #first sampling
+  filtered_signal <- adjusted_signal
+
+  baseline[adaptive_sampling_window] <- mean(adjusted_signal[1:adaptive_sampling_window], na.rm=TRUE)
+  std_cutoff[adaptive_sampling_window] <- stats::sd(adjusted_signal[1:adaptive_sampling_window], na.rm=TRUE)
+  for (i in (adaptive_sampling_window+1):length(adjusted_signal)){
+    if (abs(adjusted_signal[i] - baseline[i-1]) > SD_threshold*std_cutoff[i-1]) {
+      if (adjusted_signal[i] > baseline[i-1]) {
+        pseudomoves[i] <- 1 #if they go up
+      } else {
+        pseudomoves[i] <- -1 # if they go down
+      }
+      filtered_signal[i] <- filtered_signal[i-1] #update
+    } else {
+      pseudomoves[i] <- 0 # uniform distr
+      filtered_signal[i] <- adjusted_signal[i] #update
+    }
+
+    baseline[i] <- mean(filtered_signal[(i-adaptive_sampling_window):i], na.rm=TRUE)
+    std_cutoff[i] <- stats::sd(filtered_signal[(i-adaptive_sampling_window):i], na.rm=TRUE)
+  }
+
+  # trim pseudomoves so they fit actual signal/moves
+  adjusted_pseudomoves <- pseudomoves[101:length(pseudomoves)]
+
+  #temporary hotfix for terminal false-positives (resegmentation model
+  #- work in progress); current model was not trained on the terminal position,
+  #therefore to avoid the increased rate of false-positives reported on the
+  #adaptor-tail border, data at the very beginning are currently going to be
+  #ignored; this is just a temporary solution, introduced to reduce
+  #the bias which would be handled in more elegant way in the future releases
+  adjusted_pseudomoves[1:5] <- 0
+
+  adjusted_pseudomoves <- ninetails::substitute_gaps(adjusted_pseudomoves)
+
+  return(adjusted_pseudomoves)
+}
+
+#' Extracts fragments of poly(A) tail signal containing potential modifications
+#' along with its delimitation (positional indices; coordinates) within the tail.
+#'
+#' This function finds areas in the poly(A) tail signal containing potential
+#' non-A residues. Extracts strings spanning 100 data points (extrapolated)
+#' where the potential modification is always at the center of a given
+#' extracted fragment.
+#'
+#' If the data indicating the presence of modifications are in the regions
+#' of the ends of the signal (3' or 5'), then the missing upstream or downstream
+#' data are imputed based on the most frequent values in the entire signal.
+#'
+#' The function returns a list object (nested) which consists of the individual
+#' fragments of the input signal (chunk_sequence) and the coordinates
+#' of the given fragment in the input signal: start position (chunk_start_pos)
+#' and end position (chunk_end_pos).
 #'
 #' @param readname character string. Name of the given read within the
 #' analyzed dataset.
@@ -369,29 +521,25 @@ create_tail_feature_list <- function(nanopolish, sequencing_summary, workspace, 
 #' @param tail_feature_list list object produced by create_tail_feature_list
 #' function.
 #'
-#' @param segment numeric [1]. Length of the chunk(s) to be created.
-#'
-#' @param overlap numeric [1]. Length of the overlap between the chunks.
-#'
-#' @return A vector of indices of moved chunks organized by their order in
-#' an original list is returned.
+#' @return a list object (nested) containing 3 categories: resulting fragments
+#' (chunk_sequence), start coordinate of given fragment (chunk_start_pos)
+#' its' end coordinate (chunk_end_pos) arranged by the signal ID and positional
+#' indices (WARNING! from 3' end!).
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' split_with_overlaps_moved(readname = "name_of_given_read_of_interest",
-#'                           tail_feature_list = list_of_tail_features,
-#'                           segment = 100
-#'                           overlap = 10)
+#' split_tail_centered(readname= "1234-anexample-r3adn4m3",
+#'                     tail_feature_list = tail_feature_list)
 #'
 #'}
-#'
-#'
-split_with_overlaps_moved <- function(readname, tail_feature_list, segment, overlap) {
-  # avoiding 'no visible binding for global variable' error
-  x <- NULL
+split_tail_centered <- function(readname,
+                                tail_feature_list) {
+
+  #variable binding
+  tail <- . <- NULL
 
   #assertions
   if (missing(readname)) {
@@ -407,121 +555,78 @@ split_with_overlaps_moved <- function(readname, tail_feature_list, segment, over
   assertthat::assert_that(assertive::is_list(tail_feature_list),
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
-  checkmate::assert_integerish(segment,
-                               tol = sqrt(.Machine$double.eps),
-                               lower = 1,
-                               upper = Inf,
-                               any.missing = TRUE,
-                               all.missing = TRUE,
-                               len = NULL,
-                               min.len = 1L,
-                               max.len = 1,
-                               unique = FALSE,
-                               sorted = FALSE,
-                               names = NULL,
-                               typed.missing = FALSE,
-                               null.ok = FALSE,
-                               coerce = FALSE,
-                               .var.name = checkmate::vname(x),
-                               add = NULL)
+  #extract required data
+  signal <- tail_feature_list[[1]][[readname]][[2]]
+  pseudomoves <- tail_feature_list[[1]][[readname]][[4]]
 
-  checkmate::assert_integerish(overlap,
-                               tol = sqrt(.Machine$double.eps),
-                               lower = 0,
-                               upper = Inf,
-                               any.missing = TRUE,
-                               all.missing = TRUE,
-                               len = NULL,
-                               min.len = 1L,
-                               max.len = 1,
-                               unique = FALSE,
-                               sorted = FALSE,
-                               names = NULL,
-                               typed.missing = FALSE,
-                               null.ok = FALSE,
-                               coerce = FALSE,
-                               .var.name = checkmate::vname(x),
-                               add = NULL)
+  # mod-centered chunk extraction
+  # recompute rle
+  mod_rle <- rle(pseudomoves)
+  # pseudomoves filtered by condition (potentially modified - empyrical!)
+  condition <- mod_rle$lengths >= 4 & mod_rle$values
+  #beginning positions of filtered pseudomoves which satisfy conditions
+  first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths,-1)))[condition]
+  #length of pseudomoves satisfying condition
+  filtered_length <- mod_rle$lengths[condition]
+  #extracted coordinates (indices)
+  start_positions <-  first_filtered_positions + floor(filtered_length/2) - 50
+  end_positions <- start_positions + 99
 
+  # extract signal chunks centered on potential modification
+  list_1 <- lapply(1:length(start_positions), function(i) if(start_positions[i] >0) signal[start_positions[i]:end_positions[i]]
+                   else c(rep(NA, abs(start_positions[i]-1)), signal[1:end_positions[i]]))
 
-  assertthat::assert_that(overlap<segment, msg="Segment value must be greater than overlap value. Please provide a valid argument.")
+  # replace NAs with 5 most freq values (impute the data for gafs)
+  most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:5]))
+  list_1 <- lapply(list_1, function(n) replace(n, is.na(n), sample(most_freq_vals,sum(is.na(n)),TRUE)))
 
+  #add indices
+  chunks_indices <- c(1:length(start_positions))
 
-  signal <- tail_feature_list[[readname]][[4]]
-  moves <- tail_feature_list[[readname]][[5]]
+  # naming chunks based on names & indices
+  chunk_names <- paste0(rep(readname, length(list_1)), '_', unlist(chunks_indices))
+  names(list_1) <- chunk_names
 
-  #prevent from running the function on zero-only vectors
-  if (sum(moves) == 0){
-    stop("The move vector does not contain the value of 1. Please provide a valid move argument (use create_tail_chunk_list_moved() function or prefilter data manually).", call. =FALSE)
-  }
+  # creating final list output (retrieve coordinates as list_2 and list_3):
+  list_2 <- as.list(start_positions)
+  #names(list_2) <- chunk_names
+  list_3 <- as.list(end_positions)
+  #names(list_3) <- chunk_names
 
-  #initial coordinates (for all chunks)
-  start_coordinates_total <- seq(1, length(moves), by=segment-overlap)
-  end_coordinates_total   <- start_coordinates_total + segment - 1
+  out <- mget(ls(pattern = '^list.*\\d$')) %>%
+    split(sub("_\\d+$", '', names(.))) %>%
+    purrr::map(~purrr::transpose(purrr::set_names(.,c('chunk_sequence', 'chunk_start_pos', 'chunk_end_pos')))) %>%
+    purrr::flatten(.)
 
-  #extract indices of "moved" chunks
-  moved_chunks_indices <- lapply(1:length(start_coordinates_total),
-                                 function(i) 1 %in% moves[start_coordinates_total[i]:end_coordinates_total[i]])
-  moved_chunks_indices <- which(unlist(moved_chunks_indices))
-
-  #coordinates of selected "moved" chunks
-  start_coordinates_selected <- start_coordinates_total[moved_chunks_indices]
-  end_coordinates_selected <- start_coordinates_selected + segment - 1
-
-  #extract ONLY "moved" signal chunks
-  extracted_moved_signals <- lapply(1:length(start_coordinates_selected),
-                                    function(i) signal[start_coordinates_selected[i]:end_coordinates_selected[i]])
-  # replace NAs with 3 most frequent values (randomly sampled)
-  # if all values would be equal, so the breaks would not be unique
-
-  most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:3]))
-  extracted_moved_signals <- lapply(extracted_moved_signals,
-                                    function(n) replace(n, is.na(n), sample(most_freq_vals,sum(is.na(n)),TRUE)))
-
-  # naming chunks based on readnames & indices
-  chunk_names <- paste0(rep(readname, length(extracted_moved_signals)), '_', unlist(moved_chunks_indices))
-
-  #name_chunks
-  names(extracted_moved_signals) <- chunk_names
-
-  return(extracted_moved_signals)
-
+  return(out)
 }
 
 
-#' Creates list of overlapping tail fragments extracted from
-#' nanopolish output and fast5 files based on provided feature list.
-#'
-#' Only fragments containing move==1 are included
-#' (as create_tail_feature_list function performs prefiltering according to this criterion).
+#' Extracts fragments of polyA tails of ONT RNA reads potentially containing
+#' non-A nucleotides along their coordinates & appends the data to the nested
+#' list organized by read IDs.
 #'
 #' @param tail_feature_list list object produced by create_tail_feature_list
 #' function.
-#'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @return A list of tail range chunks organized by the read ID
-#' is returned. Only tails containing at least one move value equal to 1
-#' are included. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
-#'
-#' @importFrom foreach %dopar%
-#'
+#' @return a list object (nested) containing the segmented tail data (chunks,
+#' coordinates) organized by the read IDs.
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' create_tail_chunk_list_moved(tail_feature_list = '/path/to/tail_feature_list', num_cores = 10)
+#' create_tail_chunk_list(tail_feature_list = tail_feature_list,
+#'                        num_cores = 2)
 #'
 #'}
-#'
-#'
-create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
+create_tail_chunk_list <- function(tail_feature_list,
+                                   num_cores){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  nam <- NULL
+  i <- NULL
 
   # initial assertions
   if (missing(num_cores)) {
@@ -538,122 +643,173 @@ create_tail_chunk_list_moved <- function(tail_feature_list, num_cores){
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
   # creating cluster for parallel computing
-  doParallel::registerDoParallel(cores = num_cores)
-
-  # this is list of indexes required for parallel computing; the main list of reads is split for chunks
-  index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
+  my_cluster <- parallel::makeCluster(num_cores)
+  on.exit(parallel::stopCluster(my_cluster))
+  doSNOW::registerDoSNOW(my_cluster)
+  `%dopar%` <- foreach::`%dopar%`
+  `%do%` <- foreach::`%do%`
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(index_list),
+                              max = length(tail_feature_list[[1]]),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file= stderr())
+                              file = stderr())
+  progress <- function(n) utils::setTxtProgressBar(pb, n)
+  opts <- list(progress = progress)
 
-  #create empty list for extracted data
-  tail_chunk_list = list()
+  #output list
+  tail_chunk_list <- list()
 
-  # loop for parallel extraction
-  for (indx in 1:length(index_list)){
-
-    # work on subsets of reads in parallel
-    tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
-                         %dopar% split_with_overlaps_moved(nam, tail_feature_list, segment = 100, overlap = 50))
-
-    utils::setTxtProgressBar(pb, indx)
-
-  }
+  #parallel extraction
+  tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
+                                      .combine = c, .inorder = TRUE,
+                                      .errorhandling = 'pass',
+                                      .options.snow = opts) %dopar% {
+                                        lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
+                                        }
 
   close(pb)
 
-  #stop cluster
-  doParallel::stopImplicitCluster()
-
   #rename first level of nested list accordingly
-  names(tail_chunk_list) <- names(tail_feature_list)
+  names(tail_chunk_list) <- names(tail_feature_list[[1]])
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   return(tail_chunk_list)
-
 }
 
 
-#' Converting ONT signal to gramian angular summation field.
+#' Converting ONT signal to Gramian Angular Field.
 #'
-#' @param tail_chunk character string. Name of the given signal chunk within the
-#' analyzed dataset.
+#' This function represents time series data (ont squiggle) in a polar coordinate
+#' system instead of the typical Cartesian coordinates. This is a Pythonic
+#' pyts.image equivalent written in R language.
 #'
-#' @return an array (100,100,1) with values representing ONT signal.
+#' Two methods of such transformation are available: Gramian angular summation
+#' field (GASF) and Gramian angular difference field (GADF).
+#'
+#' @param tail_chunk numeric. A numeric vector representing signal chunk
+#' within the analyzed dataset.
+#'
+#' @param method character string specifying the type of Gramian Angular Field:
+#' "s" can be used to produce summation field (GASF) and "d" to produce
+#' difference field (GADF). Defaults to summation ["s"].
+#'
+#' @return an array (100,100,1) with values (coordinates) representing ONT signal.
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' create_gasf(tail_chunk = "1234-jhgfdr54-io643gju-ouy4378989")
+#' create_gaf(tail_chunk = tail_chunk,
+#'            method="s")
 #'
 #'}
+
+create_gaf <- function(tail_chunk, method="s"){
+
+  #assertions
+  if (missing(tail_chunk)) {
+    stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
+  }
+  if (missing(method)) {
+    stop("Transformation method is missing. Please provide a valid method argument.", call. =FALSE)
+  }
+  assertthat::assert_that(assertive::is_numeric(tail_chunk),
+                          msg=paste0("Provided tail_chunk must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_character(method),
+                          msg=paste0("Provided method must be character string. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_equal_to(length(tail_chunk), 100),
+                          msg=paste0("Provided chunks of wrong length. The chunk length should be equal to 100. Please provide a valid tail_chunk."))
+
+
+  # rescale values so that all of them fall in the interval [-1, 1]:
+  tail_chunk <- (tail_chunk-max(tail_chunk)+(tail_chunk-min(tail_chunk)))/(max(tail_chunk)-min(tail_chunk))
+
+  if (method=="s") {
+    # calculate phi coefficient for interpolation to polar coordinates
+    # first by computing arc cosine
+    # then by converting the data to matrix by replicating the vec
+    # calculating sum of phi
+    # calculating cosine
+    #and reshaping the data into new dimensions
+    tail_chunk <- acos(tail_chunk)
+    tail_chunk <- cbind(replicate(length(tail_chunk), tail_chunk))
+    tail_chunk <- tail_chunk + t(tail_chunk)
+    tail_chunk <- cos(tail_chunk)
+    tail_chunk <- array(t(tail_chunk), c(100,100,1))
+
+  } else if (method=="d") {
+    # computing arc sine instead of arc cosine
+    # calculating sine instead of cosine
+    tail_chunk <- asin(tail_chunk)
+    tail_chunk <- cbind(replicate(length(tail_chunk), tail_chunk))
+    tail_chunk <- tail_chunk + t(tail_chunk)
+    tail_chunk <- sin(tail_chunk)
+    tail_chunk <- array(t(tail_chunk), c(100,100,1))
+  } else {
+    stop("Wrong GAF method definition. Please provide 's' for summation or 'd' for difference GAF.")
+  }
+
+  # rescale values so that all of them fall in the interval [0, 1]:
+  tail_chunk <- round((tail_chunk-min(tail_chunk))/(max(tail_chunk)-min(tail_chunk)), 4)
+
+  return(tail_chunk)
+}
+
+#' Creates a two-dimensional array containing GASF and GADF resulting from
+#' the transformation of a given ONT tail chunk.
 #'
-create_gasf <- function(tail_chunk){
-  x <- NULL
+#' This function allows for the classification of signal fragments based
+#' on angular coordinates generated by two methods (summation & difference)
+#' simultaneously.
+#'
+#' Using this approach increases the sensitivity of the classification.
+#' It overcomes the limitations of each method.
+#'
+#' @param tail_chunk numeric. A numeric vector representing signal chunk
+#' within the analyzed dataset.
+#'
+#' @return an array (100,100,2) with values (coordinates) representing GASF
+#' (first dimension) and GADF (second dimension) produced by create_gaf()
+#' function applied to given fragment (tail chunk) of analyzed ONT signal.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' combine_gafs(tail_chunk = tail_chunk)
+#'
+#'}
+combine_gafs <- function(tail_chunk){
 
   #assertions
   if (missing(tail_chunk)) {
     stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
   }
 
-  checkmate::assert_integerish(tail_chunk,
-                               tol = sqrt(.Machine$double.eps),
-                               lower = -Inf,
-                               upper = Inf,
-                               any.missing = TRUE,
-                               all.missing = TRUE,
-                               len = NULL,
-                               min.len = 100L,
-                               max.len = 100,
-                               unique = FALSE,
-                               sorted = FALSE,
-                               names = NULL,
-                               typed.missing = FALSE,
-                               null.ok = FALSE,
-                               coerce = FALSE,
-                               .var.name = checkmate::vname(x),
-                               add = NULL)
+  assertthat::assert_that(assertive::is_numeric(tail_chunk),
+                          msg=paste0("Provided tail_chunk must be numeric. Please provide a valid argument."))
 
+  #create gasf & gaf
+  GASF <- ninetails::create_gaf(tail_chunk=tail_chunk, method="s")
+  GADF <- ninetails::create_gaf(tail_chunk=tail_chunk, method="d")
 
+  #create array of gafs
+  combined_gafs <- array(c(GASF, GADF), dim = c(100, 100, 2))
 
-  # rescale values so that all of them fall in the interval [-1, 1]:
-  tail_chunk <- (tail_chunk-max(tail_chunk)+(tail_chunk-min(tail_chunk)))/(max(tail_chunk)-min(tail_chunk))
-
-  # calculate phi coefficient for interpolation to polar coordinates
-  tail_chunk <- acos(tail_chunk)
-
-  # create matrix by replicating vec
-  tail_chunk <- cbind(replicate(length(tail_chunk), tail_chunk))
-
-  #calculate sum of phi
-  tail_chunk <- tail_chunk + t(tail_chunk)
-
-  #calculate cosinus
-  tail_chunk <- cos(tail_chunk)
-
-  #reshape the data into new dimensions
-  tail_chunk <- array(t(tail_chunk), c(100,100,1))
-
-  # rescale values so that all of them fall in the interval [0, 1]:
-  tail_chunk <- round((tail_chunk-min(tail_chunk))/(max(tail_chunk)-min(tail_chunk)), 4)
-
-
-  return(tail_chunk)
+  return(combined_gafs)
 }
 
 
-#' Creates list of gramian angular summation matrices produced based on
+
+#' Creates list of gramian angular matrices produced based on
 #' list of splitted tails (tail chunks).
 #'
 #' @param tail_chunk_list character string. The list object produced
@@ -662,7 +818,7 @@ create_gasf <- function(tail_chunk){
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @return A list of gasf matrices organized by the read ID_index
+#' @return A list of gaf matrices organized by the read ID_index
 #' is returned. Always assign this returned list to a variable, otherwise
 #' the long list will be printed to the console, which may crash your R session.
 #'
@@ -674,12 +830,14 @@ create_gasf <- function(tail_chunk){
 #' @examples
 #'\dontrun{
 #'
-#' create_gasf_list(feature_list = '/path/to/chunk_list', num_cores = 10)
+#' create_gaf_list(tail_chunk_list = tail_chunk_list, num_cores = 10)
 #'
 #'}
-#'
-#'
-create_gasf_list <- function(tail_chunk_list, num_cores){
+create_gaf_list <- function(tail_chunk_list,
+                             num_cores){
+
+  #variable biding
+  i <- NULL
 
   # Assertions
   if (missing(num_cores)) {
@@ -695,99 +853,92 @@ create_gasf_list <- function(tail_chunk_list, num_cores){
   assertthat::assert_that(assertive::is_numeric(num_cores),
                           msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
-
-  #register cores for parallelization
-  doParallel::registerDoParallel(cores = num_cores)
-
-  #retrieve chunknames
-  chunknames <- gsub(".*?\\.","",names(rapply(tail_chunk_list, function(x) head(x, 1))))
+  # creating cluster for parallel computing
+  my_cluster <- parallel::makeCluster(num_cores)
+  on.exit(parallel::stopCluster(my_cluster))
+  doSNOW::registerDoSNOW(my_cluster)
+  `%dopar%` <- foreach::`%dopar%`
+  `%do%` <- foreach::`%do%`
 
   #create empty list for the data
-  gasf_list = list()
+  gaf_list = list()
 
-  #set progressbar
-  cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular summation fields...', '\n', sep=''))
+  #progressbar header
+  cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular fields...', '\n', sep=''))
+
+  # progress bar
   pb <- utils::txtProgressBar(min = 0,
                               max = length(tail_chunk_list),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file= stderr())
+                              file = stderr())
+  progress <- function(n) utils::setTxtProgressBar(pb, n)
+  opts <- list(progress = progress)
 
-  #loop through the nested list
-  for (read in seq_along(tail_chunk_list)){
-    for (chunk in seq_along(tail_chunk_list[[read]])){
-      gasf_list <- c(gasf_list, foreach::foreach(chunk) %dopar% create_gasf(tail_chunk_list[[read]][[chunk]]))
 
-      utils::setTxtProgressBar(pb, read)
-    }
-  }
+  gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list), .combine = c, .inorder = TRUE,
+                                .errorhandling = 'pass',
+                                .options.snow = opts) %dopar% {
+                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
+                                }
 
   close(pb)
-
-  #stop cluster
-  doParallel::stopImplicitCluster()
-
-  #restore names in the list
-  names(gasf_list) <- chunknames
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
-  return(gasf_list)
-
+  return(gaf_list)
 }
 
 #' Classification of matrices produced from read chunks with CNN.
 #'
-#' @param gasf_list [list] A list of gasf matrices organized by the read ID_index.
+#' This function allows to assign gafs corresponding to the given signals
+#' into one of 4 categories (A, C, G, U, respectively). This function in its
+#' current implementation allows to load the pretrained CNN model. It uses
+#' tensorflow backend to produce the classification output.
 #'
-#' @return a list of gasfs predictions based on used model.
+#' @param gaf_list [list] A list of gaf matrices organized by the read ID_index.
 #'
+#' @return a list of gafs predictions based on used model.
 #'
 #' @export
 #'
 #' @examples
 #'\dontrun{
 #'
-#' predict_classes(gasf_list = gasf_list, keras_model = "/path/to/the_model.h5")
+#' predict_gaf_classes(gaf_list = gaf_list, keras_model = "/path/to/the_model.h5")
 #'
 #'}
-predict_classes <- function(gasf_list){
+predict_gaf_classes <- function(gaf_list){
 
   #assertions
-  if (missing(gasf_list)) {
-    stop("List of transformed signal chunks is missing. Please provide a valid gasf_list argument.", call. =FALSE)
+  if (missing(gaf_list)) {
+    stop("List of transformed signal chunks is missing. Please provide a valid gaf_list argument.", call. =FALSE)
   }
 
+  chunknames <- names(gaf_list)
+  names(gaf_list)  <- NULL
 
-
-
-  chunknames <- names(gasf_list)
-  names(gasf_list)  <- NULL
-
-  gasf_list <- simplify2array(gasf_list)
-  gasf_list <- aperm(gasf_list, c(4,1,2,3))
+  gaf_list <- simplify2array(gaf_list)
+  gaf_list <- aperm(gaf_list, c(4,1,2,3))
 
   # Output info
-  cat(paste0('[', as.character(Sys.time()), '] ','Classifying gramian angular summation fields...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Classifying gramian angular fields...', '\n', sep=''))
 
-
-  keras_model <- load_keras_model()
+  keras_model <- ninetails::load_keras_model()
 
   #predict chunk class
-  predicted_gasf_classes <- keras_model %>% stats::predict(gasf_list) %>% keras::k_argmax()
-  predicted_gasf_classes <- as.numeric(predicted_gasf_classes)
+  predicted_gaf_classes <- keras_model %>% stats::predict(gaf_list) %>% keras::k_argmax()
+  predicted_gaf_classes <- as.numeric(predicted_gaf_classes)
 
   predicted_list = list() # creating empty list for the extracted  data
 
   predicted_list[["chunkname"]] <- chunknames
-  predicted_list[["prediction"]] <- predicted_gasf_classes
+  predicted_list[["prediction"]] <- predicted_gaf_classes
 
   # Output info
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
-
   return(predicted_list)
 }
-
