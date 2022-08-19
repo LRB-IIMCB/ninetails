@@ -661,7 +661,7 @@ create_tail_chunk_list <- function(tail_feature_list,
                                       .errorhandling = 'pass',
                                       .options.snow = opts) %dopar% {
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
-                                      }
+                                        }
 
   close(pb)
 
@@ -825,7 +825,7 @@ combine_gafs <- function(tail_chunk){
 #'
 #'}
 create_gaf_list <- function(tail_chunk_list,
-                            num_cores){
+                             num_cores){
 
   #variable biding
   i <- NULL
@@ -869,10 +869,10 @@ create_gaf_list <- function(tail_chunk_list,
 
 
   gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list), .combine = c, .inorder = TRUE,
-                               .errorhandling = 'pass',
-                               .options.snow = opts) %dopar% {
-                                 lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
-                               }
+                                .errorhandling = 'pass',
+                                .options.snow = opts) %dopar% {
+                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
+                                }
 
   close(pb)
 
