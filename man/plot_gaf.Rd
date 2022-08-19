@@ -46,9 +46,11 @@ default built-in model was trained on 100x100 gasfs.
 \examples{
 \dontrun{
 
-example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-                                   gaf_list = gl,
-                                   save_file = TRUE)
+example_gaf <- ninetails::plot_gaf(
+ gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+ gaf_list = gl,
+ save_file = TRUE)
+
 print(example_gaf)
 
 }

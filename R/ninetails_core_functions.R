@@ -275,15 +275,22 @@ extract_tail_data <- function(readname,
 #' @examples
 #'\dontrun{
 #'
-#'tfl <- ninetails::create_tail_feature_list(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
-#'                                                                    package = 'ninetails'),
-#'                                           sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-#'                                                                            package = 'ninetails'),
-#'                                           workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
-#'                                                                   package = 'ninetails'),
-#'                                           num_cores = 2,
-#'                                           basecall_group = 'Basecall_1D_000',
-#'                                           pass_only=TRUE)
+#'tfl <- ninetails::create_tail_feature_list(
+#'  nanopolish = system.file('extdata',
+#'                           'test_data',
+#'                           'nanopolish_output.tsv',
+#'                           package = 'ninetails'),
+#'  sequencing_summary = system.file('extdata',
+#'                                   'test_data',
+#'                                   'sequencing_summary.txt',
+#'                                   package = 'ninetails'),
+#'  workspace = system.file('extdata',
+#'                          'test_data',
+#'                          'basecalled_fast5',
+#'                          package = 'ninetails'),
+#'  num_cores = 2,
+#'  basecall_group = 'Basecall_1D_000',
+#'  pass_only=TRUE)
 #'
 #'}
 #'

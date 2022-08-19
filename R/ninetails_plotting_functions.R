@@ -47,16 +47,23 @@
 #' @examples
 #' \dontrun{
 #'
-#' plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-#'                                  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
-#'                                                           package = 'ninetails'),
-#'                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-#'                                                                   package = 'ninetails'),
-#'                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
-#'                                                          package = 'ninetails'),
-#'                                  basecall_group = 'Basecall_1D_000',
-#'                                  moves = FALSE,
-#'                                  rescale = TRUE)
+#'plot <- ninetails::plot_squiggle(
+#'  readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+#'  nanopolish = system.file('extdata',
+#'                           'test_data',
+#'                           'nanopolish_output.tsv',
+#'                           package = 'ninetails'),
+#'  sequencing_summary = system.file('extdata',
+#'                                   'test_data',
+#'                                   'sequencing_summary.txt',
+#'                                   package = 'ninetails'),
+#'  workspace = system.file('extdata',
+#'                          'test_data',
+#'                          'basecalled_fast5',
+#'                          package = 'ninetails'),
+#'  basecall_group = 'Basecall_1D_000',
+#'  moves = FALSE,
+#'  rescale = TRUE)
 #'
 #' print(plot)
 #'
@@ -276,16 +283,24 @@ plot_squiggle <- function(readname,
 #' @examples
 #' \dontrun{
 #'
-#' plot <- ninetails::plot_tail_range(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-#'                                    nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
-#'                                                             package = 'ninetails'),
-#'                                    sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-#'                                                                     package = 'ninetails'),
-#'                                    workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
-#'                                                            package = 'ninetails'),
-#'                                    basecall_group = 'Basecall_1D_000',
-#'                                    moves = TRUE,
-#'                                    rescale = TRUE)
+#' plot <- ninetails::plot_tail_range(
+#'   readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+#'   nanopolish = system.file('extdata',
+#'                            'test_data',
+#'                            'nanopolish_output.tsv',
+#'                            package = 'ninetails'),
+#'   sequencing_summary = system.file('extdata',
+#'                                    'test_data',
+#'                                    'sequencing_summary.txt',
+#'                                    package = 'ninetails'),
+#'   workspace = system.file('extdata',
+#'                           'test_data',
+#'                           'basecalled_fast5',
+#'                           package = 'ninetails'),
+#'   basecall_group = 'Basecall_1D_000',
+#'   moves = TRUE,
+#'   rescale = TRUE)
+#'
 #' print(plot)
 #'
 #'}
@@ -493,8 +508,9 @@ plot_tail_range <- function(readname,
 #' @examples
 #'\dontrun{
 #'
-#' example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-#'                                       tail_chunk_list = tcl)
+#'example <- ninetails::plot_tail_chunk(
+#'  chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+#'  tail_chunk_list = tcl)
 #'
 #' print(example)
 #'
@@ -579,10 +595,12 @@ plot_tail_chunk <- function(chunk_name,
 #' @examples
 #' \dontrun{
 #'
-#' example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-#'                                    gaf_list = gl,
-#'                                    save_file = TRUE)
-#' print(example_gaf)
+#'example_gaf <- ninetails::plot_gaf(
+#'  gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+#'  gaf_list = gl,
+#'  save_file = TRUE)
+#'
+#'print(example_gaf)
 #'
 #'}
 plot_gaf <- function(gaf_name,
