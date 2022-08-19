@@ -48,104 +48,12 @@ winsorize_signal <- function(signal){
 }
 
 
-#' Counts overlapping segments created per given nanopore signal.
-#'
-#' @param signal numeric vector corresponding to the given ONT signal.
-#' @param segment numeric [1]. Length of the chunk(s) to be created.
-#' @param overlap numeric [1]. Length of the overlap between the chunks.
-#'
-#' @return number of overlapping chunks per given tail.
-#' @export
-#'
-#' @examples
-#'\dontrun{
-#'
-#' count_overlaps(signal = signal_vector,
-#'                segment = 100
-#'                overlap = 10)
-#'}
-#'
-#'
-count_overlaps <- function(signal, segment, overlap) {
-  # avoiding 'no visible binding for global variable' error
-  x <- NULL
-
-  #Assertions
-  if (missing(signal)) {
-    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
-  }
-
-  if (missing(segment)) {
-    stop("Segment number is missing. Please provide a valid segment argument.", .call = FALSE)
-  }
-
-  if (missing(overlap)) {
-    stop("Overlap vector is missing. Please provide a valid overlap argument.", .call = FALSE)
-  }
-
-  assertthat::assert_that(assertive::is_numeric(signal),
-                          msg=paste0("Signal vector must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_atomic(signal),
-                          msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
-  assertthat::assert_that(overlap<segment,
-                          msg="Segment value must be greater than overlap value. Please provide a valid argument.")
-
-  checkmate::assert_integerish(segment,
-                               tol = sqrt(.Machine$double.eps),
-                               lower = 1,
-                               upper = Inf,
-                               any.missing = TRUE,
-                               all.missing = TRUE,
-                               len = NULL,
-                               min.len = 1L,
-                               max.len = 1,
-                               unique = FALSE,
-                               sorted = FALSE,
-                               names = NULL,
-                               typed.missing = FALSE,
-                               null.ok = FALSE,
-                               coerce = FALSE,
-                               .var.name = checkmate::vname(x),
-                               add = NULL
-                               )
-
-  checkmate::assert_integerish(overlap,
-                               tol = sqrt(.Machine$double.eps),
-                               lower = 0,
-                               upper = Inf,
-                               any.missing = TRUE,
-                               all.missing = TRUE,
-                               len = NULL,
-                               min.len = 1L,
-                               max.len = 1,
-                               unique = FALSE,
-                               sorted = FALSE,
-                               names = NULL,
-                               typed.missing = FALSE,
-                               null.ok = FALSE,
-                               coerce = FALSE,
-                               .var.name = checkmate::vname(x),
-                               add = NULL)
-
-
-
-
-
-  starts <- seq(1, length(signal), by=segment-overlap)
-  ends   <- starts + segment - 1
-
-  counts_overlaps <- length(lapply(1:length(starts), function(i) signal[starts[i]:ends[i]]))
-
-  return(counts_overlaps)
-}
-
-
 #' Loads keras model for multiclass signal prediction.
 #'
-#' @param keras_model_path either missing or character string. Full path of the .h5 file
-#' with keras model used to predict signal classes. If function is called without this
-#' argument(argument is missing) the default pretrained model will be loaded. Otherwise,
-#' the dir with custom model shall be provided.
+#' @param keras_model_path either missing or character string. Full path of the
+#' .h5 file with keras model used to predict signal classes. If function is
+#' called without this argument(argument is missing) the default pretrained
+#' model will be loaded. Otherwise, the dir with custom model shall be provided.
 #'
 #' @export
 #'
@@ -157,13 +65,12 @@ count_overlaps <- function(signal, segment, overlap) {
 #'
 load_keras_model <- function(keras_model_path){
   if (rlang::is_missing(keras_model_path)) {
-    path_to_default_model <- system.file("extdata", "cnn_model", "model_grey_gasf100x100_32_64_updated.h5", package="ninetails")
+    path_to_default_model <- system.file("extdata", "cnn_model", "gasf_gadf_combined_model_20220808.h5", package="ninetails")
     keras_model <- keras::load_model_hdf5(path_to_default_model)
   } else {
     keras_model <- keras::load_model_hdf5(keras_model_path)
   }
 }
-
 
 
 #' Checks if the provided directory contains fast5 files in the correct format.
@@ -195,7 +102,8 @@ load_keras_model <- function(keras_model_path){
 # This lookup function is inspired by adnaniazi's explore-basecaller-and-fast5type.R from tailfindr
 # https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R
 
-check_fast5_filetype <- function(workspace, basecall_group){
+check_fast5_filetype <- function(workspace,
+                                 basecall_group){
 
   #Assertions
   if (missing(workspace)) {
@@ -279,5 +187,40 @@ check_fast5_filetype <- function(workspace, basecall_group){
   }
 
 }
+
+
+#' Substitutes 0s surrounded by adjacent nonzeros in pseudomove vector
+#' to facilitate position-centering function.
+#'
+#' This function helps to avoid redundancy introduced by z-score thesholding
+#' algo (this happens when signal is jagged), so one segment would be reported
+#' instead of multiple.
+#'
+#' @param pseudomoves numeric vector produced by z-score
+#' filtering algo (filter_signal_by_threshold() function) corresponding
+#' to the tail region of the read of interest as delimited by
+#' nanopolish polya function.
+#'
+#' @return a numeric vector of adjusted pseudomoves (smoothened)
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' substitute_gaps(pseudomoves = pseudomoves_vector)
+#'
+#'}
+#'
+substitute_gaps <- function(pseudomoves){
+  rle_pseudomoves <- rle(pseudomoves)
+  indx <- rle_pseudomoves$lengths < 3 & rle_pseudomoves$values == 0 & c(Inf, rle_pseudomoves$values[-length(rle_pseudomoves$values)]) == c(rle_pseudomoves$values[-1], Inf)
+  if (any(indx)) rle_pseudomoves$values[indx] <- rle_pseudomoves$values[which(indx)-1]
+  adjusted_pseudomoves <- inverse.rle(rle_pseudomoves)
+
+  return(adjusted_pseudomoves)
+}
+
+
+
 
 

@@ -41,6 +41,4 @@ extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
                  basecall_group = 'Basecall_1D_000')
 
 }
-
-
 }
