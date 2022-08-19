@@ -8,9 +8,9 @@ check_tails(
   nanopolish,
   sequencing_summary,
   workspace,
-  num_cores = 1,
-  basecall_group = "Basecall_1D_000",
-  pass_only = TRUE,
+  num_cores,
+  basecall_group,
+  pass_only,
   save_dir
 )
 }
@@ -25,12 +25,10 @@ with sequencing summary.}
 basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
 
 \item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.
-This parameter is set to 1 by default.}
+the data. Do not exceed 1 less than the number of cores at your disposal.}
 
 \item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the Fast5 file hierarchy from which the data should be extracted.
-This parameter is set to 'Basecall_1D_000' by default.}
+level in the Fast5 file hierarchy from which the data should be extracted.}
 
 \item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
 nanopolish as "PASS" would be taken into consideration. Otherwise, reads
@@ -53,9 +51,11 @@ segmentation data. Therefore it may be wise to split the nanopolish table
 beforehand and then run this function on nanopolish table chunks.
 }
 \details{
-The output of this function is a list of 2 dataframes, containing: a) binary
-classification of reads satisfying filtering criteria, b) detailed positional
-info regarding all potential nonadenosine residues detected.
+The output of this function is a list of 3 dataframes, containing: a) binary
+classification of reads satisfying filtering criteria*, b) detailed positional
+info regarding all potential nonadenosine residues detected, c) info
+regarding discarded reads (the reason why the following read has been omitted
+from the analysis).
 
 The filtering criteria applied by ninetails are as follows: move of value =1
 present, qc_tag = "PASS" or "PASS" & "SUFFCLIP", length estimated
@@ -67,7 +67,7 @@ by nanopolish >=10 nt).
 check_tails(nanopolish = '/path/to/file',
             sequencing_summary = '/path/to/file',
             workspace = '/path/to/guppy/workspace',
-            num_cores = 1,
+            num_cores = 10,
             basecalled_group = 'Basecall_1D_000',
             pass_only=TRUE,
             save_dir = '/directory/where/output/shall/be/stored')
