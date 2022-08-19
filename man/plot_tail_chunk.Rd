@@ -29,7 +29,7 @@ to picoamperes [pA].
 \examples{
 \dontrun{
 
-plot_tail_chunk(chunk_name = "3039111f-baf1-450c-f26ca4b047b4",
+plot_tail_chunk(chunk_name = "3039111f-baf1-450c-f26ca4b047b4_1",
                 tail_chunk_list = list_of_tail_chunks)
 
 }
