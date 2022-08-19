@@ -32,6 +32,7 @@ test_that("extract_tail_data correctly reads from provided files", {
   test_basecall_group = 'Basecall_1D_000'
   wrong_basecall_group = 'Basecall_1D_003'
 
+
   # no required readname
   expect_error(extract_tail_data(readname = "",
                                  polya_summary = test_polya_summary,

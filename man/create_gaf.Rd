@@ -29,8 +29,8 @@ field (GASF) and Gramian angular difference field (GADF).
 \examples{
 \dontrun{
 
-create_gaf(tail_chunk = tail_chunk,
-           method="s")
+ninetails::create_gaf(tail_chunk = tail_chunk,
+                      method="s")
 
 }
 }

@@ -26,7 +26,8 @@ list of splitted tails (tail chunks).
 \examples{
 \dontrun{
 
-create_gaf_list(tail_chunk_list = tail_chunk_list, num_cores = 10)
+gl <- ninetails::create_gaf_list(tail_chunk_list = tcl,
+                                 num_cores = 2)
 
 }
 }

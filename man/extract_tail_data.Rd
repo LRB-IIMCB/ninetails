@@ -35,10 +35,10 @@ so the cliffs are removed), and downsampled (to facilitate further analysis).
 \examples{
 \dontrun{
 
-extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
-                 polya_summary = polya_summary_table,
-                 workspace = '/path/to/folder/containing/multifast5s',
-                 basecall_group = 'Basecall_1D_000')
+ninetails::extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
+                             polya_summary = polya_summary_table,
+                             workspace = '/path/to/folder/containing/multifast5s',
+                             basecall_group = 'Basecall_1D_000')
 
 }
 }

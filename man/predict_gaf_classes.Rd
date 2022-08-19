@@ -21,7 +21,7 @@ tensorflow backend to produce the classification output.
 \examples{
 \dontrun{
 
-predict_gaf_classes(gaf_list = gaf_list, keras_model = "/path/to/the_model.h5")
+pl <- ninetails::predict_gaf_classes(gl)
 
 }
 }

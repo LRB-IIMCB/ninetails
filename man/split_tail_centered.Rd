@@ -39,7 +39,7 @@ and end position (chunk_end_pos).
 \examples{
 \dontrun{
 
-split_tail_centered(readname= "1234-anexample-r3adn4m3",
+ninetails::split_tail_centered(readname= "1234-anexample-r3adn4m3",
                     tail_feature_list = tail_feature_list)
 
 }

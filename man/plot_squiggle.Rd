@@ -63,12 +63,18 @@ Otherwise the function will throw an error.
 \examples{
 \dontrun{
 
-plot_squiggle(readname = 'name-of-read-to-be-plotted',
-              nanopolish = '/path/to/file',
-              sequencing_summary = '/path/to/file',
-              workspace = '/path/to/guppy/workspace',
-              basecalled_group = 'Basecall_1D_000',
-              moves=TRUE, rescale=TRUE)
+plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+                                 nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
+                                                          package = 'ninetails'),
+                                 sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+                                                                  package = 'ninetails'),
+                                 workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
+                                                         package = 'ninetails'),
+                                 basecall_group = 'Basecall_1D_000',
+                                 moves = FALSE,
+                                 rescale = TRUE)
+
+print(plot)
 
 }
 }

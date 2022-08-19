@@ -54,26 +54,10 @@ extract_polya_data <- function(nanopolish,
                           msg="Please provide TRUE/FALSE values for pass_only parameter")
 
   if (assertive::is_character(nanopolish)) {
-
     assertthat::assert_that(assertive::is_existing_file(nanopolish),
                             msg=paste0("File ",nanopolish," does not exist",sep=""))
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
-
-    nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                           col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
-                                           show_col_types = FALSE)
-  }
-  else if (assertive::has_rows(nanopolish)) {
-    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
-  }
-  else {
-    stop("Wrong nanopolish parameter")
-  }
-
-  sequencing_summary_table <- vroom::vroom(sequencing_summary,
-                                           col_select = c(filename, read_id),
-
                                            show_col_types = FALSE)
   }
   else if (assertive::has_rows(nanopolish)) {
@@ -677,7 +661,7 @@ create_tail_chunk_list <- function(tail_feature_list,
                                       .errorhandling = 'pass',
                                       .options.snow = opts) %dopar% {
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
-                                        }
+                                      }
 
   close(pb)
 
@@ -841,7 +825,7 @@ combine_gafs <- function(tail_chunk){
 #'
 #'}
 create_gaf_list <- function(tail_chunk_list,
-                             num_cores){
+                            num_cores){
 
   #variable biding
   i <- NULL
@@ -885,10 +869,10 @@ create_gaf_list <- function(tail_chunk_list,
 
 
   gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list), .combine = c, .inorder = TRUE,
-                                .errorhandling = 'pass',
-                                .options.snow = opts) %dopar% {
-                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
-                                }
+                               .errorhandling = 'pass',
+                               .options.snow = opts) %dopar% {
+                                 lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
+                               }
 
   close(pb)
 

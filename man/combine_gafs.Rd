@@ -28,7 +28,7 @@ It overcomes the limitations of each method.
 \examples{
 \dontrun{
 
-combine_gafs(tail_chunk = tail_chunk)
+ninetails::combine_gafs(tail_chunk = tail_chunk)
 
 }
 }

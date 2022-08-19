@@ -37,7 +37,7 @@ polya function are taken into account.
 \examples{
 \dontrun{
 
-extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
+ninetails::extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
                    sequencing_summary = '/path/to/sequencing_summary.txt',
                    pass_only = TRUE)
 

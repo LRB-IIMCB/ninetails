@@ -27,8 +27,8 @@ list organized by read IDs.
 \examples{
 \dontrun{
 
-create_tail_chunk_list(tail_feature_list = tail_feature_list,
-                       num_cores = 2)
+tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl,
+                                         num_cores = 3)
 
 }
 }

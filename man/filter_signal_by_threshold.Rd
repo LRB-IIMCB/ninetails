@@ -42,7 +42,7 @@ https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-t
 \examples{
 \dontrun{
 
-filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+ninetails::filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
 
 }
 }

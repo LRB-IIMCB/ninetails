@@ -36,8 +36,7 @@ would require additional processing steps!
 \examples{
 \dontrun{
 
-plot_multiple_gaf(gaf_list = list_of_gafs,
-                   num_cores = 4)
+ninetails::plot_multiple_gaf(gaf_list = gl, num_cores = 10)
 
 }
 }

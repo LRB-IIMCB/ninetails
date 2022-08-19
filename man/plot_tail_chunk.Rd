@@ -29,8 +29,10 @@ to picoamperes [pA].
 \examples{
 \dontrun{
 
-plot_tail_chunk(chunk_name = "3039111f-baf1-450c-f26ca4b047b4_1",
-                tail_chunk_list = list_of_tail_chunks)
+example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+                                      tail_chunk_list = tcl)
+
+print(example)
 
 }
 }
