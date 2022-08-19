@@ -62,19 +62,26 @@ library(ninetails)
 Below is an example of how to use ```check_tails()``` function:
 
 ```r
-results <- ninetails::check_tails(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                           package = 'ninetails'),
-                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
-                                                                   package = 'ninetails'),
-                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                          package = 'ninetails'),
-                                  num_cores = 2,
-                                  basecall_group = 'Basecall_1D_000',
-                                  pass_only=TRUE,
-                                  save_dir = '~/Downloads')
+results <- ninetails::check_tails(
+  nanopolish = system.file('extdata', 
+                           'test_data', 
+                           'nanopolish_output.tsv', 
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 
+                                   'test_data', 
+                                   'sequencing_summary.txt', 
+                                   package = 'ninetails'),
+  workspace = system.file('extdata', 
+                          'test_data', 
+                          'basecalled_fast5', 
+                          package = 'ninetails'),
+  num_cores = 2,
+  basecall_group = 'Basecall_1D_000',
+  pass_only=TRUE,
+  save_dir = '~/Downloads')
 ```
 
-This function returns a list consisting of two tables: **binary_classified_reads** and **detailed_positional_nonadenosine_residues**. In addition, the function saves results to text files in the user-specified directory. 
+This function returns a list consisting of two tables: **read_classes** and **nonadenosine_residues**. In addition, the function saves results to text files in the user-specified directory. 
 
 Moreover, the function also creates a log file in the directory specified by the user.
 
@@ -85,15 +92,22 @@ The **ninetails** pipeline may be also launched without the wrapper - as sometim
 The first function in processing pipeline is ```create_tail_feature_list()```. It extracts the read data from the provided outputs and merges them based on read identifiers (readnames).  This function works as follows:
 
 ```r
-tfl <- ninetails::create_tail_feature_list(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                                    package = 'ninetails'),
-                                           sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-                                                                            package = 'ninetails'),
-                                           workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                                   package = 'ninetails'), 
-                                           num_cores = 2,
-                                           basecall_group = 'Basecall_1D_000',
-                                           pass_only=TRUE)
+tfl <- ninetails::create_tail_feature_list(
+  nanopolish = system.file('extdata',
+                           'test_data', 
+                           'nanopolish_output.tsv', 
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 
+                                   'test_data', 
+                                   'sequencing_summary.txt',
+                                   package = 'ninetails'),
+  workspace = system.file('extdata', 
+                          'test_data', 
+                          'basecalled_fast5', 
+                          package = 'ninetails'), 
+  num_cores = 2,
+  basecall_group = 'Basecall_1D_000', 
+  pass_only=TRUE)
 ```
 
 The second function, ```create_tail_chunk_list()```,  segments the reads and produces a list of segments in which a change of state (move = 1) along with significant local signal anomaly (so-called "pseudomove") has been recorded, possibly indicating the presence of a non-adenosine residue.
@@ -118,12 +132,16 @@ pl <- ninetails::predict_gaf_classes(gl)
 The last function, ```create_outputs()```, allows to obtain the final output: a list composed of **read_classes** (reads are labelled accordingly as "modified", "unmodified" and "unclassified" based on applied criteria) and **nonadenosine_residues** (detailed positional info regarding detected nonadenosine residues) data frames. Note that in this form the function does not automatically save data to files.
 
 ```r
-out <- ninetails::create_outputs(tail_feature_list = tfl,
-                                 tail_chunk_list = tcl,
-                                 nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails'),
-                                 predicted_list = pl,
-                                 num_cores = 2,
-                                 pass_only=TRUE)
+out <- ninetails::create_outputs(
+  tail_feature_list = tfl,
+  tail_chunk_list = tcl,
+  nanopolish = system.file('extdata', 
+                           'test_data', 
+                           'nanopolish_output.tsv', 
+                           package = 'ninetails'),
+  predicted_list = pl,
+  num_cores = 2,
+  pass_only=TRUE)
 ```
 
 ### Output explanation
@@ -176,16 +194,23 @@ In addition, the graphs can depict only signal data (```moves=FALSE```) or they 
 The following example demonstrates how to use the ```plot_squiggle()``` function:
 
 ```r
-plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-                                 nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                          package = 'ninetails'),
-                                 sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',  
-                                                                  package = 'ninetails'), 
-                                 workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                         package = 'ninetails'),
-                                 basecall_group = 'Basecall_1D_000',
-                                 moves = FALSE,
-                                 rescale = TRUE)
+plot <- ninetails::plot_squiggle(
+  readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+  nanopolish = system.file('extdata', 
+                           'test_data', 
+                           'nanopolish_output.tsv', 
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 
+                                   'test_data', 
+                                   'sequencing_summary.txt', 
+                                   package = 'ninetails'), 
+  workspace = system.file('extdata', 
+                          'test_data', 
+                          'basecalled_fast5', 
+                          package = 'ninetails'),
+  basecall_group = 'Basecall_1D_000',
+  moves = FALSE,
+  rescale = TRUE)
 
 print(plot)
 ```
@@ -205,16 +230,23 @@ If the (```moves=TRUE```) argument is passed, then the graph also contains infor
 The ```plot_tail_range()``` function accepts the same arguments as the abovementioned function. An example usage looks as follows:
 
 ```r
-plot <- ninetails::plot_tail_range(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-                                   nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                            package = 'ninetails'),
-                                   sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
-                                                                    package = 'ninetails'),
-                                   workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                           package = 'ninetails'),
-                                   basecall_group = 'Basecall_1D_000',
-                                   moves = TRUE,
-                                   rescale = TRUE)
+plot <- ninetails::plot_tail_range(
+  readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
+  nanopolish = system.file('extdata', 
+                           'test_data', 
+                           'nanopolish_output.tsv', 
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 
+                                   'test_data', 
+                                   'sequencing_summary.txt', 
+                                   package = 'ninetails'),
+  workspace = system.file('extdata', 
+                          'test_data', 
+                          'basecalled_fast5', 
+                          package = 'ninetails'),
+  basecall_group = 'Basecall_1D_000',
+  moves = TRUE,
+  rescale = TRUE)
 
 print(plot)
 ```
@@ -234,8 +266,9 @@ Ninetails allows you to visualise a particular fragment among the list of fragme
 
 An example of how the ```plot_tail_chunk()``` function works:
 ```r
-example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-                                      tail_chunk_list = tcl)
+example <- ninetails::plot_tail_chunk(
+  chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+  tail_chunk_list = tcl)
 
 print(example)
 ```
@@ -257,9 +290,10 @@ The ```plot_gaf()``` function draws a single matrix of interest. It requires the
 Below is an example of the usage of the ```plot_gaf()``` function. Please note that in order for this example to work properly, one must first execute the 3 first commands from the **Classification of reads using standalone functions** section.  
 
 ```r
-example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-                                   gaf_list = gl, 
-                                   save_file = TRUE)
+example_gaf <- ninetails::plot_gaf(
+  gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+  gaf_list = gl, 
+  save_file = TRUE)
 
 print(example_gaf)
 ```
