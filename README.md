@@ -33,7 +33,7 @@ Currently, **ninetails** does not support single fast5 files as this format is d
 
 The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install it before running the program. 
 
-Instructions for installing tensorflow & keras can be found here:
+Instructions for installing ```tensorflow``` & ```keras``` can be found here:
 https://tensorflow.rstudio.com/install/
 
 **Ninetails** requires also ```rhdf5``` package for accessing & browsing files in fast5 format. It can be installed from Bioconductor (version available on CRAN is incompatible with newer R versions). The complete guide is available here: https://bioconductor.org/packages/release/bioc/html/rhdf5.html
