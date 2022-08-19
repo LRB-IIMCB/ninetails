@@ -31,10 +31,10 @@ Therefore, please make sure that the third-party software necessary for the step
 
 Currently, **ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
 
-The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install this package before running the program. 
+The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install it before running the program. 
 
-Instructions for installing tensorflow can be found here:
-https://tensorflow.rstudio.com/installation/
+Instructions for installing tensorflow & keras can be found here:
+https://tensorflow.rstudio.com/install/
 
 
 ## Installation
