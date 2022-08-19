@@ -59,11 +59,9 @@ extract_polya_data <- function(nanopolish,
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
                                            show_col_types = FALSE)
-  }
-  else if (assertive::has_rows(nanopolish)) {
+  } else if (assertive::has_rows(nanopolish)) {
     nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
-  }
-  else {
+  } else {
     stop("Wrong nanopolish parameter. Please provide filepath or object.")
   }
 
@@ -75,11 +73,9 @@ extract_polya_data <- function(nanopolish,
     sequencing_summary_table <- vroom::vroom(sequencing_summary,
                                              col_select = c(filename, read_id),
                                              show_col_types = FALSE)
-  }
-  else if (assertive::has_rows(sequencing_summary)) {
+  } else if (assertive::has_rows(sequencing_summary)) {
     sequencing_summary_table <- sequencing_summary
-  }
-  else {
+  } else {
     stop("Wrong sequencing_summary parameter. Please provide filepath or object.")
   }
 
