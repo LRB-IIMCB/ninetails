@@ -1,3 +1,4 @@
+
 #' Wrapper function for ninetails package.
 #'
 #' This function allows to perform all of the steps required to discover
@@ -6,9 +7,11 @@
 #' segmentation data. Therefore it may be wise to split the nanopolish table
 #' beforehand and then run this function on nanopolish table chunks.
 #'
-#' The output of this function is a list of 2 dataframes, containing: a) binary
-#' classification of reads satisfying filtering criteria, b) detailed positional
-#' info regarding all potential nonadenosine residues detected.
+#' The output of this function is a list of 3 dataframes, containing: a) binary
+#' classification of reads satisfying filtering criteria*, b) detailed positional
+#' info regarding all potential nonadenosine residues detected, c) info
+#' regarding discarded reads (the reason why the following read has been omitted
+#' from the analysis).
 #'
 #' The filtering criteria applied by ninetails are as follows: move of value =1
 #' present, qc_tag = "PASS" or "PASS" & "SUFFCLIP", length estimated
@@ -25,11 +28,9 @@
 #'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
-#' This parameter is set to 1 by default.
 #'
 #' @param basecall_group character string ["Basecall_1D_000"]. Name of the
 #' level in the Fast5 file hierarchy from which the data should be extracted.
-#' This parameter is set to 'Basecall_1D_000' by default.
 #'
 #' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
 #' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
@@ -51,23 +52,23 @@
 #' @examples
 #'\dontrun{
 #'
-#'results <- ninetails::check_tails(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
-#'                                                           package = 'ninetails'),
-#'                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-#'                                                                   package = 'ninetails'),
-#'                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
-#'                                                          package = 'ninetails'),
-#'                                  num_cores = 2,
-#'                                  basecall_group = 'Basecall_1D_000',
-#'                                  pass_only=TRUE,
-#'                                  save_dir = '~/Downloads')
+#' check_tails(nanopolish = '/path/to/file',
+#'             sequencing_summary = '/path/to/file',
+#'             workspace = '/path/to/guppy/workspace',
+#'             num_cores = 10,
+#'             basecalled_group = 'Basecall_1D_000',
+#'             pass_only=TRUE,
+#'             save_dir = '/directory/where/output/shall/be/stored')
 #'
 #' }
 
-check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, basecall_group="Basecall_1D_000", pass_only=TRUE, save_dir){
+check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores, basecall_group, pass_only, save_dir){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  i <- readname <- polya_length <- qc_tag <- chunkname <-  NULL
+  nam <- NULL
+
+  #Show console message
+  cat(paste0('Welcome to Ninetails ', as.character(utils::packageVersion("ninetails")), '\n', '\n', sep = ""))
 
   # Create a log file
   if (dir.exists(file.path(save_dir))) {
@@ -78,21 +79,6 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
     on.exit(sink(file=NULL, type = 'output'))
   }
 
-  #Show console message
-  cat(paste0('Welcome to Ninetails ', as.character(utils::packageVersion("ninetails")), '\n', '\n', sep = ""))
-
-
-  # user-specified options
-  cat(paste(' Ninetails was launched with following options:', '\n', sep=''))
-  cat(paste(' nanopolish output file:       ', nanopolish, '\n', sep=''))
-  cat(paste(' sequencing sumary file:       ', sequencing_summary, '\n', sep=''))
-  cat(paste(' fast5 files directory:        ', workspace, '\n', sep=''))
-  cat(paste(' number of cores:              ', num_cores, '\n', sep=''))
-  cat(paste(' basecall group:               ', basecall_group, '\n', sep=''))
-  cat(paste(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
-  cat(paste(' output directory:             ', save_dir, '\n', '\n', '\n'))
-
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
 
   # Handle if save dir does not exist
   if (!dir.exists(file.path(save_dir))) {
@@ -112,71 +98,80 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   }
 
 
+  # user-specified options
+  cat(paste(' Ninetails was launched with following options:', '\n', sep=''))
+  cat(paste(' nanopolish output file:       ', nanopolish, '\n', sep=''))
+  cat(paste(' sequencing sumary file:       ', sequencing_summary, '\n', sep=''))
+  cat(paste(' fast5 files directory:        ', workspace, '\n', sep=''))
+  cat(paste(' number of cores:              ', num_cores, '\n', sep=''))
+  cat(paste(' basecall group:               ', basecall_group, '\n', sep=''))
+  cat(paste(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
+  cat(paste(' output directory:             ', save_dir, '\n', '\n', '\n'))
+
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
+
+
   # Assertions
   if (missing(num_cores)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
 
   if (missing(basecall_group)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
     stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
   }
 
   if (missing(workspace)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
   if (missing(save_dir)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
     stop("A save dir for the output files is missing. Please provide a valid save_dir argument.", call. =FALSE)
   }
 
-  sink(log_file, append=TRUE, split = F, type='message')
-  assertthat::assert_that(assertive::is_numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(workspace),
                           msg = paste0("Empty string provided as an input. Please provide a valid path to basecalled fast5 files."))
   assertthat::assert_that(assertive::is_character(workspace),
                           msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
   assertthat::assert_that(assertive::is_character(save_dir),
                           msg = paste0("Path to output files is not a character string. Please provide a valid save_dir path."))
-  sink(type='message')
-
 
 
   #####################################################
-  # FAST5 QUICK CHECKUP
+  # CREATE TAIL FEATURE LIST
   #####################################################
 
-  #checking data format
-  ninetails::check_fast5_filetype(workspace, basecall_group)
+  # Assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
 
-  #####################################################
-  # CREATING TAIL FEATURE LIST
-  #####################################################
+  if (missing(basecall_group)) {
+    stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
+  }
+
+  if (missing(workspace)) {
+    stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+
 
   # Extracting and processing polya & sequencing summary data
-  polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
+  polya_summary <- extract_polya_data(nanopolish, sequencing_summary, pass_only)
 
+  # this is list of indexes required for parallel computing; the main list of reads is split for chunks (does not accept readname)
+  index_list = split(1:length(names(polya_summary$filename)), ceiling(1:length(names(polya_summary$filename))/100))
+
+  #checking data format
+  check_fast5_filetype(workspace, basecall_group)
+
+  # use selected number of cores
+  doParallel::registerDoParallel(cores = num_cores)
 
   #create empty list for extracted fast5 data
-  tail_features_list = list()
-
-  # creating cluster for parallel computing
-  my_cluster <- parallel::makeCluster(num_cores)
-  doSNOW::registerDoSNOW(my_cluster)
-  `%dopar%` <- foreach::`%dopar%`
-  `%do%` <- foreach::`%do%`
+  tail_feature_list = list()
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
@@ -187,19 +182,22 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(polya_summary$filename),
+                              max = length(index_list),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
+                              file= stderr())
 
-  # parallel extraction
-  tail_features_list <- foreach::foreach(i = seq_along(polya_summary$readname),
-                                         .combine = c, .inorder = TRUE,
-                                         .errorhandling = 'pass',
-                                         .options.snow = opts) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
+
+  # loop for parallel extraction
+  for (indx in 1:length(index_list)){
+
+    # work on subsets of reads in parallel
+    tail_feature_list <- c(tail_feature_list, foreach::foreach(nam = names(polya_summary$filename)[index_list[[indx]]]) %dopar% extract_tail_data(nam,polya_summary,workspace,basecall_group))
+
+    utils::setTxtProgressBar(pb, indx)
+
+  }
 
   close(pb)
 
@@ -209,153 +207,110 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
 
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
-  names(tail_features_list) <- squiggle_names
+  names(tail_feature_list) <- squiggle_names
 
   # remove reads with only zero moved tails
-  tail_features_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_features_list)
-  zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
-
-  # prevent from running on reads which do not fulfill the pseudomove condition
-  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=4)), tail_features_list)
-
-  # reads discarded because of unmet pseudomove condition
-  #in this reads reported pseudomove chain is too short to be considered as potential modification
-  nonpseudomoved_readnames <- squiggle_names[!(squiggle_names %in% c(zeromoved_readnames, names(tail_features_list)))]
-
-
-  #create final output
-  tail_feature_list <- list()
-
-  tail_feature_list[["tail_feature_list"]] <- tail_features_list
-  tail_feature_list[["zeromoved_readnames"]] <- zeromoved_readnames
-  tail_feature_list[["nonpseudomoved_readnames"]] <- nonpseudomoved_readnames
+  tail_feature_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_feature_list)
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   #####################################################
-  # CREATING TAIL CHUNK LIST
+  # CREATE TAIL CHUNK LIST
   #####################################################
 
+  # initial assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
+
+  if (missing(tail_feature_list)) {
+    stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_list(tail_feature_list),
+                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+
+
+
+  # this is list of indexes required for parallel computing; the main list of reads is split for chunks
+  index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
+
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()),'] ','Creating tail segmentation data...', '\n', sep=''))
 
   #SINK #1
   sink(file=NULL, type = 'output')
   close(log_file)
 
+
   # progress bar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_feature_list[[1]]),
+                              max = length(index_list),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
+                              file= stderr())
 
-  #output list
-  tail_chunk_list <- list()
+  #create empty list for extracted data
+  tail_chunk_list = list()
 
-  #parallel extraction
-  tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                      .combine = c, .inorder = TRUE,
-                                      .errorhandling = 'pass',
-                                      .options.snow = opts) %dopar% {
-                                        lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
-                                      }
+
+  # loop for parallel extraction
+  for (indx in 1:length(index_list)){
+
+    # work on subsets of reads in parallel
+    tail_chunk_list <- c(tail_chunk_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
+                         %dopar% split_with_overlaps_moved(nam, tail_feature_list, segment = 100, overlap = 50))
+
+    utils::setTxtProgressBar(pb, indx)
+
+  }
 
   close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
   sink(log_file, append=TRUE, split = TRUE, type='output')
+
 
   #rename first level of nested list accordingly
-  names(tail_chunk_list) <- names(tail_feature_list[[1]])
+  names(tail_chunk_list) <- names(tail_feature_list)
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
+
   #####################################################
-  # CREATING GAF LIST
+  # CREATE GASF LIST
   #####################################################
+
+  # Assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
+
+  if (missing(tail_chunk_list)) {
+    stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid file format."))
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+
+
+
+  #retrieve chunknames
+  chunknames <- gsub(".*?\\.","",names(rapply(tail_chunk_list, function(x) head(x, 1))))
 
   #create empty list for the data
-  gaf_list = list()
+  gasf_list = list()
 
-  #progressbar header
-  cat(paste0('[', as.character(Sys.time()), '] ','Computing angular summation fields...', '\n', sep=''))
-
-  #SINK #1
-  sink(file=NULL, type = 'output')
-  close(log_file)
-
-  # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_chunk_list),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
-
-
-  gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list), .combine = c, .inorder = TRUE,
-                               .errorhandling = 'pass',
-                               .options.snow = opts) %dopar% {
-                                 lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
-                                 }
-
-  close(pb)
-
-  #SINK #2
-  log_file <- file(log_filepath, open = "a")
-  sink(log_file, append=TRUE, split = TRUE, type='output')
-
-  # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
-
-  #stop the cluster before tensorflow
-  parallel::stopCluster(my_cluster)
-
-  #####################################################
-  # PREDICT CLASSES
-  #####################################################
-
-  predicted_list <- tryCatch({ninetails::predict_gaf_classes(gaf_list)}) #suppress tensorflow console messages
-
-  #####################################################
-  # CREATE OUTPUT
-  #####################################################
-
-  #read nanopolish data
-  nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                         col_select=c(readname, polya_length, qc_tag),
-                                         show_col_types = FALSE)
-
-  # assertions #2
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
-                          msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                          msg=paste0("File ",nanopolish," does not exist",sep=""))
-  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
-                          msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
-
-  # HANDLE LENGTH/POSITION CALIBRATING DATA
-  # reinstantiate the cluster
-  my_cluster <- parallel::makeCluster(num_cores)
-  on.exit(parallel::stopCluster(my_cluster))
-  doSNOW::registerDoSNOW(my_cluster)
-  `%dopar%` <- foreach::`%dopar%`
-  `%do%` <- foreach::`%do%`
-
-  #create empty list for the data
-  tail_length_list = list()
-
-  # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving estimated length data...', '\n', sep=''))
+  #header for progressbar
+  cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular summation fields...', '\n', sep=''))
 
   #SINK #1
   sink(file=NULL, type = 'output')
@@ -363,20 +318,20 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
 
   #set progressbar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(names(tail_feature_list[[1]])),
+                              max = length(tail_chunk_list),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
+                              file= stderr())
 
-  tail_length_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                       .combine = c, .inorder = TRUE,
-                                       .errorhandling = 'pass',
-                                       .options.snow = opts) %dopar% {
-                                         lapply(names(tail_feature_list[[1]][i]), function(x) length(tail_feature_list[[1]][[x]][[2]]))
-                                       }
+  #loop through the nested list
+  for (read in seq_along(tail_chunk_list)){
+    for (chunk in seq_along(tail_chunk_list[[read]])){
+      gasf_list <- c(gasf_list, foreach::foreach(chunk) %dopar% create_gasf(tail_chunk_list[[read]][[chunk]]))
+
+      utils::setTxtProgressBar(pb, read)
+    }
+  }
 
   close(pb)
 
@@ -384,21 +339,34 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   log_file <- file(log_filepath, open = "a")
   sink(log_file, append=TRUE, split = TRUE, type='output')
 
-  #coerce to df, add names
-  tail_length_list <- do.call("rbind.data.frame", tail_length_list)
-  tail_length_list$readname <- names(tail_feature_list[["tail_feature_list"]])
-  colnames(tail_length_list) <- c("signal_length", "readname")
 
-  #merge data from feature list with nanopolish estimations
-  tails_tail_feature_list <- dplyr::left_join(tail_length_list, nanopolish_polya_table, by="readname")
+  #restore names in the list
+  names(gasf_list) <- chunknames
+
+  #stop cluster
+  doParallel::stopImplicitCluster()
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+
+  #####################################################
+  # PREDICT CLASSES
+  #####################################################
+
+  predicted_list <- tryCatch({predict_classes(gasf_list)}) #suppress tensorflow console messages
 
 
-  ### Chunk positional data
-  #create empty list for extracted data
-  non_a_position_list <- list()
+  #####################################################
+  # CREATE COORD DF
+  #####################################################
 
+  # creating cluster for parallel computing
+  doParallel::registerDoParallel(cores = num_cores)
+
+
+  # OVERLAP COUNT LIST
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving segmentation data...', '\n', sep=''))
 
   #SINK #1
   sink(file=NULL, type = 'output')
@@ -406,119 +374,109 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
 
   # progress bar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_chunk_list),
+                              max = length(index_list),
                               style = 3,
                               width = 50,
                               char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
+                              file= stderr())
 
+  #create empty lists for extracted data
+  overlap_count_list = list()
 
-  non_a_position_list <- foreach::foreach(i = seq_along(tail_chunk_list),
-                                          .combine = c, .inorder = TRUE,
-                                          .errorhandling = 'pass',
-                                          .options.snow = opts) %dopar% {
-                                            lapply(tail_chunk_list[[i]], function(x) x[['chunk_start_pos']]+50)
-                                          }
+  # loop for parallel extraction
+  for (indx in 1:length(index_list)){
+
+    # work on subsets of reads in parallel
+    overlap_count_list <- c(overlap_count_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
+                            %dopar% count_overlaps(signal = tail_feature_list[[nam]][[4]], segment = 100, overlap = 50))
+
+    utils::setTxtProgressBar(pb, indx)
+
+  }
+
   close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
   sink(log_file, append=TRUE, split = TRUE, type='output')
 
-  # coerce to df, add names
-  non_a_position_list <- do.call("rbind.data.frame", non_a_position_list)
-  chunknames <-  purrr::map_depth(tail_chunk_list, 1, names) %>% unlist(use.names = F)
-  non_a_position_list$chunkname <- chunknames
-  non_a_position_list<- non_a_position_list %>% dplyr::mutate(readname = gsub('_.*','',chunkname))
-  colnames(non_a_position_list)[1] <- c("centr_signal_pos")
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
-  #merge data from feature list with nanopolish estimations
-  non_a_position_list <- dplyr::left_join(non_a_position_list, tails_tail_feature_list, by="readname")
+  ### TAIL LENGTH LIST
 
-  # HANDLE PREDICTIONS
-  moved_chunks_table <- data.frame(t(Reduce(rbind, predicted_list)))
-  # rename cols
-  colnames(moved_chunks_table) <- c("chunkname","prediction")
-  # extract readnames
-  moved_chunks_table$readname <- sub('\\_.*', '', moved_chunks_table$chunkname)
+  # header for progress bar
+  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
 
-  #substitute predictions with letter code
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==0] <- "A"
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==1] <- "C"
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==2] <- "G"
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==3] <- "U"
 
-  #extract reads with move==1 and modification absent (not detected)
-  moved_unmodified_readnames <- names(which(with(moved_chunks_table, tapply(prediction, readname, unique) == 'A')))
+  #SINK #1
+  sink(file=NULL, type = 'output')
+  close(log_file)
 
-  # cleaned chunks_table
-  moved_chunks_table <- subset(moved_chunks_table, !(readname %in% moved_unmodified_readnames))
-  # delete A-containing rows
-  moved_chunks_table <- moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
-  #merge data from feats & predictions
-  moved_chunks_table <- dplyr::left_join(moved_chunks_table, non_a_position_list, by=c("readname", "chunkname"))
 
-  #estimate non-A nucleotide position
-  moved_chunks_table$est_nonA_pos <- round(moved_chunks_table$polya_length-((moved_chunks_table$polya_length*moved_chunks_table$centr_signal_pos)/moved_chunks_table$signal_length), digits=2)
+  # progress bar
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
 
-  #clean up the output nonA table:
-  moved_chunks_table <- moved_chunks_table[,c(3,2,8,6,7)]
+  #create empty list for extracted data
+  tail_length_list = list()
 
-  # Handle other (discarded) reads:
-  discarded_reads <- nanopolish_polya_table[!nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
+  # loop for parallel extraction
+  for (indx in 1:length(index_list)){
 
-  # Add filtering criterion: select only pass or pass $ suffclip
-  if(pass_only == TRUE){
-    discarded_reads <- discarded_reads %>%
-      dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "insufficient read length",
-                                                qc_tag == "SUFFCLIP" ~ "not included in the analysis (pass only = T)",
-                                                qc_tag == "ADAPTER" ~ "nanopolish qc failed",
-                                                qc_tag == "NOREGION" ~ "nanopolish qc failed",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "nanopolish qc failed",
-                                                readname %in% moved_unmodified_readnames ~ "move transition present, nonA residue undetected",
-                                                TRUE ~ "move transition absent, nonA residue undetected"),
-                    class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "move transition absent, nonA residue undetected" ~ "unmodified",
-                                             TRUE ~ "unclassified"))
-  } else {
-    discarded_reads <- discarded_reads %>%
-      dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "insufficient read length",
-                                                qc_tag == "ADAPTER" ~ "nanopolish qc failed",
-                                                qc_tag == "NOREGION" ~ "nanopolish qc failed",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "nanopolish qc failed",
-                                                readname %in% moved_unmodified_readnames ~ "move transition present, nonA residue undetected",
-                                                TRUE ~ "move transition absent, nonA residue undetected"),
-                    class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "move transition absent, nonA residue undetected" ~ "unmodified",
-                                             TRUE ~ "unclassified"))
+    # work on subsets of reads in parallel
+    tail_length_list <- c(tail_length_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
+                          %dopar% tail_feature_list[[nam]][[6]])
+
+    utils::setTxtProgressBar(pb, indx)
+
   }
 
+  close(pb)
 
-  modified_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
-  modified_reads <- modified_reads %>% dplyr::mutate(class = "modified",
-                                                     comments = "move transition present, nonA residue detected")
+  #SINK #2
+  log_file <- file(log_filepath, open = "a")
+  sink(log_file, append=TRUE, split = TRUE, type='output')
 
-  #merge second tabular output:
-  nanopolish_polya_table <- rbind(modified_reads, discarded_reads)
+  #stop cluster
+  doParallel::stopImplicitCluster()
 
-  #CREATE FINAL OUTPUT
-  ninetails_output <- list()
-  ninetails_output[['read_classes']] <- nanopolish_polya_table
-  ninetails_output[['nonadenosine_residues']] <- moved_chunks_table
+  # coerce to df, add names
+  overlap_count_list <- do.call("rbind.data.frame", overlap_count_list)
+  overlap_count_list$readname <- names(tail_feature_list)
+  colnames(overlap_count_list) <- c("total_chunk", "readname")
+
+  tail_length_list <- do.call("rbind.data.frame", tail_length_list)
+  tail_length_list$readname <- names(tail_feature_list)
+  colnames(tail_length_list) <- c("tail_length", "readname")
+
+  #produce final output
+  coordinate_df <- merge(overlap_count_list, tail_length_list)
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+
+  #####################################################
+  # ANALYZE RESULTS
+  #####################################################
+
+  #header for function
+  cat(paste0('[', as.character(Sys.time()), '] ','Merging predictions...', '\n', sep=''))
+
+  results <- analyze_results(nanopolish, coordinate_df, predicted_list, pass_only=pass_only)
 
 
   #dump output to files:
+  names(results) <- c("binary_classified_reads", "detailed_positional_nonadenosine_residues")
   mapply(function (x,y) utils::write.table(x, file = file.path(save_dir, paste0(as.character(Sys.time()), '_', y, '.tsv')),
-                                           row.names = F, sep="\t", quote = F), ninetails_output, names(ninetails_output))
+                                           row.names = F, sep="\t", quote = F), results, names(results))
 
   # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', '\n', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
   #display console messages
   cat(paste0('[', as.character(Sys.time()), '] ','Pipeline finished','\n'))
@@ -530,10 +488,11 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   cat(paste0('\n','Ninetails exited successfully.','\n','\n'))
   cat(paste0('Thank you for using Ninetails.'))
 
+
+
+  return(results)
+
   # close logfile connection
-  on.exit(close(log_file))
-
-
-  return(ninetails_output)
+  close(log_file)
 
 }

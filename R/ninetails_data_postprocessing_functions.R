@@ -1,186 +1,229 @@
-#' Creates the list object containing tabular outputs of ninetails pipeline.
+#' Creates a dataframe with segmentation and tail length info required for
+#' non-adenosine position estimation.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
-#' function.
-#'
-#' @param tail_chunk_list list object produced by create_tail_chunk_list
-#' function.
-#'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
-#'
-#' @param predicted_list a list object produced by predict_classes function.
+#' @param tail_feature_list list object produced by create_tail_feature_list function.
 #'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
+#' @return a dataframe with 3 columns: read ID (readname), total number of segments
+#' per given tail (total_chunk) and poly(A) tail length (tail_length) estimated by
+#' nanopolish.
+#'
+#' @importFrom foreach %dopar%
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' create_coordinate_dataframe(tail_feature_list = '/path/to/tail_feature_list',
+#'                             num_cores = 10)
+#'
+#'}
+#'
+#'
+create_coordinate_dataframe <- function(tail_feature_list, num_cores){
+
+  # variable binding (suppressing R CMD check from throwing an error)
+  nam <- NULL
+
+  #assertions
+  if (missing(num_cores)) {
+    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+  }
+
+  if (missing(tail_feature_list)) {
+    stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+  }
+
+  assertthat::assert_that(assertive::is_numeric(num_cores), msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_list(tail_feature_list),
+                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+
+  # creating cluster for parallel computing
+  doParallel::registerDoParallel(cores = num_cores)
+
+  # this is list of indexes required for parallel computing; the main list of reads is split for chunks
+  index_list = split(1:length(names(tail_feature_list)), ceiling(1:length(names(tail_feature_list))/100))
+
+  # OVERLAP COUNT LIST
+  # header for progress bar
+  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving segmentation data...', '\n', sep=''))
+
+  # progress bar
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
+
+  #create empty lists for extracted data
+  overlap_count_list = list()
+
+  # loop for parallel extraction
+  for (indx in 1:length(index_list)){
+
+    # work on subsets of reads in parallel
+    overlap_count_list <- c(overlap_count_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
+                            %dopar% count_overlaps(signal = tail_feature_list[[nam]][[4]], segment = 100, overlap = 50))
+
+    utils::setTxtProgressBar(pb, indx)
+
+  }
+
+  close(pb)
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+
+  ### TAIL LENGTH LIST
+  # header for progress bar
+  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
+
+  # progress bar
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(index_list),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file= stderr())
+
+  #create empty list for extracted data
+  tail_length_list = list()
+
+  # loop for parallel extraction
+  for (indx in 1:length(index_list)){
+
+    # work on subsets of reads in parallel
+    tail_length_list <- c(tail_length_list, foreach::foreach(nam = names(tail_feature_list)[index_list[[indx]]])
+                          %dopar% tail_feature_list[[nam]][[6]])
+
+    utils::setTxtProgressBar(pb, indx)
+
+  }
+
+  close(pb)
+
+  #stop cluster
+  doParallel::stopImplicitCluster()
+
+
+  # coerce to df, add names
+  overlap_count_list <- do.call("rbind.data.frame", overlap_count_list)
+  overlap_count_list$readname <- names(tail_feature_list)
+  colnames(overlap_count_list) <- c("total_chunk", "readname")
+
+  tail_length_list <- do.call("rbind.data.frame", tail_length_list)
+  tail_length_list$readname <- names(tail_feature_list)
+  colnames(tail_length_list) <- c("tail_length", "readname")
+
+  #produce final output
+  coordinate_df <- merge(overlap_count_list, tail_length_list)
+
+  # Done comm
+  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+
+
+  return(coordinate_df)
+
+}
+
+
+
+#' Summarizes classification results into list of 2 dataframes containing two
+#' types of outputs (read type classification and detailed positional info).
+#'
+#' First dataframe contains classification of ONT sequencing reads based on
+#' their type. This means that reads are assigned to one of the following
+#' classes: [1] "modified" - if they meet initial conditions for analysis and
+#' contain potential non-Adenosine residue, [2] "unmodified" - if they contain
+#' no move =1 (only 0s) or contain move =1 but were classified as "A" containing
+#' exclusively by neural network, [3] "unclassified - insufficient read length"
+#' if their length estimated by nanopolish polya function was lower or equal
+#' to 10 nt, [4] other unclassified cases which may appear in the dataset were
+#' excluded from the analysis due to their nanopolish qc tag - the reason for
+#' this is given within the comment.
+#'
+#' Second dataframe contains detailed positions of detected modifications.
+#'
+#' @param nanopolish character string. Full path of the .tsv file produced
+#' by nanopolish polya function.
+#'
+#' @param coordinate_df a data frame object produced by create_coordinate_df
+#' function.
+#' @param predicted_list a list object produced by predict_classes function.
+#'
+#' @param pass_only logical [TRUE/FALSE]. This must be consistent with the
+#' parameter set while using previous functions requiring that option in an
+#' entire analysis. This means, if in previously used create_tail_feature_list()
+#' function parameter pass_only was set to "FALSE" it shall be set to "FALSE" in
+#' analyze_results() function either. If TRUE, only reads tagged by
 #' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
 #' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
 #' As a default, "TRUE" value is set.
 #'
-#' @return This function returns a list object containing two fataframes:
-#' "read_classes" and "nonadenosine_residues" with the final output.
-#' First dataframe contains initial indications, whether the given read was
-#' classified or omitted (with reason) and if classified, whether read was
-#' recognized as modified (containing non-adenosine residue) or not.
-#' The second dataframe contains detailed info on type and estimated positions
-#' of non-adenosine residues detected.
+#' @return a list of 2 dataframes with prediction results. First dataframe
+#' contains initial indications, whether the given read was recognized as
+#' modified (containing non-adenosine residue) or not.  The second dataframe
+#' contains detailed info on type and estimated positions of non-adenosine
+#' residues detected.
+#'
+#'
+#' @importFrom foreach %dopar%
+#' @importFrom dplyr %>%
 #'
 #' @export
 #'
 #' @examples
 #'\dontrun{
 #'
-#' create_outputs(tail_feature_list = tail_feature_list,
-#'                tail_chunk_list = tail_chunk_list,
-#'                nanopolish = '/path/to/nanopolish_output.tsv',
-#'                predicted_list = predicted_list,
-#'                num_cores = 2,
-#'                pass_only=TRUE)
+#' analyze_results(nanopolish = '/path/to/nanopolish_output.tsv',
+#'                 coordinate_df = '/path/to/coordinate_df',
+#'                 predicted_list = '/path/to/predicted_list',
+#'                 pass_only=TRUE)
+#'
 #'}
 #'
-#'
-create_outputs <- function(tail_feature_list,
-                           tail_chunk_list,
-                           nanopolish,
-                           predicted_list,
-                           num_cores,
-                           pass_only=TRUE){
+analyze_results <- function(nanopolish, coordinate_df, predicted_list, pass_only = TRUE){
 
-  #variable binding
-  readname <- polya_length <- qc_tag<- i <- chunkname <- NULL
+  # variable binding (suppressing R CMD check from throwing an error)
+  chunk <- total_chunk <- tail_length <- init <- readname <- polya_length <- qc_tag <- NULL
 
   #assertions
-
-  if (missing(tail_feature_list)) {
-    stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
-  }
-
-  if (missing(tail_chunk_list)) {
-    stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
-  }
-
-  if (missing(nanopolish)) {
-    stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
+  if (missing(coordinate_df)) {
+    stop("Data frame of coordinate calibration values is missing. Please provide a valid coordinate_df argument.", call. =FALSE)
   }
 
   if (missing(predicted_list)) {
     stop("List of predictions is missing. Please provide a valid predicted_list argument.", call. =FALSE)
   }
 
-  if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
-  }
-
-  assertthat::assert_that(assertive::is_list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid object."))
-  assertthat::assert_that(assertive::is_list(tail_chunk_list),
-                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid object."))
-  assertthat::assert_that(assertive::is_list(predicted_list),
-                          msg = paste0("Given predicted_list is not a list (class). Please provide valid object."))
+  #read nanopolish polya
+  nanopolish_polya_table <- vroom::vroom(nanopolish, col_select=c(readname, polya_length, qc_tag), show_col_types = FALSE)
 
 
-  #read nanopolish data
-  nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                         col_select=c(readname, polya_length, qc_tag),
-                                         show_col_types = FALSE)
-
-  # assertions #2
+  #assertions
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
                           msg = "Empty string provided as an input. Please provide a nanopolish as a string")
   assertthat::assert_that(assertive::is_existing_file(nanopolish),
                           msg=paste0("File ",nanopolish," does not exist",sep=""))
   assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
                           msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
-
-  # HANDLE LENGTH/POSITION CALIBRATING DATA
-  # creating cluster for parallel computing
-  my_cluster <- parallel::makeCluster(num_cores)
-  on.exit(parallel::stopCluster(my_cluster))
-
-  doSNOW::registerDoSNOW(my_cluster)
-  `%dopar%` <- foreach::`%dopar%`
-  `%do%` <- foreach::`%do%`
-
-  #create empty list for the data
-  tail_length_list = list()
-
-  # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving estimated length data...', '\n', sep=''))
-
-  #set progressbar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(names(tail_feature_list[[1]])),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
-
-  tail_length_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                       .combine = c, .inorder = TRUE,
-                                       .errorhandling = 'pass',
-                                       .options.snow = opts) %dopar% {
-                                         lapply(names(tail_feature_list[[1]][i]), function(x) length(tail_feature_list[[1]][[x]][[2]]))
-                                       }
-
-  close(pb)
-
-  #coerce to df, add names
-  tail_length_list <- do.call("rbind.data.frame", tail_length_list)
-  tail_length_list$readname <- names(tail_feature_list[["tail_feature_list"]])
-  colnames(tail_length_list) <- c("signal_length", "readname")
-
-  #merge data from feature list with nanopolish estimations
-  tails_tail_feature_list <- dplyr::left_join(tail_length_list, nanopolish_polya_table, by="readname")
+  assertthat::assert_that(assertive::is_data.frame(coordinate_df),
+                          msg = paste0("Given coordinate_df is not a data frame (class). Please provide valid file format."))
+  assertthat::assert_that(assertive::is_list(predicted_list),
+                          msg = paste0("Given predicted_list is not a list (class). Please provide valid file format."))
 
 
-  ### Chunk positional data
-  #create empty list for extracted data
-  non_a_position_list <- list()
-
-  # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
-
-  #set progressbar
-  # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_chunk_list),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
-  progress <- function(n) utils::setTxtProgressBar(pb, n)
-  opts <- list(progress = progress)
-
-
-  non_a_position_list <- foreach::foreach(i = seq_along(tail_chunk_list),
-                                          .combine = c, .inorder = TRUE,
-                                          .errorhandling = 'pass',
-                                          .options.snow = opts) %dopar% {
-                                            lapply(tail_chunk_list[[i]], function(x) x[['chunk_start_pos']]+50)
-                                          }
-
-  # coerce to df, add names
-  non_a_position_list <- do.call("rbind.data.frame", non_a_position_list)
-  chunknames <-  purrr::map_depth(tail_chunk_list, 1, names) %>% unlist(use.names = F)
-  non_a_position_list$chunkname <- chunknames
-  non_a_position_list<- non_a_position_list %>% dplyr::mutate(readname = gsub('_.*','',chunkname))
-  colnames(non_a_position_list)[1] <- c("centr_signal_pos")
-
-  #merge data from feature list with nanopolish estimations
-  non_a_position_list <- dplyr::left_join(non_a_position_list, tails_tail_feature_list, by="readname")
-
-  # HANDLE PREDICTIONS
+  #FIRST LIST
   moved_chunks_table <- data.frame(t(Reduce(rbind, predicted_list)))
-  # rename cols
-  colnames(moved_chunks_table) <- c("chunkname","prediction")
-  # extract readnames
-  moved_chunks_table$readname <- sub('\\_.*', '', moved_chunks_table$chunkname)
 
-  #substitute predictions with letter code
+  moved_chunks_table <- tidyr::separate(moved_chunks_table, init, into = c("readname", "chunk"), sep = "\\_")
+  moved_chunks_table$chunk <- as.numeric(moved_chunks_table$chunk)
+  colnames(moved_chunks_table)[3] <- "prediction"
+
   moved_chunks_table$prediction[moved_chunks_table$prediction ==0] <- "A"
   moved_chunks_table$prediction[moved_chunks_table$prediction ==1] <- "C"
   moved_chunks_table$prediction[moved_chunks_table$prediction ==2] <- "G"
@@ -191,63 +234,73 @@ create_outputs <- function(tail_feature_list,
 
   # cleaned chunks_table
   moved_chunks_table <- subset(moved_chunks_table, !(readname %in% moved_unmodified_readnames))
+  moved_chunks_table <- dplyr::left_join(moved_chunks_table, coordinate_df,by="readname")
+
   # delete A-containing rows
-  moved_chunks_table <- moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
-  #merge data from feats & predictions
-  moved_chunks_table <- dplyr::left_join(moved_chunks_table, non_a_position_list, by=c("readname", "chunkname"))
+  moved_chunks_table<-moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
 
-  #estimate non-A nucleotide position
-  moved_chunks_table$est_nonA_pos <- round(moved_chunks_table$polya_length-((moved_chunks_table$polya_length*moved_chunks_table$centr_signal_pos)/moved_chunks_table$signal_length), digits=2)
+  # total chunks table
+  readname <- coordinate_df$readname
 
-  #clean up the output nonA table:
-  moved_chunks_table <- moved_chunks_table[,c(3,2,8,6,7)]
+  ## bin chunks according to the position:
+  moved_chunks_table <- moved_chunks_table %>%
+    dplyr::mutate(interval = dplyr::case_when(total_chunk==1 ~ "3'end",
+                                              total_chunk==2 ~ dplyr::case_when(chunk==1 ~ "3'end",
+                                                                                TRUE~ "5'end"),
+                                              total_chunk==3 ~ dplyr::case_when(chunk==1 ~ "3'end",
+                                                                                chunk==2 ~ "center",
+                                                                                TRUE~ "5'end"),
+                                              TRUE ~ dplyr::case_when(chunk==1 ~ "3'end",
+                                                                      chunk < (total_chunk/3) ~ "3'distal",
+                                                                      chunk < 2*(total_chunk/3) ~ "center",
+                                                                      chunk==total_chunk ~ "5'end",
+                                                                      TRUE ~ "5'distal")))
+  #estimated hit centered_position (from 5' end)
+  moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos = round((tail_length - ((tail_length/total_chunk)*chunk)),2))
 
-  # Handle other (discarded) reads:
-  discarded_reads <- nanopolish_polya_table[!nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
+  #estimated hit centered_position (from 3' end)
+  #moved_chunks_table <- moved_chunks_table %>% dplyr::mutate(centered_pos = round((tail_length/total_chunk)*chunk)),2)
+
+  ## SECOND LIST
+  # handle unmodified IDs
+  unmodified_readnames <- readname[!(readname %in% moved_chunks_table$readname)]
+
+  preliminary_classification  <- data.frame(readname)
+  preliminary_classification <- preliminary_classification %>%
+    dplyr::mutate(class = ifelse((readname %in% unmodified_readnames), "unmodified", "modified"))
+
 
   # Add filtering criterion: select only pass or pass $ suffclip
   if(pass_only == TRUE){
-    discarded_reads <- discarded_reads %>%
-      dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "insufficient read length",
-                                                qc_tag == "SUFFCLIP" ~ "not included in the analysis (pass only = T)",
-                                                qc_tag == "ADAPTER" ~ "nanopolish qc failed",
-                                                qc_tag == "NOREGION" ~ "nanopolish qc failed",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "nanopolish qc failed",
-                                                readname %in% moved_unmodified_readnames ~ "move transition present, nonA residue undetected",
-                                                TRUE ~ "move transition absent, nonA residue undetected"),
-                    class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "move transition absent, nonA residue undetected" ~ "unmodified",
-                                             TRUE ~ "unclassified"))
+    discarded_reads <- nanopolish_polya_table %>%
+      dplyr::filter(!readname %in% preliminary_classification$readname) %>%
+      dplyr::mutate(class = dplyr::case_when(polya_length < 10 ~ "unclassified - insufficient read length",
+                                             qc_tag == "SUFFCLIP" ~ "unclassified - nanopolish qc failed (suffclip)",
+                                             qc_tag == "ADAPTER" ~ "unclassified - nanopolish qc failed (adapter)",
+                                             qc_tag == "NOREGION" ~ "unclassified - nanopolish qc failed (noregion)",
+                                             qc_tag == "READ_FAILED_LOAD" ~ "unclassified - nanopolish qc failed (read_failed_load)",
+                                             TRUE ~ "unmodified")) %>% dplyr::select(-c(qc_tag, polya_length))
   } else {
-    discarded_reads <- discarded_reads %>%
-      dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "insufficient read length",
-                                                qc_tag == "ADAPTER" ~ "nanopolish qc failed",
-                                                qc_tag == "NOREGION" ~ "nanopolish qc failed",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "nanopolish qc failed",
-                                                readname %in% moved_unmodified_readnames ~ "move transition present, nonA residue undetected",
-                                                TRUE ~ "move transition absent, nonA residue undetected"),
-                    class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "move transition absent, nonA residue undetected" ~ "unmodified",
-                                             TRUE ~ "unclassified"))
+    discarded_reads <- nanopolish_polya_table %>%
+      dplyr::filter(!readname %in% preliminary_classification$readname) %>%
+      dplyr::mutate(class = dplyr::case_when(polya_length < 10 ~ "unclassified - insufficient read length",
+                                             qc_tag == "ADAPTER" ~ "unclassified - nanopolish qc failed (adapter)",
+                                             qc_tag == "NOREGION" ~ "unclassified - nanopolish qc failed (noregion)",
+                                             qc_tag == "READ_FAILED_LOAD" ~ "unclassified - nanopolish qc failed (read_failed_load)",
+                                             TRUE ~ "unmodified")) %>% dplyr::select(-c(qc_tag, polya_length))
   }
 
+  preliminary_classification <- rbind(preliminary_classification, discarded_reads)
 
-  modified_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
-  modified_reads <- modified_reads %>% dplyr::mutate(class = "modified",
-                                                     comments = "move transition present, nonA residue detected")
+  # factorize variables:
+  moved_chunks_table$interval <- factor(moved_chunks_table$interval, levels= c("3'end", "3'distal", "center", "5'distal", "5'end"))
+  moved_chunks_table$prediction <- factor(moved_chunks_table$prediction, levels= c("C", "G", "U")) # add "A" if drop A would be commented out
 
-  #merge second tabular output:
-  nanopolish_polya_table <- rbind(modified_reads, discarded_reads)
 
-  #CREATE FINAL OUTPUT
-  ninetails_output <- list()
-  ninetails_output[['read_classes']] <- nanopolish_polya_table
-  ninetails_output[['nonadenosine_residues']] <- moved_chunks_table
+  #create final output
+  analyzed_results_list <- list(preliminary_classification, moved_chunks_table)
 
-  return(ninetails_output)
 
+  return(analyzed_results_list)
 }
+

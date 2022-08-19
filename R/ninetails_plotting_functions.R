@@ -47,29 +47,17 @@
 #' @examples
 #' \dontrun{
 #'
-#' plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-#'                                  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
-#'                                                           package = 'ninetails'),
-#'                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-#'                                                                   package = 'ninetails'),
-#'                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
-#'                                                          package = 'ninetails'),
-#'                                  basecall_group = 'Basecall_1D_000',
-#'                                  moves = FALSE,
-#'                                  rescale = TRUE)
-#'
-#' print(plot)
+#' plot_squiggle(readname = 'name-of-read-to-be-plotted',
+#'               nanopolish = '/path/to/file',
+#'               sequencing_summary = '/path/to/file',
+#'               workspace = '/path/to/guppy/workspace',
+#'               basecalled_group = 'Basecall_1D_000',
+#'               moves=TRUE, rescale=TRUE)
 #'
 #'}
 #
 
-plot_squiggle <- function(readname,
-                          nanopolish,
-                          sequencing_summary,
-                          workspace,
-                          basecall_group = "Basecall_1D_000",
-                          moves=FALSE,
-                          rescale=FALSE){
+plot_squiggle <- function(readname, nanopolish, sequencing_summary, workspace, basecall_group = "Basecall_1D_000", moves=FALSE, rescale=FALSE){
 
   # variable binding (suppressing R CMD check from throwing an error)
   polya_start <- transcript_start <- adapter_start <- leader_start <- filename <- read_id <- position <- time <- pA <- segment <- NULL
@@ -228,6 +216,7 @@ plot_squiggle <- function(readname,
 }
 
 
+
 #' Draws tail range squiggle for given read.
 #'
 #' Creates segmented plot of raw/rescaled ONT RNA signal (with or without moves).
@@ -276,28 +265,17 @@ plot_squiggle <- function(readname,
 #' @examples
 #' \dontrun{
 #'
-#' plot <- ninetails::plot_tail_range(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-#'                                    nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv',
-#'                                                             package = 'ninetails'),
-#'                                    sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-#'                                                                     package = 'ninetails'),
-#'                                    workspace = system.file('extdata', 'test_data', 'basecalled_fast5',
-#'                                                            package = 'ninetails'),
-#'                                    basecall_group = 'Basecall_1D_000',
-#'                                    moves = TRUE,
-#'                                    rescale = TRUE)
-#' print(plot)
+#' plot_tail_range(readname = 'name-of-read-to-be-plotted',
+#'                 nanopolish = '/path/to/file',
+#'                 sequencing_summary = '/path/to/file',
+#'                 workspace = '/path/to/guppy/workspace',
+#'                 basecalled_group = 'Basecall_1D_000',
+#'                 num_cores = 3, moves=TRUE, rescale=TRUE)
 #'
 #'}
 #
 
-plot_tail_range <- function(readname,
-                            nanopolish,
-                            sequencing_summary,
-                            workspace,
-                            basecall_group = "Basecall_1D_000",
-                            moves=FALSE,
-                            rescale=FALSE){
+plot_tail_range <- function(readname, nanopolish, sequencing_summary, workspace, basecall_group = "Basecall_1D_000", moves=FALSE, rescale=FALSE){
 
   # variable binding (suppressing R CMD check from throwing an error)
   polya_start <- transcript_start <- adapter_start <- leader_start <- filename <- read_id <- position <- time <- pA <- segment <- NULL
@@ -493,15 +471,12 @@ plot_tail_range <- function(readname,
 #' @examples
 #'\dontrun{
 #'
-#' example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-#'                                       tail_chunk_list = tcl)
-#'
-#' print(example)
+#' plot_tail_chunk(chunk_name = "3039111f-baf1-450c-f26ca4b047b4",
+#'                 tail_chunk_list = list_of_tail_chunks)
 #'
 #'}
 
-plot_tail_chunk <- function(chunk_name,
-                            tail_chunk_list) {
+plot_tail_chunk <- function(chunk_name, tail_chunk_list) {
 
   # avoiding variable binding err
   signal_name <- signal <- signal_df <- position <- p <- NULL
@@ -518,14 +493,11 @@ plot_tail_chunk <- function(chunk_name,
   assertthat::assert_that(assertive::is_list(tail_chunk_list),
                           msg=paste("Given tail_chunk_list object is not a list. Please provide a valid argument."))
 
-  #TODO
-  #add assertion checking whether given chunk is present in the tail chunk list or not
-
   #retrieve actual signal name from chiunk_name
   signal_name <- gsub("\\_.*","",chunk_name)
 
   #retrieve the signal values from tail_chunk_list
-  signal <- tail_chunk_list[[signal_name]][[chunk_name]][[1]]
+  signal <- tail_chunk_list[[signal_name]][[chunk_name]]
 
   #create signal dataframe for plotting
   signal_df <- data.frame(position=seq(1,length(signal),1),signal=signal[1:length(signal)])
@@ -540,38 +512,27 @@ plot_tail_chunk <- function(chunk_name,
 }
 
 
-#' Creates a visual representation of gramian angular field corresponding to the
-#' given poly(A) tail fragment (chunk).
+#' Creates a visual representation of gramian angular summation field
+#' corresponding to the given poly(A) tail fragment (chunk).
 #'
 #' The function uses a rainbow palette from grDevices, which makes the matrix
-#' more visually pleasing than greyscale (however this is just a visual sugar
-#' for human user, as the computer "sees" the data in greyscale
-#' (each of 2 dimensions as single-channel matrix).
-#'
-#' IMPORTANT NOTE!
-#' Please keep in mind that the matrices produced by ninetails pipeline are
-#' originally two-dimensional arrays (GASF & GADF combined). Each of the
-#' dimensions are plotted alltogether (collapsed) as a single depiction.
-#' However, they can be splitted, but this requires additional processing steps.
-#' For the purpose of ONT signal classification, this combined GASF + GADF
-#' approach turned out to be the most suitable, thus the single-dimension
-#' extraction is currently not implemented within ninetails plotting functions
-#' (which does not mean it would not be).
+#' more visually pleasing then greyscale. However, please keep in mind that the
+#' matrices are originally one-channel (computer "sees" them as greyscale).
 #'
 #' User can control the size of the plot by defining the dimensions within the
 #' code chunk in R/RStudio. However, please keep in mind that the ninetails'
 #' default built-in model was trained on 100x100 gasfs.
 #'
-#' @param gaf_name character string. Name of the given read segment (chunk)
-#' for which the gaf is meant to be plotted. This is the name of the given gaf
-#' within the gaf_list produced by the create_gaf_list function.
+#' @param gasf_name character string. Name of the given read segment (chunk)
+#' for which the gasf is meant to be plotted. This is the name of the given gasf
+#' within the gasf_list produced by the create_gasf_list function.
 #'
-#' @param gaf_list A list of gaf matrices organized by the read ID_index.
-#' @param save_file logical [TRUE/FALSE]. If TRUE, the gaf plot 100x100 (pixels)
+#' @param gasf_list A list of gasf matrices organized by the read ID_index.
+#' @param save_file logical [TRUE/FALSE]. If TRUE, the gasf plot 100x100 (pixels)
 #' would be saved in the current workng directory. If FALSE, the plot would be
 #' displayed only in the window. This parameter is set to FALSE by default.
 #'
-#' @return gramian angular field representing given fragment
+#' @return gramian angular summation field representing given fragment
 #' of nanopore read signal.
 #'
 #' @export
@@ -579,41 +540,38 @@ plot_tail_chunk <- function(chunk_name,
 #' @examples
 #' \dontrun{
 #'
-#' example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-#'                                    gaf_list = gl,
-#'                                    save_file = TRUE)
-#' print(example_gaf)
+#' plot_gasf(gasf_name = "n4m3-of-giv3n-r3ad_11",
+#'           gasf_list = list_of_gasfs,
+#'           save_file = FALSE)
 #'
 #'}
-plot_gaf <- function(gaf_name,
-                     gaf_list,
-                     save_file=FALSE){
+plot_gasf <- function(gasf_name, gasf_list, save_file=FALSE){
 
   #avoiding 'no visibe binding to variable' error
-  plt <- gaf <- Var2 <- Var1 <- value <- NULL
+  plt <- gasf <- Var2 <- Var1 <- value <- NULL
 
 
   #assertions
-  if (missing(gaf_name)) {
-    stop("Gaf_name is missing. Please provide a valid gaf_name argument.", call. =FALSE)
+  if (missing(gasf_name)) {
+    stop("Gasf_name is missing. Please provide a valid gasf_name argument.", call. =FALSE)
   }
 
-  if (missing(gaf_list)) {
-    stop("List of GAFs is missing. Please provide a valid gaf_list argument.", call. =FALSE)
+  if (missing(gasf_list)) {
+    stop("List of GASFs is missing. Please provide a valid gasf_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(gaf_list),
-                          msg=paste("Given gaf_list object is not a list. Please provide a valid argument."))
-  assertthat::assert_that(gaf_name %in% names(gaf_list),
-                          msg = "Given gaf_list does not contain provided gaf_name. Please provide a valid gaf_name argument.")
+  assertthat::assert_that(assertive::is_list(gasf_list),
+                          msg=paste("Given gasf_list object is not a list. Please provide a valid argument."))
+  assertthat::assert_that(gasf_name %in% names(gasf_list),
+                          msg = "Given gasf_list does not contain provided gasf_name. Please provide a valid gasf_name argument.")
 
-  #extract gaf of interest
-  gaf <- gaf_list[[gaf_name]]
+  #extract gasf of interest
+  gasf <- gasf_list[[gasf_name]]
   #reshape the data so the ggplot will accept their format
-  gaf <- reshape2::melt(gaf)
+  gasf <- reshape2::melt(gasf)
 
   #plot
-  plt <- gaf %>% ggplot2::ggplot(ggplot2::aes(Var2, Var1, fill=value)) +
+  plt <- gasf %>% ggplot2::ggplot(ggplot2::aes(Var2, Var1, fill=value)) +
     ggplot2::geom_raster() +
     ggplot2::scale_fill_gradientn(colours = grDevices::rainbow(100), guide="none") +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
@@ -627,15 +585,15 @@ plot_gaf <- function(gaf_name,
 
 
   if (save_file==TRUE) {
-    ggplot2::ggsave(paste0(gaf_name, ".png"), device = "png", width = 100, height = 100, units = "px",bg = "transparent")
+    ggplot2::ggsave(paste0(gasf_name, ".png"), device = "png", width = 100, height = 100, units = "px",bg = "transparent")
   }
 
   return(plt)
 
 }
 
-#' Creates a visual representation of multiple gramian angular fields
-#' based on provided gaf_list (plots all gafs from the given list).
+#' Creates a visual representation of multiple gramian angular summation fields
+#' based on provided gasf_list (plots all gasfs from the given list).
 #'
 #' The function saves the plots to files with predefined size 100x100 pixels.
 #'
@@ -643,62 +601,49 @@ plot_gaf <- function(gaf_name,
 #' It is recommended to use this feature with caution. Producing multiple graphs
 #' from extensive data sets may cause the system to crash.
 #'
-#' This function plots one-channel (100,100,1) as well as
-#' multi-channel gafs (e.g. 100,100,2).
-#'
-#' IMPORTANT NOTE! In current version, this function plots multi-channel matrices
-#' in collapsed manner. If one wants to separate color spaces to GASF/GADF
-#' channels or to R,G,B space, this function would not be suitable. The data
-#' would require additional processing steps!
-#'
-#' @param gaf_list A list of gaf matrices organized by the read ID_index.
+#' @param gasf_list A list of gasf matrices organized by the read ID_index.
 #'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @return multiple png files containing gramian angular fields representing
-#' given fragment of nanopore read signal.
+#' @return gramian angular summation field representing given fragment
+#' of nanopore read signal.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' ninetails::plot_multiple_gaf(gaf_list = gl, num_cores = 10)
+#' plot_multiple_gasf(gasf_list = list_of_gasfs,
+#'                    num_cores = 4)
 #'
 #'}
 
-plot_multiple_gaf <- function(gaf_list,
-                              num_cores){
+plot_multiple_gasf <- function(gasf_list, num_cores){
+
   #avoiding 'no visibe binding to variable' error
   nam <- NULL
 
   #assertions
-  if (missing(gaf_list)) {
-    stop("List of GAFs is missing. Please provide a valid gaf_list argument.", call. =FALSE)
+  if (missing(gasf_list)) {
+    stop("List of GASFs is missing. Please provide a valid gasf_list argument.", call. =FALSE)
   }
 
   if (missing(num_cores)) {
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(gaf_list),
-                          msg=paste("Given gaf_list object is not a list. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_list(gasf_list),
+                          msg=paste("Given gasf_list object is not a list. Please provide a valid argument."))
   assertthat::assert_that(assertive::is_numeric(num_cores),
                           msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
 
   # creating cluster for parallel computing
-  my_cluster <- parallel::makeCluster(num_cores)
-  on.exit(parallel::stopCluster(my_cluster))
-
-  doSNOW::registerDoSNOW(my_cluster)
-  `%dopar%` <- foreach::`%dopar%`
-  `%do%` <- foreach::`%do%`
+  doParallel::registerDoParallel(cores = num_cores)
 
   # this is list of indexes required for parallel computing; the main list is split for chunks
-  index_list = split(1:length(names(gaf_list)), ceiling(1:length(names(gaf_list))/100))
-
+  index_list = split(1:length(names(gasf_list)), ceiling(1:length(names(gasf_list))/100))
 
   # header for progress bar
   cat(paste('Drawing graphs...', '\n', sep=''))
@@ -708,29 +653,37 @@ plot_multiple_gaf <- function(gaf_list,
                               max = length(index_list),
                               style = 3,
                               width = 50,
-                              char = "=",
-                              file = stderr())
+                              char = "=")
 
   #create empty list for extracted data
   plot_list = list()
 
+
   # loop for parallel extraction
+
   for (indx in 1:length(index_list)){
-    plot_list <- c(plot_list, foreach::foreach(nam = names(gaf_list)[index_list[[indx]]]) %dopar% ninetails::plot_gaf(nam,gaf_list,save_file=FALSE))
+    # use selected number of cores
+    doParallel::registerDoParallel(cores = num_cores)
+
+    # work on subsets of signals in parallel
+    plot_list <- c(plot_list, foreach::foreach(nam = names(gasf_list)[index_list[[indx]]]) %dopar% plot_gasf(nam,gasf_list,save_file=FALSE))
+
     utils::setTxtProgressBar(pb, indx)
+
   }
 
   close(pb)
 
+  #stop cluster
+  doParallel::stopImplicitCluster()
+
   #label each signal according to corresponding read name to avoid confusion
-  gaf_names <- names(gaf_list)
-  names(plot_list) <- gaf_names
+  gasf_names <- names(gasf_list)
+  names(plot_list) <- gasf_names
 
   #plot all the files
   mapply(ggplot2::ggsave, file=paste0(names(plot_list), ".png"), plot=plot_list, device = "png", width = 100, height = 100, units = "px",bg = "transparent")
+
 }
-
-
-
 
 
