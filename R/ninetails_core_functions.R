@@ -54,10 +54,26 @@ extract_polya_data <- function(nanopolish,
                           msg="Please provide TRUE/FALSE values for pass_only parameter")
 
   if (assertive::is_character(nanopolish)) {
+
     assertthat::assert_that(assertive::is_existing_file(nanopolish),
                             msg=paste0("File ",nanopolish," does not exist",sep=""))
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
+
+    nanopolish_polya_table <- vroom::vroom(nanopolish,
+                                           col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
+                                           show_col_types = FALSE)
+  }
+  else if (assertive::has_rows(nanopolish)) {
+    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
+  }
+  else {
+    stop("Wrong nanopolish parameter")
+  }
+
+  sequencing_summary_table <- vroom::vroom(sequencing_summary,
+                                           col_select = c(filename, read_id),
+
                                            show_col_types = FALSE)
   }
   else if (assertive::has_rows(nanopolish)) {
