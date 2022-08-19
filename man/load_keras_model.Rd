@@ -7,10 +7,10 @@
 load_keras_model(keras_model_path)
 }
 \arguments{
-\item{keras_model_path}{either missing or character string. Full path of the .h5 file
-with keras model used to predict signal classes. If function is called without this
-argument(argument is missing) the default pretrained model will be loaded. Otherwise,
-the dir with custom model shall be provided.}
+\item{keras_model_path}{either missing or character string. Full path of the
+.h5 file with keras model used to predict signal classes. If function is
+called without this argument(argument is missing) the default pretrained
+model will be loaded. Otherwise, the dir with custom model shall be provided.}
 }
 \description{
 Loads keras model for multiclass signal prediction.

@@ -8,11 +8,13 @@
 extract_polya_data(nanopolish, sequencing_summary, pass_only = TRUE)
 }
 \arguments{
-\item{nanopolish}{character string. Full path of the .tsv file produced
-by nanopolish polya function.}
+\item{nanopolish}{character string. Either full path of the .tsv file produced
+by nanopolish polya function or an environment object containing nanopolish
+data.}
 
-\item{sequencing_summary}{character string. Full path of the .txt file
-with sequencing summary.}
+\item{sequencing_summary}{character string. Either full path of the .txt file
+with sequencing summary or an environment object containing sequencing
+summary data.}
 
 \item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
 nanopolish as "PASS" would be taken into consideration. Otherwise, reads
@@ -40,6 +42,4 @@ extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
                    pass_only = TRUE)
 
 }
-
-
 }
