@@ -4,6 +4,9 @@
 
 <img align="right" width="200" height="220" src="https://user-images.githubusercontent.com/68285258/168554098-a5a5dee9-2c8f-4351-86b4-e6420a5b8ced.png">
 
+# IMPORTANT NOTE #
+**Ninetals is currently under maintenance. A major upgrade is being uploaded. Please refrain from installing it until the maintenance would be resumed. 
+Thank you for your patience.** 
 
 ## Introduction
 * It works on Oxford Nanopore direct RNA sequencing reads basecalled by Guppy software
@@ -62,16 +65,16 @@ library(ninetails)
 Below is an example of how to use ```check_tails()``` function:
 
 ```r
-results <- ninetails::check_tails(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                           package = 'ninetails'),
-                                  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
-                                                                   package = 'ninetails'),
-                                  workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                          package = 'ninetails'),
-                                  num_cores = 2,
-                                  basecall_group = 'Basecall_1D_000',
-                                  pass_only=TRUE,
-                                  save_dir = '~/Downloads')
+results <- check_tails(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                package = 'ninetails'),
+                       sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
+                                                        package = 'ninetails'),
+                       workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                               package = 'ninetails'),
+                       num_cores = 2,
+                       basecall_group = 'Basecall_1D_000',
+                       pass_only=TRUE,
+                       save_dir = '~/Downloads')
 ```
 
 This function returns a list consisting of two tables: **binary_classified_reads** and **detailed_positional_nonadenosine_residues**. In addition, the function saves results to text files in the user-specified directory. 
@@ -85,79 +88,87 @@ The **ninetails** pipeline may be also launched without the wrapper - as sometim
 The first function in processing pipeline is ```create_tail_feature_list()```. It extracts the read data from the provided outputs and merges them based on read identifiers (readnames).  This function works as follows:
 
 ```r
-tfl <- ninetails::create_tail_feature_list(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                                    package = 'ninetails'),
-                                           sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
-                                                                            package = 'ninetails'),
-                                           workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                                   package = 'ninetails'), 
-                                           num_cores = 2,
-                                           basecall_group = 'Basecall_1D_000',
-                                           pass_only=TRUE)
+tfl <- create_tail_feature_list(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                         package = 'ninetails'),
+                                sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',
+                                                                 package = 'ninetails'),
+                                workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                                        package = 'ninetails'),
+                                num_cores = 10,
+                                basecall_group = 'Basecall_1D_000',
+                                pass_only=TRUE)
 ```
 
-The second function, ```create_tail_chunk_list()```,  segments the reads and produces a list of segments in which a change of state (move = 1) along with significant local signal anomaly (so-called "pseudomove") has been recorded, possibly indicating the presence of a non-adenosine residue.
+The second function, ```create_tail_chunk_list_moved()```,  segments the reads and produces a list of segments in which a change of state (move = 1) has been recorded, possibly indicating the presence of a non-adenosine residue.
 
 ```r
-tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl, 
-                                         num_cores = 2)
+tcl <- create_tail_chunk_list_moved(tail_feature_list = tfl, 
+                                    num_cores = 10)
 ```
-The list of fragments should be then passed to the function ```create_gaf_list()```, which transforms the signals into gramian angular fields (GAFs). The function outputs a list of arrays (100,100,2). First channel of each array consists of gramian angular summation field (GASF), while the second channel consists of gramian angular difference field (GADF). 
+The list of fragments should be then passed to the function ```create_gasf_list()```, which transforms the signals into gramian angular summation fields. The function outputs a list of GASF matrices. 
 
 ```r
-gl <- ninetails::create_gaf_list(tail_chunk_list = tcl, 
-                                 num_cores = 2)
+gl <- create_gasf_list(tail_chunk_list = tcl, 
+                       num_cores = 10)
 ```
 
-The penultimate function, ```predict_gaf_classes()```, launches the neural network to classify the input data. This function uses the tensorflow backend.
+The list of matrices should then be passed to the ```predict_classes()``` function, which launches the neural network to classify the input data. This function uses the tensorflow backend.
 
 ```r
-pl <- ninetails::predict_gaf_classes(gl)
+pl <- predict_classes(gl)
 ```
 
-The last function, ```create_outputs()```, allows to obtain the final output: a list composed of **read_classes** (reads are labelled accordingly as "modified", "unmodified" and "unclassified" based on applied criteria) and **nonadenosine_residues** (detailed positional info regarding detected nonadenosine residues) data frames. Note that in this form the function does not automatically save data to files.
+The penultimate function, ```create_coordinate_dataframe()```,  creates a table with data necessary to estimate the position of individual modifications within the tails harboring them. 
 
 ```r
-out <- ninetails::create_outputs(tail_feature_list = tfl,
-                                 tail_chunk_list = tcl,
-                                 nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails'),
-                                 predicted_list = pl,
-                                 num_cores = 2,
-                                 pass_only=TRUE)
+cdf <- create_coordinate_dataframe(tail_feature_list=tfl,
+                                   num_cores=10)
 ```
+The last function, ```analyze_results()```,  allows to obtain the final output: a list composed of **binary_classified_reads** and **detailed_positional_nonadenosine_residues** data frames. Note that in this form the function does not automatically save data to files.
+
+```r
+results <- analyze_results(nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                    package = 'ninetails'), 
+                           coordinate_df=cdf, 
+                           predicted_list=pl, 
+                           pass_only=TRUE)
+```
+
+
+
+
+
 
 ### Output explanation
 
-#### The **read_classes** dataframe (file) contains following columns:
+The **binary_classified_reads** dataframe (file) contains following columns:
 
 | column name  | content |
 | ------------- | ------------- |
 | readname  | an identifier of a given read  (36 characters)|
-| polya_length  | tail length estimation provided by nanopolish polya function|
-| qc_tag  | quality tag assigned by nanopolish polya function|
 | class  | the crude result of classification  |
-| comments  | a detailed description of met/unmet classification criteria|
 
-The ```class``` column contains information whether the given read was recognized as modified (containing non-adenosine residue) or not. Whereas the ```comment``` column contains details underlying the classification outcome. These columns may contain a following content:
+The ```class``` column contains information whether the given read was recognized as modified (containing non-adenosine residue) or not. Additionally, it contains information about reads discarded from classification - the reason for this is also included. This column may contain a following content:
 
-| class  | comments |
+| class column content  | explanation |
 | ------------- | ------------- |
-| modified | move transition present, nonA residue detected |
-| unmodified | move transition absent, nonA residue undetected  |
-| unmodified | move transition present, nonA residue undetected  |
-| unclassified  | nanopolish qc failed |
-| unclassified  | not included in the analysis (pass only = T) |
-| unclassified  | insufficient read length |
+| modified | read recognized as containing non-adenosine residue within poly(A) tail|
+|  unmodified | read containing only adenosines in poly(A) tail  |
+|  unclassified - insufficient read length | read length estimated by Nanopolish as <10 nt (insufficient for proper tail segmentation)|
+|  unclassified - nanopolish qc failed (adapter) | insufficient read quality assigned by Nanopolish |
+|  unclassified - nanopolish qc failed (suffclip) | insufficient read quality assigned by Nanopolish. This category shows only if ```pass_only=TRUE``` was passed to the processing function, so reads tagged by Nanopolish as "suffclip" were excluded from the analysis|
 
-#### The **nonadenosine_residues** dataframe (file) contains following columns:
+The **detailed_positional_nonadenosine_residues** dataframe (file) contains following columns:
 
 | column name  | content |
 | ------------- | ------------- |
-| readname  | an identifier of a given read  (36 characters)  |
+| readname  | an identifier of a given read  (36 characters)|
+| chunk	  | number of tail segment in which the given non-adenosine residue was spotted; reported from 3' end  |
 | prediction  | the result of classification (basic model: C, G, U assignment)  |
-| est_nonA_pos  | the approximate nucleotide position where nonadenosine is to be expected; reported from 5' end |
-| polya_length  | the tail length estimated according to Nanopolish polya function  |
-| qc_tag  | quality tag assigned by nanopolish polya function  |
+| total_chunk  | total number of segments per given tail |
+| tail_length  | the tail length estimated according to Nanopolish polya function  |
+| interval  | the approximate region of the poly(A) tail where the modification is to be expected |
+| centered_pos  | the approximate nucleotide position in the centre of a given tail segment where modifications are to be expected; reported from 5' end |
 
 
 
@@ -176,27 +187,25 @@ In addition, the graphs can depict only signal data (```moves=FALSE```) or they 
 The following example demonstrates how to use the ```plot_squiggle()``` function:
 
 ```r
-plot <- ninetails::plot_squiggle(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-                                 nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                          package = 'ninetails'),
-                                 sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt',  
-                                                                  package = 'ninetails'), 
-                                 workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                         package = 'ninetails'),
-                                 basecall_group = 'Basecall_1D_000',
-                                 moves = FALSE,
-                                 rescale = TRUE)
+plot <- plot_squiggle(readname = "cd6c7f1d-6ef4-45a0-a67a-0a2853967e5b",
+                      nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                package = 'ninetails'),
+                      sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
+                                                        package = 'ninetails'),
+                      workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                               package = 'ninetails'),
+                      basecall_group = 'Basecall_1D_000',
+                      moves = FALSE,
+                      rescale = TRUE)
 
 print(plot)
 ```
 
 The output of the above command is the following graph:
-![plot_squiggle](https://user-images.githubusercontent.com/68285258/183749085-633a8b95-f36a-4484-bb47-4916807b05e5.png)
-
-
+![moves_false_whole_sig](https://user-images.githubusercontent.com/68285258/170456526-e4b05d2a-1fda-45f4-b1f2-f4dfa82b751c.png)
 
 If the (```moves=TRUE```) argument is passed, then the graph also contains information regarding moves, which looks as follows:
-![plot_squiggle_moves](https://user-images.githubusercontent.com/68285258/183749261-162683a1-b13c-4cab-b2b8-e8a360831fb2.png)
+![moves_true_whole_sig](https://user-images.githubusercontent.com/68285258/170457349-d3adcf55-37e3-4a70-b8e1-689ed9f05182.png)
 
 
 
@@ -205,28 +214,27 @@ If the (```moves=TRUE```) argument is passed, then the graph also contains infor
 The ```plot_tail_range()``` function accepts the same arguments as the abovementioned function. An example usage looks as follows:
 
 ```r
-plot <- ninetails::plot_tail_range(readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
-                                   nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
-                                                            package = 'ninetails'),
-                                   sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
-                                                                    package = 'ninetails'),
-                                   workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
-                                                           package = 'ninetails'),
-                                   basecall_group = 'Basecall_1D_000',
-                                   moves = TRUE,
-                                   rescale = TRUE)
+
+library(ninetails)
+
+plot <- plot_tail_range(readname = "cd6c7f1d-6ef4-45a0-a67a-0a2853967e5b",
+                        nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', 
+                                                 package = 'ninetails'),
+                        sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', 
+                                                         package = 'ninetails'),
+                        workspace = system.file('extdata', 'test_data', 'basecalled_fast5', 
+                                                package = 'ninetails'),
+                        basecall_group = 'Basecall_1D_000',
+                        moves = FALSE,
+                        rescale = TRUE)
 
 print(plot)
 ```
 Which outputs:
-![tail_range](https://user-images.githubusercontent.com/68285258/183749972-58b40238-d2e6-4f2a-b134-c462c3b0bbc2.png)
-
+![moves_false_tail_sig](https://user-images.githubusercontent.com/68285258/170458080-1c550bc3-488c-4c14-8390-688d613f2ca4.png)
 
 Or below, if the (```moves=TRUE```) argument is passed:
-![tail_range_moves](https://user-images.githubusercontent.com/68285258/183749982-e8dc21fd-2220-4256-85c3-c60b0b25afe8.png)
-
-
-
+![moves_true_tail_sig](https://user-images.githubusercontent.com/68285258/170458256-c850e981-b8b0-4c29-bce0-2094ab9136e2.png)
 
 #### Plotting the tail segment of interest
 
@@ -234,65 +242,65 @@ Ninetails allows you to visualise a particular fragment among the list of fragme
 
 An example of how the ```plot_tail_chunk()``` function works:
 ```r
-example <- ninetails::plot_tail_chunk(chunk_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-                                      tail_chunk_list = tcl)
+
+example <- plot_tail_chunk(chunk_name = "1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5",
+                          tail_chunk_list = tcl)
 
 print(example)
 ```
 
 And an example output:
 
-![chunk](https://user-images.githubusercontent.com/68285258/183750409-9b89eb98-790c-4cb8-8e61-a69d728d0476.png)
+![00001a](https://user-images.githubusercontent.com/68285258/170530349-fd36cf05-776d-4236-989c-ca7c22492c1e.png)
 
 
+### Plotting the gramian angular summation fields
 
-### Plotting the gramian angular fields
-
-The package allows to create a visual representation of gramian angular fields (GAFs) using ```ggplot2```. 
+The package allows to create a visual representation of gramian angular summation fields (GASFs) using ```ggplot2```. 
 
 #### Plotting single GASF of interest
 
-The ```plot_gaf()``` function draws a single matrix of interest. It requires the name of a particular segment and a list of matrices produced by the ```create_gaf_list()``` function as an input. 
+The ```plot_gasf()``` function draws a single matrix of interest. It requires the name of a particular segment and a list of matrices produced by the ```create_gasf_list()``` function as an input. 
 
-Below is an example of the usage of the ```plot_gaf()``` function. Please note that in order for this example to work properly, one must first execute the 3 first commands from the **Classification of reads using standalone functions** section.  
+Below is an example of the usage of the ```plot_gasf()``` function. Please note that in order for this example to work properly, one must first execute the 3 first commands from the **Classification of reads using standalone functions** section.  
 
 ```r
-example_gaf <- ninetails::plot_gaf(gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
-                                   gaf_list = gl, 
-                                   save_file = TRUE)
 
-print(example_gaf)
+example_gasf <- plot_gasf(gasf_name = "1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5",
+                          gasf_list = gl, 
+                          save_file = TRUE)
+
+print(example_gasf)
 ```
 And here is an example output:
 
-![test_gaf_2channel](https://user-images.githubusercontent.com/68285258/183750865-9ab4b705-230b-4e5e-9f0a-d29acec08bfc.png)
 
-
+![1625f71d-287e-42b0-ae37-dc14c2f4ed8e_5](https://user-images.githubusercontent.com/68285258/170500508-b27289fa-e62c-4a14-9e50-ff1a8798dfa7.png)
 
 
 
 #### Plotting multiple GASFs
 
-**Ninetails** also allows the user to plot the entire list of matrices produced by the ```create_gaf_list()``` function at once. The files will be saved in the current working directory. An example of usage is given below:
+**Ninetails** also allows the user to plot the entire list of matrices produced by the ```create_gasf_list()``` function at once. The files will be saved in the current working directory. An example of usage is given below:
 
 ```r
-ninetails::plot_multiple_gaf(gaf_list = gl, 
-                             num_cores = 10)
+plot_multiple_gasf(gasf_list = gl, num_cores = 10)
 
 ```
 And this results in multiple plots, like this: 
 
+![drawing](https://user-images.githubusercontent.com/68285258/170512100-ddfb03dc-63c8-449e-8339-57a4ec16ce43.png)
 
-![gafs](https://user-images.githubusercontent.com/68285258/183752592-177fe651-8791-4b4d-8c1e-49273a9c8283.png)
 
 
-However, it is advisable to use this function with caution. The data contained in a ```gaf_list``` object tends to be large. Drawing multiple graphs at once may overload the system and cause it to crash.
+
+
+However, it is advisable to use this function with caution. The data contained in a ```gasf_list``` object tends to be large. Drawing multiple graphs at once may overload the system and cause it to crash.
 
 
 ## Citation
 
-Please cite **ninetails** as: 
-Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing, 27th Annual Meeting of the RNA Society, Boulder, Colorado, May 31 to June 5, 2022.
+Please cite **ninetails** as: Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing, 27th Annual Meeting of the RNA Society, Boulder, Colorado, May 31 to June 5, 2022.
 
 Preprint is in the preparation.
 
