@@ -36,6 +36,12 @@ The neural network in **ninetails** uses the tensorflow backend, so it is necess
 Instructions for installing tensorflow & keras can be found here:
 https://tensorflow.rstudio.com/install/
 
+**Ninetails** requires also ```rhdf5``` package for accessing & browsing files in fast5 format. It can be installed from Bioconductor (version available on CRAN is incompatible with newer R versions). The complete guide is available here: https://bioconductor.org/packages/release/bioc/html/rhdf5.html
+
+```r
+install.packages("BiocManager")
+BiocManager::install("rhdf5")
+```
 
 ## Installation
 
