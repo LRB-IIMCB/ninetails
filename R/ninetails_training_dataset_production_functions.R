@@ -210,6 +210,8 @@ create_tail_feature_list_trainingset <- function(nanopolish,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
+
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
@@ -227,11 +229,13 @@ create_tail_feature_list_trainingset <- function(nanopolish,
 
   # parallel extraction
   tail_features_list <- foreach::foreach(i = seq_along(polya_summary$readname),
-                                         .combine = c, .inorder = TRUE,
+                                         .combine = c,
+                                         .inorder = TRUE,
                                          .errorhandling = 'pass',
-                                         .options.snow = opts) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data_trainingset(x,polya_summary,workspace,basecall_group))}
+                                         .options.snow = opts,
+                                         .options.multicore = mc_options) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data_trainingset(x,polya_summary,workspace,basecall_group))}
 
-  close(pb)
+  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
@@ -493,6 +497,7 @@ create_tail_chunk_list_trainingset <- function(tail_feature_list,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
@@ -512,13 +517,15 @@ create_tail_chunk_list_trainingset <- function(tail_feature_list,
 
   #parallel extraction
   tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                      .combine = c, .inorder = TRUE,
+                                      .combine = c,
+                                      .inorder = TRUE,
                                       .errorhandling = 'pass',
-                                      .options.snow = opts) %dopar% {
+                                      .options.snow = opts,
+                                      .options.multicore = mc_options) %dopar% {
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered_trainingset(x,tail_feature_list))
                                       }
 
-  close(pb)
+  #close(pb)
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
@@ -659,6 +666,7 @@ create_tail_feature_list_A <- function(nanopolish,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
@@ -676,11 +684,13 @@ create_tail_feature_list_A <- function(nanopolish,
 
   # parallel extraction
   tail_features_list <- foreach::foreach(i = seq_along(polya_summary$readname),
-                                         .combine = c, .inorder = TRUE,
+                                         .combine = c,
+                                         .inorder = TRUE,
                                          .errorhandling = 'pass',
-                                         .options.snow = opts) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data_trainingset(x,polya_summary,workspace,basecall_group))}
+                                         .options.snow = opts,
+                                         .options.multicore = mc_options) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data_trainingset(x,polya_summary,workspace,basecall_group))}
 
-  close(pb)
+  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
@@ -762,6 +772,7 @@ create_tail_chunk_list_A <- function(tail_feature_list,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste('Creating A-exclusive tail segmentation data...', '\n', sep=''))
@@ -779,16 +790,18 @@ create_tail_chunk_list_A <- function(tail_feature_list,
 
   #parallel extraction
   tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                      .combine = c, .inorder = TRUE,
+                                      .combine = c,
+                                      .inorder = TRUE,
                                       .errorhandling = 'pass',
-                                      .options.snow = opts) %dopar% {
+                                      .options.snow = opts,
+                                      .options.multicore = mc_options) %dopar% {
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_with_overlaps(x,
                                                                                                                             tail_feature_list,
                                                                                                                             segment = 100,
                                                                                                                             overlap = 50))
                                       }
 
-  close(pb)
+  #close(pb)
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
@@ -845,6 +858,7 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste('Computing gramian angular fields...', '\n', sep=''))
@@ -864,10 +878,11 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
                                 .combine = c,
                                 .inorder = TRUE,
                                 .errorhandling = 'pass',
-                                .options.snow = opts) %dopar% {lapply(tail_chunk_list[[i]], function(x) ninetails::combine_gafs(x))}
+                                .options.snow = opts,
+                               .options.multicore = mc_options) %dopar% {lapply(tail_chunk_list[[i]], function(x) ninetails::combine_gafs(x))}
 
 
-  close(pb)
+  #close(pb)
 
   #naming chunks based on readnames & indices
   for (chunk in seq_along(tail_chunk_list)) {
@@ -986,6 +1001,7 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Filtering training nonA chunks...', '\n', sep=''))
@@ -1004,13 +1020,13 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list,
   filtered_input <- foreach::foreach(i = seq_along(tail_chunk_list),
                                      .inorder = TRUE,
                                      .errorhandling = 'pass',
-                                     .options.snow = opts
-  ) %dopar% {
+                                     .options.snow = opts,
+                                     .options.multicore = mc_options) %dopar% {
     filtered_output <-  Filter(function(x) any(with(rle(x$pseudomoves), lengths[values==value]>=4)) & x$chunk_start_pos>=0, tail_chunk_list[[i]])
     lapply(filtered_output, function(x) x)
   }
 
-  close(pb)
+  #close(pb)
 
   #remove empty sublists
   filtered_input <- Filter(function(x) length(x) > 0, filtered_input)

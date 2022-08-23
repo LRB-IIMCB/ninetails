@@ -53,6 +53,7 @@ extract_polya_data <- function(nanopolish,
   assertthat::assert_that(assertive::is_a_bool(pass_only),
                           msg="Please provide TRUE/FALSE values for pass_only parameter")
 
+  # Accept either path to file or in-memory file - PK's GH issue
   if (assertive::is_character(nanopolish)) {
     assertthat::assert_that(assertive::is_existing_file(nanopolish),
                             msg=paste0("File ",nanopolish," does not exist",sep=""))
@@ -65,7 +66,7 @@ extract_polya_data <- function(nanopolish,
     stop("Wrong nanopolish parameter. Please provide filepath or object.")
   }
 
-
+  # Accept either path to file or in-memory file - PK's GH issue
   if (assertive::is_character(sequencing_summary)) {
     assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
                             msg=paste0("File ",sequencing_summary," does not exist",sep=""))
@@ -332,6 +333,7 @@ create_tail_feature_list <- function(nanopolish,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
@@ -349,11 +351,13 @@ create_tail_feature_list <- function(nanopolish,
 
   # parallel extraction
   tail_features_list <- foreach::foreach(i = seq_along(polya_summary$readname),
-                                         .combine = c, .inorder = TRUE,
+                                         .combine = c,
+                                         .inorder = TRUE,
                                          .errorhandling = 'pass',
-                                         .options.snow = opts) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
+                                         .options.snow = opts,
+                                         .options.multicore = mc_options) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
 
-  close(pb)
+  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
@@ -641,6 +645,7 @@ create_tail_chunk_list <- function(tail_feature_list,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
@@ -660,13 +665,15 @@ create_tail_chunk_list <- function(tail_feature_list,
 
   #parallel extraction
   tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                      .combine = c, .inorder = TRUE,
+                                      .combine = c,
+                                      .inorder = TRUE,
                                       .errorhandling = 'pass',
-                                      .options.snow = opts) %dopar% {
+                                      .options.snow = opts,
+                                      .options.multicore = mc_options) %dopar% {
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
                                         }
 
-  close(pb)
+  #close(pb)
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
@@ -853,6 +860,7 @@ create_gaf_list <- function(tail_chunk_list,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   #create empty list for the data
   gaf_list = list()
@@ -871,13 +879,16 @@ create_gaf_list <- function(tail_chunk_list,
   opts <- list(progress = progress)
 
 
-  gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list), .combine = c, .inorder = TRUE,
-                                .errorhandling = 'pass',
-                                .options.snow = opts) %dopar% {
-                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
+  gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list),
+                               .combine = c,
+                               .inorder = TRUE,
+                               .errorhandling = 'pass',
+                               .options.snow = opts,
+                               .options.multicore = mc_options) %dopar% {
+                                 lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
                                 }
 
-  close(pb)
+  #close(pb)
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))

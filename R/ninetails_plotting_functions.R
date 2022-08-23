@@ -738,7 +738,7 @@ plot_multiple_gaf <- function(gaf_list,
     utils::setTxtProgressBar(pb, indx)
   }
 
-  close(pb)
+  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   gaf_names <- names(gaf_list)

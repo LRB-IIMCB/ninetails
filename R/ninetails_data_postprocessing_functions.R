@@ -7,7 +7,7 @@
 #' function.
 #'
 #' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' by nanopolish polya function or name of in-memory file (environment object).
 #'
 #' @param predicted_list a list object produced by predict_classes function.
 #'
@@ -82,17 +82,20 @@ create_outputs <- function(tail_feature_list,
 
 
   #read nanopolish data
-  nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                         col_select=c(readname, polya_length, qc_tag),
-                                         show_col_types = FALSE)
+  # Accept either path to file or in-memory file - PK's GH issue
+  if (assertive::is_character(nanopolish)) {
+    assertthat::assert_that(assertive::is_existing_file(nanopolish),
+                            msg=paste0("File ",nanopolish," does not exist",sep=""))
+    nanopolish_polya_table <- vroom::vroom(nanopolish,
+                                           col_select=c(readname, polya_length, qc_tag),
+                                           show_col_types = FALSE)
+  } else if (assertive::has_rows(nanopolish)) {
+    nanopolish_polya_table <- nanopolish[,c("readname","polya_length","qc_tag")]
+  } else {
+    stop("Wrong nanopolish parameter. Please provide filepath or object.")
+  }
 
-  # assertions #2
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(nanopolish),
-                          msg = "Empty string provided as an input. Please provide a nanopolish as a string")
-  assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                          msg=paste0("File ",nanopolish," does not exist",sep=""))
-  assertthat::assert_that(assertive::has_rows(nanopolish_polya_table),
-                          msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
+
 
   # HANDLE LENGTH/POSITION CALIBRATING DATA
   # creating cluster for parallel computing
@@ -102,6 +105,7 @@ create_outputs <- function(tail_feature_list,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   #create empty list for the data
   tail_length_list = list()
@@ -122,11 +126,12 @@ create_outputs <- function(tail_feature_list,
   tail_length_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
                                        .combine = c, .inorder = TRUE,
                                        .errorhandling = 'pass',
-                                       .options.snow = opts) %dopar% {
+                                       .options.snow = opts,
+                                       .options.multicore = mc_options) %dopar% {
                                          lapply(names(tail_feature_list[[1]][i]), function(x) length(tail_feature_list[[1]][[x]][[2]]))
                                        }
 
-  close(pb)
+  #close(pb)
 
   #coerce to df, add names
   tail_length_list <- do.call("rbind.data.frame", tail_length_list)
@@ -159,9 +164,11 @@ create_outputs <- function(tail_feature_list,
   non_a_position_list <- foreach::foreach(i = seq_along(tail_chunk_list),
                                           .combine = c, .inorder = TRUE,
                                           .errorhandling = 'pass',
-                                          .options.snow = opts) %dopar% {
+                                          .options.snow = opts,
+                                          .options.multicore = mc_options) %dopar% {
                                             lapply(tail_chunk_list[[i]], function(x) x[['chunk_start_pos']]+50)
                                           }
+  #close(pb)
 
   # coerce to df, add names
   non_a_position_list <- do.call("rbind.data.frame", non_a_position_list)
