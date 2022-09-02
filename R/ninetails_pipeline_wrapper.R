@@ -535,7 +535,7 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
 
 
   #dump output to files:
-  mapply(function (x,y) utils::write.table(x, file = file.path(save_dir, paste0(as.character(Sys.time()), '_', y, '.tsv')),
+  mapply(function (x,y) utils::write.table(x, file = file.path(save_dir, paste0(as.character(format(Sys.time(), "%Y-%m-%d_%H-%M-%S")), '_', y, '.tsv')),
                                            row.names = F, sep="\t", quote = F), ninetails_output, names(ninetails_output))
 
   # Done comm
