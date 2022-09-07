@@ -16,11 +16,15 @@ Currently, **ninetails** can distinguish characteristic signatures of four types
 
 The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
 
+**Ninetails** was tested on Linux Mint 20.3, Ubuntu 20.04.3 and Windows 11 operating systems with R 4.1.2, R 4.2.0 and R 4.2.1.
+
 ## Important note
 
 Please be aware that signal transformations performed during analysis can place a heavy load on memory. This is especially true if your data covers the entire sequencing run. For the moment, **ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the ```Nanopolish``` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
 
 ## Prerequisites
+
+### Input data & preprocessing tools
 
 **Ninetails** requires the following input data to operate:
 * multifast5 files basecalled by ```Guppy``` - for the signal data extraction 
@@ -29,19 +33,37 @@ Please be aware that signal transformations performed during analysis can place 
 
 Therefore, please make sure that the third-party software necessary for the steps preceding the use of **ninetails** is installed (```Nanopolish```, ```Guppy```) and/or that you have all the required input files.
 
-Currently, **ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
-
+### Tensorflow & keras for R
 The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install it before running the program. 
 
 Instructions for installing ```tensorflow``` & ```keras``` can be found here:
 https://tensorflow.rstudio.com/install/
 
-**Ninetails** requires also ```rhdf5``` package for accessing & browsing files in fast5 format. It can be installed from Bioconductor (version available on CRAN is incompatible with newer R versions). The complete guide is available here: https://bioconductor.org/packages/release/bioc/html/rhdf5.html
+### HDF resources
+
+Since fast5 is a binary format based on the HDF5, handling it requires installation of certain utilities in the operating system. Most of the necessary resources can be downloaded from the HDF5 Group website: https://www.hdfgroup.org/downloads/hdf5/.
+
+**Ninetails** requires also ```rhdf5``` package and its dependencies for accessing & browsing files in fast5 format in R. It can be installed from Bioconductor (version available on CRAN is incompatible with newer R versions). The complete guide is available here: https://bioconductor.org/packages/release/bioc/html/rhdf5.html
 
 ```r
 install.packages("BiocManager")
 BiocManager::install("rhdf5")
 ```
+
+As a result, 3 packages are installed: ```rhdf5```, ```rhdf5filters``` and ```Rhdf5lib```. The ```rhdf5filters``` has to be reinstalled from the Github repo: https://github.com/grimbough/rhdf5filters, which can be done with following command in R/RStudio:
+
+```r
+devtools::install_github('grimbough/rhdf5filters')
+```
+
+### VBZ compression plugin
+Nanopore sequencing data produced with newer versions of the ```MinKNOW``` software are compressed with the VBZ algorithm which allows for more efficient compression than the formerly used GZIP. In order for the ninetails package to work with VBZ-compressed data, it is necessary to install an ```ont-vbz-hdf-plugin``` from the following repo: https://github.com/nanoporetech/vbz_compression/releases
+
+Then it is necessary to navigate to the folder where the ONT VBZ compression plug-in was installed. On Linux operating systems, the default path is /usr/local/hdf5/lib/plugin/, whereas on Windows operating systems it might be C:\Program Files\OxfordNanopore\ont-vbz-hdf-plugin\hdf5\lib\plugin\. The file(s) found there (libvbz_hdf_plugin.so on Linux and vbz_hdf_plugin.dll, vbz_hdf_plugin.lib on Windows) must be copied to the ```rhdf5filters``` folder (rhdf5filters/lib/) where the R libraries are stored.
+
+### single fast5 support 
+
+Currently, **ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
 
 ## Installation
 
@@ -52,6 +74,11 @@ If you do not have ```devtools``` installed already, you can do this with the fo
 ```r
 install.packages("devtools")
 ```
+
+**Note for Windows users:**
+
+Before installation of ```devtools``` on Windows, you should install ```Rtools```, so the packages would be correctly compiled: https://cran.r-project.org/bin/windows/Rtools/
+
 Once you have ```devtools``` installed, you can install **ninetails** using the command below in R/RStudio:
 
 ```r
@@ -338,8 +365,7 @@ Preprint is in the preparation.
 
 ## Future plans
 * model finetuning
-* optimized positioning (position calibration)
-* port to Python
+* additional post-processing & data analysis features
 
 ## Troubleshooting
 
