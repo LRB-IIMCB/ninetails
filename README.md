@@ -184,21 +184,22 @@ out <- ninetails::create_outputs(
 | column name  | content |
 | ------------- | ------------- |
 | readname  | an identifier of a given read  (36 characters)|
+| contig  | reference to which the given read was mapped (inherited from nanopolish)|
 | polya_length  | tail length estimation provided by nanopolish polya function|
 | qc_tag  | quality tag assigned by nanopolish polya function|
 | class  | the crude result of classification  |
-| comments  | a detailed description of met/unmet classification criteria|
+| comments  | a code indicating whether the classification criteria were met/unmet|
 
 The ```class``` column contains information whether the given read was recognized as modified (containing non-adenosine residue) or not. Whereas the ```comment``` column contains details underlying the classification outcome. These columns may contain a following content:
 
-| class  | comments |
-| ------------- | ------------- |
-| modified | move transition present, nonA residue detected |
-| unmodified | move transition absent, nonA residue undetected  |
-| unmodified | move transition present, nonA residue undetected  |
-| unclassified  | nanopolish qc failed |
-| unclassified  | not included in the analysis (pass only = T) |
-| unclassified  | insufficient read length |
+| class  | comments | explanation  |
+| ------------- | ------------- |------------- |
+| modified | |move transition present, nonA residue detected |
+| unmodified | |move transition absent, nonA residue undetected  |
+| unmodified | |move transition present, nonA residue undetected  |
+| unclassified  | |nanopolish qc failed |
+| unclassified  | |not included in the analysis (pass only = T) |
+| unclassified  | |insufficient read length |
 
 #### The **nonadenosine_residues** dataframe (file) contains following columns:
 
