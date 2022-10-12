@@ -1,4 +1,4 @@
-# ninetails
+# Ninetails
 
 **An R package for finding non-adenosine poly(A) residues in Oxford Nanopore direct RNA sequencing reads**
 
@@ -10,7 +10,7 @@
 * It requires tail delimitation data produced by Nanopolish software
 * It allows both for the detection of non-adenosine residues within the poly(A) tails and visual inspection of  read signals
 
-Currently, **ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
+Currently, **Ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
 
 **Ninetails** relies on Nanopolish segmentation and therefore may underestimate terminal modifications (last and penultimate nucleotides of the tail).
 
@@ -20,7 +20,7 @@ The software is still under development, so all suggestions to improving it are 
 
 ## Important note
 
-Please be aware that signal transformations performed during analysis can place a heavy load on memory. This is especially true if your data covers the entire sequencing run. For the moment, **ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the ```Nanopolish``` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
+Please be aware that signal transformations performed during analysis can place a heavy load on memory. This is especially true if your data covers the entire sequencing run. For the moment, **Ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the ```Nanopolish``` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
 
 ## Prerequisites
 
@@ -31,7 +31,7 @@ Please be aware that signal transformations performed during analysis can place 
 * sequencing_summary.txt file - for file ID extraction
 * an output of ```Nanopolish``` polya function (tsv file) - to obtain the tail segmentation data
 
-Therefore, please make sure that the third-party software necessary for the steps preceding the use of **ninetails** is installed (```Nanopolish```, ```Guppy```) and/or that you have all the required input files.
+Therefore, please make sure that the third-party software necessary for the steps preceding the use of **Ninetails** is installed (```Nanopolish```, ```Guppy```) and/or that you have all the required input files.
 
 ### Tensorflow & keras for R
 The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install it before running the program. 
@@ -63,11 +63,11 @@ Then it is necessary to navigate to the folder where the ONT VBZ compression plu
 
 ### single fast5 support 
 
-Currently, **ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
+Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with ```ont-fast5-api```.
 
 ## Installation
 
-Currently, **ninetails** is not available on CRAN/Bioconductor, so you need to install it using ```devtools```.
+Currently, **Ninetails** is not available on CRAN/Bioconductor, so you need to install it using ```devtools```.
 
 If you do not have ```devtools``` installed already, you can do this with the following command in R/RStudio:
 
@@ -79,7 +79,7 @@ install.packages("devtools")
 
 Before installation of ```devtools``` on Windows, you should install ```Rtools```, so the packages would be correctly compiled: https://cran.r-project.org/bin/windows/Rtools/
 
-Once you have ```devtools``` installed, you can install **ninetails** using the command below in R/RStudio:
+Once you have ```devtools``` installed, you can install **Ninetails** using the command below in R/RStudio:
 
 ```r
 devtools::install_github('LRB-IIMCB/ninetails')
@@ -120,7 +120,7 @@ Moreover, the function also creates a log file in the directory specified by the
 
 ### Classification of reads using standalone functions
 
-The **ninetails** pipeline may be also launched without the wrapper - as sometimes it might be useful, especially if the input files are large and/or you would like to plot some produced matrices. 
+The **Ninetails** pipeline may be also launched without the wrapper - as sometimes it might be useful, especially if the input files are large and/or you would like to plot some produced matrices. 
 
 The first function in processing pipeline is ```create_tail_feature_list()```. It extracts the read data from the provided outputs and merges them based on read identifiers (readnames).  This function works as follows:
 
@@ -190,16 +190,16 @@ out <- ninetails::create_outputs(
 | class  | the crude result of classification  |
 | comments  | a code indicating whether the classification criteria were met/unmet|
 
-The ```class``` column contains information whether the given read was recognized as modified (containing non-adenosine residue) or not. Whereas the ```comment``` column contains details underlying the classification outcome. These columns may contain a following content:
+The ```class``` column contains information whether the given read was recognized as modified (containing non-adenosine residue) or not. Whereas the ```comment``` column contains details underlying the classification outcome. The content of these columns is explained below:
 
 | class  | comments | explanation  |
 | ------------- | ------------- |------------- |
-| modified | |move transition present, nonA residue detected |
-| unmodified | |move transition absent, nonA residue undetected  |
-| unmodified | |move transition present, nonA residue undetected  |
-| unclassified  | |nanopolish qc failed |
-| unclassified  | |not included in the analysis (pass only = T) |
-| unclassified  | |insufficient read length |
+| modified | YAY | move transition present, nonA residue detected |
+| unmodified | MAU | move transition absent, nonA residue undetected  |
+| unmodified | MPU | move transition present, nonA residue undetected  |
+| unclassified  | QCF | nanopolish qc failed |
+| unclassified  | NIN | not included in the analysis (pass only = T) |
+| unclassified  | IRL | insufficient read length |
 
 #### The **nonadenosine_residues** dataframe (file) contains following columns:
 
@@ -359,7 +359,7 @@ However, it is advisable to use this function with caution. The data contained i
 
 ## Citation
 
-Please cite **ninetails** as: 
+Please cite **Ninetails** as: 
 Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. Direct detection of non-adenosine nucleotides within poly(A) tails – a new tool for the analysis of post-transcriptional mRNA tailing, 27th Annual Meeting of the RNA Society, Boulder, Colorado, May 31 to June 5, 2022.
 
 Preprint is in the preparation.
@@ -374,5 +374,5 @@ If you encounter a bug, please post it on github. To help diagnose the problem, 
 
 ## Maintainer
 
-Any issues regarding the **ninetails** should be addressed to Natalia Gumińska (nguminska (at) iimcb.gov.pl).
+Any issues regarding the **Ninetails** should be addressed to Natalia Gumińska (nguminska (at) iimcb.gov.pl).
 
