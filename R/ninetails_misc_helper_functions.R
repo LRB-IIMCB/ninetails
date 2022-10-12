@@ -146,7 +146,7 @@ check_fast5_filetype <- function(workspace,
   assertthat::assert_that(is_multifast5(selected_fast5_file_structure))
 
   # check whether file is basecalled or not
-  tryCatch(selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group)), error = function(e) { cat("The previewed fast5 file is not a basecalled one. Ninetails requires fast5 files basecalled by Guppy.") })
+  tryCatch(selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group)), error = function(e) { cat("The previewed fast5 file does not contain defined basecall_group. Check basecall_group - is it valid? Ninetails requires fast5 files basecalled by Guppy.") })
 
   if (exists('selected_basecall_group')) {
     # checking whether the fast5 file contains RNA ONT reads

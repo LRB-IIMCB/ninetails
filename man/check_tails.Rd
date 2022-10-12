@@ -11,6 +11,7 @@ check_tails(
   num_cores = 1,
   basecall_group = "Basecall_1D_000",
   pass_only = TRUE,
+  qc = TRUE,
   save_dir
 )
 }
@@ -37,6 +38,16 @@ nanopolish as "PASS" would be taken into consideration. Otherwise, reads
 tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
 As a default, "TRUE" value is set.}
 
+\item{qc}{logical [TRUE/FALSE]. If TRUE, the quality control of the output
+predictions would be performed. This means that the reads/non-A residue
+positions in terminal nucleotides, which are most likely artifacts, are
+labeled accordingly as "-WARN" (residues recognized as non-A due to
+nanopolish segmentation error which is inherited from nanopolish,
+as ninetails uses nanopolish segmentation). It is then up to user, whether
+they would like to include or discard such reads from their pipeline. However,
+it is advised to treat them with caution. By default, the qc option is enabled
+(this parameter is set to TRUE).}
+
 \item{save_dir}{character string. Full path of the directory where the output
 files containing the tail composition information should be stored.}
 }
@@ -44,6 +55,8 @@ files containing the tail composition information should be stored.}
 A list containing tail information organized by the read ID
 is returned. Always assign this returned list to a variable, otherwise
 the long list will be printed to the console, which may crash your R session.
+Also a log file as well as read_classes & nonadenosine_residues files
+are created in the user-specified directory.
 }
 \description{
 This function allows to perform all of the steps required to discover
@@ -53,9 +66,22 @@ segmentation data. Therefore it may be wise to split the nanopolish table
 beforehand and then run this function on nanopolish table chunks.
 }
 \details{
-The output of this function is a list of 2 dataframes, containing: a) binary
-classification of reads satisfying filtering criteria, b) detailed positional
-info regarding all potential nonadenosine residues detected.
+The output of this function is a list of 2 dataframes, containing:\itemize{
+\item read_classes - classification of reads based on applied criteria
+\item nonadenosine_residues - detailed positional info regarding all
+potential nonadenosine residues detected.
+}
+
+The more detailed info regarding read classification is stored within
+'comments' column. To make the output more compact, it contains codes
+as follows:\itemize{
+\item IRL - insufficient read length
+\item QCF - nanopolish qc failed
+\item MAU - move transition absent, nonA residue undetected
+\item MPU - move transition present, nonA residue undetected
+\item NIN - not included in the analysis (pass only = T)
+\item YAY - move transition present, nonA residue detected
+}
 
 The filtering criteria applied by ninetails are as follows: move of value =1
 present, qc_tag = "PASS" or "PASS" & "SUFFCLIP", length estimated
@@ -80,6 +106,7 @@ results <- ninetails::check_tails(
  num_cores = 2,
  basecall_group = 'Basecall_1D_000',
  pass_only=TRUE,
+ qc=TRUE,
  save_dir = '~/Downloads')
 
 }

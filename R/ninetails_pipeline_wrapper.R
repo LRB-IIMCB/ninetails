@@ -6,9 +6,22 @@
 #' segmentation data. Therefore it may be wise to split the nanopolish table
 #' beforehand and then run this function on nanopolish table chunks.
 #'
-#' The output of this function is a list of 2 dataframes, containing: a) binary
-#' classification of reads satisfying filtering criteria, b) detailed positional
-#' info regarding all potential nonadenosine residues detected.
+#' The output of this function is a list of 2 dataframes, containing:\itemize{
+#' \item read_classes - classification of reads based on applied criteria
+#' \item nonadenosine_residues - detailed positional info regarding all
+#' potential nonadenosine residues detected.
+#' }
+#'
+#' The more detailed info regarding read classification is stored within
+#' 'comments' column. To make the output more compact, it contains codes
+#' as follows:\itemize{
+#' \item IRL - insufficient read length
+#' \item QCF - nanopolish qc failed
+#' \item MAU - move transition absent, nonA residue undetected
+#' \item MPU - move transition present, nonA residue undetected
+#' \item NIN - not included in the analysis (pass only = T)
+#' \item YAY - move transition present, nonA residue detected
+#' }
 #'
 #' The filtering criteria applied by ninetails are as follows: move of value =1
 #' present, qc_tag = "PASS" or "PASS" & "SUFFCLIP", length estimated
@@ -36,6 +49,16 @@
 #' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
 #' As a default, "TRUE" value is set.
 #'
+#' @param qc logical [TRUE/FALSE]. If TRUE, the quality control of the output
+#' predictions would be performed. This means that the reads/non-A residue
+#' positions in terminal nucleotides, which are most likely artifacts, are
+#' labeled accordingly as "-WARN" (residues recognized as non-A due to
+#' nanopolish segmentation error which is inherited from nanopolish,
+#' as ninetails uses nanopolish segmentation). It is then up to user, whether
+#' they would like to include or discard such reads from their pipeline. However,
+#' it is advised to treat them with caution. By default, the qc option is enabled
+#' (this parameter is set to TRUE).
+#'
 #' @param save_dir character string. Full path of the directory where the output
 #' files containing the tail composition information should be stored.
 #'
@@ -44,6 +67,8 @@
 #' @return A list containing tail information organized by the read ID
 #' is returned. Always assign this returned list to a variable, otherwise
 #' the long list will be printed to the console, which may crash your R session.
+#' Also a log file as well as read_classes & nonadenosine_residues files
+#' are created in the user-specified directory.
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom utils head
@@ -67,14 +92,22 @@
 #'  num_cores = 2,
 #'  basecall_group = 'Basecall_1D_000',
 #'  pass_only=TRUE,
+#'  qc=TRUE,
 #'  save_dir = '~/Downloads')
 #'
 #' }
 
-check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, basecall_group="Basecall_1D_000", pass_only=TRUE, save_dir){
+check_tails <- function(nanopolish,
+                        sequencing_summary,
+                        workspace,
+                        num_cores=1,
+                        basecall_group="Basecall_1D_000",
+                        pass_only=TRUE,
+                        qc=TRUE,
+                        save_dir){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  i <- readname <- polya_length <- qc_tag <- chunkname <-  NULL
+  i <- readname <- polya_length <- qc_tag <- chunkname <-contig <- est_nonA_pos <-  NULL
 
   # Create a log file
   if (dir.exists(file.path(save_dir))) {
@@ -97,6 +130,7 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   cat(paste(' number of cores:              ', num_cores, '\n', sep=''))
   cat(paste(' basecall group:               ', basecall_group, '\n', sep=''))
   cat(paste(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
+  cat(paste(' output quality control:       ', qc, '\n', sep=''))
   cat(paste(' output directory:             ', save_dir, '\n', '\n', '\n'))
 
   cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
@@ -285,6 +319,16 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
 
+  #drop moves variable - recursive fn for prunning moves vector from the output
+  .prune_moves <- function(i)
+    lapply(i, function(x)
+      if (is.list(x)) {
+        if(!is.null(names(x))) .prune_moves(x[names(x)!="chunk_moves"]) else .prune_moves(x)
+      } else x
+    )
+
+  tail_chunk_list <- .prune_moves(tail_chunk_list)
+
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
 
@@ -350,10 +394,10 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
     assertthat::assert_that(assertive::is_existing_file(nanopolish),
                             msg=paste0("File ",nanopolish," does not exist",sep=""))
     nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                           col_select=c(readname, polya_length, qc_tag),
+                                           col_select=c(readname, contig, polya_length, qc_tag),
                                            show_col_types = FALSE)
   } else if (assertive::has_rows(nanopolish)) {
-    nanopolish_polya_table <- nanopolish[,c("readname","polya_length","qc_tag")]
+    nanopolish_polya_table <- nanopolish[,c("readname","contig", "polya_length","qc_tag")]
   } else {
     stop("Wrong nanopolish parameter. Please provide filepath or object.")
   }
@@ -485,7 +529,7 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   moved_chunks_table$est_nonA_pos <- round(moved_chunks_table$polya_length-((moved_chunks_table$polya_length*moved_chunks_table$centr_signal_pos)/moved_chunks_table$signal_length), digits=2)
 
   #clean up the output nonA table:
-  moved_chunks_table <- moved_chunks_table[,c(3,2,8,6,7)]
+  moved_chunks_table <- moved_chunks_table[,c(3,6,2,9,7,8)]
 
   # Handle other (discarded) reads:
   discarded_reads <- nanopolish_polya_table[!nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
@@ -494,44 +538,88 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
   if(pass_only == TRUE){
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "insufficient read length",
-                                                qc_tag == "SUFFCLIP" ~ "not included in the analysis (pass only = T)",
-                                                qc_tag == "ADAPTER" ~ "nanopolish qc failed",
-                                                qc_tag == "NOREGION" ~ "nanopolish qc failed",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "nanopolish qc failed",
-                                                readname %in% moved_unmodified_readnames ~ "move transition present, nonA residue undetected",
-                                                TRUE ~ "move transition absent, nonA residue undetected"),
+      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "IRL",
+                                                qc_tag == "SUFFCLIP" ~ "NIN",
+                                                qc_tag == "ADAPTER" ~ "QCF",
+                                                qc_tag == "NOREGION" ~ "QCF",
+                                                qc_tag == "READ_FAILED_LOAD" ~ "QCF",
+                                                readname %in% moved_unmodified_readnames ~ "MPU",
+                                                TRUE ~ "MAU"),
                     class = dplyr::case_when(polya_length < 10 ~ "unclassified",
                                              readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "move transition absent, nonA residue undetected" ~ "unmodified",
+                                             comments == "MAU" ~ "unmodified",
                                              TRUE ~ "unclassified"))
   } else {
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "insufficient read length",
-                                                qc_tag == "ADAPTER" ~ "nanopolish qc failed",
-                                                qc_tag == "NOREGION" ~ "nanopolish qc failed",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "nanopolish qc failed",
-                                                readname %in% moved_unmodified_readnames ~ "move transition present, nonA residue undetected",
-                                                TRUE ~ "move transition absent, nonA residue undetected"),
+      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "IRL",
+                                                qc_tag == "ADAPTER" ~ "QCF",
+                                                qc_tag == "NOREGION" ~ "QCF",
+                                                qc_tag == "READ_FAILED_LOAD" ~ "QCF",
+                                                readname %in% moved_unmodified_readnames ~ "MPU",
+                                                TRUE ~ "MAU"),
                     class = dplyr::case_when(polya_length < 10 ~ "unclassified",
                                              readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "move transition absent, nonA residue undetected" ~ "unmodified",
+                                             comments == "MAU" ~ "unmodified",
                                              TRUE ~ "unclassified"))
   }
 
 
   modified_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
   modified_reads <- modified_reads %>% dplyr::mutate(class = "modified",
-                                                     comments = "move transition present, nonA residue detected")
+                                                     comments = "YAY")
 
-  #merge second tabular output:
+  #merge read_classes tabular output:
   nanopolish_polya_table <- rbind(modified_reads, discarded_reads)
+  #corece tibble to df
+  nanopolish_polya_table <- data.frame(nanopolish_polya_table)
 
-  #CREATE FINAL OUTPUT
+  #create empty list for the output
   ninetails_output <- list()
-  ninetails_output[['read_classes']] <- nanopolish_polya_table
-  ninetails_output[['nonadenosine_residues']] <- moved_chunks_table
+
+  ##############################################################################
+  # QUALITY CONTROL OF THE OUTPUTS
+  ##############################################################################
+  # the model was not trained on the tail termini; also the ninetails inherits
+  # the potential segmentation errors from nanopolish (as the tail is delimited
+  # based on nanopolish polya function). Thus, to avoid artifact contribution in
+  # the final output tables, the potential erroneous positions indicated by the
+  # classifier based on the signal shape would be labeled by this module; it
+  # then depends on the user whether to include such reads in the analysis or
+  # not; additional info would be provided as "WARN" comment to treat those reads
+  # with caution.
+
+
+  if(qc == TRUE){
+    # filter the outermost positions (termini!) from position data:
+    # empirically tested constraints! report without terminal data
+    moved_chunks_table_trimmed <- moved_chunks_table %>% dplyr::filter(!(est_nonA_pos < 2) & !(est_nonA_pos > polya_length-2))
+    moved_chunks_table_discarded <- subset(moved_chunks_table,!(readname %in% moved_chunks_table_trimmed$readname))
+
+
+    # subset potential artifacts from read_classes
+    potential_artifacts <- subset(nanopolish_polya_table, readname %in% moved_chunks_table_discarded$readname)
+
+    modified_reads_edited <- nanopolish_polya_table %>%
+      dplyr::mutate(class = dplyr::case_when(
+        readname %in% potential_artifacts$readname ~ paste0(class,"-WARN"),
+        TRUE ~ paste0(class)))
+
+    # label potential artifacts in nonadenosine residue dataframe
+    moved_chunks_table_qc <- moved_chunks_table %>%
+      dplyr::mutate(prediction=dplyr::case_when(est_nonA_pos < 2 ~ paste0(prediction, "-WARN"),
+                                                est_nonA_pos > polya_length-2 ~ paste0(prediction, "-WARN"),
+                                                TRUE~ paste0(prediction)))
+
+    #CREATE FINAL OUTPUT
+    ninetails_output[['read_classes']] <- modified_reads_edited
+    ninetails_output[['nonadenosine_residues']] <- moved_chunks_table_qc
+
+  } else{
+    #CREATE FINAL OUTPUT
+    ninetails_output[['read_classes']] <- nanopolish_polya_table
+    ninetails_output[['nonadenosine_residues']] <- moved_chunks_table
+  }
 
 
   #dump output to files:
@@ -553,9 +641,10 @@ check_tails <- function(nanopolish, sequencing_summary, workspace, num_cores=1, 
 
   # close logfile connection
   #on.exit(close(log_file))
-  close(log_file)
-
+  on.exit(closeAllConnections()) #fixed err
 
   return(ninetails_output)
 
 }
+
+

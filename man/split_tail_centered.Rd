@@ -27,6 +27,14 @@ where the potential modification is always at the center of a given
 extracted fragment.
 }
 \details{
+It extracts the region of interest based on 2 assumptions (conditions):
+the presence of significant raw signal distortion (above the given threshold)
+recorded by the thresholding algo as "pseudomove" and the transition of state
+(move==1) recorded by Guppy. If move==0 are present exclusively within the given
+signal chunk, then this chunk is dropped from the analysis (as the distortion
+is most likely caused by sequencing artifact, not the non-A residue itself
+- this is introduced in order to minimize alse positives)
+
 If the data indicating the presence of modifications are in the regions
 of the ends of the signal (3' or 5'), then the missing upstream or downstream
 data are imputed based on the most frequent values in the entire signal.

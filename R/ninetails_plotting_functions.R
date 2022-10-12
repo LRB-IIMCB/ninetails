@@ -1,4 +1,6 @@
-
+################################################################################
+# VISUAL INSPECTION OF SIGNALS
+################################################################################
 #' Draws an entire squiggle for given read.
 #'
 #' Creates segmented plot of raw/rescaled ONT RNA signal (with or without moves).
@@ -555,6 +557,9 @@ plot_tail_chunk <- function(chunk_name,
   return(plot_squiggle)
 }
 
+################################################################################
+# VISUAL REPRESENTATION OF GAFS
+################################################################################
 
 #' Creates a visual representation of gramian angular field corresponding to the
 #' given poly(A) tail fragment (chunk).
@@ -749,6 +754,253 @@ plot_multiple_gaf <- function(gaf_list,
 }
 
 
+################################################################################
+# DATA EXPLORATORY PLOTS
+################################################################################
 
+#' Plotting read classes data per category assigned to the analyzed reads.
+#'
+#' This function requires as input the dataframe with read_classes provided by
+#' ninetails pipeline. Function works in 2 flavours: it can output detailed
+#' classification (based on column "comments") or crude classification (based on
+#' column "class").
+#'
+#' Function  based on the Nanotail equivalent: https://github.com/LRB-IIMCB/nanotail
+#' Many thanks to smeagol for advice & support!
+#'
+#' @param class_data A dataframe or tibble containing read_classes predictions
+#' made by ninetails pipeline
+#'
+#' @param grouping_factor character string. A grouping variable (e.g. "sample_name")
+#'
+#' @param frequency logical [TRUE/FALSE]. If TRUE, the frequency will be plotted.
+#' If FALSE, raw counts will be shown. This parameter is set to TRUE by default.
+#'
+#' @param detailed logical [TRUE/FALSE]. If TRUE, the counts will be provided
+#' based on the "comments" column, which contains detailed information on the
+#' assigned class. If FALSE, the counts will be provided based on "class" column
+#' which gives more crude glimpse on the classification - i.e. provides an info
+#' whether the reads were considered as "modified", "unmodified" and
+#' "unclassified" only. By default, the TRUE option is set.
+#'
+#' @return ggplot object with read class prediction
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#' ninetails::plot_class_counts(class_data=read_classes_dataframe,
+#'                              grouping_factor="sample_name",
+#'                              frequency=TRUE,
+#'                              detailed=TRUE)
+#' }
+#'
+#'
+plot_class_counts <- function(class_data,
+                              grouping_factor=NA,
+                              frequency=TRUE,
+                              detailed=TRUE) {
+
+  # var binding
+  n <- comments <- NULL
+
+
+  if (missing(class_data)) {
+    stop("Class_data is missing. Please provide a valid class_data argument",
+         call. = FALSE)
+  }
+
+  assertthat::assert_that(assertive::has_rows(class_data),
+                          msg = "Empty dataframe provided as an input")
+  assertthat::assert_that(assertive::is_a_bool(frequency),
+                          msg="Non-boolean value provided for option frequency")
+  assertthat::assert_that(assertive::is_a_bool(detailed),
+                          msg="Non-boolean value provided for option detailed")
+
+
+  if (detailed==TRUE){
+
+
+    class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=TRUE)
+
+    basic_colnames = c("comments","n")
+    assertthat::assert_that(basic_colnames[1] %in% colnames(class_counts),
+                            msg="comments column is missing in the input. Invalid output of count_class().")
+    assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
+                            msg="n column is missing in the input. Invalid output of count_class().")
+
+    class_counts$comments <- factor(class_counts$comments, levels=c("NIN",
+                                                                    "IRL",
+                                                                    "QCF",
+                                                                    "MPU",
+                                                                    "MAU",
+                                                                    "YAY"))
+
+    if (ncol(class_counts)>2) {
+      grouping_colname = setdiff(colnames(class_counts),basic_colnames)
+
+      class_plot <- ggplot2::ggplot(class_counts, ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=comments,y=n)) +
+        ggplot2::ylab("count")+ ggplot2::theme_bw() +
+        ggplot2::labs(x="\nsample", fill="Class:", title="Assigned read classes")
+      if(frequency) {
+        class_plot <- class_plot + ggplot2::geom_bar(stat="identity",position="fill") + ggplot2::ylab("frequency")
+      } else {
+        class_plot <- class_plot + ggplot2::geom_bar(stat="identity",position="stack") + ggplot2::ylab("count")
+      }
+      class_plot <- class_plot + ggplot2::labs(x="\nsample", fill="Class:", title="Assigned read classes")
+    } else {
+      class_plot <- ggplot2::ggplot(class_counts,ggplot2::aes(x=comments,y=n)) +
+        ggplot2::geom_bar(stat="identity") +
+        ggplot2::labs(x="\nsample", y="count\n", fill="Class:", title="Assigned read classes")
+    }
+
+    class_plot <- class_plot +
+      ggplot2::scale_fill_manual(values=c("YAY" = "#ff6600",
+                                          "QCF" = "#808080",
+                                          "MAU"= "#00aad4",
+                                          "IRL"= "#4d4d4d",
+                                          "NIN"= "#1a1a1a",
+                                          "MPU"= "#cccccc"),
+                                 labels=c("move transition present, nonA residue detected",
+                                          "nanopolish qc failed",
+                                          "move transition absent, nonA residue undetected",
+                                          "insufficient read length",
+                                          "not included in the analysis (pass only = T)",
+                                          "move transition present, nonA residue undetected"
+                                 ))
+  } else {
+    class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=FALSE)
+
+    basic_colnames = c("class","n")
+    assertthat::assert_that(basic_colnames[1] %in% colnames(class_counts),
+                            msg="class column is missing in the input. Invalid output of count_class().")
+    assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
+                            msg="n column is missing in the input. Invalid output of count_class().")
+
+    class_counts$class <- factor(class_counts$class, levels=c("unclassified", "unmodified", "modified"))
+
+    if (ncol(class_counts)>2) {
+      grouping_colname = setdiff(colnames(class_counts),basic_colnames)
+
+      class_plot <- ggplot2::ggplot(class_counts, ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=class,y=n)) +
+        ggplot2::ylab("count")+ ggplot2::theme_bw() +
+        ggplot2::labs(x="\nsample", fill="Class:", title="Assigned read classes")
+      if(frequency) {
+        class_plot <- class_plot + ggplot2::geom_bar(stat="identity",position="fill") + ggplot2::ylab("frequency")
+      } else {
+        class_plot <- class_plot + ggplot2::geom_bar(stat="identity",position="stack") + ggplot2::ylab("count")
+      }
+      class_plot <- class_plot + ggplot2::labs(x="\nsample", fill="Class:", title="Assigned read classes")
+    } else {
+      class_plot <- ggplot2::ggplot(class_counts,ggplot2::aes(x=class,y=n)) +
+        ggplot2::geom_bar(stat="identity") +
+        ggplot2::labs(x="\nsample", y="count\n", fill="Class:", title="Assigned read classes")
+    }
+
+    class_plot <- class_plot +
+      ggplot2::scale_fill_manual(values=c("modified" = "#ff6600",
+                                          "unmodified"= "#00aad4",
+                                          "unclassified"= "#808080"))
+
+  }
+
+  return(class_plot)
+}
+
+
+#' Plot counts of nonadenosine residues found in ninetails output data
+#'
+#' @param residue_data A dataframe or tibble containig non-A residue predictions
+#' made by ninetails pipeline
+#'
+#' @param grouping_factor grouping variable (e.g. "sample_name")
+#'
+#' @param frequency logical [TRUE/FALSE]. If TRUE, the frequency will be plotted.
+#' If FALSE, raw counts will be shown. This parameter is set to TRUE by default.
+#'
+#' @return a ggplot2 object
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#' ninetails::plot_residue_counts(residue_data=nonadenosine_residues_dataframe,
+#'                                grouping_factor="sample_name",
+#'                                frequency=TRUE)
+#' }
+plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE) {
+
+  # var binding
+  n <- prediction <- C <- G <- U <- total <- group <- pC <- pG <- pU<- NULL
+
+  if (missing(residue_data)) {
+    stop("Residue_data dataframe is missing. Please provide a valid residue_data argument",
+         call. = FALSE)
+  }
+
+  assertthat::assert_that(assertive::has_rows(residue_data),
+                          msg = "Empty dataframe provided as an input")
+
+
+  residue_counts <- ninetails::count_residues(residue_data=residue_data, grouping_factor=grouping_factor)
+
+  basic_colnames = c("prediction","n")
+  assertthat::assert_that(basic_colnames[1] %in% colnames(residue_counts),
+                          msg="prediction column is missing in the input. Invalid output of count_residues().")
+  assertthat::assert_that(basic_colnames[2] %in% colnames(residue_counts),
+                          msg="n column is missing in the input. Invalid output of count_residues().")
+
+  assertthat::assert_that(assertive::is_a_bool(frequency),
+                          msg="Non-boolean value provided for option frequency")
+
+
+  # if there were multiple samples compared
+  if (ncol(residue_counts)>2) {
+
+    grouping_colname = setdiff(colnames(residue_counts),basic_colnames)
+
+    residue_plot <- ggplot2::ggplot(residue_counts, ggplot2::aes(x=!!rlang::sym(grouping_colname),
+                                                                 fill=prediction,
+                                                                 y=n)) +
+      ggplot2::ylab("count")+ ggplot2::theme_bw() +
+      ggplot2::labs(x="\nsample", fill="Residue:", title="Non-A residue counts")
+
+    if(frequency) {
+      #residue_plot <- residue_plot + ggplot2::geom_bar(stat="identity",position="fill") + ggplot2::ylab("frequency")
+      residue_counts <- residue_counts %>% tidyr::pivot_wider(names_from = prediction, values_from = n) %>%
+        dplyr::mutate(total = C+G+U,pC = C/total,pG = G/total,pU = U/total) %>%
+        dplyr::select(group, pC, pG, pU) %>% dplyr::rename(C = pC, G = pG, U = pU) %>% tidyr::gather(key = prediction,value =n,C:G:U)
+
+      #unify factor levels
+      residue_counts$prediction <- factor(residue_counts$prediction, levels=c("G", "U", "C"))
+
+      residue_plot <- ggplot2::ggplot(residue_counts, ggplot2::aes(x=!!rlang::sym(grouping_colname),
+                                                                   fill=prediction,
+                                                                   y=n)) +
+        ggplot2::ylab("frequency")+ ggplot2::theme_bw() +
+        ggplot2::labs(x="\nsample", fill="Residue:", title="Non-A residue frequency") +
+        ggplot2::geom_bar(stat="identity",position="dodge")
+
+
+
+    }
+    else{
+      residue_plot <- residue_plot + ggplot2::geom_bar(stat="identity",position="dodge") + ggplot2::ylab("count")
+    }
+
+    residue_plot <- residue_plot + ggplot2::labs(x="\nsample", fill="Residue:", title="Non-A residue counts")
+  }
+  else {
+    residue_plot <- ggplot2::ggplot(residue_counts,ggplot2::aes(x=prediction,y=n)) +
+      ggplot2::geom_bar(stat="identity") +
+      ggplot2::labs(x="\nsample", y="count\n", fill="Residue:",  title="Non-A residue counts")
+  }
+
+  #color scheme
+  residue_plot <- residue_plot +
+    ggplot2::scale_fill_manual(values=c("#3a424f", "#50a675", "#b0bdd4"))
+
+
+  return(residue_plot)
+}
 
 
