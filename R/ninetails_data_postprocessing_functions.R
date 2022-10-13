@@ -615,6 +615,8 @@ summarize_nonA <- function(merged_nonA_tables,
 #' The function allows the user to set a cutoff number of reads required for
 #' the analysis.
 #'
+#' This function is intended to work under the calculate_fisher function.
+#'
 #' The function was inspired by the Nanotail package written & maintained by
 #' Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
 #'
@@ -635,6 +637,10 @@ summarize_nonA <- function(merged_nonA_tables,
 #' @param min_reads [numeric] minimum number of reads representing given
 #' transcript to include it in the analysis
 #'
+#' @param transcript_id_column [character string] name of the column in which
+#' the identifiers of the transcripts are stored. It is set to NA
+#' by default.
+#'
 #' @return a tibble with results for given transcript, including pvalue,
 #' adjusted pvalue, stats_code (the variable describing whether conditions
 #' are met) and significance (FDR based on padj).
@@ -650,7 +656,7 @@ summarize_nonA <- function(merged_nonA_tables,
 #'
 #' }
 #'
-nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0) {
+nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, transcript_id_column=NA) {
 
   # var binding
   counts_unmod <- NULL
@@ -662,6 +668,10 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0) {
   }
   if (missing(base)) {
     stop("Base is missing. Please provide 'base' argument as character string (C, G or U).",
+         call. =FALSE)
+  }
+  if (missing(transcript_id_column)) {
+    stop("Transcript_id_column is missing. Please provide 'transcript_id_column' argument as character string.",
          call. =FALSE)
   }
 
@@ -728,7 +738,7 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0) {
       # summarize nonAs
       contingency_table <- ninetails::summarize_nonA(merged_nonA_tables = ninetails_data,
                                                      summary_factors=grouping_factor,
-                                                     transcript_id_column="transcript2") %>%
+                                                     transcript_id_column=transcript_id_column) %>%
         dplyr::select(!!rlang::sym(grouping_factor),
                       counts_unmod,
                       !!rlang::sym(count_column))
@@ -763,6 +773,7 @@ stat_codes_list = list(OK = "OK",
                        G_LC = "LOW COUNT FOR ONE GROUP",
                        G_NA = "DATA FOR ONE GROUP NOT AVAILABLE",
                        ERR = "OTHER ERROR")
+
 
 #' Performs Fisher's exact test for each transcript in ninetails
 #' output data. Then, it performs the Benjamini-Hochberg procedure
@@ -819,6 +830,8 @@ stat_codes_list = list(OK = "OK",
 #'
 #' @return a summary table with pvalues, padj and significance levels
 #' for each transcript  (tibble)
+#'
+#' @importFrom rlang :=
 #'
 #' @export
 #'
@@ -911,7 +924,7 @@ calculate_fisher <- function(ninetails_data,
   }
 
   # filter out transcripts with not enough amount of non-A reads among the whole pool of reads:
-  mod_summarized <- merged_nonA_tables %>% dplyr::ungroup() %>%
+  mod_summarized <- ninetails_data %>% dplyr::ungroup() %>%
     dplyr::mutate(sum_nonA = rowSums(dplyr::across(dplyr::starts_with('prediction_')))) %>%
     dplyr::group_by(!!!rlang::syms(c(transcript_id_column,grouping_factor))) %>%
     dplyr::summarise(dplyr::across(c(sum_nonA), list(counts = ~ sum(.x != 0))), .groups= 'drop') %>%
@@ -925,14 +938,14 @@ calculate_fisher <- function(ninetails_data,
 
 
   ninetails_data_stat <- ninetails_data %>%
-    dplyr::mutate(transcript2=contig) %>%
-    dplyr::group_by(!!!rlang::syms(c(transcript_id_column))) %>%
+    dplyr::mutate(transcript_id=get(c(transcript_id_column))) %>%
+    dplyr::group_by(get(c(transcript_id_column))) %>%
     tidyr::nest()
 
 
   ninetails_data_stat <- ninetails_data_stat %>%
-    dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base)) %>%
-    dplyr::select(-data) %>% tidyr::unnest(cols = c(stats))
+    dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base,transcript_id_column = "transcript_id")) %>%
+    dplyr::select(-data) %>% tidyr::unnest(cols = c(stats)) %>% dplyr::rename(!!transcript_id_column := "get(c(transcript_id_column))")
   message("calculating statistics")
 
   message("Finished")

@@ -7,7 +7,13 @@ columns in a contingency table representing given transcript in ninetails
 output data. This is a wrapper for fisher.test function from stats package
 with additional features to facilitate data wrangling.}
 \usage{
-nonA_fisher(ninetails_data, grouping_factor, base, min_reads = 0)
+nonA_fisher(
+  ninetails_data,
+  grouping_factor,
+  base,
+  min_reads = 0,
+  transcript_id_column = NA
+)
 }
 \arguments{
 \item{ninetails_data}{dataframe - the output of ninetails::merge_nonA_tables
@@ -23,6 +29,10 @@ C, G, U arguments. The "C" value is set by default.}
 
 \item{min_reads}{[numeric] minimum number of reads representing given
 transcript to include it in the analysis}
+
+\item{transcript_id_column}{[character string] name of the column in which
+the identifiers of the transcripts are stored. It is set to NA
+by default.}
 }
 \value{
 a tibble with results for given transcript, including pvalue,
@@ -36,6 +46,8 @@ table), where 2 conditions (e.g. WT vs KO) are compared at once.
 \details{
 The function allows the user to set a cutoff number of reads required for
 the analysis.
+
+This function is intended to work under the calculate_fisher function.
 
 The function was inspired by the Nanotail package written & maintained by
 Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
