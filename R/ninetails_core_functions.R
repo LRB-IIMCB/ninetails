@@ -570,7 +570,7 @@ split_tail_centered <- function(readname,
   # recompute rle
   mod_rle <- rle(pseudomoves)
   # pseudomoves filtered by condition (potentially modified - empyrical!)
-  condition <- mod_rle$lengths >= 5 & mod_rle$values
+  condition <- mod_rle$lengths >= 4 & mod_rle$values
   # beginning positions of filtered pseudomoves which satisfy conditions
   first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths,-1)))[condition]
   # length of pseudomoves satisfying condition
