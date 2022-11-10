@@ -3,10 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{split_with_overlaps}
 \alias{split_with_overlaps}
-\title{Splits signal to overlapping fragments of equal length. In case if the signal
-is not completely divisible by given segment length, the function fills
-missing data (NAs) with 10 most frequent values from the entire signal
-(randomly sampled).}
+\title{Splits signal to overlapping fragments of equal length.}
 \usage{
 split_with_overlaps(readname, tail_feature_list, segment, overlap)
 }
@@ -24,10 +21,9 @@ function.}
 a list object containing split chunks of signal.
 }
 \description{
-Splits signal to overlapping fragments of equal length. In case if the signal
-is not completely divisible by given segment length, the function fills
-missing data (NAs) with 10 most frequent values from the entire signal
-(randomly sampled).
+In case if the signal is not completely divisible by given segment length,
+the function fills missing data (NAs) with 10 most frequent values from the
+entire signal (randomly sampled).
 }
 \examples{
 \dontrun{

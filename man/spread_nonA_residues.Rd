@@ -2,10 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{spread_nonA_residues}
 \alias{spread_nonA_residues}
-\title{Spreads counts of the nonA residues in modified reads in
-*_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
-to 3 separate columns, each containing respective C, G, U prediction
-per given read.}
+\title{Reshapes nonadenosine_residues dataframe.}
 \usage{
 spread_nonA_residues(residue_data)
 }
@@ -17,6 +14,12 @@ made by ninetails pipeline (filename ends with "_nonadenosine_residues.tsv")}
 a tibble with spread prediction column (3 cols instead)
 }
 \description{
+Spreads counts of the nonA residues in modified reads in
+*_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
+to 3 separate columns, each containing respective C, G, U prediction
+per given read.
+}
+\details{
 In addition, an extra "nonA_residues" column is located at the end of
 the output table. It contains all non-A residues positions summarized (per read),
 given from the 5' to 3' end, separated by ":".

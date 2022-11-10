@@ -1,7 +1,7 @@
-#' Reads ninetails read_classes dataframe from file
+#' Reads ninetails read_classes dataframe from file.
 #'
 #' This is the basic function used to import read_classes output from check_tails
-#' to R
+#' to R.
 #'
 #' @param class_path a character string. Path to ninetails output file
 #'
@@ -54,7 +54,7 @@ read_class_single <- function(class_path, sample_name = NA) {
 
 
 
-#' Reads multiple ninetails read_classes outputs at once
+#' Reads multiple ninetails read_classes outputs at once.
 #'
 #' This function can be used to load any number of files with read_classes
 #' predictions with single invocation, allowing for metadata specification.
@@ -66,7 +66,7 @@ read_class_single <- function(class_path, sample_name = NA) {
 #' \item sample_name - unique sample identifier
 #' }
 #'
-#' @param ... - additional parameters to pass to read_class_single();
+#' @param ... - additional parameters to pass to \code{\link{read_class_single}};
 #' currently accepts sample_name argument
 #'
 #' Function based on PK (smaegol) NanoTail read_polya_multiple
@@ -120,10 +120,10 @@ read_class_multiple <- function(samples_table,...) {
 }
 
 #' Counts read classes found in read_classes dataframe produced
-#' by ninetails pipeline
+#' by ninetails pipeline.
 #'
 #' Process the information returned by ninetails found in the read_classes
-#' dataframe in the prediction column
+#' dataframe in the prediction column.
 #'
 #' @param class_data A dataframe or tibble containig read_classes predictions
 #' made by ninetails pipeline
@@ -162,12 +162,12 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
       assertthat::assert_that(grouping_factor %in% colnames(class_data),
                               msg=paste0(grouping_factor," is not a column of input dataset"))
       class_counts <- class_data %>%
-        dplyr::mutate(comments=forcats::fct_relevel(comments,"move transition present, nonA residue detected", after = Inf)) %>%
+        dplyr::mutate(comments=forcats::fct_relevel(comments,"YAY", after = Inf)) %>%
         dplyr::group_by(!!rlang::sym(grouping_factor),comments) %>%
         dplyr::count()
     } else {
       class_counts <- class_data %>%
-        dplyr::mutate(comments=forcats::fct_relevel(comments,"move transition present, nonA residue detected", after = Inf)) %>%
+        dplyr::mutate(comments=forcats::fct_relevel(comments,"YAY", after = Inf)) %>%
         dplyr::group_by(comments) %>%
         dplyr::count()
     }
@@ -192,9 +192,9 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 }
 
 
-#' Reads ninetails nonadenosine_residues data from file
+#' Reads ninetails nonadenosine_residues data from file.
 #'
-#' This is the basic function used to import output from check_tails to R:
+#' This is the basic function used to import output from \code{\link{check_tails}} to R:
 #' it imports the dataframe containing non-A detailed position info
 #' (nonadenosine_residues).
 #'
@@ -248,7 +248,7 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 }
 
 
-#' Reads multiple ninetails nonadenosine_residues outputs at once
+#' Reads multiple ninetails nonadenosine_residues outputs at once.
 #'
 #' This function can be used to load any number of files
 #' with nonadenosine_residues predictions with single invocation,
@@ -263,7 +263,7 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 #' \item residue_path - containing path to the nonadenosine_residues predictions file
 #' \item sample_name - unique sample identifier
 #' }
-#' @param ... - additional parameters to pass to read_residue_single();
+#' @param ... - additional parameters to pass to \code{\link{read_residue_single}};
 #' currently accepts sample_name argument
 #'
 #' Function based on PK (smaegol) NanoTail read_polya_multiple
@@ -354,13 +354,13 @@ count_residues <- function(residue_data, grouping_factor=NA) {
                             msg=paste0(grouping_factor," is not a column of input dataset"))
 
     residue_counts <- residue_data %>%
-      dplyr::mutate(prediction=forcats::fct_relevel(prediction,"C", after = Inf)) %>%
+      dplyr::mutate(prediction=forcats::fct_relevel(prediction,"U", after = Inf)) %>%
       dplyr::group_by(!!rlang::sym(grouping_factor),prediction) %>%
       dplyr::count()
   }
   else {
     residue_counts <- residue_data %>%
-      dplyr::mutate(prediction=forcats::fct_relevel(prediction,"C", after = Inf)) %>%
+      dplyr::mutate(prediction=forcats::fct_relevel(prediction,"U", after = Inf)) %>%
       dplyr::group_by(prediction) %>%
       dplyr::count()
   }
@@ -369,6 +369,8 @@ count_residues <- function(residue_data, grouping_factor=NA) {
 }
 
 
+#' Reshapes nonadenosine_residues dataframe.
+#'
 #' Spreads counts of the nonA residues in modified reads in
 #' *_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
 #' to 3 separate columns, each containing respective C, G, U prediction
@@ -528,7 +530,7 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 #' The function also reports the mean and median poly(A) tail length
 #' by transcript.
 #'
-#' @param merged_nonA_tables an output of merge_nonA_tables() function
+#' @param merged_nonA_tables an output of \code{\link{merge_nonA_tables}} function
 #'
 #' @param summary_factors character string or vector of strings;
 #' column(s) used for grouping (default: "group")
@@ -604,368 +606,64 @@ summarize_nonA <- function(merged_nonA_tables,
   return(nonA_data_summarized)
 }
 
-#' Performs Fisher's exact test for testing the null of independence of rows and
-#' columns in a contingency table representing given transcript in ninetails
-#' output data. This is a wrapper for fisher.test function from stats package
-#' with additional features to facilitate data wrangling.
+
+#' Aggregates the quality control info produced by nanopolish polya function.
 #'
-#' It is suitable only for the pairwise comparisons (i.e. for 2x2 contingency
-#' table), where 2 conditions (e.g. WT vs KO) are compared at once.
+#' This function returns read counts assigned to each of the qc_tags
+#' per user-predefined grouping variable (grouping_factor) which might be either
+#' a sample name or an experiment condition (the column of choice must be present
+#' within the input table).
 #'
-#' The function allows the user to set a cutoff number of reads required for
-#' the analysis.
+#' This is the ninetails' implementation of
+#' \code{\link[nanotail:get_nanopolish_processing_info]{name}}
+#' function originally written by P. Krawczyk (smeagol) and incorporated within
+#' the NanoTail package.
 #'
-#' This function is intended to work under the calculate_fisher function.
+#' For original source code, see:
+#' https://github.com/LRB-IIMCB/nanotail/blob/master/R/polya_stats.R
 #'
-#' The function was inspired by the Nanotail package written & maintained by
-#' Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
+#' The variable names were adjusted according to the naming convention within
+#' ninetails to avoid confusion.
 #'
-#' Many thanks to the developer of original source code.
+#' Many thanks to the author of original source code for help and advice.
 #'
+#' @param class_data A dataframe or tibble containig class_data output
+#' from Ninetails
 #'
-#' @param ninetails_data dataframe - the output of ninetails::merge_nonA_tables
-#' function (merged tabular output containing read classification &
-#' non-A position data).
+#' CAUTION! Do not use \code{\link{merge_nonA_tables}} output, since it is cleaned from
+#' poor quality reads by default!
 #'
-#' @param grouping_factor [character string] the name of factor variable defining
-#' groups/conditions (needs to have 2 levels!)
+#' @param grouping_factor [character string] variable used for grouping the data
+#' (e.g. by sample_name)
 #'
-#' @param base [character string] letter representing particular non-A nucleotide,
-#' for which the statistics are meant to be computed. Currently function accepts
-#' C, G, U arguments. The "C" value is set by default.
-#'
-#' @param min_reads [numeric] minimum number of reads representing given
-#' transcript to include it in the analysis
-#'
-#' @param transcript_id_column [character string] name of the column in which
-#' the identifiers of the transcripts are stored. It is set to NA
-#' by default.
-#'
-#' @return a tibble with results for given transcript, including pvalue,
-#' adjusted pvalue, stats_code (the variable describing whether conditions
-#' are met) and significance (FDR based on padj).
-#'
+#' @return A tibble with counts for each qc_tag present in the run
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' test <- ninetails::nonA_fisher(ninetails_data=merged_nonA_tables,
-#'                                grouping_factor = "sample_name",
-#'                                base="C",
-#'                                min_reads=100)
-#'
-#' }
-#'
-nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, transcript_id_column=NA) {
+nanopolish_qc <- function(class_data,
+                          grouping_factor=NA) {
+  #var binding
+  qc_tag <- NULL
 
-  # var binding
-  counts_unmod <- NULL
-
-  # Assertions
-  if (missing(ninetails_data)) {
-    stop("Ninetails data are missing. Please provide a valid ninetails_data argument",
-         call. = FALSE)
-  }
-  if (missing(base)) {
-    stop("Base is missing. Please provide 'base' argument as character string (C, G or U).",
-         call. =FALSE)
-  }
-  if (missing(transcript_id_column)) {
-    stop("Transcript_id_column is missing. Please provide 'transcript_id_column' argument as character string.",
-         call. =FALSE)
-  }
-
-  assertthat::assert_that(assertive::has_rows(ninetails_data),
-                          msg = "Empty data.frame provided as an input")
-  assertthat::assert_that(assertive::is_numeric(min_reads),
-                          msg = "Non-numeric parameter provided (min_reads)")
-  assertthat::assert_that(grouping_factor %in% colnames(ninetails_data),
-                          msg=paste0(grouping_factor," is not a column of input dataset"))
+  #assertions
+  assertthat::assert_that(assertive::has_rows(class_data),
+                          msg = "Empty dataframe provided as an input")
 
 
-  # if grouping factor has more than two levels
-  if (length(levels(ninetails_data[[grouping_factor]]))>2) {
-    if(is.na(condition1) && is.na(condition2)) {
-      #throw error when no conditions for comparison are specified
-      stop(paste0("grouping_factor ",grouping_factor," has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"))
-    } else {
-      # filter input data leaving only specified conditions, dropping other factor levels
-      assertthat::assert_that(condition1 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition1," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition2," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 != condition1,
-                              msg="condition2 should be different than condition1")
-      ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(grouping_factor) %in% c(condition1,condition2)) %>% droplevels()
-    }
-  } else if (length(levels(ninetails_data[[grouping_factor]]))==1) {
-    stop("Only 1 level present for grouping factor. Choose another groping factor for comparison")
-  } else {
-    condition1 = levels(ninetails_data[[grouping_factor]])[1]
-    condition2 = levels(ninetails_data[[grouping_factor]])[2]
-  }
-
-  # initial status code
-  stats_code = codes_stats = "OK"
-  # calculate group counts
-  group_counts = ninetails_data %>% dplyr::group_by(!!!rlang::syms(c(grouping_factor))) %>% dplyr::count()
-
-  stats <- NA
-
-  if (base=="C") {
-    count_column <- "counts_C"
-  } else if (base=="G") {
-    count_column <- "counts_G"
-  } else if (base=="U") {
-    count_column <- "counts_U"
-  } else {
-    stop("Wrong non-A nucleotide defined. To compute statistics, please provide 'base' argument as character string (C, G or U).")
-  }
-
-
-  if (nrow(group_counts)==2) {
-    if (group_counts[1,]$n < min_reads) {
-      if (group_counts[2,]$n < min_reads) {
-        stats_code = "B_LC"
-      } else {
-        stats_code = "G_LC"
-      }
-    } else if (group_counts[2,]$n < min_reads) {
-      stats_code = "G_LC"
-    } else {
-      options(scipen = 999)
-
-      # summarize nonAs
-      contingency_table <- ninetails::summarize_nonA(merged_nonA_tables = ninetails_data,
-                                                     summary_factors=grouping_factor,
-                                                     transcript_id_column=transcript_id_column) %>%
-        dplyr::select(!!rlang::sym(grouping_factor),
-                      counts_unmod,
-                      !!rlang::sym(count_column))
-      contingency_table <- as.data.frame(contingency_table) # coerce tibble to df as setting names to tibble is deprecated
-      row.names(contingency_table) <- contingency_table[[grouping_factor]] # set rownames
-      contingency_table[[grouping_factor]] <- NULL # drop grouping col
-      stats <- suppressWarnings(stats::fisher.test(contingency_table))$p.value
-
-    }
-  } else if (nrow(group_counts)==1) {
-    stats_code = "G_NA"
-  } else if (nrow(group_counts)==0) {
-    stats_code = "B_NA"
-  } else {
-    stats_code = "ERR"
-  }
-
-  # create output
-  stats <- tibble::tibble(p.value=stats,stats_code=as.character(stats_code))
-
-  return(stats)
-
-}
-
-stat_codes_list = list(OK = "OK",
-                       G1_NA = "GROUP1_NA",
-                       G2_NA = "GROUP2_NA",
-                       G1_LC = "G1_LOW_COUNT",
-                       G2_LC = "G2_LOW_COUNT",
-                       B_NA = "DATA FOR BOTH GROUPS NOT AVAILABLE",
-                       B_LC = "LOW COUNTS FOR BOTH GROUPS",
-                       G_LC = "LOW COUNT FOR ONE GROUP",
-                       G_NA = "DATA FOR ONE GROUP NOT AVAILABLE",
-                       ERR = "OTHER ERROR")
-
-
-#' Performs Fisher's exact test for each transcript in ninetails
-#' output data. Then, it performs the Benjamini-Hochberg procedure
-#' (BH step-up procedure) to control the FDR.
-#'
-#' This is a wrapper for fisher.test function from stats package and p.adjust
-#' functions with additional features to facilitate data wrangling.
-#'
-#' The function was inspired by the Nanotail package written & maintained by
-#' Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
-#'
-#' Many thanks to the developer of original source code.
-#'
-#' @param ninetails_data dataframe - the output of ninetails::merge_nonA_tables
-#' function (merged tabular output containing read classification &
-#' non-A position data).
-#'
-#' @param transcript_id_column [character string] column with transcript id data
-#' (default: "contig", as inherited from nanopolish; can be changed by the user)
-#'
-#' @param min_reads [numeric] minimum number of reads representing given
-#' transcript to include it in the analysis. This parameter is set by default
-#' to 0. Please keep in mind that taking into account many transcripts with low
-#' coverage increases the risk of reject true null hypothesis
-#' (Benjamini-Hochberg procedure).
-#'
-#' @param min_nonA_reads [numeric] minimum number of reads containing
-#' nonadenosine residues (summary for C, G, U alltogether) per given
-#' transcript to include it in the analysis. This parameter prevents from
-#' considering too many observations as nonsignificant in the further pvalue
-#' adjustation. In general, the non-A containing reads are a small fraction
-#' of the total pool of reads. As a rule of thumb, additional filtering
-#' criteria can provide more valuable information regarding the samples
-#' (prevent from rejecting true null hypothesis).
-#' This is set by default to 0.
-#'
-#' @param grouping_factor [character string] grouping variable
-#' (e.g. "sample_name" - default)
-#'
-#' @param condition1 [character string] first level of `grouping_factor`
-#' to use for comparison
-#'
-#' @param condition2 [character string] second level of `grouping_factor`
-#' to use for comparison
-#'
-#' @param alpha [numeric] an alpha value to consider a hit significant.
-#' Default: 0.05.
-#'
-#' @param base [character string] letter representing particular non-A nucleotide,
-#' for which the statistics are meant to be computed. Currently function accepts
-#' C, G, U arguments. The "C" value is set by default.
-#'
-#' @param ... additional parameters to pass to nonA_fisher (under development)
-#'
-#' @return a summary table with pvalues, padj and significance levels
-#' for each transcript  (tibble)
-#'
-#' @importFrom rlang :=
-#'
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' test <- ninetails::calculate_fisher(ninetails_data=merged_nonA_tables,
-#'                                     transcript_id_column = "contig",
-#'                                     min_reads=100,
-#'                                     min_nonA_reads=10,
-#'                                     grouping_factor = "sample_name",
-#'                                     condition1="WT",
-#'                                     condition2="KO",
-#'                                     alpha=0.05,
-#'                                     base="C")
-#' }
-calculate_fisher <- function(ninetails_data,
-                             transcript_id_column = "contig",
-                             min_reads = 0,
-                             min_nonA_reads=0,
-                             grouping_factor = "sample_name",
-                             condition1=NA,
-                             condition2=NA,
-                             alpha=0.05,
-                             base="C",
-                             ...)
-{
-
-  # vr binding
-  merged_nonA_tables<- sum_nonA <- counts_nonA <- contig <- data<- stats<- padj<- NULL
-
-  # Assertions
-  if (missing(ninetails_data)) {
-    stop("Ninetails data are missing. Please provide a valid ninetails_data argument",
-         call. = FALSE)
-  }
-  if (missing(transcript_id_column)) {
-    stop("Transcript_id_column is missing. Please provide a valid transcript_id_column argument",
-         call. = FALSE)
-  }
-  if (missing(min_reads)) {
-    stop("Min_reads are missing. Please provide a valid min_reads argument",
-         call. = FALSE)
-  }
-  if (missing(min_nonA_reads)) {
-    stop("Min_nonA_reads data are missing. Please provide a valid min_nonA_reads argument",
-         call. = FALSE)
-  }
-  if (missing(base)) {
-    stop("Base definition is missing. Please provide a valid base argument",
-         call. = FALSE)
-  }
-
-  assertthat::assert_that(assertive::is_numeric(min_reads),
-                          msg=paste0("Min_reads must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(min_nonA_reads),
-                          msg=paste0("Min_nonA_reads must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(alpha),
-                          msg=paste0("Alpha must be numeric. Please provide a valid argument."))
-
-  assertthat::assert_that(assertive::has_rows(ninetails_data),
-                          msg = "Empty data.frame provided as an input")
-
-
-  # if grouping factor has more than two levels
-  if (length(levels(ninetails_data[[grouping_factor]]))>2) {
-    if(is.na(condition1) && is.na(condition2)) {
-      #throw error when no conditions for comparison are specified
-      stop(paste0("grouping_factor ",grouping_factor," has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"))
-    }
-    else {
-      # filter input data leaving only specified conditions, dropping other factor levels
-      assertthat::assert_that(condition1 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition1," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition2," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 != condition1,msg="condition2 should be different than condition1")
-
-      ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(grouping_factor) %in% c(condition1,condition2)) %>%
-        dplyr::mutate() %>%
-        droplevels()
-
-    }
-  }
-  else if (length(levels(ninetails_data[[grouping_factor]]))==1) {
-    stop("Only 1 level present for grouping factor. Choose another groping factor for comparison")
+  if(!is.na(grouping_factor)) {
+    assertthat::assert_that(grouping_factor %in% colnames(class_data),
+                            msg=paste0(grouping_factor," is not a column of input dataset"))
+    processing_info <- class_data %>%
+      dplyr::mutate(qc_tag=forcats::fct_relevel(qc_tag,"PASS", after = Inf)) %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor),qc_tag) %>%
+      dplyr::count()
   }
   else {
-    condition1 = levels(ninetails_data[[grouping_factor]])[1]
-    condition2 = levels(ninetails_data[[grouping_factor]])[2]
+    processing_info <- class_data %>%
+      dplyr::mutate(qc_tag=forcats::fct_relevel(qc_tag,"PASS", after = Inf)) %>%
+      dplyr::group_by(qc_tag) %>%
+      dplyr::count()
   }
 
-  # filter out transcripts with not enough amount of non-A reads among the whole pool of reads:
-  mod_summarized <- ninetails_data %>% dplyr::ungroup() %>%
-    dplyr::mutate(sum_nonA = rowSums(dplyr::across(dplyr::starts_with('prediction_')))) %>%
-    dplyr::group_by(!!!rlang::syms(c(transcript_id_column,grouping_factor))) %>%
-    dplyr::summarise(dplyr::across(c(sum_nonA), list(counts = ~ sum(.x != 0))), .groups= 'drop') %>%
-    dplyr::rename_with(~stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'), 3:dplyr::last_col())
-  # apply filtering criterion (minimal nonA read content)
-  mod_summarized_filtered <- mod_summarized %>% dplyr::filter(counts_nonA>=min_nonA_reads)
-  #extract filtered readnames
-  mod_summarized_filtered <- unique(mod_summarized_filtered$contig)
-
-  ninetails_data <- ninetails_data[ninetails_data$contig %in% mod_summarized_filtered,]
-
-
-  ninetails_data_stat <- ninetails_data %>%
-    dplyr::mutate(transcript_id=get(c(transcript_id_column))) %>%
-    dplyr::group_by(get(c(transcript_id_column))) %>%
-    tidyr::nest()
-
-
-  ninetails_data_stat <- ninetails_data_stat %>%
-    dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base,transcript_id_column = "transcript_id")) %>%
-    dplyr::select(-data) %>% tidyr::unnest(cols = c(stats)) %>% dplyr::rename(!!transcript_id_column := "get(c(transcript_id_column))")
-  message("calculating statistics")
-
-  message("Finished")
-
-  message("Adjusting p.value")
-  ninetails_data_stat$padj <- stats::p.adjust(ninetails_data_stat$p.value, method = "BH")
-
-  # create significance factor
-  ninetails_data_stat <- ninetails_data_stat %>%
-    dplyr::mutate(significance = dplyr::case_when(is.na(padj)  ~ "NotSig",
-                                                  (padj < alpha) ~ paste0("FDR<", alpha),
-                                                  TRUE ~ "NotSig"))
-  ninetails_data_stat$stats_code <- sapply(ninetails_data_stat$stats_code,
-                                           FUN = function(x) {stat_codes_list[[x]]},simplify = "vector",USE.NAMES = FALSE) %>% unlist()
-
-
-
-  ninetails_data_stat <- ninetails_data_stat %>% dplyr::arrange(padj)
-
-  return(ninetails_data_stat)
+  return (processing_info)
 }
-
 

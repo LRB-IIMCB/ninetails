@@ -3,9 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_tail_chunk_list_A}
 \alias{create_tail_chunk_list_A}
-\title{Extracts fragments of polyA tails of ONT RNA reads containing only A
-nucleotides along their coordinates & appends the data to the nested
-list organized by read IDs.}
+\title{Creates list of tail chunks containing As exclusively.}
 \usage{
 create_tail_chunk_list_A(tail_feature_list, num_cores)
 }
@@ -21,11 +19,15 @@ a list object (nested) containing the segmented tail data  (chunks,
 coordinates) organized by the read IDs.
 }
 \description{
+Extracts fragments of polyA tails of ONT RNA reads containing only A
+nucleotides along their coordinates & appends the data to the nested
+list organized by read IDs.
+}
+\details{
 This version of the function is intended to be used to produce training and
 validation datasets. It is designed to filter signal fragments that DO NOT
 contain potential non-A nucleotides.
-}
-\details{
+
 This function segments the signals with overlaps, making the data multiplied (data augmentation).
 }
 \examples{

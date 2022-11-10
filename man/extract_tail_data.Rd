@@ -12,7 +12,7 @@ extract_tail_data(readname, polya_summary, workspace, basecall_group)
 analyzed dataset.}
 
 \item{polya_summary}{character string. The table containing data extracted
-from nanopolish & sequencing summary (using extract_polya_data() function.}
+from nanopolish & sequencing summary (using \code{\link{extract_polya_data}} function.}
 
 \item{workspace}{character string. Full path of the directory to search
 the basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}

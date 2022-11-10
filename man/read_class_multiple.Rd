@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{read_class_multiple}
 \alias{read_class_multiple}
-\title{Reads multiple ninetails read_classes outputs at once}
+\title{Reads multiple ninetails read_classes outputs at once.}
 \usage{
 read_class_multiple(samples_table, ...)
 }
@@ -14,7 +14,7 @@ Should have at least two columns: \itemize{
 \item sample_name - unique sample identifier
 }}
 
-\item{...}{- additional parameters to pass to read_class_single();
+\item{...}{- additional parameters to pass to \code{\link{read_class_single}};
 currently accepts sample_name argument
 
 Function based on PK (smaegol) NanoTail read_polya_multiple

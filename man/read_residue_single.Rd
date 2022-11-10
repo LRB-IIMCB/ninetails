@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{read_residue_single}
 \alias{read_residue_single}
-\title{Reads ninetails nonadenosine_residues data from file}
+\title{Reads ninetails nonadenosine_residues data from file.}
 \usage{
 read_residue_single(residue_path, sample_name = NA)
 }
@@ -20,7 +20,7 @@ Many thanks to the NanoTail developer for help and advice!}
 a [tibble] with non-A predictions
 }
 \description{
-This is the basic function used to import output from check_tails to R:
+This is the basic function used to import output from \code{\link{check_tails}} to R:
 it imports the dataframe containing non-A detailed position info
 (nonadenosine_residues).
 }

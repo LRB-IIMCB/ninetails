@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{read_class_single}
 \alias{read_class_single}
-\title{Reads ninetails read_classes dataframe from file}
+\title{Reads ninetails read_classes dataframe from file.}
 \usage{
 read_class_single(class_path, sample_name = NA)
 }
@@ -21,7 +21,7 @@ a [tibble] with read_classes predictions
 }
 \description{
 This is the basic function used to import read_classes output from check_tails
-to R
+to R.
 }
 \examples{
 \dontrun{

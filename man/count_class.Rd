@@ -3,7 +3,7 @@
 \name{count_class}
 \alias{count_class}
 \title{Counts read classes found in read_classes dataframe produced
-by ninetails pipeline}
+by ninetails pipeline.}
 \usage{
 count_class(class_data, grouping_factor = NA, detailed = TRUE)
 }
@@ -26,7 +26,7 @@ A tibble with counts for each non-A residue
 }
 \description{
 Process the information returned by ninetails found in the read_classes
-dataframe in the prediction column
+dataframe in the prediction column.
 }
 \examples{
 \dontrun{

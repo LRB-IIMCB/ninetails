@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{read_residue_multiple}
 \alias{read_residue_multiple}
-\title{Reads multiple ninetails nonadenosine_residues outputs at once}
+\title{Reads multiple ninetails nonadenosine_residues outputs at once.}
 \usage{
 read_residue_multiple(samples_table, ...)
 }
@@ -14,7 +14,7 @@ It should contain at least two columns: \itemize{
 \item sample_name - unique sample identifier
 }}
 
-\item{...}{- additional parameters to pass to read_residue_single();
+\item{...}{- additional parameters to pass to \code{\link{read_residue_single}};
 currently accepts sample_name argument
 
 Function based on PK (smaegol) NanoTail read_polya_multiple

@@ -3,10 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{prepare_trainingset}
 \alias{prepare_trainingset}
-\title{Filters out signals corresponding to a given category of reads
-(containing A-nucleotides alone or particular types of non-adenosine
-nucleotides: G, C or U) in order to prepare the set for neural network
-training.}
+\title{Filters out signals of given type of interest.}
 \usage{
 prepare_trainingset(
   nucleotide,

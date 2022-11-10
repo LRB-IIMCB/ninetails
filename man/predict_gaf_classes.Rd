@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{predict_gaf_classes}
 \alias{predict_gaf_classes}
-\title{Classification of matrices produced from read chunks with CNN.}
+\title{Performs classification of matrices produced from read chunks with CNN.}
 \usage{
 predict_gaf_classes(gaf_list)
 }

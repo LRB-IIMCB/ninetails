@@ -11,7 +11,7 @@ summarize_nonA(
 )
 }
 \arguments{
-\item{merged_nonA_tables}{an output of merge_nonA_tables() function}
+\item{merged_nonA_tables}{an output of \code{\link{merge_nonA_tables}} function}
 
 \item{summary_factors}{character string or vector of strings;
 column(s) used for grouping (default: "group")}

@@ -2,8 +2,7 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{winsorize_signal}
 \alias{winsorize_signal}
-\title{Winsorizes nanopore signal - removes high cliffs (extending above & below
-signal range). Slightly affects signal extremes.}
+\title{Winsorizes nanopore signal.}
 \usage{
 winsorize_signal(signal)
 }
@@ -14,6 +13,10 @@ winsorize_signal(signal)
 winsorized signal (numeric vector).
 }
 \description{
+Removes high cliffs (extending above & below
+signal range). Slightly affects signal extremes.
+}
+\details{
 Based on the A. Signorell's DescTools
 https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r
 }

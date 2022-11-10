@@ -1,4 +1,6 @@
-#' Winsorizes nanopore signal - removes high cliffs (extending above & below
+#' Winsorizes nanopore signal.
+#'
+#' Removes high cliffs (extending above & below
 #' signal range). Slightly affects signal extremes.
 #'
 #' Based on the A. Signorell's DescTools
@@ -183,7 +185,7 @@ check_fast5_filetype <- function(workspace,
   } else {
     # close all handled instances (groups, attrs) of fast5 file
     rhdf5::h5closeAll()
-    stop(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Please provide fast5 files basecalled by Guppy software. '))
+    stop(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Please provide fast5 files basecalled by Guppy software. '), call. =FALSE)
   }
 
 }
@@ -197,7 +199,7 @@ check_fast5_filetype <- function(workspace,
 #' instead of multiple.
 #'
 #' @param pseudomoves numeric vector produced by z-score
-#' filtering algo (filter_signal_by_threshold() function) corresponding
+#' filtering algo (\code{\link{filter_signal_by_threshold}}) corresponding
 #' to the tail region of the read of interest as delimited by
 #' nanopolish polya function.
 #'
@@ -213,14 +215,90 @@ check_fast5_filetype <- function(workspace,
 #'
 substitute_gaps <- function(pseudomoves){
   rle_pseudomoves <- rle(pseudomoves)
-  indx <- rle_pseudomoves$lengths < 3 & rle_pseudomoves$values == 0 & c(Inf, rle_pseudomoves$values[-length(rle_pseudomoves$values)]) == c(rle_pseudomoves$values[-1], Inf)
+  indx <- rle_pseudomoves$lengths < 2 & rle_pseudomoves$values == 0 & c(Inf, rle_pseudomoves$values[-length(rle_pseudomoves$values)]) == c(rle_pseudomoves$values[-1], Inf)
   if (any(indx)) rle_pseudomoves$values[indx] <- rle_pseudomoves$values[which(indx)-1]
   adjusted_pseudomoves <- inverse.rle(rle_pseudomoves)
 
   return(adjusted_pseudomoves)
 }
 
+#' Calculates statistical mode of given vector.
+#'
+#' This function operates in 2 flavours. Either of them can be defined
+#' by the "method" parameter. There are 2 options available: "density"
+#' and "value".
+#'
+#' If the "density" (default) option was chosen, then the
+#' statistical mode (most frequent value) would be computed from the
+#' normalized data density distribution. In this mode, the functon returns
+#' a single value.
+#'
+#' If the "value" option was selected, then the function return the mode based
+#' on actual value. This means that, if the dataset was bi- or multimodal, the
+#' returned vector would contain more than one most frequent values.
+#'
+#' This function was written based on the following SO thread:
+#' https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+#' Special thanks to Chris and hugovdberg!
+#'
+#' @param x vector with values [numeric] to compute the mode for
+#'
+#' @param method [character] string; which method of computing statistical mode
+#' is meant to be used by the function. 2 options available: "value"/"density".
+#' The latter is set by default.
+#'
+#' @param na.rm logical [TRUE/FALSE] whether or not to remove NA values from the
+#' calculation. Set to FALSE by default.
+#'
+#' @return statistical mode of given vector of values [numeric]
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#'test1 <- c(rep(2,5), rep(3,4), rep(1,4), rep(8,2), rep(7,3), rep(5,3)) # 1 most freq val
+#'test2 <- c(rep(2,5), rep(3,4), rep(1,4), rep(8,5), rep(7,3), rep(5,3)) # 2 most freq val
+#'test3 <- c(rep(2,5), rep(3,4), rep(1,4), rep(8,5), rep(7,5), rep(5,3)) # 3 most freq val
+#'test4 <- c("Lorem", "ipsum", "dolor", "sit", "amet")
+#'
+#'result <- ninetails::get_mode(x=test1, method= "value")
+#'print(result)
+#'class(result)
+#'
+#'}
+#'
+get_mode <- function(x, method ="density", na.rm = FALSE) {
 
+  # assertions
+  assertthat::assert_that(assertive::is_numeric(x),
+                          msg=paste0("Provided vector must be numeric. Please provide a valid argument."))
+
+  x <- unlist(x)
+  if (na.rm) {
+    x <- x[!is.na(x)]
+  }
+
+  if (method %in% c("value", "density", "") | is.na(method)) {
+    # Return actual mode (from the real values in dataset)
+    if (method %in% c("density", "")) {
+
+      # Return density mode for normalized data - only for numeric!)
+      d <- stats::density(x)
+      return(d$x[d$y==max(d$y)])
+      #return(modeest::mlv(x,na.rm=TRUE,method="parzen", abc=T)) #in some cases this method produces "weird" output
+
+    } else if (method %in% c("value")) {
+
+      uniqx <- unique(x)
+      n <- length(uniqx)
+      freqx <- tabulate(match(x, uniqx))
+      modex <- freqx == max(freqx)
+      return(uniqx[which(modex)])
+    }
+  } else {
+    stop("Wrong mode provided. Please provide either 'density' or 'value'", call. =FALSE)
+  }
+}
 
 
 

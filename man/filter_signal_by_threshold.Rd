@@ -10,7 +10,7 @@ filter_signal_by_threshold(signal)
 \item{signal}{numeric vector. An ONT read fragment corresponding to the tail
 region of the read of interest as delimited by nanopolish polya function (the
 fragments are stored in tail_feature_list[[1]] produced by the
-create_tail_feature_list() function.}
+\code{\link{create_tail_feature_list}} function.}
 }
 \value{
 numeric vector of "pseudomoves" corresponding to the analyzed tail

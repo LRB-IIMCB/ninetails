@@ -259,7 +259,7 @@ check_tails <- function(nanopolish,
   zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
 
   # prevent from running on reads which do not fulfill the pseudomove condition
-  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=4)), tail_features_list)
+  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=5)), tail_features_list)
 
   # reads discarded because of unmet pseudomove condition
   #in this reads reported pseudomove chain is too short to be considered as potential modification

@@ -448,7 +448,7 @@ split_tail_centered_trainingset <- function(readname,
   return(out)
 }
 
-#' Extracts fragments of polyA tails of ONT RNA reads containing non-A
+#' Extracts fragments of poly(A) tails of ONT RNA reads containing non-A
 #' nucleotides along their coordinates & appends the data to the nested
 #' list organized by read IDs.
 #'
@@ -537,10 +537,11 @@ create_tail_chunk_list_trainingset <- function(tail_feature_list,
 }
 
 
-#' Splits signal to overlapping fragments of equal length. In case if the signal
-#' is not completely divisible by given segment length, the function fills
-#' missing data (NAs) with 10 most frequent values from the entire signal
-#' (randomly sampled).
+#' Splits signal to overlapping fragments of equal length.
+#'
+#' In case if the signal is not completely divisible by given segment length,
+#' the function fills missing data (NAs) with 10 most frequent values from the
+#' entire signal (randomly sampled).
 #'
 #' @param readname character string. Name of the given ONT signal.
 #'
@@ -583,7 +584,7 @@ split_with_overlaps <- function(readname,
   return(result_split)
 }
 
-#' Extracts features of polyA tails of ONT RNA reads required for finding
+#' Extracts features of poly(A) tails of ONT RNA reads required for finding
 #' non-A nucleotides within the given tails.
 #'
 #' This is the version of the function useful to produce the training set
@@ -716,6 +717,8 @@ create_tail_feature_list_A <- function(nanopolish,
 }
 
 
+#' Creates list of tail chunks containing As exclusively.
+#'
 #' Extracts fragments of polyA tails of ONT RNA reads containing only A
 #' nucleotides along their coordinates & appends the data to the nested
 #' list organized by read IDs.
@@ -847,7 +850,8 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
     stop("List of tail chunks is missing. Please provide a valid chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores), msg=paste("Declared core number must be numeric. Please provide a valid argument."))
+  assertthat::assert_that(assertive::is_numeric(num_cores),
+                          msg=paste("Declared core number must be numeric. Please provide a valid argument."))
 
   #create empty list for extracted data
   gaf_list = list()
@@ -895,7 +899,7 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
   return(gaf_list)
 }
 
-#' Filter read chunks containing nonadenosine nucleotides of interest for
+#' Filters read chunks containing nonadenosine nucleotides of interest for
 #' neural net training set preparation.
 #'
 #' The function is designed to be used on a generated set of synthetic
@@ -1043,6 +1047,8 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list,
 }
 
 
+#' Filters out signals of given type of interest.
+#'
 #' Filters out signals corresponding to a given category of reads
 #' (containing A-nucleotides alone or particular types of non-adenosine
 #' nucleotides: G, C or U) in order to prepare the set for neural network

@@ -3,7 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_tail_chunk_list_trainingset}
 \alias{create_tail_chunk_list_trainingset}
-\title{Extracts fragments of polyA tails of ONT RNA reads containing non-A
+\title{Extracts fragments of poly(A) tails of ONT RNA reads containing non-A
 nucleotides along their coordinates & appends the data to the nested
 list organized by read IDs.}
 \usage{

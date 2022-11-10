@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_gaf}
 \alias{create_gaf}
-\title{Converting ONT signal to Gramian Angular Field.}
+\title{Converts ONT signal to Gramian Angular Field.}
 \usage{
 create_gaf(tail_chunk, method = "s")
 }

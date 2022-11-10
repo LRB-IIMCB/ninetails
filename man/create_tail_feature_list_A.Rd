@@ -3,7 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_tail_feature_list_A}
 \alias{create_tail_feature_list_A}
-\title{Extracts features of polyA tails of ONT RNA reads required for finding
+\title{Extracts features of poly(A) tails of ONT RNA reads required for finding
 non-A nucleotides within the given tails.}
 \usage{
 create_tail_feature_list_A(

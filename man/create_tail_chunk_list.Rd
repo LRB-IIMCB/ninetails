@@ -2,9 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_tail_chunk_list}
 \alias{create_tail_chunk_list}
-\title{Extracts fragments of polyA tails of ONT RNA reads potentially containing
-non-A nucleotides along their coordinates & appends the data to the nested
-list organized by read IDs.}
+\title{Creates list of polyA tail chunks centered on significant signal deviations.}
 \usage{
 create_tail_chunk_list(tail_feature_list, num_cores)
 }

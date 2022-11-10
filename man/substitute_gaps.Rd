@@ -9,7 +9,7 @@ substitute_gaps(pseudomoves)
 }
 \arguments{
 \item{pseudomoves}{numeric vector produced by z-score
-filtering algo (filter_signal_by_threshold() function) corresponding
+filtering algo (\code{\link{filter_signal_by_threshold}}) corresponding
 to the tail region of the read of interest as delimited by
 nanopolish polya function.}
 }

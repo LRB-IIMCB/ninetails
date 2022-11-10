@@ -910,10 +910,35 @@ plot_class_counts <- function(class_data,
 
 #' Plot counts of nonadenosine residues found in ninetails output data
 #'
+#' This function may report the non-A occurrences in two flavours: by read
+#' or by residue. To illustrate this, let's have a look at the following example:
+#'
+#' read_1:
+#' contains 3xU residues
+#'
+#' read_2:
+#' contains 2xC residue, 1xG residue, 1xU residue
+#'
+#' function launched in by read mode (by_read==TRUE):
+#' read_1 - taken into account once, because it non-As of the same (single) type
+#' read_2 - taken into account thrice, because it has non-As of three types
+#'
+#' function launched in by residue mode (by_read==FALSE):
+#' read_1 - taken into account thrice, because it has 3 non-A residues reported
+#' read_2 - taken into account fourfold, because it has 4 nonAs reported
+#'
+#' The user can switch between those modes depending on the desired informations
+#' to be reported.
+#'
 #' @param residue_data A dataframe or tibble containig non-A residue predictions
 #' made by ninetails pipeline
 #'
 #' @param grouping_factor grouping variable (e.g. "sample_name")
+#'
+#' @param by_read logical [TRUE/FALSE]. If TRUE, the count/frequency data
+#' per reads with given residues will be plotted (i.e. how many reads contain
+#' given residue. If FALSE, the number of residues will be plotted).
+#' Set to FALSE by default.
 #'
 #' @param frequency logical [TRUE/FALSE]. If TRUE, the frequency will be plotted.
 #' If FALSE, raw counts will be shown. This parameter is set to TRUE by default.
@@ -927,7 +952,10 @@ plot_class_counts <- function(class_data,
 #'                                grouping_factor="sample_name",
 #'                                frequency=TRUE)
 #' }
-plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE) {
+plot_residue_counts <- function(residue_data,
+                                grouping_factor=NA,
+                                by_read= FALSE,
+                                frequency=TRUE) {
 
   # var binding
   n <- prediction <- C <- G <- U <- total <- group <- pC <- pG <- pU<- NULL
@@ -941,7 +969,16 @@ plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE
                           msg = "Empty dataframe provided as an input")
 
 
-  residue_counts <- ninetails::count_residues(residue_data=residue_data, grouping_factor=grouping_factor)
+  if (by_read==TRUE){
+    residue_data2 <- residue_data[!duplicated(residue_data[c("readname","prediction")]),]
+    residue_counts <- ninetails::count_residues(residue_data=residue_data2, grouping_factor=grouping_factor)
+    title_suffix <- "reported by read"
+  } else {
+    residue_counts <- ninetails::count_residues(residue_data=residue_data, grouping_factor=grouping_factor)
+    title_suffix <- "reported by residue"
+  }
+
+
 
   basic_colnames = c("prediction","n")
   assertthat::assert_that(basic_colnames[1] %in% colnames(residue_counts),
@@ -949,6 +986,8 @@ plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE
   assertthat::assert_that(basic_colnames[2] %in% colnames(residue_counts),
                           msg="n column is missing in the input. Invalid output of count_residues().")
 
+  assertthat::assert_that(assertive::is_a_bool(by_read),
+                          msg="Non-boolean value provided for option by_read")
   assertthat::assert_that(assertive::is_a_bool(frequency),
                           msg="Non-boolean value provided for option frequency")
 
@@ -962,7 +1001,7 @@ plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE
                                                                  fill=prediction,
                                                                  y=n)) +
       ggplot2::ylab("count")+ ggplot2::theme_bw() +
-      ggplot2::labs(x="\nsample", fill="Residue:", title="Non-A residue counts")
+      ggplot2::labs(x="\nsample", fill="Residue:", title=paste0("Non-A residue counts ",title_suffix))
 
     if(frequency) {
       #residue_plot <- residue_plot + ggplot2::geom_bar(stat="identity",position="fill") + ggplot2::ylab("frequency")
@@ -971,28 +1010,26 @@ plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE
         dplyr::select(group, pC, pG, pU) %>% dplyr::rename(C = pC, G = pG, U = pU) %>% tidyr::gather(key = prediction,value =n,C:G:U)
 
       #unify factor levels
-      residue_counts$prediction <- factor(residue_counts$prediction, levels=c("G", "U", "C"))
+      residue_counts$prediction <- factor(residue_counts$prediction, levels=c("C", "G", "U"))
 
       residue_plot <- ggplot2::ggplot(residue_counts, ggplot2::aes(x=!!rlang::sym(grouping_colname),
                                                                    fill=prediction,
                                                                    y=n)) +
         ggplot2::ylab("frequency")+ ggplot2::theme_bw() +
-        ggplot2::labs(x="\nsample", fill="Residue:", title="Non-A residue frequency") +
+        ggplot2::labs(x="\nsample", fill="Residue:", title=paste0("Non-A residue frequency ",title_suffix)) +
         ggplot2::geom_bar(stat="identity",position="dodge")
 
 
 
-    }
-    else{
+    } else {
       residue_plot <- residue_plot + ggplot2::geom_bar(stat="identity",position="dodge") + ggplot2::ylab("count")
     }
 
-    residue_plot <- residue_plot + ggplot2::labs(x="\nsample", fill="Residue:", title="Non-A residue counts")
-  }
-  else {
+    residue_plot <- residue_plot + ggplot2::labs(x="\nsample", fill="Residue:", title=paste0("Non-A residue counts ",title_suffix))
+  } else {
     residue_plot <- ggplot2::ggplot(residue_counts,ggplot2::aes(x=prediction,y=n)) +
       ggplot2::geom_bar(stat="identity") +
-      ggplot2::labs(x="\nsample", y="count\n", fill="Residue:",  title="Non-A residue counts")
+      ggplot2::labs(x="\nsample", y="count\n", fill="Residue:",  title=paste0("Non-A residue counts ",title_suffix))
   }
 
   #color scheme
@@ -1002,5 +1039,272 @@ plot_residue_counts <- function(residue_data, grouping_factor=NA, frequency=TRUE
 
   return(residue_plot)
 }
+
+#' Plots qc data (qc_tag) inherited from nanopolish polya function.
+#'
+#' Provides insight into the proportion of each quality tag category per sample
+#' or experiment condition defined by the user.
+#'
+#' This is the ninetails' implementation of the
+#' \code{\link[nanotail:plot_nanopolish_qc]{name}} function originally written
+#' by P. Krawczyk (smeagol) and incorporated within the NanoTail package.
+#'
+#' For original source code, see:
+#' https://github.com/LRB-IIMCB/nanotail/blob/master/R/polya_plots.R
+#'
+#' The variable names were adjusted according to the naming convention within
+#' ninetails to avoid confusion.
+#'
+#' Many thanks to the author of original source code for help and advice.
+#'
+#' @param processing_info the output of nanopolish_qc function
+#'
+#' @param frequency logical [TRUE/FALSE].
+#'
+#' @return a ggplot object
+#' @export
+#'
+#'
+plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
+  # var binding
+  n <- qc_tag <- NULL
+
+  if (missing(processing_info)) {
+    stop("Nanopolish processing info is missing. Please provide a valid processing_info argument",
+         call. = FALSE)
+  }
+
+  assertthat::assert_that(assertive::has_rows(processing_info),
+                          msg = "Empty dataframe provided as an input")
+  basic_colnames = c("qc_tag","n")
+  assertthat::assert_that(basic_colnames[1] %in% colnames(processing_info),
+                          msg="qc_tag column is missing in the input. Is that valid output of nanopolish_qc()?")
+  assertthat::assert_that(basic_colnames[2] %in% colnames(processing_info),
+                          msg="n column is missing in the input. Is that valid output of nanopolish_qc()?")
+  assertthat::assert_that(assertive::is_a_bool(frequency),
+                          msg="Non-boolean value provided for option frequency")
+
+
+
+  # if there were multiple samples compared
+  if (ncol(processing_info)>2) {
+    grouping_colname = setdiff(colnames(processing_info),
+                               basic_colnames)
+    nanopolish_qc_plot <- ggplot2::ggplot(processing_info,
+                                          ggplot2::aes(x=!!rlang::sym(grouping_colname),
+                                                       fill=qc_tag,
+                                                       y=n))
+    if(frequency) {
+      nanopolish_qc_plot <- nanopolish_qc_plot +
+        ggplot2::geom_bar(stat="identity",position="fill") +
+        ggplot2::labs(x="\nsample", y="frequency\n", fill="Nanopolish QC tag:") +
+        ggplot2::ggtitle("Read frequency plot")
+    }
+    else{
+      nanopolish_qc_plot <- nanopolish_qc_plot +
+        ggplot2::geom_bar(stat="identity",position="stack") +
+        ggplot2::labs(x="\nsample", y="count\n", fill="Nanopolish QC tag:") +
+        ggplot2::ggtitle("Read count plot")
+
+    }
+    nanopolish_qc_plot <- nanopolish_qc_plot +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45,vjust = 0.7))
+  }
+  else {
+    nanopolish_qc_plot <- ggplot2::ggplot(processing_info,
+                                          ggplot2::aes(x=qc_tag,
+                                                       y=n)) +
+      ggplot2::geom_bar(stat="identity")
+  }
+
+  #define color values & theme
+  nanopolish_qc_plot <- nanopolish_qc_plot +
+    ggplot2::theme_bw() +
+    ggplot2::scale_fill_manual(values = c("#D7191C","#FDAE61","#FFFFBF","#ABD9E9","#2C7BB6"))
+
+
+
+  return(nanopolish_qc_plot)
+}
+
+
+#' Plots poly(A) tail length distribution in analyzed sample(s).
+#'
+#' This function plots distributions of poly(A) tail lengths across the dataset
+#' using the user-predefned grouping variable (e.g. samples, conditions etc.).
+#' The grouping variable must be a column within the input dataset
+#' passed to the function.
+#'
+#' User can specify this in samples_table if the ninetails pipeline output is
+#' intended to be loaded into R session by \code{\link{read_residue_multiple}}
+#' and \code{\link{read_class_multiple}} functions or added manually by
+#' other means.
+#'
+#' The function takes as an input merged ninetails' output dataset, which can be
+#' produced with the \code{\link{merge_nonA_tables}} function.
+#'
+#' The function allows to mark measures of central tendency, either mean, median
+#' or mode (as vertical dashed line). One of these values may be shown on the plot
+#' with additional caption in lower right corner. This is an optional feature.
+#'
+#' Mean and median are computed using base R functions.
+#'
+#' The mode value (if specified by value_to_show argument) is computed using
+#' the \code{\link{get_mode}} function. This is a custom helper function written
+#' based on this thread: https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+#'
+#'
+#' This returns the density mode for
+#' normalized data to avoid unexpected results (messed-up plots) which may occur
+#' if the distribution is bi- or multimodal.
+#'
+#' This is the ninetails' implementation of plot_polya_distribution()
+#' from Nanotail backage by P. Krawczyk (smaegol) written under
+#' author's permission.
+#'
+#' The original code is available here:
+#' https://github.com/smaegol/nanotail/blob/master/R/polya_plots.R
+#'
+#' The function was simplified & adjusted to ninetails' naming convention
+#' to avoid confusion & overwriting, if both packages are loaded in the same
+#' R session.
+#'
+#' @param input_data the ninetails pipeline output data preprocessed with the
+#' \code{\link{merge_nonA_tables}} function
+#'
+#' @param grouping_factor [character] string, the grouping variable defined
+#' by the user. Note that this variable has to be the column of input_data.
+#'
+#' @param max_length [numeric] maximum length of plotted tail data
+#'
+#' @param value_to_show [character] string; one of the measures of central
+#' tendency: either the "mode", the "median" or the "mean" value, which user
+#' wants to be displayed on the plot. By default, none is specified.
+#'
+#' @param ndensity logical [TRUE/FALSE]. If TRUE, the normalized density would
+#' be shown. If false - the data would not be normalized. It is set to "TRUE"
+#' by default.
+#'
+#' @param title logical [TRUE/FALSE]. If TRUE, the title + subtitles would be
+#' displayed. If not - the title & subtitle would not be visible.
+#'
+#' @return a ggplot object
+#'
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#' plt <- ninetails::plot_tail_distribution(input_data = merged_nonA_tables,
+#'                                          grouping_factor = "group",
+#'                                          max_length = 200,
+#'                                          value_to_show = "median",
+#'                                          ndensity=T,
+#'                                          title=F)
+#'
+#'
+#'}
+plot_tail_distribution <- function(input_data,
+                                   grouping_factor=NA,
+                                   max_length=NA,
+                                   value_to_show=NA,
+                                   ndensity=T,
+                                   title=F){
+
+
+  # var binding
+  polya_length <- ..density.. <- ..ndensity.. <- NULL
+
+
+  # Assertions
+  if (missing(input_data)) {
+    stop("Ninetails data are missing. Please provide a valid input_data argument",
+         call. = FALSE)
+  }
+
+  if (!is.na(grouping_factor)) {
+
+    assertthat::assert_that(grouping_factor %in% colnames(input_data),
+                            msg=paste0(grouping_factor," is not a column of input dataset"))
+
+    plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=polya_length,color=!!rlang::sym(grouping_factor)))+
+      ggplot2::xlab("poly(A) length")
+
+  } else {
+
+    plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=polya_length))+
+      ggplot2::xlab("poly(A) length")
+
+  }
+
+  if (!is.na(max_length)) {
+
+    assertthat::assert_that(assertive::is_numeric(max_length),
+                            msg="Please provide numeric value for max_length")
+    plot_tails <- plot_tails + ggplot2::scale_x_continuous(limits=c(0,max_length))
+  }
+
+  if (ndensity) {
+    plot_tails <- plot_tails + ggplot2::geom_line(stat="density",size=1,ggplot2::aes(y=..ndensity..)) +
+      ggplot2::ylab("normalized density")
+  } else {
+    plot_tails <- plot_tails + ggplot2::geom_line(stat="density",size=1,ggplot2::aes(y=..density..)) +
+      ggplot2::ylab("density")
+  }
+
+  if (!is.na(value_to_show)) {
+
+    if (value_to_show=="median"){
+      center_value="median_value"
+      center_values <- input_data %>%
+        dplyr::group_by(!!rlang::sym(grouping_factor)) %>%
+        dplyr::summarize(median_value = stats::median(polya_length,na.rm = TRUE))
+
+    } else if (value_to_show=="mean"){
+
+      center_value="mean_value"
+      center_values <- input_data %>%
+        dplyr::group_by(!!rlang::sym(grouping_factor)) %>%
+        dplyr::summarize(mean_value=mean(polya_length,na.rm=TRUE))
+
+    } else if (value_to_show=="mode") {
+
+      center_value="mode_value"
+      center_values <- input_data %>%
+        dplyr::group_by(!!rlang::sym(grouping_factor)) %>%
+        dplyr::summarize(mode_value=get_mode(polya_length,na.rm=TRUE,method="density"))
+
+    } else {
+      stop("Wrong value_to_show specified (should be 'median', 'mode', 'mean' or none (NA)")
+    }
+
+    plot_tails <- plot_tails + ggplot2::geom_vline(data=center_values,
+                                                   ggplot2::aes(xintercept=!!rlang::sym(center_value),
+                                                                color=!!rlang::sym(grouping_factor)),
+                                                   linetype="longdash",show.legend = FALSE)
+
+  } else {
+    plot_tails <- plot_tails
+  }
+
+
+  plot_tails <- plot_tails + ggplot2::coord_cartesian(clip = "off") + ggplot2::theme_bw()
+
+
+  if(title){
+    plot_tails <- plot_tails + ggplot2::labs(title = "Poly(A) length distribution",
+                                             subtitle = paste0("Dashed lines - ", value_to_show, " values\n"))
+  }
+
+  return(plot_tails)
+}
+
+
+
+
+
+
+
+
 
 

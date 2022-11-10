@@ -13,8 +13,9 @@ within the analyzed dataset.}
 }
 \value{
 an array (100,100,2) with values (coordinates) representing GASF
-(first dimension) and GADF (second dimension) produced by create_gaf()
-function applied to given fragment (tail chunk) of analyzed ONT signal.
+(first dimension) and GADF (second dimension) produced by the
+\code{\link{create_gaf}} function applied to given fragment (tail chunk)
+of analyzed ONT signal.
 }
 \description{
 This function allows for the classification of signal fragments based

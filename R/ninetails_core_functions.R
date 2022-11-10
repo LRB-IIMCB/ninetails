@@ -117,7 +117,7 @@ extract_polya_data <- function(nanopolish,
 #' analyzed dataset.
 #'
 #' @param polya_summary character string. The table containing data extracted
-#' from nanopolish & sequencing summary (using extract_polya_data() function.
+#' from nanopolish & sequencing summary (using \code{\link{extract_polya_data}} function.
 #'
 #' @param workspace character string. Full path of the directory to search
 #' the basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
@@ -368,7 +368,7 @@ create_tail_feature_list <- function(nanopolish,
   zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
 
   # prevent from running on reads which do not fulfill the pseudomove condition
-  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=4)), tail_features_list)
+  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=5)), tail_features_list)
 
   # reads discarded because of unmet pseudomove condition
   #in this reads reported pseudomove chain is too short to be considered as potential modification
@@ -415,7 +415,7 @@ create_tail_feature_list <- function(nanopolish,
 #' @param signal numeric vector. An ONT read fragment corresponding to the tail
 #' region of the read of interest as delimited by nanopolish polya function (the
 #' fragments are stored in tail_feature_list[[1]] produced by the
-#' create_tail_feature_list() function.
+#' \code{\link{create_tail_feature_list}} function.
 #'
 #' @return numeric vector of "pseudomoves" corresponding to the analyzed tail
 #' region; containing values ranging from -1 to 1.
@@ -570,7 +570,7 @@ split_tail_centered <- function(readname,
   # recompute rle
   mod_rle <- rle(pseudomoves)
   # pseudomoves filtered by condition (potentially modified - empyrical!)
-  condition <- mod_rle$lengths >= 4 & mod_rle$values
+  condition <- mod_rle$lengths >= 5 & mod_rle$values
   # beginning positions of filtered pseudomoves which satisfy conditions
   first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths,-1)))[condition]
   # length of pseudomoves satisfying condition
@@ -620,6 +620,8 @@ split_tail_centered <- function(readname,
 }
 
 
+#' Creates list of polyA tail chunks centered on significant signal deviations.
+#'
 #' Extracts fragments of polyA tails of ONT RNA reads potentially containing
 #' non-A nucleotides along their coordinates & appends the data to the nested
 #' list organized by read IDs.
@@ -722,7 +724,7 @@ create_tail_chunk_list <- function(tail_feature_list,
 }
 
 
-#' Converting ONT signal to Gramian Angular Field.
+#' Converts ONT signal to Gramian Angular Field.
 #'
 #' This function represents time series data (ont squiggle) in a polar coordinate
 #' system instead of the typical Cartesian coordinates. This is a Pythonic
@@ -814,8 +816,9 @@ create_gaf <- function(tail_chunk, method="s"){
 #' within the analyzed dataset.
 #'
 #' @return an array (100,100,2) with values (coordinates) representing GASF
-#' (first dimension) and GADF (second dimension) produced by create_gaf()
-#' function applied to given fragment (tail chunk) of analyzed ONT signal.
+#' (first dimension) and GADF (second dimension) produced by the
+#' \code{\link{create_gaf}} function applied to given fragment (tail chunk)
+#' of analyzed ONT signal.
 #' @export
 #'
 #' @examples
@@ -933,7 +936,7 @@ create_gaf_list <- function(tail_chunk_list,
   return(gaf_list)
 }
 
-#' Classification of matrices produced from read chunks with CNN.
+#' Performs classification of matrices produced from read chunks with CNN.
 #'
 #' This function allows to assign gafs corresponding to the given signals
 #' into one of 4 categories (A, C, G, U, respectively). This function in its

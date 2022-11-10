@@ -3,7 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{filter_nonA_chunks_trainingset}
 \alias{filter_nonA_chunks_trainingset}
-\title{Filter read chunks containing nonadenosine nucleotides of interest for
+\title{Filters read chunks containing nonadenosine nucleotides of interest for
 neural net training set preparation.}
 \usage{
 filter_nonA_chunks_trainingset(tail_chunk_list, value, num_cores)
