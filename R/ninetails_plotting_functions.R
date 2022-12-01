@@ -1128,12 +1128,13 @@ plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
 }
 
 
-#' Plots poly(A) tail length distribution in analyzed sample(s).
+#' Plots poly(A) tail length (or estimated non-A position) distribution
+#' in analyzed sample(s).
 #'
-#' This function plots distributions of poly(A) tail lengths across the dataset
-#' using the user-predefned grouping variable (e.g. samples, conditions etc.).
-#' The grouping variable must be a column within the input dataset
-#' passed to the function.
+#' This function plots distributions of either poly(A) tail lengths or estimated
+#' non-A residues' positions across the dataset using the user-predefned grouping
+#' variable (e.g. samples, conditions etc.). The grouping variable must be a
+#' column within the input dataset passed to the function.
 #'
 #' User can specify this in samples_table if the ninetails pipeline output is
 #' intended to be loaded into R session by \code{\link{read_residue_multiple}}
@@ -1170,7 +1171,11 @@ plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
 #' R session.
 #'
 #' @param input_data the ninetails pipeline output data preprocessed with the
-#' \code{\link{merge_nonA_tables}} function
+#' \code{\link{merge_nonA_tables}} function or residue_data or other suitable data
+#'
+#' @param variable_to_plot [character] string, the variable to be plotted defined
+#' by the user. By default (if not provided by the user) the polya_length would
+#' be plotted. Note that this variable has to be the column of input_data.
 #'
 #' @param grouping_factor [character] string, the grouping variable defined
 #' by the user. Note that this variable has to be the column of input_data.
@@ -1196,6 +1201,7 @@ plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
 #'\dontrun{
 #'
 #' plt <- ninetails::plot_tail_distribution(input_data = merged_nonA_tables,
+#'                                          variable_to_plot = "polya_length",
 #'                                          grouping_factor = "group",
 #'                                          max_length = 200,
 #'                                          value_to_show = "median",
@@ -1205,6 +1211,7 @@ plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
 #'
 #'}
 plot_tail_distribution <- function(input_data,
+                                   variable_to_plot="polya_length",
                                    grouping_factor=NA,
                                    max_length=NA,
                                    value_to_show=NA,
@@ -1222,18 +1229,28 @@ plot_tail_distribution <- function(input_data,
          call. = FALSE)
   }
 
+  assertthat::assert_that(assertive::is_character(variable_to_plot),
+                          msg=paste0("Variable_to_plot must be a string. Please provide a valid argument."))
+
+  if (variable_to_plot=="polya_length"){
+    x_caption <- ggplot2::xlab("poly(A) length")
+  } else if (variable_to_plot=="est_nonA_pos") {
+    x_caption <- ggplot2::xlab("estimated non-A position")
+  } else {
+    x_caption <- ggplot2::xlab(variable_to_plot)
+  }
+
   if (!is.na(grouping_factor)) {
 
     assertthat::assert_that(grouping_factor %in% colnames(input_data),
                             msg=paste0(grouping_factor," is not a column of input dataset"))
 
-    plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=polya_length,color=!!rlang::sym(grouping_factor)))+
-      ggplot2::xlab("poly(A) length")
+    plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=!!rlang::sym(variable_to_plot),color=!!rlang::sym(grouping_factor)))+
+      x_caption
 
   } else {
 
-    plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=polya_length))+
-      ggplot2::xlab("poly(A) length")
+    plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=!!rlang::sym(variable_to_plot)))+ x_caption
 
   }
 
@@ -1298,7 +1315,6 @@ plot_tail_distribution <- function(input_data,
 
   return(plot_tails)
 }
-
 
 
 
