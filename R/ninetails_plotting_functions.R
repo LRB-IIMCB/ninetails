@@ -1234,10 +1234,13 @@ plot_tail_distribution <- function(input_data,
 
   if (variable_to_plot=="polya_length"){
     x_caption <- ggplot2::xlab("poly(A) length")
+    plot_title <- "Poly(A) length distribution"
   } else if (variable_to_plot=="est_nonA_pos") {
     x_caption <- ggplot2::xlab("estimated non-A position")
+    plot_title <- "Non-A residues distribution"
   } else {
     x_caption <- ggplot2::xlab(variable_to_plot)
+    plot_title <- paste0(variable_to_plot, "distribution")
   }
 
   if (!is.na(grouping_factor)) {
@@ -1309,18 +1312,9 @@ plot_tail_distribution <- function(input_data,
 
 
   if(title){
-    plot_tails <- plot_tails + ggplot2::labs(title = "Poly(A) length distribution",
-                                             subtitle = paste0("Dashed lines - ", value_to_show, " values\n"))
+    plot_tails <- plot_tails + ggplot2::labs(title = plot_title,
+                                             caption = paste0("Dashed lines - ", value_to_show, " values\n"))
   }
 
   return(plot_tails)
 }
-
-
-
-
-
-
-
-
-
