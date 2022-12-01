@@ -2,10 +2,12 @@
 % Please edit documentation in R/ninetails_plotting_functions.R
 \name{plot_tail_distribution}
 \alias{plot_tail_distribution}
-\title{Plots poly(A) tail length distribution in analyzed sample(s).}
+\title{Plots poly(A) tail length (or estimated non-A position) distribution
+in analyzed sample(s).}
 \usage{
 plot_tail_distribution(
   input_data,
+  variable_to_plot = "polya_length",
   grouping_factor = NA,
   max_length = NA,
   value_to_show = NA,
@@ -15,7 +17,11 @@ plot_tail_distribution(
 }
 \arguments{
 \item{input_data}{the ninetails pipeline output data preprocessed with the
-\code{\link{merge_nonA_tables}} function}
+\code{\link{merge_nonA_tables}} function or residue_data or other suitable data}
+
+\item{variable_to_plot}{[character] string, the variable to be plotted defined
+by the user. By default (if not provided by the user) the polya_length would
+be plotted. Note that this variable has to be the column of input_data.}
 
 \item{grouping_factor}{[character] string, the grouping variable defined
 by the user. Note that this variable has to be the column of input_data.}
@@ -37,10 +43,10 @@ displayed. If not - the title & subtitle would not be visible.}
 a ggplot object
 }
 \description{
-This function plots distributions of poly(A) tail lengths across the dataset
-using the user-predefned grouping variable (e.g. samples, conditions etc.).
-The grouping variable must be a column within the input dataset
-passed to the function.
+This function plots distributions of either poly(A) tail lengths or estimated
+non-A residues' positions across the dataset using the user-predefned grouping
+variable (e.g. samples, conditions etc.). The grouping variable must be a
+column within the input dataset passed to the function.
 }
 \details{
 User can specify this in samples_table if the ninetails pipeline output is
@@ -81,6 +87,7 @@ R session.
 \dontrun{
 
 plt <- ninetails::plot_tail_distribution(input_data = merged_nonA_tables,
+                                         variable_to_plot = "polya_length",
                                          grouping_factor = "group",
                                          max_length = 200,
                                          value_to_show = "median",
