@@ -109,8 +109,8 @@ check_tails <- function(nanopolish,
   # variable binding (suppressing R CMD check from throwing an error)
   i <- readname <- polya_length <- qc_tag <- chunkname <-contig <- est_nonA_pos <-  NULL
 
-  #Show console message
-  cat(paste0('Welcome to Ninetails ', as.character(utils::packageVersion("ninetails")), '\n', '\n', sep = ""))
+  #show console message
+  cat(paste0('\n', 'Welcome to Ninetails ', as.character(utils::packageVersion("ninetails")), '\n', '\n', sep = ""))
 
   # Create a log file
   if (dir.exists(file.path(save_dir))) {
@@ -139,60 +139,56 @@ check_tails <- function(nanopolish,
   }
 
 
-  # user-specified options
-  cat(paste(' Ninetails was launched with following options:', '\n', sep=''))
-  cat(paste(' nanopolish output file:       ', nanopolish, '\n', sep=''))
-  cat(paste(' sequencing sumary file:       ', sequencing_summary, '\n', sep=''))
-  cat(paste(' fast5 files directory:        ', workspace, '\n', sep=''))
-  cat(paste(' number of cores:              ', num_cores, '\n', sep=''))
-  cat(paste(' basecall group:               ', basecall_group, '\n', sep=''))
-  cat(paste(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
-  cat(paste(' output quality control:       ', qc, '\n', sep=''))
-  cat(paste(' output directory:             ', save_dir, '\n', '\n', '\n'))
-
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
-
-
-
-  # Assertions
-  if (missing(num_cores)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
-  }
-
-  if (missing(basecall_group)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
-    stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
-  }
-
-  if (missing(workspace)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
-    stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
-  }
-
-  if (missing(save_dir)) {
-    sink(log_file, type='message')
-    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
-    on.exit(sink())
-    stop("A save dir for the output files is missing. Please provide a valid save_dir argument.", call. =FALSE)
-  }
-
+  #Assertions
   sink(log_file, append=TRUE, split = F, type='message')
   assertthat::assert_that(assertive::is_numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+                          msg=paste0("Declared core number must be numeric. Please provide a valid argument.",
+                                     '\n','[', as.character(Sys.time()), '] ',
+                                     "Ninetails aborted"))
   assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(workspace),
-                          msg = paste0("Empty string provided as an input. Please provide a valid path to basecalled fast5 files."))
+                          msg = paste0("Empty string provided as an input. Please provide a valid path to basecalled fast5 files.",
+                                       '\n','[', as.character(Sys.time()), '] ',
+                                       "Ninetails aborted"))
   assertthat::assert_that(assertive::is_character(workspace),
-                          msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
+                          msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files.",
+                                       '\n','[', as.character(Sys.time()), '] ',
+                                       "Ninetails aborted"))
   assertthat::assert_that(assertive::is_character(save_dir),
-                          msg = paste0("Path to output files is not a character string. Please provide a valid save_dir path."))
+                          msg = paste0("Path to output files is not a character string. Please provide a valid save_dir path.",
+                                       '\n','[', as.character(Sys.time()), '] ',
+                                       "Ninetails aborted"))
+  assertthat::assert_that(assertive::is_logical(pass_only),
+                          msg = paste0("The pass_only is not a logical [TRUE/FALSE]. Please provide a valid argument.",
+                                       '\n','[', as.character(Sys.time()), '] ',
+                                       "Ninetails aborted"))
+  assertthat::assert_that(assertive::is_logical(qc),
+                          msg = paste0("The qc variable is not a logical [TRUE/FALSE]. Please provide a valid argument.",
+                                       '\n','[', as.character(Sys.time()), '] ',
+                                       "Ninetails aborted"))
   sink(type='message')
+
+
+  # user-specified options
+  cat(paste0('[', as.character(Sys.time()), '] ',' Ninetails was launched with following options:', '\n', sep=''))
+
+  if (!is.object(nanopolish)){
+    cat(paste0(' nanopolish output file:       ', nanopolish, '\n', sep=''))
+  } else {
+    cat(paste0(' nanopolish output file:       ', deparse(substitute(nanopolish)), '\n', sep=''))
+  }
+  if (!is.object(sequencing_summary)){
+    cat(paste0(' sequencing sumary file:       ', sequencing_summary, '\n', sep=''))
+  } else {
+    cat(paste0(' sequencing sumary file:       ', deparse(substitute(sequencing_summary)), '\n', sep=''))
+  }
+  cat(paste0(' fast5 files directory:        ', workspace, '\n', sep=''))
+  cat(paste0(' number of cores:              ', num_cores, '\n', sep=''))
+  cat(paste0(' basecall group:               ', basecall_group, '\n', sep=''))
+  cat(paste0(' only "PASS" reads included:   ', pass_only, '\n', sep=''))
+  cat(paste0(' output quality control:       ', qc, '\n', sep=''))
+  cat(paste0(' output directory:             ', save_dir, '\n', '\n', '\n'))
+
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Pipeline initialized','\n','\n'))
 
 
 
@@ -210,16 +206,16 @@ check_tails <- function(nanopolish,
   # Extracting and processing polya & sequencing summary data
   polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
 
-
   #create empty list for extracted fast5 data
   tail_features_list = list()
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
+  on.exit(parallel::stopCluster(my_cluster))
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
-  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = TRUE)
 
   # header for progress bar
   cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
@@ -245,7 +241,7 @@ check_tails <- function(nanopolish,
                                          .options.snow = opts,
                                          .options.multicore = mc_options) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
 
-  #close(pb)
+  close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
@@ -255,12 +251,42 @@ check_tails <- function(nanopolish,
   squiggle_names <- polya_summary$readname
   names(tail_features_list) <- squiggle_names
 
+
+  ####### SANITY CHECK #########################################################
+  # slows down pipeline a little bit, but facilitates debugging in case of error
+
+  # check whether a list of lists was created - remove unwanted items
+  tail_features_list <- Filter(function(x) is.list(x), tail_features_list)
+  # check the sublists' structure - remove unwanted items
+  tail_features_list <- Filter(function(x) is.numeric(x$tail_signal)& is.numeric(x$tail_moves), tail_features_list)
+
+  if (length(tail_features_list) == 0){
+    stop("Produced feature list is of length 0. Check your input (nanopolish, fast5 files) for integrity.", call. =FALSE)
+  }
+
+  warn_message <- FALSE
+
+  if (length(squiggle_names) != length(unique(names(tail_features_list)))) {
+    warn_message <- TRUE
+  }
+
+  ####### SANITY CHECK ########################################################
+
+
   # remove reads with only zero moved tails
   tail_features_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_features_list)
   zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
 
   # prevent from running on reads which do not fulfill the pseudomove condition
   tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=5)), tail_features_list)
+
+
+  if (length(tail_features_list) == 0){
+    sink(log_file, type='message')
+    cat(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Aborted.\n'))
+    on.exit(sink())
+    stop("None of the provided signals fulfilled filtering criteria. Check your fast5 files. Re-basecall could be a good idea.", call. =FALSE)
+  }
 
   # reads discarded because of unmet pseudomove condition
   #in this reads reported pseudomove chain is too short to be considered as potential modification
@@ -311,7 +337,7 @@ check_tails <- function(nanopolish,
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
                                       }
 
-  #close(pb)
+  close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
@@ -341,7 +367,7 @@ check_tails <- function(nanopolish,
   gaf_list = list()
 
   #progressbar header
-  cat(paste0('[', as.character(Sys.time()), '] ','Computing angular summation fields...', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular fields...', '\n', sep=''))
 
   #SINK #1
   sink(file=NULL, type = 'output')
@@ -365,9 +391,9 @@ check_tails <- function(nanopolish,
                                .options.snow = opts,
                                .options.multicore = mc_options) %dopar% {
                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
-                                 }
+                               }
 
-  #close(pb)
+  close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
@@ -411,7 +437,7 @@ check_tails <- function(nanopolish,
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
   `%do%` <- foreach::`%do%`
-  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
+  mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = TRUE)
 
   #create empty list for the data
   tail_length_list = list()
@@ -442,7 +468,7 @@ check_tails <- function(nanopolish,
                                          lapply(names(tail_feature_list[[1]][i]), function(x) length(tail_feature_list[[1]][[x]][[2]]))
                                        }
 
-  #close(pb)
+  close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
@@ -487,7 +513,7 @@ check_tails <- function(nanopolish,
                                           .options.multicore = mc_options) %dopar% {
                                             lapply(tail_chunk_list[[i]], function(x) x[['chunk_start_pos']]+50)
                                           }
-  #close(pb)
+  close(pb)
 
   #SINK #2
   log_file <- file(log_filepath, open = "a")
@@ -637,15 +663,27 @@ check_tails <- function(nanopolish,
   cat(paste0('[', as.character(Sys.time()), '] ','A logfile has been saved in: ','\n'))
   cat(paste0('  ', log_filepath, '\n'))
 
-  cat(paste0('\n','Ninetails exited successfully.','\n','\n'))
+
+  # WARN OR FULL SUCCESS #######################################################
+
+  if (warn_message == TRUE) {
+    cat(paste0('\n','Ninetails exited with WARNING.','\n','\n','Check your Nanopolish and Guppy outputs for consistency. It seems like some reads passing quality criteria, which were provided in nanopolish output file (*.tsv) are absent from provided fast5 files. They were omitted in this analysis. However they might constitute a significant fraction of your data. If you are sure that everything was provided correctly, just ignore that info. ','\n','\n'))
+
+  } else {
+
+    cat(paste0('\n','Ninetails exited successfully.','\n','\n'))
+
+  }
+
+
   cat(paste0('Thank you for using Ninetails.'))
 
   # close logfile connection
   #on.exit(close(log_file))
+
   on.exit(closeAllConnections()) #fixed err
 
   return(ninetails_output)
 
 }
-
 
