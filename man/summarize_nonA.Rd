@@ -7,7 +7,7 @@
 summarize_nonA(
   merged_nonA_tables,
   summary_factors = c("group"),
-  transcript_id_column = c("contig")
+  transcript_id_column = c("ensembl_transcript_id_short")
 )
 }
 \arguments{
@@ -17,14 +17,15 @@ summarize_nonA(
 column(s) used for grouping (default: "group")}
 
 \item{transcript_id_column}{character string; column with transcript id data
-(default: "contig", as inherited from nanopolish; can be changed by the user)}
+(default: "ensembl_transcript_id_short" as added during data preprocessing;
+can be changed by the user)}
 }
 \value{
 a summary table of nonA occurrences (tibble)
 }
 \description{
 Creates a table with statistics for non-A residues occurrences
-for each transcript (contig) per each analyzed sample in given dataset.
+for each transcript (ensembl_transcrit_id_short) per each analyzed sample in given dataset.
 }
 \details{
 In the table, "counts" are understood as the number of reads in total
@@ -41,7 +42,7 @@ by transcript.
 
 summarized <- ninetails::summarize_nonA(merged_nonA_tables=merged_nonA_tables,
                                         summary_factors="group",
-                                        transcript_id_column="contig")
+                                        transcript_id_column="ensembl_transcript_id_short")
 
 }
 }

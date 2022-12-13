@@ -49,6 +49,17 @@ read_class_single <- function(class_path, sample_name = NA) {
     class_data$sample_name <- as.factor(class_data$sample_name)
   }
 
+  ## correct annotation <- if gencode format: create new columns with ensembl IDs
+  # else created columns could be easily dropped
+  # this code chunk was originally written by Paweł Krawczyk (smaegol) & incorporated in NanoTail package
+  transcript_names <- gsub(".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*", "\\1", class_data$contig)
+  class_data$transcript <- transcript_names
+  ensembl_transcript_ids <- gsub("^(.*?)\\|.*\\|.*", "\\1", class_data$contig)
+  ensembl_transcript_ids_short <- gsub("(.*)\\..*", "\\1", ensembl_transcript_ids) # without version number
+  class_data$ensembl_transcript_id_full <- ensembl_transcript_ids
+  class_data$ensembl_transcript_id_short <- ensembl_transcript_ids_short
+
+
   return(class_data)
 }
 
@@ -107,7 +118,7 @@ read_class_multiple <- function(samples_table,...) {
                           msg = "The samples_table should contain at least class_path and sample_name columns")
 
   samples_data <- samples_table %>%
-    dplyr::as.tbl() %>%
+    tibble::as_tibble() %>%
     dplyr::mutate_if(is.character,as.factor) %>%
     dplyr::mutate(class_path = as.character(class_path)) %>%
     dplyr::group_by(sample_name) %>% dplyr::mutate(class_contents=purrr::map(class_path, function(x) ninetails::read_class_single(x))) %>%
@@ -244,6 +255,19 @@ read_residue_single <- function(residue_path, sample_name = NA) {
     residue_data$sample_name <- as.factor(residue_data$sample_name)
   }
 
+  ## correct annotation <- if gencode format: create new columns with ensembl IDs
+  # else created columns could be easily dropped
+  # this code chunk was originally written by Paweł Krawczyk (smaegol) & incorporated in NanoTail package
+
+  transcript_names <- gsub(".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*", "\\1", residue_data$contig)
+  residue_data$transcript <- transcript_names
+  ensembl_transcript_ids <- gsub("^(.*?)\\|.*\\|.*", "\\1", residue_data$contig)
+  ensembl_transcript_ids_short <- gsub("(.*)\\..*", "\\1", ensembl_transcript_ids) # without version number
+  residue_data$ensembl_transcript_id_full <- ensembl_transcript_ids
+  residue_data$ensembl_transcript_id_short <- ensembl_transcript_ids_short
+
+
+
   return(residue_data)
 }
 
@@ -306,7 +330,7 @@ read_residue_multiple <- function(samples_table,...) {
                           msg = "The samples_table should contain at least residue_path and sample_name columns.")
 
   samples_data <- samples_table %>%
-    dplyr::as.tbl() %>%
+    tibble::as_tibble() %>%
     dplyr::mutate_if(is.character,as.factor) %>%
     dplyr::mutate(residue_path = as.character(residue_path)) %>%
     dplyr::group_by(sample_name) %>%
@@ -519,7 +543,7 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 #' Produces summary table of nonA occurrences within analyzed dataset.
 #'
 #' Creates a table with statistics for non-A residues occurrences
-#' for each transcript (contig) per each analyzed sample in given dataset.
+#' for each transcript (ensembl_transcrit_id_short) per each analyzed sample in given dataset.
 #'
 #' In the table, "counts" are understood as the number of reads in total
 #' or containing a given type of non-A residue (see column headers for details).
@@ -536,7 +560,8 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 #' column(s) used for grouping (default: "group")
 #'
 #' @param transcript_id_column character string; column with transcript id data
-#' (default: "contig", as inherited from nanopolish; can be changed by the user)
+#' (default: "ensembl_transcript_id_short" as added during data preprocessing;
+#' can be changed by the user)
 #'
 #' @return a summary table of nonA occurrences (tibble)
 #' @export
@@ -546,12 +571,12 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 #'
 #' summarized <- ninetails::summarize_nonA(merged_nonA_tables=merged_nonA_tables,
 #'                                         summary_factors="group",
-#'                                         transcript_id_column="contig")
+#'                                         transcript_id_column="ensembl_transcript_id_short")
 #'
 #'}
 summarize_nonA <- function(merged_nonA_tables,
                            summary_factors = c("group"),
-                           transcript_id_column = c("contig")) {
+                           transcript_id_column = c("ensembl_transcript_id_short")) {
   # var binding
   starts_with <- sum_nonA <- prediction_C <- prediction_G <- prediction_U <- median <- polya_length <- counts_total <- counts_unmod <- zeromod_summarized <- NULL
 

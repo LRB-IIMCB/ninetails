@@ -8,7 +8,7 @@ output data. Then, it performs the Benjamini-Hochberg procedure
 \usage{
 calculate_fisher(
   ninetails_data,
-  transcript_id_column = "contig",
+  transcript_id_column = "ensembl_transcript_id_short",
   min_reads = 0,
   min_nonA_reads = 0,
   grouping_factor = "sample_name",
@@ -25,7 +25,7 @@ function (merged tabular output containing read classification &
 non-A position data).}
 
 \item{transcript_id_column}{[character string] column with transcript id data
-(default: "contig", as inherited from nanopolish; can be changed by the user)}
+(default: "ensembl_transcript_id_short"; can be changed by the user)}
 
 \item{min_reads}{[numeric] minimum number of reads representing given
 transcript to include it in the analysis. This parameter is set by default
@@ -78,7 +78,7 @@ Many thanks to the developer of original source code.
 \examples{
 \dontrun{
 test <- ninetails::calculate_fisher(ninetails_data=merged_nonA_tables,
-                                    transcript_id_column = "contig",
+                                    transcript_id_column = "ensembl_transcript_id_short",
                                     min_reads=100,
                                     min_nonA_reads=10,
                                     grouping_factor = "sample_name",

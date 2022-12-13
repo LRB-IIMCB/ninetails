@@ -188,7 +188,7 @@ stat_codes_list = list(OK = "OK",
 #' non-A position data).
 #'
 #' @param transcript_id_column [character string] column with transcript id data
-#' (default: "contig", as inherited from nanopolish; can be changed by the user)
+#' (default: "ensembl_transcript_id_short"; can be changed by the user)
 #'
 #' @param min_reads [numeric] minimum number of reads representing given
 #' transcript to include it in the analysis. This parameter is set by default
@@ -234,7 +234,7 @@ stat_codes_list = list(OK = "OK",
 #' @examples
 #' \dontrun{
 #' test <- ninetails::calculate_fisher(ninetails_data=merged_nonA_tables,
-#'                                     transcript_id_column = "contig",
+#'                                     transcript_id_column = "ensembl_transcript_id_short",
 #'                                     min_reads=100,
 #'                                     min_nonA_reads=10,
 #'                                     grouping_factor = "sample_name",
@@ -244,7 +244,7 @@ stat_codes_list = list(OK = "OK",
 #'                                     base="C")
 #' }
 calculate_fisher <- function(ninetails_data,
-                             transcript_id_column = "contig",
+                             transcript_id_column = "ensembl_transcript_id_short",
                              min_reads = 0,
                              min_nonA_reads=0,
                              grouping_factor = "sample_name",
@@ -330,7 +330,8 @@ calculate_fisher <- function(ninetails_data,
   #extract filtered readnames
   mod_summarized_filtered <- unique(mod_summarized_filtered$contig)
 
-  ninetails_data <- ninetails_data[ninetails_data$contig %in% mod_summarized_filtered,]
+  #ninetails_data <- ninetails_data[ninetails_data$contig %in% mod_summarized_filtered,]
+  ninetails_data <- ninetails_data[transcript_id_column %in% mod_summarized_filtered,]
 
 
   ninetails_data_stat <- ninetails_data %>%
@@ -340,7 +341,7 @@ calculate_fisher <- function(ninetails_data,
 
 
   ninetails_data_stat <- ninetails_data_stat %>%
-    dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base,transcript_id_column = "transcript_id")) %>%
+    dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base,transcript_id_column = transcript_id_column)) %>%
     dplyr::select(-data) %>% tidyr::unnest(cols = c(stats)) %>% dplyr::rename(!!transcript_id_column := "get(c(transcript_id_column))")
   message("calculating statistics")
 
