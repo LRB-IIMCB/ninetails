@@ -248,8 +248,10 @@ check_tails <- function(nanopolish,
   sink(log_file, append=TRUE, split = TRUE, type='output')
 
   #label each signal according to corresponding read name to avoid confusion
-  squiggle_names <- polya_summary$readname
-  names(tail_features_list) <- squiggle_names
+  #squiggle_names <- polya_summary$readname
+  #names(tail_features_list) <- squiggle_names
+  squiggle_names <- as.vector(sapply(tail_features_list, function(x) attributes(x[[1]])$names))
+  tail_features_list <- stats::setNames(tail_features_list, squiggle_names)
 
 
   ####### SANITY CHECK #########################################################

@@ -360,8 +360,13 @@ create_tail_feature_list <- function(nanopolish,
   #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
-  squiggle_names <- polya_summary$readname
-  names(tail_features_list) <- squiggle_names
+  # this deals with issue#5 (nanopolish records do not exactly match seqsummary file)
+  squiggle_names <- as.vector(sapply(tail_features_list, function(x) attributes(x[[1]])$names))
+  tail_features_list <- stats::setNames(tail_features_list, squiggle_names)
+
+  #former solution:
+  #squiggle_names <- polya_summary$readname
+  #names(tail_features_list) <- squiggle_names
 
   # remove reads with only zero moved tails
   tail_features_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_features_list)
