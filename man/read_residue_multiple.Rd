@@ -19,7 +19,7 @@ currently accepts sample_name argument
 
 Function based on PK (smaegol) NanoTail read_polya_multiple
 https://github.com/LRB-IIMCB/nanotail/
-#' Many thanks to the NanoTail developer for help and advice!}
+Many thanks to the NanoTail developer for help and advice!}
 }
 \value{
 a [tibble] containing non-A residue data for

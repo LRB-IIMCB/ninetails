@@ -7,7 +7,7 @@
 create_tail_chunk_list(tail_feature_list, num_cores)
 }
 \arguments{
-\item{tail_feature_list}{list object produced by create_tail_feature_list
+\item{tail_feature_list}{list object produced by \code{\link{create_tail_feature_list}}
 function.}
 
 \item{num_cores}{numeric [1]. Number of physical cores to use in processing

@@ -15,16 +15,16 @@ create_outputs(
 )
 }
 \arguments{
-\item{tail_feature_list}{list object produced by create_tail_feature_list
+\item{tail_feature_list}{list object produced by \code{\link{create_tail_feature_list}}
 function.}
 
-\item{tail_chunk_list}{list object produced by create_tail_chunk_list
+\item{tail_chunk_list}{list object produced by \code{\link{create_tail_chunk_list}}
 function.}
 
 \item{nanopolish}{character string. Full path of the .tsv file produced
 by nanopolish polya function or name of in-memory file (environment object).}
 
-\item{predicted_list}{a list object produced by predict_classes function.}
+\item{predicted_list}{a list object produced by \code{\link{predict_classes}} function.}
 
 \item{num_cores}{numeric [1]. Number of physical cores to use in processing
 the data. Do not exceed 1 less than the number of cores at your disposal.}
@@ -45,7 +45,7 @@ it is advised to treat them with caution. By default, the qc option is enabled
 (this parameter is set to TRUE).}
 }
 \value{
-This function returns a list object containing two fataframes:
+This function returns a list object containing two dataframes:
 "read_classes" and "nonadenosine_residues" with the final output.
 First dataframe contains initial indications, whether the given read was
 classified or omitted (with reason) and if classified, whether read was

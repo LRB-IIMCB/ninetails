@@ -22,7 +22,8 @@ groups/conditions (needs to have 2 levels!)}
 
 \item{base}{[character string] letter representing particular non-A nucleotide,
 for which the statistics are meant to be computed. Currently function accepts
-C, G, U arguments. The "C" value is set by default.}
+"C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
+value is for the nonA residues alltogether.}
 
 \item{min_reads}{[numeric] minimum number of reads representing given
 transcript to include it in the analysis}

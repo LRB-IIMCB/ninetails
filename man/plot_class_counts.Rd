@@ -8,7 +8,7 @@ plot_class_counts(
   class_data,
   grouping_factor = NA,
   frequency = TRUE,
-  detailed = TRUE
+  type = "R"
 )
 }
 \arguments{
@@ -20,25 +20,29 @@ made by ninetails pipeline}
 \item{frequency}{logical [TRUE/FALSE]. If TRUE, the frequency will be plotted.
 If FALSE, raw counts will be shown. This parameter is set to TRUE by default.}
 
-\item{detailed}{logical [TRUE/FALSE]. If TRUE, the counts will be provided
-based on the "comments" column, which contains detailed information on the
-assigned class. If FALSE, the counts will be provided based on "class" column
-which gives more crude glimpse on the classification - i.e. provides an info
-whether the reads were considered as "modified", "unmodified" and
-"unclassified" only. By default, the TRUE option is set.}
+\item{type}{character string ["R"/"N"/"A"]. This variable controls the level
+of detail of the resulting plot:
+\itemize{
+\item "R" - detailed classification (based on column "comments")
+\item "N" - crude classification (based on column "class")
+\item "A" - reads decorated with non-As exclusively
+}
+By default, the "R" option is set.}
 }
 \value{
 ggplot object with read class prediction
 }
 \description{
 This function requires as input the dataframe with read_classes provided by
-ninetails pipeline. Function works in 2 flavours: it can output detailed
-classification (based on column "comments") or crude classification (based on
-column "class").
+ninetails pipeline. Function works in 3 flavours, by plotting either: \itemize{
+\item detailed classification (based on column "comments")
+\item crude classification (based on column "class")
+\item reads decorated with non-As exclusively
+}
 }
 \details{
 Function  based on the Nanotail equivalent: https://github.com/LRB-IIMCB/nanotail
-Many thanks to smeagol for advice & support!
+Many thanks to smeagol (Pawel Krawczyk) for advice & support!
 }
 \examples{
 \dontrun{
@@ -46,7 +50,7 @@ Many thanks to smeagol for advice & support!
 ninetails::plot_class_counts(class_data=read_classes_dataframe,
                              grouping_factor="sample_name",
                              frequency=TRUE,
-                             detailed=TRUE)
+                             type="R")
 }
 
 

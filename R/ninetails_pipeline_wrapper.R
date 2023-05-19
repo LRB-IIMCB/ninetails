@@ -641,11 +641,18 @@ check_tails <- function(nanopolish,
                                                 TRUE~ paste0(prediction)))
 
     #CREATE FINAL OUTPUT
+    modified_reads_edited <- unique(modified_reads_edited)
+    moved_chunks_table_qc <- unique(moved_chunks_table_qc)
+
     ninetails_output[['read_classes']] <- modified_reads_edited
     ninetails_output[['nonadenosine_residues']] <- moved_chunks_table_qc
 
   } else{
     #CREATE FINAL OUTPUT
+    nanopolish_polya_table <- unique(nanopolish_polya_table)
+    moved_chunks_table <- unique(moved_chunks_table)
+
+
     ninetails_output[['read_classes']] <- nanopolish_polya_table
     ninetails_output[['nonadenosine_residues']] <- moved_chunks_table
   }

@@ -585,7 +585,7 @@ plot_tail_chunk <- function(chunk_name,
 #'
 #' @param gaf_name character string. Name of the given read segment (chunk)
 #' for which the gaf is meant to be plotted. This is the name of the given gaf
-#' within the gaf_list produced by the create_gaf_list function.
+#' within the gaf_list produced by the \code{\link{create_gaf_list}} function.
 #'
 #' @param gaf_list A list of gaf matrices organized by the read ID_index.
 #' @param save_file logical [TRUE/FALSE]. If TRUE, the gaf plot 100x100 (pixels)
@@ -761,12 +761,14 @@ plot_multiple_gaf <- function(gaf_list,
 #' Plotting read classes data per category assigned to the analyzed reads.
 #'
 #' This function requires as input the dataframe with read_classes provided by
-#' ninetails pipeline. Function works in 2 flavours: it can output detailed
-#' classification (based on column "comments") or crude classification (based on
-#' column "class").
+#' ninetails pipeline. Function works in 3 flavours, by plotting either: \itemize{
+#' \item detailed classification (based on column "comments")
+#' \item crude classification (based on column "class")
+#' \item reads decorated with non-As exclusively
+#' }
 #'
 #' Function  based on the Nanotail equivalent: https://github.com/LRB-IIMCB/nanotail
-#' Many thanks to smeagol for advice & support!
+#' Many thanks to smeagol (Pawel Krawczyk) for advice & support!
 #'
 #' @param class_data A dataframe or tibble containing read_classes predictions
 #' made by ninetails pipeline
@@ -776,12 +778,14 @@ plot_multiple_gaf <- function(gaf_list,
 #' @param frequency logical [TRUE/FALSE]. If TRUE, the frequency will be plotted.
 #' If FALSE, raw counts will be shown. This parameter is set to TRUE by default.
 #'
-#' @param detailed logical [TRUE/FALSE]. If TRUE, the counts will be provided
-#' based on the "comments" column, which contains detailed information on the
-#' assigned class. If FALSE, the counts will be provided based on "class" column
-#' which gives more crude glimpse on the classification - i.e. provides an info
-#' whether the reads were considered as "modified", "unmodified" and
-#' "unclassified" only. By default, the TRUE option is set.
+#' @param type character string ["R"/"N"/"A"]. This variable controls the level
+#' of detail of the resulting plot:
+#' \itemize{
+#' \item "R" - detailed classification (based on column "comments")
+#' \item "N" - crude classification (based on column "class")
+#' \item "A" - reads decorated with non-As exclusively
+#' }
+#' By default, the "R" option is set.
 #'
 #' @return ggplot object with read class prediction
 #' @export
@@ -792,18 +796,17 @@ plot_multiple_gaf <- function(gaf_list,
 #' ninetails::plot_class_counts(class_data=read_classes_dataframe,
 #'                              grouping_factor="sample_name",
 #'                              frequency=TRUE,
-#'                              detailed=TRUE)
+#'                              type="R")
 #' }
 #'
 #'
 plot_class_counts <- function(class_data,
                               grouping_factor=NA,
                               frequency=TRUE,
-                              detailed=TRUE) {
+                              type="R") {
 
   # var binding
-  n <- comments <- NULL
-
+  n <- comments <- total <- prop <- NULL
 
   if (missing(class_data)) {
     stop("Class_data is missing. Please provide a valid class_data argument",
@@ -814,13 +817,10 @@ plot_class_counts <- function(class_data,
                           msg = "Empty dataframe provided as an input")
   assertthat::assert_that(assertive::is_a_bool(frequency),
                           msg="Non-boolean value provided for option frequency")
-  assertthat::assert_that(assertive::is_a_bool(detailed),
-                          msg="Non-boolean value provided for option detailed")
+  assertthat::assert_that(assertive::is_character(type),
+                          msg = "Non-character argument is not alowed for `type`. Please provide valid type (choose from: 'R', 'N', 'A')")
 
-
-  if (detailed==TRUE){
-
-
+  if (type=="R"){
     class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=TRUE)
 
     basic_colnames = c("comments","n")
@@ -835,7 +835,6 @@ plot_class_counts <- function(class_data,
                                                                     "MPU",
                                                                     "MAU",
                                                                     "YAY"))
-
     if (ncol(class_counts)>2) {
       grouping_colname = setdiff(colnames(class_counts),basic_colnames)
 
@@ -861,14 +860,14 @@ plot_class_counts <- function(class_data,
                                           "IRL"= "#4d4d4d",
                                           "NIN"= "#1a1a1a",
                                           "MPU"= "#cccccc"),
-                                 labels=c("move transition present, nonA residue detected",
-                                          "nanopolish qc failed",
-                                          "move transition absent, nonA residue undetected",
-                                          "insufficient read length",
-                                          "not included in the analysis (pass only = T)",
-                                          "move transition present, nonA residue undetected"
+                                 labels=c("YAY" = "move transition present, nonA residue detected",
+                                          "QCF" = "nanopolish qc failed",
+                                          "MAU"= "move transition absent, nonA residue undetected",
+                                          "IRL"= "insufficient read length",
+                                          "NIN"= "not included in the analysis (pass only = T)",
+                                          "MPU"= "move transition present, nonA residue undetected"
                                  ))
-  } else {
+  } else if (type=="N") {
     class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=FALSE)
 
     basic_colnames = c("class","n")
@@ -885,7 +884,7 @@ plot_class_counts <- function(class_data,
       class_plot <- ggplot2::ggplot(class_counts, ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=class,y=n)) +
         ggplot2::ylab("count")+ ggplot2::theme_bw() +
         ggplot2::labs(x="\nsample", fill="Class:", title="Assigned read classes")
-      if(frequency) {
+      if (frequency) {
         class_plot <- class_plot + ggplot2::geom_bar(stat="identity",position="fill") + ggplot2::ylab("frequency")
       } else {
         class_plot <- class_plot + ggplot2::geom_bar(stat="identity",position="stack") + ggplot2::ylab("count")
@@ -902,6 +901,59 @@ plot_class_counts <- function(class_data,
                                           "unmodified"= "#00aad4",
                                           "unclassified"= "#808080"))
 
+  } else if (type=="A") {
+
+    class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=FALSE)
+
+    basic_colnames = c("class","n")
+    assertthat::assert_that(basic_colnames[1] %in% colnames(class_counts),
+                            msg="class column is missing in the input. Invalid output of count_class().")
+    assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
+                            msg="n column is missing in the input. Invalid output of count_class().")
+
+    class_counts$class <- factor(class_counts$class, levels=c("unclassified", "unmodified", "modified"))
+
+    if (ncol(class_counts)>2) {
+
+      grouping_colname = setdiff(colnames(class_counts),basic_colnames)
+
+      if (frequency) {
+        class_counts <- class_counts %>% dplyr::left_join(class_counts %>%
+                                                            dplyr::group_by(!!rlang::sym(grouping_colname)) %>%
+                                                            dplyr::summarize(total = sum(n))) %>%
+          dplyr::ungroup() %>% dplyr::filter(class=="modified")%>% dplyr::mutate(prop=n/total)
+
+        class_plot <- ggplot2::ggplot(class_counts,
+                                      ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=class,y=prop)) +
+          ggplot2::ylab("count")+ ggplot2::theme_bw() +
+          ggplot2::labs(x="\nsample", fill="Class:",
+                        title="Reads with non-As in poly(A)") +
+          ggplot2::geom_bar(stat="identity",position="stack") + ggplot2::ylab("frequency")
+
+      } else {
+
+        class_plot <- ggplot2::ggplot(class_counts%>% dplyr::filter(class=="modified"),
+                                      ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=class,y=n)) +
+          ggplot2::ylab("count")+ ggplot2::theme_bw() +
+          ggplot2::labs(x="\nsample", fill="Class:",
+                        title="Reads with non-As in poly(A)") +
+          ggplot2::geom_bar(stat="identity",position="stack") + ggplot2::ylab("count")
+      }
+
+    } else {
+
+      class_plot <- ggplot2::ggplot(class_counts %>% dplyr::filter(class=="modified"),ggplot2::aes(x=class,y=n)) +
+        ggplot2::geom_bar(stat="identity") +
+        ggplot2::labs(x="\nsample", y="count\n", fill="Class:", title="Reads with non-As in poly(A)")
+
+    }
+
+    class_plot <- class_plot +
+      ggplot2::scale_fill_manual(values=c("modified" = "#ff6600"))
+
+  } else{
+    stop("Wrong type of plot defined. Please provide a valid type (choose from: 'R', 'N', 'A')",
+         call. = FALSE)
   }
 
   return(class_plot)
@@ -1318,3 +1370,383 @@ plot_tail_distribution <- function(input_data,
 
   return(plot_tails)
 }
+
+#' Plots panel characteristics of ninetails output.
+#'
+#' Creates a multipanel plot with comprehensive characteristics of input data
+#' produced by ninetails software. Those panel charts provide the most comprehensive
+#' characterization of a given pool of reads (representing particular transcript
+#' or set of transcripts, respectively).
+#'
+#' Includes 5 panels A-E containing various subplots with the following content:\itemize{
+#' \item A - read categories - result of read classification according to presence/absence
+#' of non-As in their poly(A) tails
+#' \item B - non-A residues - frequency of reads containing given residue among all
+#' of the reads harboring non-A nucleotides
+#' \item C - distribution of lengths of poly(A) tails - overall distribution of lengths
+#' in comparison to the lengths of tails decorated with non-As
+#' \item D - normalized distribution of non-A residues in poly(A) tails -
+#' non-A nucleotide positions normalized to the length of reads in which given residue occurs
+#' \item raw distribution of non-A residues in poly(A) tails - crude depiction
+#' of positions along the tail range
+#' }
+#'
+#' @param input_residue_data A dataframe or tibble containig non-A residue predictions
+#' made by ninetails pipeline
+#'
+#' @param input_class_data A dataframe or tibble containing read_classes predictions
+#' made by ninetails pipeline. Mutually exclusive with parameter input_merged_nonA_tables_data
+#'
+#' @param input_merged_nonA_tables_data A dataframe or tibble containing merged_nonA_tables data
+#' produced by the \code{\link{merge_nonA_tables}} function. Mutually exclusive with parameter
+#' input_class_data
+#'
+#' @param type [character] either "default" or "moderna" - controls the predefined
+#' settings of the plot. In case of moderna adds the default UCUAG pentamer position
+#' to the distribution subplots. By default, the "default" option is set.
+#'
+#' @param max_length [numeric] maximum length of plotted tail data
+#'
+#' @param direction_5_prime [logical] by default set to TRUE. controls the direction in which
+#' the non-A positions are reported. Either from 5' end, according to the most common convention,
+#' or from 3' end (as ONT direct RNA seq proceeds).
+#'
+#' @return a ggplot object
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#' ninetails::plot_panel_characteristics(input_residue_data=residue_data,
+#'                                       input_class_data=class_data,
+#'                                       input_merged_nonA_tables_data=NULL,
+#'                                       type="default",
+#'                                       max_length=100,
+#'                                       direction_5_prime=T)
+#'
+#'}
+#'
+plot_panel_characteristics <- function(input_residue_data,
+                                       input_class_data=NULL,
+                                       input_merged_nonA_tables_data=NULL,
+                                       type="default",
+                                       max_length=300,
+                                       direction_5_prime=TRUE){
+
+  colnames_to_save <- tail_distribution_data <- upper_limit <- group_count <- subtitle_info <- NULL
+  summarized_nonA <- cgu_metrics <- main_metrics <- binned_length_pos <- rel_density_plot <- NULL
+  distrib_plot <- general_read_categories <- residue_counts <- final <-design <- NULL
+  nonA_residues <- prediction <- ygreki <- n <- est_nonA_pos <- est_nonA_pos_2 <- NULL
+  counts <- counts_C <- counts_G <- counts_U <- counts_nonA <- counts_unmod <- counts_total<- NULL
+  binned_lengths <- binned_positions <- polya_median <- polya_mean <- NULL
+  counts_of_reads_equal_or_longer_than_est_position <- NULL
+  counts_of_reads_with_nonA_in_given_position <- polya_length<- NULL
+
+  # ASSERTIONS
+  ##############################################################################
+
+  if (!is.na(max_length)) {
+    assertthat::assert_that(assertive::is_numeric(max_length),
+                            msg="Please provide numeric value for max_length")
+  }
+
+  assertthat::assert_that(assertive::has_rows(input_residue_data),
+                          msg = "Empty input_residue_data dataframe provided as an input")
+
+  assertthat::assert_that(assertive::is_character(type),
+                          msg=paste0("Type must be a string (either 'default' or 'moderna'). Please provide a valid argument."))
+
+  if (is.null(input_class_data) && is.null(input_merged_nonA_tables_data)) stop("At least one dataframe should be provided - either input_class_data or input_merged_nonA_tables_data")
+  if (!is.null(input_class_data) && !is.null(input_merged_nonA_tables_data)) stop("Only one dataframe should be provided - either input_class_data or input_merged_nonA_tables_data")
+
+
+  # PROCESSING INPUTS
+  ##############################################################################
+
+
+  if (!is.null(input_class_data)) {
+    input_merged_nonA_tables_data <- ninetails::merge_nonA_tables(residue_data=input_residue_data,
+                                                                  class_data=input_class_data,
+                                                                  pass_only = F)
+  }
+  if (!is.null(input_merged_nonA_tables_data)) {
+    input_merged_nonA_tables_data <- input_merged_nonA_tables_data
+  }
+
+  ## TAIL DISTRIBUTION DATA
+
+
+  colnames_to_save <- c("sample","group", "readname", "prediction", "est_nonA_pos",
+                        "polya_length", "class","comments","transcript",
+                        "ensembl_transcript_id_full", "ensembl_transcript_id_short",
+                        "prediction_C", "prediction_G", "prediction_U", "nonA_residues")
+
+  tail_distribution_data <- input_merged_nonA_tables_data %>%
+    dplyr::select(-dplyr::one_of(setdiff(names(input_merged_nonA_tables_data), colnames_to_save)))
+
+  tail_distribution_data <-dplyr::bind_rows(
+    tail_distribution_data %>% dplyr::filter(is.na(nonA_residues)) %>% dplyr::mutate(type="unmod"),
+    tail_distribution_data %>% dplyr::filter(!is.na(nonA_residues)) %>% dplyr::mutate(type="nonA"),
+    tail_distribution_data %>% dplyr::mutate(type="total"))
+
+  ## RESIDUE DATA
+  #clean the table from unneeded cols
+  colnames_to_save <- c("readname", "prediction", "est_nonA_pos", "polya_length")
+  input_residue_data <- input_residue_data %>%
+    dplyr::select(-dplyr::one_of(setdiff(names(input_residue_data), colnames_to_save))) %>%
+    dplyr::group_by(prediction) %>% dplyr::add_count() %>% dplyr::ungroup() %>%
+    dplyr::mutate(label = paste0("(n=", n, ")"))
+
+
+  if(direction_5_prime==TRUE) {
+    # getting rid of decimals
+    input_residue_data$round_pos <- round(input_residue_data$est_nonA_pos)
+    input_residue_data$round_length <- round(input_residue_data$polya_length)
+
+    # bin columns
+    upper_limit <- 5 * ceiling(max(input_residue_data$round_pos) / 5)
+    input_residue_data$binned_positions <- cut(input_residue_data$round_pos,
+                                               breaks = seq(0, upper_limit, by = 5),
+                                               right = TRUE)
+    upper_limit <- 5 * ceiling(max(input_residue_data$round_length) / 5)
+    input_residue_data$binned_lengths <- cut(input_residue_data$round_length,
+                                             breaks = seq(0, upper_limit, by = 5),
+                                             right = TRUE)
+
+    #convert intervals into numeric cols with upper value
+    input_residue_data$binned_lengths <- gsub(".*\\,", "", input_residue_data$binned_lengths)
+    input_residue_data$binned_lengths <- gsub('.{1}$', '', input_residue_data$binned_lengths)
+    input_residue_data$binned_lengths <- as.numeric(input_residue_data$binned_lengths)
+    input_residue_data$binned_positions <- gsub(".*\\,", "", input_residue_data$binned_positions)
+    input_residue_data$binned_positions <- gsub('.{1}$', '', input_residue_data$binned_positions)
+    input_residue_data$binned_positions <- as.numeric(input_residue_data$binned_positions)
+
+
+    #adding columns for cumulative counts per positions
+    input_residue_data <- input_residue_data  %>%
+      dplyr::mutate(
+        counts_of_reads_equal_or_longer_than_est_position = sapply(binned_positions, function(x) sum(x <= binned_lengths))) %>%
+      dplyr::group_by(binned_positions) %>%
+      dplyr::mutate(counts_of_reads_with_nonA_in_given_position = dplyr::n()) %>%
+      dplyr::ungroup() %>% dplyr::mutate(
+        ygreki = counts_of_reads_with_nonA_in_given_position/counts_of_reads_equal_or_longer_than_est_position)
+
+    group_count <- length(unique(input_residue_data$binned_lengths))
+
+    subtitle_info <- "Non-A positions reported from 5' end"
+
+
+  } else if (direction_5_prime==FALSE) {
+
+    # replace est_nonA_pos
+    input_residue_data <- input_residue_data %>% dplyr::mutate(est_nonA_pos_2 =  polya_length - est_nonA_pos) %>%
+      dplyr::select(-est_nonA_pos) %>% dplyr::rename(est_nonA_pos=est_nonA_pos_2)
+
+    # getting rid of decimals
+    input_residue_data$round_pos <- round(input_residue_data$est_nonA_pos)
+    input_residue_data$round_length <- round(input_residue_data$polya_length)
+
+    # bin columns
+    upper_limit <- 5 * ceiling(max(input_residue_data$round_pos) / 5)
+    input_residue_data$binned_positions <- cut(input_residue_data$round_pos,
+                                               breaks = seq(0, upper_limit, by = 5),
+                                               right = TRUE)
+    upper_limit <- 5 * ceiling(max(input_residue_data$round_length) / 5)
+    input_residue_data$binned_lengths <- cut(input_residue_data$round_length,
+                                             breaks = seq(0, upper_limit, by = 5),
+                                             right = TRUE)
+
+    #convert intervals into numeric cols with upper value
+    input_residue_data$binned_lengths <- gsub(".*\\,", "", input_residue_data$binned_lengths)
+    input_residue_data$binned_lengths <- gsub('.{1}$', '', input_residue_data$binned_lengths)
+    input_residue_data$binned_lengths <- as.numeric(input_residue_data$binned_lengths)
+    input_residue_data$binned_positions <- gsub(".*\\,", "", input_residue_data$binned_positions)
+    input_residue_data$binned_positions <- gsub('.{1}$', '', input_residue_data$binned_positions)
+    input_residue_data$binned_positions <- as.numeric(input_residue_data$binned_positions)
+
+
+    #adding columns for cumulative counts per positions
+    input_residue_data <- input_residue_data  %>%
+      dplyr::mutate(
+        counts_of_reads_equal_or_longer_than_est_position = sapply(binned_positions, function(x) sum(x <= binned_lengths))) %>%
+      dplyr::group_by(binned_positions) %>%
+      dplyr::mutate(counts_of_reads_with_nonA_in_given_position = dplyr::n()) %>%
+      dplyr::ungroup() %>% dplyr::mutate(
+        ygreki = counts_of_reads_with_nonA_in_given_position/counts_of_reads_equal_or_longer_than_est_position)
+
+    group_count <- length(unique(input_residue_data$binned_lengths))
+
+    subtitle_info <- "Non-A positions reported from 3' end"
+
+  } else {
+    stop("Unknown argument defined. Please provide correct parameter", .call = FALSE)
+  }
+
+
+  #drop unnecessary columns
+  input_residue_data$round_pos <- NULL
+  input_residue_data$round_length <- NULL
+  #input_residue_data$binned_positions <- NULL
+  #input_residue_data$binned_lengths <- NULL
+
+
+  ## READ COUNTS FOR METRIC PLOT
+  summarized_nonA <- ninetails::summarize_nonA(input_merged_nonA_tables_data,
+                                               summary_factors = c("group"),
+                                               transcript_id_column = NULL)
+
+  ### split for 2 separate dframes (count, hits)
+  summarized_nonA <- lapply(split.default(summarized_nonA[-(1:3)], sub("_.*", "", names(summarized_nonA)[-(1:3)])),
+                            function(x) cbind(summarized_nonA[1:3], x))
+  ###extract only counts
+  summarized_nonA <- summarized_nonA[[1]]
+  summarized_nonA <- summarized_nonA %>%
+    dplyr::select(-polya_median, -polya_mean) %>%
+    dplyr::mutate_if(is.numeric, ~round(., 3)) %>%
+    tidyr::pivot_longer(cols=c(counts_total, counts_unmod, counts_nonA, counts_C,
+                               counts_G, counts_U), names_to = "source", values_to = "counts")
+  summarized_nonA$cat <- c(rep("main",3), rep("mods",3))
+
+  ### divide into 2 separate subplots for general categories & c,g,u preds
+  main_metrics <- summarized_nonA %>% dplyr::filter(cat=="main") %>%
+    dplyr::mutate(label = paste0("(n=", counts, ")"))
+  main_metrics$source <- factor(main_metrics$source, levels=c("counts_nonA", "counts_unmod", "counts_total"))
+
+  cgu_metrics <- summarized_nonA %>% dplyr::filter(cat=="mods") %>%
+    dplyr::mutate(label = paste0("(n=", counts, ")"))
+  cgu_metrics$source <- factor(cgu_metrics$source, levels=c("counts_C", "counts_G", "counts_U"))
+
+
+  # PLOTTING
+  ##############################################################################
+
+  # general read classification plots
+  ## general read categories:
+  general_read_categories <-ggplot2::ggplot(data=main_metrics, ggplot2::aes(x=source, y=counts, fill=source)) +
+    ggplot2::geom_bar(stat="identity") +
+    ggplot2::scale_fill_manual(values=c("#ff6600", "#00aad4", "#174e73"),
+                               labels=c("with non-As", "unmodified", "total"),guide = ggplot2::guide_legend(reverse = TRUE)) +
+    ggplot2::scale_x_discrete(breaks=main_metrics$source, labels=main_metrics$label) +
+    ggplot2::coord_flip() + ggplot2::theme_bw() +
+    ggplot2::theme(axis.title.y=ggplot2::element_blank(),
+                   legend.position="top",
+                   legend.title= ggplot2::element_blank()) +
+    ggplot2::labs(title="Read categories", tag="A")
+
+  ## residue freq per read:
+  residue_counts <-ggplot2::ggplot(data=cgu_metrics, ggplot2::aes(x=forcats::fct_rev(source), y=counts, fill=source)) +
+    ggplot2::geom_bar(stat="identity") +
+    ggplot2::scale_fill_manual(values=c("#3a424f","#50a675","#b0bdd4"),
+                               labels=c("reads with C", "reads with G", "reads with U")) + ggplot2::theme_bw() +
+    ggplot2::scale_x_discrete(breaks=cgu_metrics$source, labels=cgu_metrics$label) +
+    ggplot2::theme(axis.title.y=ggplot2::element_blank(),
+                   legend.position="top",
+                   legend.title= ggplot2::element_blank()) +
+    ggplot2::labs(title="Non-A residues", tag="B") + ggplot2::coord_flip()
+
+
+  # distribution plot:
+  distrib_plot <- ninetails::plot_tail_distribution(input_data = tail_distribution_data,
+                                                    variable_to_plot = "polya_length",
+                                                    max_length =max_length,
+                                                    ndensity=F,
+                                                    title=F,
+                                                    grouping_factor = "type") +
+    ggplot2::scale_color_manual(values=c("#ff6600", "#174e73", "#00aad4"),
+                                labels=c("with non-As", "total", "unmodified")) +
+    ggplot2::labs(title="Distribution of lengths of poly(A) tails",
+                  color="read type",
+                  tag="C") +
+    ggplot2::theme(legend.position="top",
+                   legend.title= ggplot2::element_blank())
+
+  # NORMALIZED PLOT
+  binned_length_pos <- ggplot2::ggplot(input_residue_data, ggplot2::aes(y=ygreki/group_count, x=binned_lengths, fill=prediction)) +
+    ggplot2::geom_col(stat="identity", position="stack") +
+    ggplot2::facet_wrap(~prediction, ncol=1) +
+    ggplot2::scale_fill_manual(values=c("#3a424f", "#50a675", "#b0bdd4")) +
+    ggplot2::scale_x_continuous(limits=c(0,max_length)) +
+    ggplot2::labs(title="Distribution of non-A residues in poly(A) tails (normalized)",
+                  subtitle =paste0("Positions were binned every 5 nucleotides (", subtitle_info,")"),
+                  y="normalized non-A frequency",
+                  x="poly(A) length",
+                  tag="D",
+                  fill="non-A residue") +
+    ggplot2::theme_bw() + ggplot2::theme(strip.background = ggplot2::element_blank(),
+                                         strip.text.x = ggplot2::element_blank(),
+                                         legend.position="top",
+                                         legend.title= ggplot2::element_blank()) +
+    ggplot2::scale_y_continuous()
+
+
+
+  rel_density_plot <- ggplot2::ggplot(data=input_residue_data,
+                                      ggplot2::aes(x = forcats::fct_rev(prediction),
+                                                   y = est_nonA_pos,
+                                                   fill=prediction))
+
+
+  # relative density plot (fisheye + rug):
+  rel_density_plot <- rel_density_plot +
+    ggdist::stat_halfeye(adjust = .5, width = .6, .width = 0, justification = -.1, point_colour = NA) +
+    gghalves::geom_half_point(side = "l", shape = 124,range_scale = 0, size = 6, alpha = .3, show.legend=FALSE,color="#1d2e3b") +
+    ggplot2::coord_cartesian(xlim = c(1.2, NA), clip = "off") +
+    ggplot2::theme_bw() + ggplot2::coord_flip() + ggplot2::scale_fill_manual(values=c("#3a424f", "#50a675", "#b0bdd4")) +
+    ggplot2::scale_y_continuous(limits=c(0,max_length)) +
+    ggplot2::scale_x_discrete(breaks=input_residue_data$prediction, labels=input_residue_data$label) +
+
+    ggplot2::labs(title="Distribution of non-A residues in poly(A) tails (raw positions)",
+                  subtitle=paste0(subtitle_info),
+                  y="estimated position in poly(A) tail",
+                  x="residue",
+                  tag="E",
+                  fill="non-A residue")+
+    ggplot2::theme(axis.title.y=ggplot2::element_blank(),
+                   legend.position="top",
+                   legend.title= ggplot2::element_blank())
+
+
+  # ADD OPTIONS TO PLOTS
+  ##############################################################################
+
+  if (type=="default") {
+
+    #distribution plot
+    distrib_plot <- distrib_plot
+
+  } else if (type=="moderna") {
+
+    #distribution plot
+    distrib_plot <- distrib_plot + ggplot2::geom_vline(xintercept = 100, color="red", size=5, alpha=0.2) +
+      ggplot2::labs(caption ="default Moderna pentamer position marked in red")
+
+    rel_density_plot <- rel_density_plot + ggplot2::geom_hline(yintercept = 100, color="red", size=5, alpha=0.2) +
+      ggplot2::labs(caption ="default Moderna pentamer position marked in red")
+
+  } else {
+    stop("Unknown type of data defined. Please provide correct parameter", .call = FALSE)
+  }
+
+
+  # FINAL ASSEMBLY OF PLOT PANELS
+  ##############################################################################
+
+  # layout for patchwork
+  design = "
+  AB
+  CC
+  DD
+  EE
+  "
+
+  # final plot organisation:
+  final <- general_read_categories +
+    residue_counts + distrib_plot + binned_length_pos + rel_density_plot +
+    patchwork::plot_layout(design = design, heights = c(2, 4, 7,7))
+
+
+  #return(rel_density_plot)
+  return(final)
+}
+
+

@@ -11,7 +11,7 @@ split_tail_centered(readname, tail_feature_list)
 \item{readname}{character string. Name of the given read within the
 analyzed dataset.}
 
-\item{tail_feature_list}{list object produced by create_tail_feature_list
+\item{tail_feature_list}{list object produced by \code{\link{create_tail_feature_list}}
 function.}
 }
 \value{

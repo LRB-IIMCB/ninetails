@@ -57,7 +57,8 @@ Default: 0.05.}
 
 \item{base}{[character string] letter representing particular non-A nucleotide,
 for which the statistics are meant to be computed. Currently function accepts
-C, G, U arguments. The "C" value is set by default.}
+"C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
+value is for the nonA residues alltogether.}
 
 \item{...}{additional parameters to pass to nonA_fisher (under development)}
 }

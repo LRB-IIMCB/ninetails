@@ -292,7 +292,7 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 #'
 #' Function based on PK (smaegol) NanoTail read_polya_multiple
 #' https://github.com/LRB-IIMCB/nanotail/
-#' #' Many thanks to the NanoTail developer for help and advice!
+#' Many thanks to the NanoTail developer for help and advice!
 #'
 #' @return a [tibble] containing non-A residue data for
 #' all specified samples, with metadata provided in samples_table
@@ -517,6 +517,7 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
   #drop all unclassified reads
   class_data <- class_data[!(class_data$class=="unclassified"),]
 
+
   # filter class_data according to predefined condition
   if(pass_only==TRUE){
     class2 <- class_data[class_data$qc_tag == "PASS", ]
@@ -691,4 +692,435 @@ nanopolish_qc <- function(class_data,
 
   return (processing_info)
 }
+
+
+#' Marks uncertain positions of non-A residues in ninetails output data
+#'
+#' Based on quantiles of poly(A) tail length & non-A residue distribution
+#' peak calling per transcript.
+#'
+#' @param class_data [dataframe] A dataframe or tibble containing read_classes
+#' predictions made by ninetails pipeline
+#'
+#' @param residue_data [dataframe] A dataframe or tibble containig non-A residue
+#' predictions made by ninetails pipeline
+#'
+#' @param grouping_factor [character string]. A grouping variable (e.g. "sample_name",
+#' "group", etc.) - optional.
+#'
+#' @param transcript_column [character string]. Name of column containing transcript id
+#' (e.g. "ensembl_transcript_id_short") - required.
+#'
+#' @param ref [character string] or object or NULL (default) - the whitelist of transcripts
+#' with hybrid tails - containing 3'UTRs highly enriched with A nucleotides (in last 20
+#' positions >80%).
+#' Current version of ninetails contains built-in whitelists, which may be selected
+#' by the user:\itemize{
+#' \item 'athaliana' - Arabidopsis thaliana
+#' \item 'hsapiens' - Homo sapiens
+#' \item 'mmusculus' - Mus musculus
+#' \item 'scerevisiae' - Saccharomyces cerevisiae
+#' \item 'celegans' - Caenorhabditis elegans
+#' \item 'tbrucei' - Trypanosoma brucei
+#' }
+#' It is also possible to provide own whitelist. Important note: whitelist must be consistent
+#' with the content of the 'transcript_column'. Using whitelist is not mandatory,
+#' however it allows to retrieve more true positive data.
+#'
+#' @return A tibble with modified residue_data. In this dataframe, in comparison
+#' to the original (raw) residue_data, some additional columns are present:\itemize{
+#' \item mode_pos - most frequent position of non-A reported for given transcript
+#' \item mode_len - most frequent tail length reported for given transcript
+#' \item seg_err_quart - 0.05 quantile of tail length for given transcript
+#' \item qc_pos - quality tag for given position "Y" for correct, "N" for ambiguous
+#' \item pos_err_quart - 0.05 quantile of given nonA (C, G, U, respectively) for given transcript
+#' \item count_nonA - number of nonA containing reads for given transcript
+#' \item count - number of reads for given transcript
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # the output of function \code{\link{check_tails}} or \code{\link{create_outputs}}
+#' # is required (below denoted as "results") to run the following example
+#' # for details see the documentation for the \code{\link{check_tails}}
+#' # and \code{\link{create_outputs}}
+#'
+#' residue_data_edited <- ninetails::correct_residue_data(class_data=results[[1]],
+#'                                                        residue_data=results[[2]],
+#'                                                        transcript_column="contig")
+#' }
+#'
+correct_residue_data <- function(class_data,
+                                 residue_data,
+                                 grouping_factor=NULL,
+                                 transcript_column,
+                                 ref=NULL){
+
+  # variable binding
+  est_nonA_pos <- mode_pos <- polya_length <- qc_pos <- seg_err_quart <- prediction <- NULL
+  n <- mouse_whitelist <- human_whitelist <- saccer_whitelist <- celegans_whitelist <- arabidopsis_whitelist <- trypa_whitelist <- NULL
+
+  # assertions
+  if (missing(class_data)) {
+    stop("The class_data argument is missing. Please provide the valid class prediction dataframe.",
+         call. = FALSE)
+  }
+
+  if (missing(residue_data)) {
+    stop("The residue_data argument is missing. Please provide the valid residue prediction dataframe.",
+         call. = FALSE)
+  }
+
+  if (missing(transcript_column)) {
+    stop("The transcript_column argument is missing. Please provide the name of the column that stores the transcript IDs.",
+         call. = FALSE)
+  }
+
+  assertthat::assert_that(assertive::has_rows(class_data),
+                          msg = "Empty data frame provided as an input (class_data). Please provide valid class_data.")
+
+  assertthat::assert_that(assertive::has_rows(residue_data),
+                          msg = "Empty data frame provided as an input (residue_data). Please provide valid residue_data.")
+
+  #prevent bugs
+  class_data <- unique(class_data)
+  residue_data <- unique(residue_data)
+
+  if (is.null(grouping_factor)){
+
+    # mark positions located in first quantile of length (i.e. in close proximity to the transcript body;
+    # those are ambiguous as they can arise as the segmentation artifacts inherited from nanopolish)
+    class_data_filtered <- class_data %>%
+      dplyr::group_by(!!rlang::sym(transcript_column)) %>%
+      dplyr::mutate(seg_err_quart = stats::quantile(polya_length, probs=0.05),
+                    mode_len = which.max(tabulate(polya_length)),
+                    count = n()) %>% dplyr::ungroup()
+
+    # mark most frequent position of nonA residue; the mode will be then used to filter out positions
+    # which are most likely artifacts
+    residue_data_filtered <- residue_data %>%
+      dplyr::group_by(!!rlang::sym(transcript_column), prediction) %>%
+      dplyr::mutate(mode_pos = which.max(tabulate(est_nonA_pos)),
+                    pos_err_quart = stats::quantile(est_nonA_pos, probs=0.05),
+                    count_nonA = n()) %>% dplyr::ungroup()
+
+  } else{
+
+    # add new columns to class data
+    class_data_filtered <- class_data %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor), !!rlang::sym(transcript_column)) %>%
+      dplyr::mutate(seg_err_quart = stats::quantile(polya_length, probs=0.05),
+                    mode_len = which.max(tabulate(polya_length)),
+                    count = n()) %>% dplyr::ungroup()
+
+    # add new columns to residue data
+    residue_data_filtered <- residue_data %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor), !!rlang::sym(transcript_column), prediction) %>%
+      dplyr::mutate(mode_pos = which.max(tabulate(est_nonA_pos)),
+                    pos_err_quart = stats::quantile(est_nonA_pos, probs=0.05),
+                    count_nonA = n()) %>% dplyr::ungroup()
+  }
+
+  # load whitelists
+  path_to_builtin_whitelists <- system.file("extdata", "whitelists", "whitelist.RData", package="ninetails")
+  load(path_to_builtin_whitelists)
+
+  #whitelists
+  if (ref=="mmusculus") {
+    whitelist=mouse_whitelist
+  } else if (ref=="hsapiens") {
+    whitelist=human_whitelist
+  } else if (ref=="scerevisiae") {
+    whitelist=saccer_whitelist
+  } else if (ref=="celegans") {
+    whitelist=celegans_whitelist
+  } else if (ref=="athaliana") {
+    whitelist=arabidopsis_whitelist
+  } else if (ref=="tbrucei") {
+    whitelist=trypa_whitelist
+  } else {
+    whitelist=ref
+  }
+
+  # merge the filtered data
+  residue_data_edited <- residue_data_filtered %>% dplyr::left_join(class_data_filtered)
+  # mark ambiguous positions
+  residue_data_edited <- residue_data_edited %>%
+    dplyr::mutate(
+      qc_pos=dplyr::case_when(!!rlang::sym(transcript_column) %in% whitelist ~ "Y",
+                              count_nonA > 10 & (est_nonA_pos > mode_pos & mode_pos<pos_err_quart)  ~ "Y",
+                              count_nonA > 10 & (est_nonA_pos > mode_pos & mode_pos>pos_err_quart) & est_nonA_pos - pos_err_quart>4 ~ "Y",
+                              count_nonA > 10 & mode_pos > seg_err_quart  ~ "Y",
+                              count_nonA > 10 & est_nonA_pos > pos_err_quart & est_nonA_pos > seg_err_quart ~ "Y",
+                              count_nonA < 10 & est_nonA_pos > seg_err_quart~ "Y",
+                              count_nonA > 10 & polya_length<50 &(est_nonA_pos/polya_length)*100<mode_len & est_nonA_pos>pos_err_quart & pos_err_quart>10 ~ "Y",
+                              count < 10 & count_nonA < 10 ~ "Y",
+                              count_nonA < 10 ~ "Y",
+                              TRUE ~ "N"))
+
+
+  return(residue_data_edited)
+}
+
+#' Corrects the classification of reads contained in class_data table
+#'
+#' Introduces additional columns to the class_data ('corr_comments' and
+#' 'corr_class'), with reclassification based on positional data
+#' (tail lengths and distribution of non-A residuals).
+#'
+#' Based on these columns, the classification can be adjusted, which minimizes
+#' the risk of including nanopolish artifacts.
+#'
+#' ---CAUTION---
+#'
+#' Reads that contain only non-A nucleotides that are likely to be nanopolish
+#' artifacts are reclassified in the output table as "unmodified" ("corr_class"
+#' column), and their comment is changed from "YAY" to "MPU" ("corr_comments" column).
+#' The latter is due to maintain compatibility with tag system used in plotting
+#' functions.
+#'
+#' It is recommended that the output of the \code{\link{reclassify_ninetails_data}}
+#' function be used in further analyses, which is optimized for this purpose.
+#'
+#' In order to plot the output of this function directly, one should rename
+#' 'corr_comments' and 'corr_class' columns to 'comments' and 'class'.
+#'
+#' @param residue_data_edited [dataframe] A dataframe or tibble containing
+#' corrected nonA residue predictions produced by \code{\link{correct_residue_data}}
+#' function.
+#'
+#' @param class_data [dataframe] A dataframe or tibble containing read_classes
+#' predictions made by ninetails pipeline
+#'
+#' @return A tibble with corrected class_data (potential artifacts are reclassified).
+#' In this dataframe, in comparison to the original (raw) class_data, two additional
+#' columns are present:\itemize{
+#' \item corr_class - result of corrected classification
+#' \item corr_comments - comment adjusted accordingly
+#' }
+#'
+#' For more details check documentation of \code{\link{create_outputs}} function
+#' and \code{\link{reclassify_ninetails_data}} function.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # the output of function \code{\link{check_tails}} or \code{\link{create_outputs}}
+#' # is required (below denoted as "results") to run the following example
+#' # for details see the documentation for the \code{\link{check_tails}}
+#' # and \code{\link{create_outputs}}
+#'
+#' class_data_corrected <- ninetails::correct_class_data(residue_data_edited = residue_data_edited,
+#'                                                       class_data=results[[1]])
+#' }
+#'
+correct_class_data <- function(residue_data_edited, class_data){
+
+  # variable binding
+  n_resid <- no_qc_pos_N <- qc_pos <- readname <- NULL
+
+  # assertions
+  if (missing(residue_data_edited)) {
+    stop("The residue_data_edited argument is missing. Please provide the output of correct_residue_data function.",
+         call. = FALSE)
+  }
+
+  if (missing(class_data)) {
+    stop("The class_data argument is missing. Please provide the valid class prediction dataframe.",
+         call. = FALSE)
+  }
+
+  assertthat::assert_that(assertive::has_rows(residue_data_edited),
+                          msg = "Empty data frame provided as an input (residue_data_edited). Please provide valid dataframe")
+
+  assertthat::assert_that(assertive::has_rows(class_data),
+                          msg = "Empty data frame provided as an input (class_data). Please provide valid dataframe")
+
+  basic_colnames = c("mode_pos","seg_err_quart", "qc_pos")
+
+  assertthat::assert_that(basic_colnames[1] %in% colnames(residue_data_edited),
+                          msg="mode_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+  assertthat::assert_that(basic_colnames[2] %in% colnames(residue_data_edited),
+                          msg="seg_err_quart column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+  assertthat::assert_that(basic_colnames[3] %in% colnames(residue_data_edited),
+                          msg="qc_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+
+  #prevent bugs
+  class_data <- unique(class_data)
+  residue_data_edited <- unique(residue_data_edited)
+
+  # prepare residue summary
+  residue_data_summarized <- residue_data_edited %>%
+    dplyr::group_by(readname) %>%
+    dplyr::summarize(n_resid=dplyr::n(),
+                     no_qc_pos_N = sum(qc_pos=="N"))
+
+  # deal with class data
+  class_data <- class_data %>% dplyr::left_join(residue_data_summarized, by = "readname") %>%
+    dplyr::mutate(corr_class = dplyr::case_when(n_resid == no_qc_pos_N ~ "unmodified",
+                                                n_resid > no_qc_pos_N ~ "modified",
+                                                TRUE ~ class),
+                  corr_comments = dplyr::case_when(class==corr_class ~ comments,
+                                                   TRUE ~ "MPU")) %>%
+    dplyr::select(-c(n_resid, no_qc_pos_N))
+
+
+  return(class_data)
+}
+
+#' Reclassifies ambiguous nonA residues to mitigate potential errors inherited
+#' from nanopolish segmentation
+#'
+#' In the current version, ninetails does not segment reads on its own,
+#' but inherits segmentation from nanopolish. This segmentation is not ideal.
+#' Sometimes nucleotides from the 3' ends of some AT-rich transcripts
+#' are misidentified as poly(A) tails, when in fact they are still nucleotides
+#' belonging to the body of the transcript. In the case of such transcripts,
+#' a very large enrichment of non-A positions in close proximity to the body
+#' of the transcript is observed (peak distribution).
+#'
+#' If the tail boundaries are recognized incorrectly in the transcript,
+#' this results in an accumulation of non-A positions detected near
+#' the 3'end of the transcript. This, in turn, significantly affects
+#' the results of the analysis. To minimize the impact of potential
+#' segmentation artifacts, you can use this function to filter out
+#' such ambiguous nonA positions.
+#'
+#' This function takes as input the raw outputs of the ninetails pipeline
+#' (class_data and residue_data), preferably loaded using the read_class_*
+#' and read_residue_* functions. It also requires a grouping variable name
+#' (grouping_factor) and a name of column containing the IDs of the transcripts
+#' (e.g. "contig", "transcript", "ensembl_transcript_id_short", etc.) desired
+#' by the user.
+#'
+#' The output contains headers identical to those present in the raw ninetails
+#' outputs. They are fully compatible with the rest of the functions of the
+#' package, such as those for data visualization.
+#'
+#' ---CAUTION---
+#'
+#' Reads that contain only non-A nucleotides that are likely to be nanopolish
+#' artifacts are reclassified in the class_data table as "unmodified" ("class"
+#' column), and their comment is changed from "YAY" to "MPU" ("comments" column).
+#'
+#'
+#' @param residue_data [dataframe] A dataframe or tibble containig non-A residue
+#' predictions made by ninetails pipeline
+#'
+#' @param class_data [dataframe] A dataframe or tibble containing read_classes
+#' predictions made by ninetails pipeline
+#'
+#' @param grouping_factor [character string]. A grouping variable (e.g. "sample_name")
+#'
+#' @param transcript_column [character string]. Name of column containing transcript id
+#' (e.g. "ensembl_transcript_id_short")
+#'
+#' @param ref [character string] or object or NULL (default) - the whitelist of transcripts
+#' with hybrid tails - containing 3'UTRs highly enriched with A nucleotides (in last 20
+#' positions >80%).
+#' Current version of ninetails contains built-in whitelists, which may be selected
+#' by the user:\itemize{
+#' \item 'athaliana' - Arabidopsis thaliana
+#' \item 'hsapiens' - Homo sapiens
+#' \item 'mmusculus' - Mus musculus
+#' \item 'scerevisiae' - Saccharomyces cerevisiae
+#' \item 'celegans' - Caenorhabditis elegans
+#' \item 'tbrucei' - Trypanosoma brucei
+#' }
+#' It is also possible to provide own whitelist. Important note: whitelist must be consistent
+#' with the content of the 'transcript_column'. Using whitelist is not mandatory,
+#' however it allows to retrieve more true positive data.
+#'
+#' @return A [list] with 2 dataframes containing class_data and residue_data, respectively,
+#' with corrections for classified data applied.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' rec_results <- ninetails::reclassify_ninetails_data(residue_data=results[[2]],
+#'                                                     class_data=results[[1]],
+#'                                                     transcript_column = "contig")
+#'  }
+#'
+reclassify_ninetails_data <- function(residue_data,
+                                      class_data,
+                                      grouping_factor=NULL,
+                                      transcript_column,
+                                      ref=NULL){
+
+
+  # variable binding
+  corr_class <- corr_comments <- mode_pos <- count <- qc_pos <- seg_err_quart <- comments <- NULL
+  pos_err_quart <- count_nonA <- mode_len <- NULL
+
+  # assertions
+  if (missing(residue_data)) {
+    stop("The residue_data argument is missing. Please provide the valid residue_data (output of core ninetails pipeline).",
+         call. = FALSE)
+  }
+
+  if (missing(class_data)) {
+    stop("The class_data argument is missing. Please provide the valid class_data (output of core ninetails pipeline).",
+         call. = FALSE)
+  }
+
+  if (missing(transcript_column)) {
+    stop("The transcript_column argument is missing. Please provide the name of the column that stores the transcript IDs.",
+         call. = FALSE)
+  }
+
+  assertthat::assert_that(assertive::has_rows(class_data),
+                          msg = "Empty data frame provided as an input (class_data). Please provide valid class_data.")
+
+  assertthat::assert_that(assertive::has_rows(residue_data),
+                          msg = "Empty data frame provided as an input (residue_data). Please provide valid residue_data.")
+
+
+  #prevent bugs
+  class_data <- unique(class_data)
+  residue_data <- unique(residue_data)
+
+  # load whitelists
+  path_to_builtin_whitelists <- system.file("extdata", "whitelists", "whitelist.RData", package="ninetails")
+  load(path_to_builtin_whitelists)
+
+  # deal with ambiguous positions
+  residue_data_edited <- ninetails::correct_residue_data(class_data=class_data,
+                                                         residue_data=residue_data,
+                                                         grouping_factor=grouping_factor,
+                                                         transcript_column = transcript_column,
+                                                         ref=ref)
+
+  # deal with classification
+  class_data <- ninetails::correct_class_data(residue_data_edited=residue_data_edited,
+                                              class_data=class_data) %>%
+    dplyr::select(-c(class, comments)) %>%
+    dplyr::rename(class = corr_class, comments = corr_comments)
+
+  # filter residue data - drop ambiguous positions
+  residue_data_edited <- residue_data_edited %>% dplyr::filter(qc_pos=="Y") %>%
+    dplyr::select(-c(mode_pos, seg_err_quart, qc_pos, pos_err_quart, count_nonA, mode_len, count))
+
+  #reassure that tibbles are coerced to df
+  class_data <- as.data.frame(class_data)
+  residue_data_edited <- as.data.frame(residue_data_edited)
+
+  # produce the output
+  output <- list()
+  output[["class_data"]] <- class_data
+  output[["residue_data"]] <- residue_data_edited
+
+
+  return(output)
+
+}
+
+
+
+
 

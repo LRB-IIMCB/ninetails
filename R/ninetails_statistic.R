@@ -28,7 +28,8 @@
 #'
 #' @param base [character string] letter representing particular non-A nucleotide,
 #' for which the statistics are meant to be computed. Currently function accepts
-#' C, G, U arguments. The "C" value is set by default.
+#' "C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
+#' value is for the nonA residues alltogether.
 #'
 #' @param min_reads [numeric] minimum number of reads representing given
 #' transcript to include it in the analysis
@@ -114,8 +115,11 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, trans
     count_column <- "counts_G"
   } else if (base=="U") {
     count_column <- "counts_U"
+  } else if (base=="all") {
+    #ninetails_data <- ninetails_data %>% dplyr::mutate(counts_nonA=)
+    count_column <- "counts_nonA"
   } else {
-    stop("Wrong non-A nucleotide defined. To compute statistics, please provide 'base' argument as character string (C, G or U).")
+    stop("Wrong non-A nucleotide defined. To compute statistics, please provide 'base' argument as character string (C, G, U or all).")
   }
 
 
@@ -143,6 +147,7 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, trans
       contingency_table[[grouping_factor]] <- NULL # drop grouping col
       stats <- suppressWarnings(stats::fisher.test(contingency_table))$p.value
 
+
     }
   } else if (nrow(group_counts)==1) {
     stats_code = "G_NA"
@@ -169,6 +174,7 @@ stat_codes_list = list(OK = "OK",
                        G_LC = "LOW COUNT FOR ONE GROUP",
                        G_NA = "DATA FOR ONE GROUP NOT AVAILABLE",
                        ERR = "OTHER ERROR")
+
 
 
 #' Performs Fisher's exact test for each transcript in ninetails
@@ -220,7 +226,8 @@ stat_codes_list = list(OK = "OK",
 #'
 #' @param base [character string] letter representing particular non-A nucleotide,
 #' for which the statistics are meant to be computed. Currently function accepts
-#' C, G, U arguments. The "C" value is set by default.
+#' "C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
+#' value is for the nonA residues alltogether.
 #'
 #' @param ... additional parameters to pass to nonA_fisher (under development)
 #'
@@ -327,11 +334,14 @@ calculate_fisher <- function(ninetails_data,
     dplyr::rename_with(~stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'), 3:dplyr::last_col())
   # apply filtering criterion (minimal nonA read content)
   mod_summarized_filtered <- mod_summarized %>% dplyr::filter(counts_nonA>=min_nonA_reads)
-  #extract filtered readnames
-  mod_summarized_filtered <- unique(mod_summarized_filtered$contig)
+  #extract filtered trans
+  contig <- as.name(transcript_id_column)
+  mod_summarized_filtered <-  unique(mod_summarized_filtered[[contig]])
+
+  ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(contig) %in% mod_summarized_filtered)
 
   #ninetails_data <- ninetails_data[ninetails_data$contig %in% mod_summarized_filtered,]
-  ninetails_data <- ninetails_data[transcript_id_column %in% mod_summarized_filtered,]
+  #ninetails_data <- ninetails_data[transcript_id_column %in% mod_summarized_filtered,]
 
 
   ninetails_data_stat <- ninetails_data %>%
@@ -339,11 +349,11 @@ calculate_fisher <- function(ninetails_data,
     dplyr::group_by(get(c(transcript_id_column))) %>%
     tidyr::nest()
 
-
+  message("calculating statistics")
   ninetails_data_stat <- ninetails_data_stat %>%
     dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base,transcript_id_column = transcript_id_column)) %>%
     dplyr::select(-data) %>% tidyr::unnest(cols = c(stats)) %>% dplyr::rename(!!transcript_id_column := "get(c(transcript_id_column))")
-  message("calculating statistics")
+
 
   message("Finished")
 

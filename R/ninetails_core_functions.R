@@ -97,6 +97,9 @@ extract_polya_data <- function(nanopolish,
   # Add filtering criterion: tail length >= 10 nt
   polya_summary <- dplyr::filter(polya_summary, polya_length >=10)
 
+  # Prevent bugs from custom models used for mapping (secondary alignments)
+  polya_summary <- unique(polya_summary)
+
   names(polya_summary$filename) <- polya_summary$readname #named vec of filenames (names = readnames)
   attr(polya_summary, 'spec') <- NULL #drop attributes left by vroom
 
@@ -528,7 +531,7 @@ filter_signal_by_threshold <- function(signal) {
 #' @param readname character string. Name of the given read within the
 #' analyzed dataset.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
+#' @param tail_feature_list list object produced by \code{\link{create_tail_feature_list}}
 #' function.
 #'
 #' @return a list object (nested) containing 3 categories: resulting fragments
@@ -631,7 +634,7 @@ split_tail_centered <- function(readname,
 #' non-A nucleotides along their coordinates & appends the data to the nested
 #' list organized by read IDs.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
+#' @param tail_feature_list list object produced by \code{\link{create_tail_feature_list}}
 #' function.
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
@@ -1017,16 +1020,16 @@ predict_gaf_classes <- function(gaf_list){
 #' The nonadenosine_residues contains detailed positional info regarding all
 #' potential nonadenosine residues detected.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
+#' @param tail_feature_list list object produced by \code{\link{create_tail_feature_list}}
 #' function.
 #'
-#' @param tail_chunk_list list object produced by create_tail_chunk_list
+#' @param tail_chunk_list list object produced by \code{\link{create_tail_chunk_list}}
 #' function.
 #'
 #' @param nanopolish character string. Full path of the .tsv file produced
 #' by nanopolish polya function or name of in-memory file (environment object).
 #'
-#' @param predicted_list a list object produced by predict_classes function.
+#' @param predicted_list a list object produced by \code{\link{predict_classes}} function.
 #'
 #' @param num_cores numeric [1]. Number of physical cores to use in processing
 #' the data. Do not exceed 1 less than the number of cores at your disposal.
@@ -1046,7 +1049,7 @@ predict_gaf_classes <- function(gaf_list){
 #' it is advised to treat them with caution. By default, the qc option is enabled
 #' (this parameter is set to TRUE).
 #'
-#' @return This function returns a list object containing two fataframes:
+#' @return This function returns a list object containing two dataframes:
 #' "read_classes" and "nonadenosine_residues" with the final output.
 #' First dataframe contains initial indications, whether the given read was
 #' classified or omitted (with reason) and if classified, whether read was
@@ -1281,6 +1284,7 @@ create_outputs <- function(tail_feature_list,
   #corece tibble to df
   nanopolish_polya_table <- data.frame(nanopolish_polya_table)
 
+
   #create empty list for the output
   ninetails_output <- list()
 
@@ -1312,18 +1316,31 @@ create_outputs <- function(tail_feature_list,
         readname %in% potential_artifacts$readname ~ paste0(class,"-WARN"),
         TRUE ~ paste0(class)))
 
+
+
     # label potential artifacts in nonadenosine residue dataframe
     moved_chunks_table_qc <- moved_chunks_table %>%
       dplyr::mutate(prediction=dplyr::case_when(est_nonA_pos < 2 ~ paste0(prediction, "-WARN"),
                                                 est_nonA_pos > polya_length-2 ~ paste0(prediction, "-WARN"),
                                                 TRUE~ paste0(prediction)))
 
+
+
+
     #CREATE FINAL OUTPUT
+    #prevent potential bugs inherited from nanopolish multimapping
+    modified_reads_edited <- unique(modified_reads_edited)
+    moved_chunks_table_qc <- unique(moved_chunks_table_qc)
+
     ninetails_output[['read_classes']] <- modified_reads_edited
     ninetails_output[['nonadenosine_residues']] <- moved_chunks_table_qc
 
   } else{
     #CREATE FINAL OUTPUT
+    #prevent potential bugs inherited from nanopolish multimapping
+    nanopolish_polya_table <- unique(nanopolish_polya_table)
+    moved_chunks_table <- unique(moved_chunks_table)
+
     ninetails_output[['read_classes']] <- nanopolish_polya_table
     ninetails_output[['nonadenosine_residues']] <- moved_chunks_table
   }

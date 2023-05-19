@@ -10,7 +10,7 @@ plot_gaf(gaf_name, gaf_list, save_file = FALSE)
 \arguments{
 \item{gaf_name}{character string. Name of the given read segment (chunk)
 for which the gaf is meant to be plotted. This is the name of the given gaf
-within the gaf_list produced by the create_gaf_list function.}
+within the gaf_list produced by the \code{\link{create_gaf_list}} function.}
 
 \item{gaf_list}{A list of gaf matrices organized by the read ID_index.}
 
