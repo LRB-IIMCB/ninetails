@@ -22,7 +22,6 @@ Currently, **Ninetails** can distinguish characteristic signatures of four types
 <div>
 
 
-
 ![schemat_sieci_presentation_smol](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
 
 
