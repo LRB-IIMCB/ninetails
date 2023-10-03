@@ -1,8 +1,7 @@
 <i>Repo metadata</i>
 
-<a href="https://github.com/nemitheasura/ninetails/releases/"><img src="https://img.shields.io/github/tag/nemitheasura/ninetails?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
-<a href="https://github.com/nemitheasura/ninetails/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
-<a href="https://github.com/nemitheasura/ninetails/issues"><img src="https://img.shields.io/github/issues/nemitheasura/ninetails" alt="issues - ninetails"></a>
+<a href="https://github.com/nemitheasura/https://github.com/LRB-IIMCB/ninetails/releases/"><img src="https://img.shields.io/github/tag/nemitheasura/https://github.com/LRB-IIMCB/ninetails?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
+<a href="https://github.com/nemitheasura/https://github.com/LRB-IIMCB/ninetails/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
 
 <i>Call-to-Action buttons</i>
 
