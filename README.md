@@ -14,7 +14,14 @@ Currently, **Ninetails** can distinguish characteristic signatures of four types
 
 **Ninetails** relies on Nanopolish segmentation and therefore may underestimate terminal modifications (last and penultimate nucleotides of the tail).
 
+<div>
+
+> **Note**
+>
 The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
+>
+</div>
+
 
 **Ninetails** was tested on Linux Mint 20.3, Ubuntu 20.04.3 and Windows 11 operating systems with R 4.1.2, R 4.2.0 and R 4.2.1.
 
