@@ -27,6 +27,9 @@ Currently, **Ninetails** can distinguish characteristic signatures of four types
 >
 </div>
 
+![schemat_sieci_presentation_smol](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
+
+
 The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
 
 **Ninetails** was tested on Linux Mint 20.3, Ubuntu 20.04.3 and Windows 11 operating systems with R 4.1.2, R 4.2.0 and R 4.2.1.
