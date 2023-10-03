@@ -1,7 +1,10 @@
 
 <a href="https://github.com/nemitheasura/https://github.com/LRB-IIMCB/ninetails/releases/"><img src="https://img.shields.io/github/tag/LRB-IIMCB/ninetails?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
 <a href="https://github.com/nemitheasura/https://github.com/LRB-IIMCB/ninetails/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
-![maintained - yes](https://img.shields.io/badge/maintained-yes-blue)
+<img src="https://img.shields.io/badge/maintained-yes-blue" alt="maintained - yes">
+<a href="https://www.linux.org/" title="Go to Linux homepage"><img src="https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white" alt="OS - Linux"></a>
+<a href="https://www.microsoft.com/" title="Go to Microsoft homepage"><img src="https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white" alt="OS - Windows"></a>
+![R](https://img.shields.io/badge/r-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white)
 
 <div align="center">
 </div>
