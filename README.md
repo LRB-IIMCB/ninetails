@@ -60,7 +60,7 @@ For the moment, **Ninetails** does not offer the possibility of processing large
 
 > **Note**
 >
-Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with `ont-fast5-api`.
+> Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with `ont-fast5-api`.
 > 
 </div>
 
