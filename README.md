@@ -20,8 +20,6 @@
 
 Currently, **Ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
 
-**Ninetails** relies on Nanopolish segmentation and therefore may underestimate terminal modifications (last and penultimate nucleotides of the tail).
-
 <div>
 
 > **Note**
@@ -157,6 +155,14 @@ For the moment, **Ninetails** does not offer the possibility of processing large
 >
 > Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with `ont-fast5-api`.
 > 
+</div>
+
+<div>
+
+> **Note**
+> 
+>**Ninetails** relies on Nanopolish segmentation and therefore may underestimate terminal modifications (last and penultimate nucleotides of the tail).
+>
 </div>
 
 ## Citation
