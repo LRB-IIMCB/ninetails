@@ -638,7 +638,7 @@ plot_gaf <- function(gaf_name,
   #plot
   plt <- gaf %>% ggplot2::ggplot(ggplot2::aes(Var2, Var1, fill=value)) +
     ggplot2::geom_raster() +
-    ggplot2::scale_fill_gradientn(colours = grDevices::rainbow(100), guide="none") +
+    ggplot2::scale_fill_gradientn(colours = c("red", "green", "blue"), guide="none") +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
     ggplot2::scale_x_continuous(expand = c(0, 0)) +
     ggplot2::theme(axis.text = ggplot2::element_blank(),
