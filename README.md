@@ -184,3 +184,5 @@ If you encounter a bug, please post it on github. To help diagnose the problem, 
 ## Maintainer
 
 Any issues regarding the **Ninetails** should be addressed to Natalia Gumińska (nguminska (at) iimcb.gov.pl).
+
+**Ninetails** has beed developed in the <a href="https://www.iimcb.gov.pl/en/research/41-laboratory-of-rna-biology-era-chairs-group">Laboratory of RNA Biology</a> (Dziembowski Lab) at the <a href="https://www.iimcb.gov.pl/en/">International Institute of Molecular and Cell Biology</a> in Warsaw. 
