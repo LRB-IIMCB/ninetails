@@ -81,7 +81,8 @@ install.packages("devtools")
 
 > **Note**
 >
-> Note for Windows users:
+> **For Windows users:**
+> 
 > Before installation of `devtools` on Windows, you should install `Rtools`, so the packages would be correctly compiled: <https://cran.r-project.org/bin/windows/Rtools/>
 
 </div>
