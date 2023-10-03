@@ -55,46 +55,14 @@ Before running the program, it is recommended to ascertain that the given argume
 
 For the moment, **Ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the `Nanopolish` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
 
-## Prerequisites
 
-### Input data & preprocessing tools
+<div>
 
-**Ninetails** requires the following input data to operate: \* multifast5 files basecalled by `Guppy` - for the signal data extraction \* sequencing_summary.txt file - for file ID extraction \* an output of `Nanopolish` polya function (tsv file) - to obtain the tail segmentation data
-
-Therefore, please make sure that the third-party software necessary for the steps preceding the use of **Ninetails** is installed (`Nanopolish`, `Guppy`) and/or that you have all the required input files.
-
-### Tensorflow & keras for R
-
-The neural network in **ninetails** uses the tensorflow backend, so it is necessary to install it before running the program.
-
-Instructions for installing `tensorflow` & `keras` can be found here: <https://tensorflow.rstudio.com/install/>
-
-### HDF resources
-
-Since fast5 is a binary format based on the HDF5, handling it requires installation of certain utilities in the operating system. Most of the necessary resources can be downloaded from the HDF5 Group website: <https://www.hdfgroup.org/downloads/hdf5/>.
-
-**Ninetails** requires also `rhdf5` package and its dependencies for accessing & browsing files in fast5 format in R. It can be installed from Bioconductor (version available on CRAN is incompatible with newer R versions). The complete guide is available here: <https://bioconductor.org/packages/release/bioc/html/rhdf5.html>
-
-``` r
-install.packages("BiocManager")
-BiocManager::install("rhdf5")
-```
-
-As a result, 3 packages are installed: `rhdf5`, `rhdf5filters` and `Rhdf5lib`. The `rhdf5filters` has to be reinstalled from the Github repo: <https://github.com/grimbough/rhdf5filters>, which can be done with following command in R/RStudio:
-
-``` r
-devtools::install_github('grimbough/rhdf5filters')
-```
-
-### VBZ compression plugin
-
-Nanopore sequencing data produced with newer versions of the `MinKNOW` software are compressed with the VBZ algorithm which allows for more efficient compression than the formerly used GZIP. In order for the ninetails package to work with VBZ-compressed data, it is necessary to install an `ont-vbz-hdf-plugin` from the following repo: <https://github.com/nanoporetech/vbz_compression/releases>
-
-Then it is necessary to navigate to the folder where the ONT VBZ compression plug-in was installed. On Linux operating systems, the default path is /usr/local/hdf5/lib/plugin/, whereas on Windows operating systems it might be C:\Program Files\OxfordNanopore\ont-vbz-hdf-plugin\hdf5\lib\plugin. The file(s) found there (libvbz_hdf_plugin.so on Linux and vbz_hdf_plugin.dll, vbz_hdf_plugin.lib on Windows) must be copied to the `rhdf5filters` folder (rhdf5filters/lib/) where the R libraries are stored.
-
-### single fast5 support
-
+> **Note**
+>
 Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with `ont-fast5-api`.
+> 
+</div>
 
 ## Installation
 
@@ -123,7 +91,7 @@ devtools::install_github('LRB-IIMCB/ninetails')
 library(ninetails)
 ```
 
-## Usage
+## General usage
 
 ### Classification of reads using wrapper function
 
@@ -155,65 +123,6 @@ This function returns a list consisting of two tables: **read_classes** and **no
 
 Moreover, the function also creates a log file in the directory specified by the user.
 
-### Classification of reads using standalone functions
-
-The **Ninetails** pipeline may be also launched without the wrapper - as sometimes it might be useful, especially if the input files are large and/or you would like to plot some produced matrices.
-
-The first function in processing pipeline is `create_tail_feature_list()`. It extracts the read data from the provided outputs and merges them based on read identifiers (readnames). This function works as follows:
-
-``` r
-tfl <- ninetails::create_tail_feature_list(
-  nanopolish = system.file('extdata',
-                           'test_data', 
-                           'nanopolish_output.tsv', 
-                           package = 'ninetails'),
-  sequencing_summary = system.file('extdata', 
-                                   'test_data', 
-                                   'sequencing_summary.txt',
-                                   package = 'ninetails'),
-  workspace = system.file('extdata', 
-                          'test_data', 
-                          'basecalled_fast5', 
-                          package = 'ninetails'), 
-  num_cores = 2,
-  basecall_group = 'Basecall_1D_000', 
-  pass_only=TRUE)
-```
-
-The second function, `create_tail_chunk_list()`, segments the reads and produces a list of segments in which a change of state (move = 1) along with significant local signal anomaly (so-called "pseudomove") has been recorded, possibly indicating the presence of a non-adenosine residue.
-
-``` r
-tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl, 
-                                         num_cores = 2)
-```
-
-The list of fragments should be then passed to the function `create_gaf_list()`, which transforms the signals into gramian angular fields (GAFs). The function outputs a list of arrays (100,100,2). First channel of each array consists of gramian angular summation field (GASF), while the second channel consists of gramian angular difference field (GADF).
-
-``` r
-gl <- ninetails::create_gaf_list(tail_chunk_list = tcl, 
-                                 num_cores = 2)
-```
-
-The penultimate function, `predict_gaf_classes()`, launches the neural network to classify the input data. This function uses the tensorflow backend.
-
-``` r
-pl <- ninetails::predict_gaf_classes(gl)
-```
-
-The last function, `create_outputs()`, allows to obtain the final output: a list composed of **read_classes** (reads are labelled accordingly as "modified", "unmodified" and "unclassified" based on applied criteria) and **nonadenosine_residues** (detailed positional info regarding detected nonadenosine residues) data frames. Note that in this form the function does not automatically save data to files.
-
-``` r
-out <- ninetails::create_outputs(
-  tail_feature_list = tfl,
-  tail_chunk_list = tcl,
-  nanopolish = system.file('extdata', 
-                           'test_data', 
-                           'nanopolish_output.tsv', 
-                           package = 'ninetails'),
-  predicted_list = pl,
-  num_cores = 2,
-  pass_only=TRUE)
-```
 
 ### Output explanation
 
