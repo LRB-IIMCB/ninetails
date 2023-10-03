@@ -363,7 +363,14 @@ And this results in multiple plots, like this:
 
 ![gafs](https://user-images.githubusercontent.com/68285258/183752592-177fe651-8791-4b4d-8c1e-49273a9c8283.png)
 
-However, it is advisable to use this function with caution. The data contained in a `gaf_list` object tends to be large. Drawing multiple graphs at once may overload the system and cause it to crash.
+
+<div>
+
+> **Warning**
+>
+> However, it is advisable to use this function with caution. The data contained in a `gaf_list` object tends to be large. Drawing multiple graphs at once may overload the system and cause it to crash.
+> 
+</div>
 
 ## Citation
 
