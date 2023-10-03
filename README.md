@@ -77,9 +77,14 @@ If you do not have `devtools` installed already, you can do this with the follow
 install.packages("devtools")
 ```
 
-**Note for Windows users:**
+<div>
 
-Before installation of `devtools` on Windows, you should install `Rtools`, so the packages would be correctly compiled: <https://cran.r-project.org/bin/windows/Rtools/>
+> **Note**
+>
+> Note for Windows users:
+> Before installation of `devtools` on Windows, you should install `Rtools`, so the packages would be correctly compiled: <https://cran.r-project.org/bin/windows/Rtools/>
+
+</div>
 
 Once you have `devtools` installed, you can install **Ninetails** using the command below in R/RStudio:
 
