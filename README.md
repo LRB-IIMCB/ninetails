@@ -1,3 +1,7 @@
+  <!-- badges: start -->
+  [![R-CMD-check](https://github.com/LRB-IIMCB/ninetails/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/LRB-IIMCB/ninetails/actions/workflows/R-CMD-check.yaml)
+  <!-- badges: end -->
+
 # Ninetails
 
 **An R package for finding non-adenosine poly(A) residues in Oxford Nanopore direct RNA sequencing reads**
