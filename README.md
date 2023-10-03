@@ -1,6 +1,13 @@
-  <!-- badges: start -->
-  [![R-CMD-check](https://github.com/LRB-IIMCB/ninetails/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/LRB-IIMCB/ninetails/actions/workflows/R-CMD-check.yaml)
-  <!-- badges: end -->
+<i>Repo metadata</i>
+
+<a href="https://github.com/nemitheasura/ninetails/releases/"><img src="https://img.shields.io/github/tag/nemitheasura/ninetails?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
+<a href="https://github.com/nemitheasura/ninetails/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
+<a href="https://github.com/nemitheasura/ninetails/issues"><img src="https://img.shields.io/github/issues/nemitheasura/ninetails" alt="issues - ninetails"></a>
+
+<i>Call-to-Action buttons</i>
+
+<div align="center">
+</div>
 
 # Ninetails
 
