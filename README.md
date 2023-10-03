@@ -21,13 +21,16 @@
 Currently, **Ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
 <div>
 
+
+
+![schemat_sieci_presentation_smol](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
+
+
 > **Note**
 > 
 > **For detailed documentation including explanation of additional dataprocessing and datavis features see Wiki!**
 >
 </div>
-
-![schemat_sieci_presentation_smol](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
 
 
 The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
