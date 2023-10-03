@@ -249,6 +249,24 @@ The `class` column contains information whether the given read was recognized as
 | polya_length | the tail length estimated according to Nanopolish polya function                               |
 | qc_tag       | quality tag assigned by nanopolish polya function                                              |
 
+
+### Data postprocessing
+
+The **Ninetails** package offers possibility of further processing of obtained files (objects), including visualizations.
+
+#### Reading file(s) into R
+
+Data postprocessing module needs output from main **Ninetails** pipeline (e.g. `check_tails()`) to work. It can read a single output file with `read_class_single()` in case of **read_classes** dataframe and `read_residue_single()` in case of **nonadenosine_residues** dataframe:
+
+``` r
+class_path <- "/directory/with/ninetails/read_class_output.tsv"
+class_data <- ninetails::read_class_single(class_path)
+
+residue_path <- "/directory/with/ninetails/nonadenosine_residues_output.tsv"
+residue_data <- ninetails::read_residue_single(residue_path)
+
+```
+
 ### Visual inspection of reads of interest
 
 **Ninetails** has built-in functions `plot_squiggle()` and `plot_tail_range()` for plotting whole reads and the poly(A) tail region, respectively.
