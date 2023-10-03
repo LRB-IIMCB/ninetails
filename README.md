@@ -33,36 +33,6 @@ Currently, **Ninetails** can distinguish characteristic signatures of four types
 
 **Ninetails** was tested on Linux Mint 20.3, Ubuntu 20.04.3 and Windows 11 operating systems with R 4.1.2, R 4.2.0 and R 4.2.1.
 
-## Important notes
-
-<div>
-
-> **Warning**
->
-> **Current pre-release versions of the package work with Guppy basecaller 6.0.0 and lower. Please be aware to use compatible version of basecaller.**
->
-</div>
-
-Before running the program, it is recommended to ascertain that the given arguments (nanopolish, sequencing summary and directory with fast5 files) correspond with each other. In other words, that the records contained in the `Nanopolish` polyA output file correspond to the records contained in the sequencing summary file and in the fast5 files stored in the declared directory (workspace). If a complete discrepancy is detected, the program will not perform the analysis. Instead, it will throw an error. In case of the presence of incompatible records - they will be omitted from the result files and the pipeline will end with warning.
-
-<div>
-
-> **Warning**
-> 
-> Please be aware that signal transformations performed during analysis can place a heavy load on memory. This is especially true if your data covers the entire sequencing run. 
-> 
-</div>
-
-For the moment, **Ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the `Nanopolish` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
-
-
-<div>
-
-> **Note**
->
-> Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with `ont-fast5-api`.
-> 
-</div>
 
 ## Installation
 
@@ -158,6 +128,36 @@ The `class` column contains information whether the given read was recognized as
 | polya_length | the tail length estimated according to Nanopolish polya function                               |
 | qc_tag       | quality tag assigned by nanopolish polya function                                              |
 
+## Important notes
+
+<div>
+
+> **Warning**
+>
+> **Current pre-release versions of the package work with Guppy basecaller 6.0.0 and lower. Please be aware to use compatible version of basecaller.**
+>
+</div>
+
+Before running the program, it is recommended to ascertain that the given arguments (nanopolish, sequencing summary and directory with fast5 files) correspond with each other. In other words, that the records contained in the `Nanopolish` polyA output file correspond to the records contained in the sequencing summary file and in the fast5 files stored in the declared directory (workspace). If a complete discrepancy is detected, the program will not perform the analysis. Instead, it will throw an error. In case of the presence of incompatible records - they will be omitted from the result files and the pipeline will end with warning.
+
+<div>
+
+> **Warning**
+> 
+> Please be aware that signal transformations performed during analysis can place a heavy load on memory. This is especially true if your data covers the entire sequencing run. 
+> 
+</div>
+
+For the moment, **Ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the `Nanopolish` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
+
+
+<div>
+
+> **Note**
+>
+> Currently, **Ninetails** does not support single fast5 files as this format is deprecated by ONT. Before running the program on single fast5 files, you should convert them to multifast5 with another tool, for instance with `ont-fast5-api`.
+> 
+</div>
 
 ## Citation
 
