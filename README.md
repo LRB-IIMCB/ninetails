@@ -19,19 +19,15 @@
 -   It allows both for the detection of non-adenosine residues within the poly(A) tails and visual inspection of read signals
 
 Currently, **Ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
-
-> **Important**
-> **For detailed documentation including explanation of additional dataprocessing and datavis features see Wiki!**
->
-
 <div>
 
 > **Note**
->
-> The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
+> 
+> **For detailed documentation including explanation of additional dataprocessing and datavis features see Wiki!**
 >
 </div>
 
+The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
 
 **Ninetails** was tested on Linux Mint 20.3, Ubuntu 20.04.3 and Windows 11 operating systems with R 4.1.2, R 4.2.0 and R 4.2.1.
 
