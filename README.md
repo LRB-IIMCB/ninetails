@@ -18,7 +18,7 @@ Currently, **Ninetails** can distinguish characteristic signatures of four types
 
 > **Note**
 >
-The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
+> The software is still under development, so all suggestions to improving it are welcome. Please note that the code contained herein may change frequently, so use it with caution.
 >
 </div>
 
