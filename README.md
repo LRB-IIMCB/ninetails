@@ -27,7 +27,7 @@ Currently, **Ninetails** can distinguish characteristic signatures of four types
 
 > **Note**
 > 
-> **For detailed documentation including explanation of additional dataprocessing and datavis features see <https://github.com/LRB-IIMCB/ninetails/wiki>**
+> **For detailed documentation including explanation of additional dataprocessing and datavis features see <a href="https://github.com/LRB-IIMCB/ninetails/wiki">Ninetails' Wiki</a>**
 >
 </div>
 
