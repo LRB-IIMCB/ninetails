@@ -56,7 +56,7 @@
 nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, transcript_id_column=NA) {
 
   # var binding
-  counts_unmod <- NULL
+  counts_blank <- NULL
 
   # Assertions
   if (missing(ninetails_data)) {
@@ -72,9 +72,12 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, trans
          call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(ninetails_data),
-                          msg = "Empty data.frame provided as an input")
-  assertthat::assert_that(assertive::is_numeric(min_reads),
+
+  if (!is.data.frame(ninetails_data) || nrow(ninetails_data) == 0) {
+    stop("Empty data frame provided as an input (ninetails_data). Please provide valid input")
+  }
+
+  assertthat::assert_that(is.numeric(min_reads),
                           msg = "Non-numeric parameter provided (min_reads)")
   assertthat::assert_that(grouping_factor %in% colnames(ninetails_data),
                           msg=paste0(grouping_factor," is not a column of input dataset"))
@@ -140,7 +143,7 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, trans
                                                      summary_factors=grouping_factor,
                                                      transcript_id_column=transcript_id_column) %>%
         dplyr::select(!!rlang::sym(grouping_factor),
-                      counts_unmod,
+                      counts_blank,
                       !!rlang::sym(count_column))
       contingency_table <- as.data.frame(contingency_table) # coerce tibble to df as setting names to tibble is deprecated
       row.names(contingency_table) <- contingency_table[[grouping_factor]] # set rownames
@@ -287,15 +290,16 @@ calculate_fisher <- function(ninetails_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(min_reads),
+  assertthat::assert_that(is.numeric(min_reads),
                           msg=paste0("Min_reads must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(min_nonA_reads),
+  assertthat::assert_that(is.numeric(min_nonA_reads),
                           msg=paste0("Min_nonA_reads must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(alpha),
+  assertthat::assert_that(is.numeric(alpha),
                           msg=paste0("Alpha must be numeric. Please provide a valid argument."))
 
-  assertthat::assert_that(assertive::has_rows(ninetails_data),
-                          msg = "Empty data.frame provided as an input")
+  if (!is.data.frame(ninetails_data) || nrow(ninetails_data) == 0) {
+    stop("Empty data frame provided as an input (ninetails_data). Please provide valid input")
+  }
 
 
   # if grouping factor has more than two levels

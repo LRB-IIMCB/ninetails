@@ -18,7 +18,7 @@ made by ninetails pipeline}
 based on the "comments" column, which contains detailed information on the
 assigned class. If FALSE, the counts will be provided based on "class" column
 which gives more crude glimpse on the classification - i.e. provides an info
-whether the reads were considered as "modified", "unmodified" and
+whether the reads were considered as "decorated", "blank" and
 "unclassified" only. By default, the TRUE option is set.}
 }
 \value{

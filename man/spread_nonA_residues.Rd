@@ -14,7 +14,7 @@ made by ninetails pipeline (filename ends with "_nonadenosine_residues.tsv")}
 a tibble with spread prediction column (3 cols instead)
 }
 \description{
-Spreads counts of the nonA residues in modified reads in
+Spreads counts of the nonA residues in decorated reads in
 *_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
 to 3 separate columns, each containing respective C, G, U prediction
 per given read.

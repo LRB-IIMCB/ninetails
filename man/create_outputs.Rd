@@ -49,7 +49,7 @@ This function returns a list object containing two dataframes:
 "read_classes" and "nonadenosine_residues" with the final output.
 First dataframe contains initial indications, whether the given read was
 classified or omitted (with reason) and if classified, whether read was
-recognized as modified (containing non-adenosine residue) or not.
+recognized as decorated (containing non-adenosine residue) or not.
 The second dataframe contains detailed info on type and estimated positions
 of non-adenosine residues detected.
 }
@@ -58,8 +58,8 @@ The read_classes dataframe contains results of read classification.
 The sequencing reads are assigned to classes based on whether the initial
 conditions are met or not (e.g. sufficient read quality, sufficient length
 (>=10 nt), move transition presence, local signal anomaly detected etc.).
-According to this, reads are assigned into 3 main categories: modified,
-unmodified, unclassified (class column).
+According to this, reads are assigned into 3 main categories: decorated,
+blank, unclassified (class column).
 }
 \details{
 The more detailed info regarding read classification is stored within

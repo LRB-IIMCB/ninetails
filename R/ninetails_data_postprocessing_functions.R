@@ -29,16 +29,20 @@ read_class_single <- function(class_path, sample_name = NA) {
     stop("The path to class predictions (argument class_path) is missing",
          call. = FALSE)
   }
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(class_path),
-                          msg = "Empty string provided as an input. Please provide a class_path as a string")
-  assertthat::assert_that(assertive::is_existing_file(class_path),
-                          msg=paste("File ",class_path," does not exist",sep=""))
-  assertthat::assert_that(assertive::is_non_empty_file(class_path),
-                          msg=paste("File ",class_path," is empty",sep=""))
+
+  assertthat::assert_that(!is.na(class_path) && nchar(class_path) > 0,
+                          msg = paste("File path ",class_path," is missing or invalid",sep=""))
+
+  #missing empty file
+  assertthat::assert_that(file.exists(class_path) && file.info(class_path)$size > 0,
+                          msg = paste("File ",class_path," is empty or does not exist",sep=""))
 
   # load class data
   message(paste0("Loading data from ",class_path))
   class_data <- vroom::vroom(class_path, show_col_types = FALSE) %>% dplyr::as_tibble()
+
+  # resolve backcompatibility issues (from v.0.9)
+  class_data <- ninetails::correct_labels(class_data)
 
   if(!is.na(sample_name)) {
     # set sample_name (if was set)
@@ -110,8 +114,10 @@ read_class_multiple <- function(samples_table,...) {
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(samples_table),
-                          msg = "Empty data frame provided as an input (samples_table). Please provide samples_table describing data to load")
+
+  if (!is.data.frame(samples_table) || nrow(samples_table) == 0) {
+    stop("Empty data frame provided as an input (samples_table). Please provide samples_table describing data to load")}
+
   assertthat::assert_that("class_path" %in% colnames(samples_table),
                           msg = "The samples_table should contain at least class_path and sample_name columns")
   assertthat::assert_that("sample_name" %in% colnames(samples_table),
@@ -146,7 +152,7 @@ read_class_multiple <- function(samples_table,...) {
 #' based on the "comments" column, which contains detailed information on the
 #' assigned class. If FALSE, the counts will be provided based on "class" column
 #' which gives more crude glimpse on the classification - i.e. provides an info
-#' whether the reads were considered as "modified", "unmodified" and
+#' whether the reads were considered as "decorated", "blank" and
 #' "unclassified" only. By default, the TRUE option is set.
 #'
 #'
@@ -165,8 +171,8 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
   comments <- NULL
 
   #assertions
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty dataframe provided as an input")
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
 
   if (detailed==TRUE){
     if(!is.na(grouping_factor)) {
@@ -188,12 +194,12 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
       assertthat::assert_that(grouping_factor %in% colnames(class_data),
                               msg=paste0(grouping_factor," is not a column of input dataset"))
       class_counts <- class_data %>%
-        dplyr::mutate(class=forcats::fct_relevel(class,"modified", after = Inf)) %>%
+        dplyr::mutate(class=forcats::fct_relevel(class,"decorated", after = Inf)) %>%
         dplyr::group_by(!!rlang::sym(grouping_factor),class) %>%
         dplyr::count()
     } else {
       class_counts <- class_data %>%
-        dplyr::mutate(class=forcats::fct_relevel(class,"modified", after = Inf)) %>%
+        dplyr::mutate(class=forcats::fct_relevel(class,"decorated", after = Inf)) %>%
         dplyr::group_by(class) %>%
         dplyr::count()
     }
@@ -230,21 +236,16 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 read_residue_single <- function(residue_path, sample_name = NA) {
 
   #assertions
-  if (missing(residue_path)) {
-    stop("The path to residue predictions (argument residue_path) is missing",
-         call. = FALSE)
-  }
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(residue_path),
-                          msg = "Empty string provided as an input. Please provide a residue_path as a string")
-  assertthat::assert_that(assertive::is_existing_file(residue_path),
-                          msg=paste("File ",residue_path," does not exist",sep=""))
-  assertthat::assert_that(assertive::is_non_empty_file(residue_path),
-                          msg=paste("File ",residue_path," is empty",sep=""))
+  assertthat::assert_that(!is.na(residue_path) && nchar(residue_path) > 0,
+                          msg = "Input is either missing or an empty string. Please provide a residue_path as a string")
+
+
+  assertthat::assert_that(file.exists(residue_path) && file.info(residue_path)$size > 0,
+                          msg = paste0("Input is either missing or an empty file: ", residue_path))
 
   # load the data
   message(paste0("Loading non-A residue data from ", residue_path))
   residue_data <- vroom::vroom(residue_path, show_col_types = FALSE) %>% dplyr::as_tibble()
-
 
   if(!is.na(sample_name)) {
     # set sample_name (if was set)
@@ -322,8 +323,10 @@ read_residue_multiple <- function(samples_table,...) {
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(samples_table),
-                          msg = "Empty data frame provided as an input (samples_table). Please provide samples_table describing data to load.")
+
+  if (!is.data.frame(samples_table) || nrow(samples_table) == 0) {
+    stop("Empty data frame provided as an input (samples_table). Please provide valid input")}
+
   assertthat::assert_that("residue_path" %in% colnames(samples_table),
                           msg = "The samples_table should contain at least residue_path and sample_name columns.")
   assertthat::assert_that("sample_name" %in% colnames(samples_table),
@@ -370,8 +373,8 @@ count_residues <- function(residue_data, grouping_factor=NA) {
   prediction <- NULL
 
   # assertions
-  assertthat::assert_that(assertive::has_rows(residue_data),
-                          msg = "Empty dataframe provided as an input")
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
   if(!is.na(grouping_factor)) {
     assertthat::assert_that(grouping_factor %in% colnames(residue_data),
@@ -389,13 +392,13 @@ count_residues <- function(residue_data, grouping_factor=NA) {
       dplyr::count()
   }
 
-  return (residue_counts)
+  return(residue_counts)
 }
 
 
 #' Reshapes nonadenosine_residues dataframe.
 #'
-#' Spreads counts of the nonA residues in modified reads in
+#' Spreads counts of the nonA residues in decorated reads in
 #' *_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
 #' to 3 separate columns, each containing respective C, G, U prediction
 #' per given read.
@@ -427,8 +430,8 @@ spread_nonA_residues <- function(residue_data){
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(residue_data),
-                          msg = "Empty dataframe provided as an input (residue_data)")
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
 
   #create column for non-A residue summary (cigar-like string)
@@ -506,11 +509,14 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty dataframe provided as an input (class_data)")
-  assertthat::assert_that(assertive::has_rows(residue_data),
-                          msg = "Empty dataframe provided as an input (residue_data)")
-  assertthat::assert_that(assertive::is_a_bool(pass_only),
+
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+
+  assertthat::assert_that(is.logical(pass_only),
                           msg="Please provide TRUE/FALSE values for pass_only parameter")
 
 
@@ -549,7 +555,7 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 #' In the table, "counts" are understood as the number of reads in total
 #' or containing a given type of non-A residue (see column headers for details).
 #' Whereas "hits" are understood as the number of occurrences of a given
-#' modification in total (see column headers for details). Please be aware that
+#' nonA in total (see column headers for details). Please be aware that
 #' there may be several "hits" in one read.
 #'
 #' The function also reports the mean and median poly(A) tail length
@@ -579,7 +585,7 @@ summarize_nonA <- function(merged_nonA_tables,
                            summary_factors = c("group"),
                            transcript_id_column = c("ensembl_transcript_id_short")) {
   # var binding
-  starts_with <- sum_nonA <- prediction_C <- prediction_G <- prediction_U <- median <- polya_length <- counts_total <- counts_unmod <- zeromod_summarized <- NULL
+  starts_with <- sum_nonA <- prediction_C <- prediction_G <- prediction_U <- median <- polya_length <- counts_total <- counts_blank <- zeromod_summarized <- NULL
 
   #Assertions
   if (missing(merged_nonA_tables)) {
@@ -587,9 +593,11 @@ summarize_nonA <- function(merged_nonA_tables,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(merged_nonA_tables),
-                          msg = "Empty dataframe provided as an input")
-  assertthat::assert_that(assertive::is_character(summary_factors),
+  if (!is.data.frame(merged_nonA_tables) || nrow(merged_nonA_tables) == 0) {
+    stop("Empty data frame provided as an input (merged_nonA_tables). Please provide valid input")
+  }
+
+  assertthat::assert_that(is.character(summary_factors),
                           msg = "Non-character argument is not alowed for `summary_factors`. Please provide either string or vector of strings")
   assertthat::assert_that(all(summary_factors %in% colnames(merged_nonA_tables)),
                           msg="Non-existent column name provided as the argument (summary_factors)")
@@ -616,18 +624,18 @@ summarize_nonA <- function(merged_nonA_tables,
     # rename columns according to desired convention
     dplyr::rename_with(~stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'), 4:dplyr::last_col())
 
-  # add counts of unmodified reads - it has to be assigned to new var, because otherwise throws an error
+  # add counts of blank reads - it has to be assigned to new var, because otherwise throws an error
   zeromod_summarized <- merged_nonA_tables %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!rlang::syms(c(transcript_id_column,summary_factors))) %>%
-    dplyr::summarise(counts_unmod = sum(dplyr::if_all(tidyselect::starts_with('prediction_'), ~ .x == 0)), .groups = 'drop')
+    dplyr::summarise(counts_blank = sum(dplyr::if_all(tidyselect::starts_with('prediction_'), ~ .x == 0)), .groups = 'drop')
 
   nonA_data_summarized <- nonA_data_summarized%>%
-    # add counts of unmodified reads - this syntax is because otherwise it throws an error
+    # add counts of blank reads - this syntax is because otherwise it throws an error
     # also: avoiding assigning new variable to temporary table
     dplyr::left_join(zeromod_summarized, by=c(transcript_id_column,summary_factors)) %>%
-    # move unmodified reads count near total counts - for table clarity
-    dplyr::relocate(counts_unmod, .after = counts_total)
+    # move blank reads count near total counts - for table clarity
+    dplyr::relocate(counts_blank, .after = counts_total)
 
   return(nonA_data_summarized)
 }
@@ -671,9 +679,10 @@ nanopolish_qc <- function(class_data,
   qc_tag <- NULL
 
   #assertions
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty dataframe provided as an input")
 
+  if (!is.data.frame(class_data) || nrow(class_data) == 0){
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")
+  }
 
   if(!is.na(grouping_factor)) {
     assertthat::assert_that(grouping_factor %in% colnames(class_data),
@@ -727,7 +736,7 @@ nanopolish_qc <- function(class_data,
 #' with the content of the 'transcript_column'. Using whitelist is not mandatory,
 #' however it allows to retrieve more true positive data.
 #'
-#' @return A tibble with modified residue_data. In this dataframe, in comparison
+#' @return A tibble with decorated residue_data. In this dataframe, in comparison
 #' to the original (raw) residue_data, some additional columns are present:\itemize{
 #' \item mode_pos - most frequent position of non-A reported for given transcript
 #' \item mode_len - most frequent tail length reported for given transcript
@@ -778,11 +787,13 @@ correct_residue_data <- function(class_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty data frame provided as an input (class_data). Please provide valid class_data.")
 
-  assertthat::assert_that(assertive::has_rows(residue_data),
-                          msg = "Empty data frame provided as an input (residue_data). Please provide valid residue_data.")
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+
 
   #prevent bugs
   class_data <- unique(class_data)
@@ -796,7 +807,7 @@ correct_residue_data <- function(class_data,
       dplyr::group_by(!!rlang::sym(transcript_column)) %>%
       dplyr::mutate(seg_err_quart = stats::quantile(polya_length, probs=0.05),
                     mode_len = which.max(tabulate(polya_length)),
-                    count = n()) %>% dplyr::ungroup()
+                    count = dplyr::n()) %>% dplyr::ungroup()
 
     # mark most frequent position of nonA residue; the mode will be then used to filter out positions
     # which are most likely artifacts
@@ -804,7 +815,7 @@ correct_residue_data <- function(class_data,
       dplyr::group_by(!!rlang::sym(transcript_column), prediction) %>%
       dplyr::mutate(mode_pos = which.max(tabulate(est_nonA_pos)),
                     pos_err_quart = stats::quantile(est_nonA_pos, probs=0.05),
-                    count_nonA = n()) %>% dplyr::ungroup()
+                    count_nonA = dplyr::n()) %>% dplyr::ungroup()
 
   } else{
 
@@ -813,14 +824,14 @@ correct_residue_data <- function(class_data,
       dplyr::group_by(!!rlang::sym(grouping_factor), !!rlang::sym(transcript_column)) %>%
       dplyr::mutate(seg_err_quart = stats::quantile(polya_length, probs=0.05),
                     mode_len = which.max(tabulate(polya_length)),
-                    count = n()) %>% dplyr::ungroup()
+                    count = dplyr::n()) %>% dplyr::ungroup()
 
     # add new columns to residue data
     residue_data_filtered <- residue_data %>%
       dplyr::group_by(!!rlang::sym(grouping_factor), !!rlang::sym(transcript_column), prediction) %>%
       dplyr::mutate(mode_pos = which.max(tabulate(est_nonA_pos)),
                     pos_err_quart = stats::quantile(est_nonA_pos, probs=0.05),
-                    count_nonA = n()) %>% dplyr::ungroup()
+                    count_nonA = dplyr::n()) %>% dplyr::ungroup()
   }
 
   # load whitelists
@@ -876,7 +887,7 @@ correct_residue_data <- function(class_data,
 #' ---CAUTION---
 #'
 #' Reads that contain only non-A nucleotides that are likely to be nanopolish
-#' artifacts are reclassified in the output table as "unmodified" ("corr_class"
+#' artifacts are reclassified in the output table as "blank" ("corr_class"
 #' column), and their comment is changed from "YAY" to "MPU" ("corr_comments" column).
 #' The latter is due to maintain compatibility with tag system used in plotting
 #' functions.
@@ -933,11 +944,13 @@ correct_class_data <- function(residue_data_edited, class_data){
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(residue_data_edited),
-                          msg = "Empty data frame provided as an input (residue_data_edited). Please provide valid dataframe")
 
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty data frame provided as an input (class_data). Please provide valid dataframe")
+  if (!is.data.frame(residue_data_edited) || nrow(residue_data_edited) == 0) {
+    stop("Empty data frame provided as an input (residue_data_edited). Please provide valid input")}
+
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+
 
   basic_colnames = c("mode_pos","seg_err_quart", "qc_pos")
 
@@ -960,8 +973,8 @@ correct_class_data <- function(residue_data_edited, class_data){
 
   # deal with class data
   class_data <- class_data %>% dplyr::left_join(residue_data_summarized, by = "readname") %>%
-    dplyr::mutate(corr_class = dplyr::case_when(n_resid == no_qc_pos_N ~ "unmodified",
-                                                n_resid > no_qc_pos_N ~ "modified",
+    dplyr::mutate(corr_class = dplyr::case_when(n_resid == no_qc_pos_N ~ "blank",
+                                                n_resid > no_qc_pos_N ~ "decorated",
                                                 TRUE ~ class),
                   corr_comments = dplyr::case_when(class==corr_class ~ comments,
                                                    TRUE ~ "MPU")) %>%
@@ -1003,7 +1016,7 @@ correct_class_data <- function(residue_data_edited, class_data){
 #' ---CAUTION---
 #'
 #' Reads that contain only non-A nucleotides that are likely to be nanopolish
-#' artifacts are reclassified in the class_data table as "unmodified" ("class"
+#' artifacts are reclassified in the class_data table as "blank" ("class"
 #' column), and their comment is changed from "YAY" to "MPU" ("comments" column).
 #'
 #'
@@ -1074,12 +1087,12 @@ reclassify_ninetails_data <- function(residue_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty data frame provided as an input (class_data). Please provide valid class_data.")
 
-  assertthat::assert_that(assertive::has_rows(residue_data),
-                          msg = "Empty data frame provided as an input (residue_data). Please provide valid residue_data.")
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
 
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
   #prevent bugs
   class_data <- unique(class_data)
@@ -1120,7 +1133,49 @@ reclassify_ninetails_data <- function(residue_data,
 
 }
 
+#' Counts reads with certain amount of nonA occurrences (instances)
+#'
+#' The function counts reads with single, two or more separate instances of nonA
+#' occurrences as reported by ninetails main pipeline.
+#'
+#' @param residue_data A dataframe or tibble containig non-A residue predictions
+#' made by ninetails pipeline
+#'
+#' @param grouping_factor grouping variable (e.g. "sample_name")
+#'
+#' @return A tibble with counts for each amount of nonA occurrences (single, two, more)
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' nonA_abundance <- ninetails::count_nonA_abundance(residue_data=residue_data,
+#'                                                   grouping_factor="sample_name")
+#' }
+count_nonA_abundance <- function(residue_data,
+                                 grouping_factor=NA){
+  # var binding
+  readname <- instances <- NULL
+
+  # assertions
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+
+  if(!is.na(grouping_factor)) {
+    assertthat::assert_that(grouping_factor %in% colnames(residue_data),
+                            msg=paste0(grouping_factor," is not a column of input dataset"))}
 
 
+  nonA_counts <- residue_data %>% dplyr::select(!!rlang::sym(grouping_factor),
+                                                readname) %>%
+    dplyr::group_by(!!rlang::sym(grouping_factor), readname) %>%
+    dplyr::mutate(instances = ifelse(dplyr::n() == 1, "single",
+                                     ifelse(dplyr::n() == 2, "two", "more"))) %>%
+    dplyr::ungroup() %>% dplyr::group_by(!!rlang::sym(grouping_factor), instances) %>%
+    dplyr::mutate(count=dplyr::n()) %>% dplyr::select(-readname) %>% dplyr::distinct() %>%
+    dplyr::ungroup()
+
+  return(nonA_counts)
+
+}
 
 

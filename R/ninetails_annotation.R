@@ -67,8 +67,10 @@ annotate_with_biomart <- function(input_data,
   }
 
 
-  assertthat::assert_that(assertive::has_rows(input_data),
-                          msg = "Empty data frame provided as an input (input_data). Please provide valid input")
+  if (!is.data.frame(input_data) || nrow(input_data) == 0) {
+    stop("Empty data frame provided as an input (input_data). Please provide valid input")}
+
+
   assertthat::assert_that(length(attributes)>0,
                           msg="please provide attributes to get from biomart")
 
@@ -136,8 +138,10 @@ annotate_with_biomart <- function(input_data,
                                     values = ensembl_ids,
                                     mart = mart_to_use)
 
-  assertthat::assert_that(assertive::has_rows(annotation_data),
-                          msg = "Could not retrieve annotation data for given transcript IDs. Check if the organism or mart_to_use was defined correctly.")
+
+  if (!is.data.frame(annotation_data) || nrow(annotation_data) == 0) {
+    stop("Could not retrieve annotation data for given transcript IDs. Check if the organism or mart_to_use was defined correctly")}
+
 
   input_data_annotated <-  input_data %>% dplyr::left_join(annotation_data) %>%
     dplyr::rename(ensembl_transcript_id_short = ensembl_transcript_id)

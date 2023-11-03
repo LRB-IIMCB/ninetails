@@ -37,7 +37,7 @@ the risk of including nanopolish artifacts.
 ---CAUTION---
 
 Reads that contain only non-A nucleotides that are likely to be nanopolish
-artifacts are reclassified in the output table as "unmodified" ("corr_class"
+artifacts are reclassified in the output table as "blank" ("corr_class"
 column), and their comment is changed from "YAY" to "MPU" ("corr_comments" column).
 The latter is due to maintain compatibility with tag system used in plotting
 functions.

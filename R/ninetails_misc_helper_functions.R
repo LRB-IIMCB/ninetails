@@ -27,11 +27,11 @@ winsorize_signal <- function(signal){
     stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(signal),
+  assertthat::assert_that(is.numeric(signal),
                           msg=paste0("Signal vector must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_atomic(signal),
+  assertthat::assert_that(is.atomic(signal),
                           msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_atomic(signal),
+  assertthat::assert_that(is.atomic(signal),
                           msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
   assertthat::assert_that(assertthat::noNA(signal),
                           msg="Signal vector must not contain missing values. Please provide a valid argument.")
@@ -116,7 +116,8 @@ check_fast5_filetype <- function(workspace,
     stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_character(workspace), msg = paste0("Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."))
+  assertthat::assert_that(is.character(workspace),
+                          msg = paste0("Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."))
 
 
   #list fast5 files in given dir
@@ -270,7 +271,7 @@ substitute_gaps <- function(pseudomoves){
 get_mode <- function(x, method ="density", na.rm = FALSE) {
 
   # assertions
-  assertthat::assert_that(assertive::is_numeric(x),
+  assertthat::assert_that(is.numeric(x),
                           msg=paste0("Provided vector must be numeric. Please provide a valid argument."))
 
   x <- unlist(x)
@@ -300,5 +301,45 @@ get_mode <- function(x, method ="density", na.rm = FALSE) {
   }
 }
 
+#'  Correcting class recognition in ninetails data
+#'
+#'  This helper fnction solves issues with backcompatibility of ninetails'
+#'  read class naming convention.
+#'
+#'  Previously, the read classes were named as "modified", "unmodified" and
+#'  "unclassified" (pre-release versions). However, it has been changed
+#'  to more precise terms: "decorated", "blank" and "unclassified", since the
+#'  presence of non-A within poly(A) tail does not necessary have to be
+#'  the result of post-transcriptional, cytoplasmic modification. It might be
+#'  caused by the semi-templated tails or polymerase slippage during RNA
+#'  synthesis/canonical tailing or caused by other potential yet undefined
+#'  mechanisms.
+#'
+#' @param df data frame with ninetails read classification results (class_data)
+#' or the output of \code{\link{merge_nonA_tables}} function.
+#'
+#' @return corrected dataframe (with changed class labels)
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' class_data <- ninetails::correct_labels(class_data)
+#' }
+#'
+correct_labels <- function(df) {
 
+  assertthat::assert_that(is.data.frame(df),
+                          msg=paste0("Provided input must be dataframe. Please provide a valid argument."))
+
+  if("class" %in% colnames(df)) {
+    df$class <- ifelse(df$class %in% c("unmodified", "unclassified"),
+                       "blank",
+                       ifelse(df$class == "blank",
+                              "unmodified",
+                              "decorated"))
+  }
+
+  return(df)
+}
 

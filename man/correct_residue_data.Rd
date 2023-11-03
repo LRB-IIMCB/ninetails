@@ -42,7 +42,7 @@ with the content of the 'transcript_column'. Using whitelist is not mandatory,
 however it allows to retrieve more true positive data.}
 }
 \value{
-A tibble with modified residue_data. In this dataframe, in comparison
+A tibble with decorated residue_data. In this dataframe, in comparison
 to the original (raw) residue_data, some additional columns are present:\itemize{
 \item mode_pos - most frequent position of non-A reported for given transcript
 \item mode_len - most frequent tail length reported for given transcript

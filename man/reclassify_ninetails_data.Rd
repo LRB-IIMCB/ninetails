@@ -76,7 +76,7 @@ package, such as those for data visualization.
 ---CAUTION---
 
 Reads that contain only non-A nucleotides that are likely to be nanopolish
-artifacts are reclassified in the class_data table as "unmodified" ("class"
+artifacts are reclassified in the class_data table as "blank" ("class"
 column), and their comment is changed from "YAY" to "MPU" ("comments" column).
 }
 \examples{

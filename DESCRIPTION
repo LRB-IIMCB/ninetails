@@ -1,7 +1,7 @@
 Package: ninetails
 Type: Package
 Title: Nonadenosine Nucleotides in Poly(A) Tails
-Version: 0.9.0
+Version: 1.0.0
 Author: Natalia Gumińska
 Maintainer: The package maintainer <nguminska@iimcb.gov.pl>
 Description: Finds noncanonical (nonadenosine) nucleotides 
@@ -12,7 +12,6 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.3
 Imports: 
-    assertive,
     assertthat,
     checkmate,
     doSNOW,
@@ -40,6 +39,7 @@ Depends:
 Suggests: 
     testthat (>= 3.0.0),
     biomaRt (>= 2.40.0),
+    cowplot,
     ggdist,
     gghalves,
     patchwork

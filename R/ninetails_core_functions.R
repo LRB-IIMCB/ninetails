@@ -50,34 +50,38 @@ extract_polya_data <- function(nanopolish,
     stop("Sequencing summary file is missing. Please provide a valid sequencing_summary argument.", .call = FALSE)
   }
 
-  assertthat::assert_that(assertive::is_a_bool(pass_only),
+  assertthat::assert_that(is.logical(pass_only),
                           msg="Please provide TRUE/FALSE values for pass_only parameter")
 
   # Accept either path to file or in-memory file - PK's GH issue
-  if (assertive::is_character(nanopolish)) {
-    assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                            msg=paste0("File ",nanopolish," does not exist",sep=""))
+  if (checkmate::test_string(nanopolish)) {
+    # if string provided as an argument, read from file
+    checkmate::assert_file_exists(nanopolish)
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
                                            show_col_types = FALSE)
-  } else if (assertive::has_rows(nanopolish)) {
-    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
   } else {
-    stop("Wrong nanopolish parameter. Please provide filepath or object.")
+    # make sure that nanopolish is an object with rows
+    if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
+      stop("Empty data frame provided as an input (nanopolish). Please provide valid input")
+    }
+
+    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
   }
 
   # Accept either path to file or in-memory file - PK's GH issue
-  if (assertive::is_character(sequencing_summary)) {
-    assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
-                            msg=paste0("File ",sequencing_summary," does not exist",sep=""))
-
+  if (checkmate::test_string(sequencing_summary)) {
+    # if string provided as an argument, read from file
+    checkmate::assert_file_exists(sequencing_summary)
     sequencing_summary_table <- vroom::vroom(sequencing_summary,
                                              col_select = c(filename, read_id),
                                              show_col_types = FALSE)
-  } else if (assertive::has_rows(sequencing_summary)) {
-    sequencing_summary_table <- sequencing_summary
   } else {
-    stop("Wrong sequencing_summary parameter. Please provide filepath or object.")
+    if (!is.data.frame(sequencing_summary) || nrow(sequencing_summary) == 0) {
+      stop("Empty data frame provided as an input (sequencing_summary). Please provide valid input")
+    }
+
+    sequencing_summary_table <- sequencing_summary
   }
 
   #rename read id column
@@ -164,13 +168,16 @@ extract_tail_data <- function(readname,
     stop("Polya_summary is missing. Please provide a valid polya_summary argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(polya_summary),
-                          msg = paste0("Empty data frame provided as an input (polya_summary). Please provide a valid input table."))
-  assertthat::assert_that(assertive::is_a_non_missing_nor_empty_string(workspace),
-                          msg = paste0("Empty string provided as an input. Please provide a valid path to basecalled fast5 files."))
-  assertthat::assert_that(assertive::is_character(workspace),
+  if (!is.data.frame(polya_summary) || nrow(polya_summary) == 0){
+    stop("Empty data frame provided as an input (polya_summary). Please provide a valid input table.",call. =FALSE )
+  }
+
+
+  assertthat::assert_that(is.character(workspace),
                           msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
-  assertthat::assert_that(assertive::is_character(readname),
+  assertthat::assert_that(checkmate::test_string(workspace, null.ok=F, min.chars=1),
+                          msg="Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
+  assertthat::assert_that(is.character(readname),
                           msg = paste0("Given readname is not a character string. Please provide a valid readname argument."))
 
   # Extract data from fast5 file
@@ -321,7 +328,7 @@ create_tail_feature_list <- function(nanopolish,
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores),
+  assertthat::assert_that(is.numeric(num_cores),
                           msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
   # Extracting and processing polya & sequencing summary data
@@ -446,7 +453,7 @@ filter_signal_by_threshold <- function(signal) {
     stop("Signal is missing. Please provide a valid signal argument [numeric vec].", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(signal),
+  assertthat::assert_that(is.numeric(signal),
                           msg=paste0("Signal must be numeric. Please provide a valid argument."))
 
   # reproducibility
@@ -563,9 +570,9 @@ split_tail_centered <- function(readname,
     stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_character(readname),
+  assertthat::assert_that(is.character(readname),
                           msg = paste0("Given readname is not a character string. Please provide a valid readname."))
-  assertthat::assert_that(assertive::is_list(tail_feature_list),
+  assertthat::assert_that(is.list(tail_feature_list),
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
   #extract required data
@@ -577,7 +584,7 @@ split_tail_centered <- function(readname,
   # mod-centered chunk extraction
   # recompute rle
   mod_rle <- rle(pseudomoves)
-  # pseudomoves filtered by condition (potentially modified - empyrical!)
+  # pseudomoves filtered by condition (potentially decorated - empyrical!)
   condition <- mod_rle$lengths >= 5 & mod_rle$values
   # beginning positions of filtered pseudomoves which satisfy conditions
   first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths,-1)))[condition]
@@ -665,9 +672,9 @@ create_tail_chunk_list <- function(tail_feature_list,
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(num_cores),
+  assertthat::assert_that(is.numeric(num_cores),
                           msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_list(tail_feature_list),
+  assertthat::assert_that(is.list(tail_feature_list),
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
 
   # creating cluster for parallel computing
@@ -768,11 +775,11 @@ create_gaf <- function(tail_chunk, method="s"){
   if (missing(method)) {
     stop("Transformation method is missing. Please provide a valid method argument.", call. =FALSE)
   }
-  assertthat::assert_that(assertive::is_numeric(tail_chunk),
+  assertthat::assert_that(is.numeric(tail_chunk),
                           msg=paste0("Provided tail_chunk must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_character(method),
+  assertthat::assert_that(is.character(method),
                           msg=paste0("Provided method must be character string. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_equal_to(length(tail_chunk), 100),
+  assertthat::assert_that(length(tail_chunk) == 100,
                           msg=paste0("Provided chunks of wrong length. The chunk length should be equal to 100. Please provide a valid tail_chunk."))
 
 
@@ -842,7 +849,7 @@ combine_gafs <- function(tail_chunk){
     stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_numeric(tail_chunk),
+  assertthat::assert_that(is.numeric(tail_chunk),
                           msg=paste0("Provided tail_chunk must be numeric. Please provide a valid argument."))
 
   #create gasf & gaf
@@ -897,9 +904,9 @@ create_gaf_list <- function(tail_chunk_list,
     stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+  assertthat::assert_that(is.list(tail_chunk_list),
                           msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid file format."))
-  assertthat::assert_that(assertive::is_numeric(num_cores),
+  assertthat::assert_that(is.numeric(num_cores),
                           msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
   # creating cluster for parallel computing
@@ -1003,8 +1010,8 @@ predict_gaf_classes <- function(gaf_list){
 #' The sequencing reads are assigned to classes based on whether the initial
 #' conditions are met or not (e.g. sufficient read quality, sufficient length
 #' (>=10 nt), move transition presence, local signal anomaly detected etc.).
-#' According to this, reads are assigned into 3 main categories: modified,
-#' unmodified, unclassified (class column).
+#' According to this, reads are assigned into 3 main categories: decorated,
+#' blank, unclassified (class column).
 #'
 #' The more detailed info regarding read classification is stored within
 #' 'comments' column. To make the output more compact, it contains codes
@@ -1053,7 +1060,7 @@ predict_gaf_classes <- function(gaf_list){
 #' "read_classes" and "nonadenosine_residues" with the final output.
 #' First dataframe contains initial indications, whether the given read was
 #' classified or omitted (with reason) and if classified, whether read was
-#' recognized as modified (containing non-adenosine residue) or not.
+#' recognized as decorated (containing non-adenosine residue) or not.
 #' The second dataframe contains detailed info on type and estimated positions
 #' of non-adenosine residues detected.
 #'
@@ -1105,28 +1112,27 @@ create_outputs <- function(tail_feature_list,
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(tail_feature_list),
+  assertthat::assert_that(is.list(tail_feature_list),
                           msg = paste0("Given tail_feature_list is not a list (class). Please provide valid object."))
-  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+  assertthat::assert_that(is.list(tail_chunk_list),
                           msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid object."))
-  assertthat::assert_that(assertive::is_list(predicted_list),
+  assertthat::assert_that(is.list(predicted_list),
                           msg = paste0("Given predicted_list is not a list (class). Please provide valid object."))
 
-
-  #read nanopolish data
-  # Accept either path to file or in-memory file - PK's GH issue
-  if (assertive::is_character(nanopolish)) {
-    assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                            msg=paste0("File ",nanopolish," does not exist",sep=""))
+  if (checkmate::test_string(nanopolish)) {
+    # if string provided as an argument, read from file
+    checkmate::assert_file_exists(nanopolish)
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, contig, polya_length, qc_tag),
                                            show_col_types = FALSE)
-  } else if (assertive::has_rows(nanopolish)) {
-    nanopolish_polya_table <- nanopolish[,c("readname", "contig","polya_length","qc_tag")]
   } else {
-    stop("Wrong nanopolish parameter. Please provide filepath or object.")
-  }
+    # make sure that nanopolish is an object with rows
+    if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
+      stop("Empty data frame provided as an input (nanopolish). Please provide valid input")
+    }
 
+    nanopolish_polya_table <- nanopolish[,c("readname", "contig","polya_length","qc_tag")]
+  }
 
 
   # HANDLE LENGTH/POSITION CALIBRATING DATA
@@ -1226,10 +1232,10 @@ create_outputs <- function(tail_feature_list,
   moved_chunks_table$prediction[moved_chunks_table$prediction ==3] <- "U"
 
   #extract reads with move==1 and modification absent (not detected)
-  moved_unmodified_readnames <- names(which(with(moved_chunks_table, tapply(prediction, readname, unique) == 'A')))
+  moved_blank_readnames <- names(which(with(moved_chunks_table, tapply(prediction, readname, unique) == 'A')))
 
   # cleaned chunks_table
-  moved_chunks_table <- subset(moved_chunks_table, !(readname %in% moved_unmodified_readnames))
+  moved_chunks_table <- subset(moved_chunks_table, !(readname %in% moved_blank_readnames))
   # delete A-containing rows
   moved_chunks_table <- moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
   #merge data from feats & predictions
@@ -1253,11 +1259,11 @@ create_outputs <- function(tail_feature_list,
                                                 qc_tag == "ADAPTER" ~ "QCF",
                                                 qc_tag == "NOREGION" ~ "QCF",
                                                 qc_tag == "READ_FAILED_LOAD" ~ "QCF",
-                                                readname %in% moved_unmodified_readnames ~ "MPU",
+                                                readname %in% moved_blank_readnames ~ "MPU",
                                                 TRUE ~ "MAU"),
                     class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "MAU" ~ "unmodified",
+                                             readname %in% moved_blank_readnames ~ "blank",
+                                             comments == "MAU" ~ "blank",
                                              TRUE ~ "unclassified"))
   } else {
     discarded_reads <- discarded_reads %>%
@@ -1266,21 +1272,21 @@ create_outputs <- function(tail_feature_list,
                                                 qc_tag == "ADAPTER" ~ "QCF",
                                                 qc_tag == "NOREGION" ~ "QCF",
                                                 qc_tag == "READ_FAILED_LOAD" ~ "QCF",
-                                                readname %in% moved_unmodified_readnames ~ "MPU",
+                                                readname %in% moved_blank_readnames ~ "MPU",
                                                 TRUE ~ "MAU"),
                     class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_unmodified_readnames ~ "unmodified",
-                                             comments == "MAU" ~ "unmodified",
+                                             readname %in% moved_blank_readnames ~ "blank",
+                                             comments == "MAU" ~ "blank",
                                              TRUE ~ "unclassified"))
   }
 
 
-  modified_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
-  modified_reads <- modified_reads %>% dplyr::mutate(class = "modified",
+  decorated_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
+  decorated_reads <- decorated_reads %>% dplyr::mutate(class = "decorated",
                                                      comments = "YAY")
 
   #merge read_classes tabular output:
-  nanopolish_polya_table <- rbind(modified_reads, discarded_reads)
+  nanopolish_polya_table <- rbind(decorated_reads, discarded_reads)
   #corece tibble to df
   nanopolish_polya_table <- data.frame(nanopolish_polya_table)
 
@@ -1311,11 +1317,10 @@ create_outputs <- function(tail_feature_list,
     # subset potential artifacts from read_classes
     potential_artifacts <- subset(nanopolish_polya_table, readname %in% moved_chunks_table_discarded$readname)
 
-    modified_reads_edited <- nanopolish_polya_table %>%
+    decorated_reads_edited <- nanopolish_polya_table %>%
       dplyr::mutate(class = dplyr::case_when(
         readname %in% potential_artifacts$readname ~ paste0(class,"-WARN"),
         TRUE ~ paste0(class)))
-
 
 
     # label potential artifacts in nonadenosine residue dataframe
@@ -1325,14 +1330,12 @@ create_outputs <- function(tail_feature_list,
                                                 TRUE~ paste0(prediction)))
 
 
-
-
     #CREATE FINAL OUTPUT
     #prevent potential bugs inherited from nanopolish multimapping
-    modified_reads_edited <- unique(modified_reads_edited)
+    decorated_reads_edited <- unique(decorated_reads_edited)
     moved_chunks_table_qc <- unique(moved_chunks_table_qc)
 
-    ninetails_output[['read_classes']] <- modified_reads_edited
+    ninetails_output[['read_classes']] <- decorated_reads_edited
     ninetails_output[['nonadenosine_residues']] <- moved_chunks_table_qc
 
   } else{
@@ -1348,10 +1351,6 @@ create_outputs <- function(tail_feature_list,
   return(ninetails_output)
 
 }
-
-
-
-
 
 
 

@@ -31,7 +31,7 @@ for each transcript (ensembl_transcrit_id_short) per each analyzed sample in giv
 In the table, "counts" are understood as the number of reads in total
 or containing a given type of non-A residue (see column headers for details).
 Whereas "hits" are understood as the number of occurrences of a given
-modification in total (see column headers for details). Please be aware that
+nonA in total (see column headers for details). Please be aware that
 there may be several "hits" in one read.
 
 The function also reports the mean and median poly(A) tail length

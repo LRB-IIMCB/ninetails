@@ -104,13 +104,14 @@ plot_squiggle <- function(readname,
   if (checkmate::test_string(nanopolish)) {
     # if string provided as an argument, read from file
     # handle nanopolish
-    assertthat::assert_that(assertive::is_existing_file(nanopolish), msg=paste0("File ",nanopolish," does not exist",sep=""))
+    checkmate::assert_file_exists(nanopolish)
     nanopolish <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, adapter_start, leader_start), show_col_types = FALSE)
     colnames(nanopolish)[1] <- "read_id" #because there was conflict with the same vars
   }
 
   #else: make sure that nanopolish is an  object with rows
-  assertthat::assert_that(assertive::has_rows(nanopolish), msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
+  if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
+    stop("Empty data frame provided as an input (nanopolish). Please provide valid input")}
 
 
   nanopolish <- nanopolish[nanopolish$read_id==readname,]
@@ -124,13 +125,15 @@ plot_squiggle <- function(readname,
 
   if (checkmate::test_string(sequencing_summary)) {
     #handle sequencing summary
-    assertthat::assert_that(assertive::is_existing_file(sequencing_summary), msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+    checkmate::assert_file_exists(sequencing_summary)
     sequencing_summary <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   }
 
   sequencing_summary <- sequencing_summary[sequencing_summary$read_id==readname,]
 
-  assertthat::assert_that(assertive::has_rows(sequencing_summary), msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
+
+  if (!is.data.frame(sequencing_summary) || nrow(sequencing_summary) == 0) {
+    stop("Empty data frame provided as an input (sequencing_summary). Please provide valid input")}
 
   # Extract data from fast5 file
   fast5_file <- sequencing_summary$filename
@@ -341,21 +344,16 @@ plot_tail_range <- function(readname,
   if (checkmate::test_string(nanopolish)) {
     # if string provided as an argument, read from file
     # handle nanopolish
-    assertthat::assert_that(assertive::is_existing_file(nanopolish),
-                            msg=paste0("File ",nanopolish," does not exist",sep=""))
-    nanopolish <- vroom::vroom(nanopolish, col_select=c(readname,
-                                                        polya_start,
-                                                        transcript_start,
-                                                        adapter_start,
-                                                        leader_start),
-                               show_col_types = FALSE)
+    checkmate::assert_file_exists(nanopolish)
+    nanopolish <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, adapter_start, leader_start), show_col_types = FALSE)
     colnames(nanopolish)[1] <- "read_id" #because there was conflict with the same vars
   }
 
   #else: make sure that nanopolish is an  object with rows
-  assertthat::assert_that(assertive::has_rows(nanopolish),
-                          msg = "Empty data frame provided as an input (nanopolish). Please provide valid input")
+  if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
+    stop("Empty data frame provided as an input (nanopolish). Please provide valid input")}
 
+  colnames(nanopolish)[1] <- "read_id" #because there was conflict with the same vars
 
   nanopolish <- nanopolish[nanopolish$read_id==readname,]
   adapter_start_position <- nanopolish$adapter_start
@@ -366,17 +364,23 @@ plot_tail_range <- function(readname,
   polya_end_position <- transcript_start_position -1
 
 
+
+ #### TU WSTAWIC
   if (checkmate::test_string(sequencing_summary)) {
     #handle sequencing summary
-    assertthat::assert_that(assertive::is_existing_file(sequencing_summary),
-                            msg=paste0("File ",sequencing_summary," does not exist",sep=""))
+    checkmate::assert_file_exists(sequencing_summary)
     sequencing_summary <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   }
 
   sequencing_summary <- sequencing_summary[sequencing_summary$read_id==readname,]
 
-  assertthat::assert_that(assertive::has_rows(sequencing_summary),
-                          msg = "Empty data frame provided as an input (sequencing_summary). Please provide valid input")
+
+  if (!is.data.frame(sequencing_summary) || nrow(sequencing_summary) == 0) {
+    stop("Empty data frame provided as an input (sequencing_summary). Please provide valid input")}
+
+
+  sequencing_summary <- sequencing_summary[sequencing_summary$read_id==readname,]
+
 
   # Extract data from fast5 file
   fast5_file <- sequencing_summary$filename
@@ -533,7 +537,7 @@ plot_tail_chunk <- function(chunk_name,
     stop("Chunk_name is missing. Please provide a valid chunk_name argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(tail_chunk_list),
+  assertthat::assert_that(is.list(tail_chunk_list),
                           msg=paste("Given tail_chunk_list object is not a list. Please provide a valid argument."))
 
   #TODO
@@ -625,7 +629,7 @@ plot_gaf <- function(gaf_name,
     stop("List of GAFs is missing. Please provide a valid gaf_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(gaf_list),
+  assertthat::assert_that(is.list(gaf_list),
                           msg=paste("Given gaf_list object is not a list. Please provide a valid argument."))
   assertthat::assert_that(gaf_name %in% names(gaf_list),
                           msg = "Given gaf_list does not contain provided gaf_name. Please provide a valid gaf_name argument.")
@@ -705,9 +709,9 @@ plot_multiple_gaf <- function(gaf_list,
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(assertive::is_list(gaf_list),
+  assertthat::assert_that(is.list(gaf_list),
                           msg=paste("Given gaf_list object is not a list. Please provide a valid argument."))
-  assertthat::assert_that(assertive::is_numeric(num_cores),
+  assertthat::assert_that(is.numeric(num_cores),
                           msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
 
 
@@ -813,11 +817,13 @@ plot_class_counts <- function(class_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(class_data),
-                          msg = "Empty dataframe provided as an input")
-  assertthat::assert_that(assertive::is_a_bool(frequency),
+  #else: make sure that it is an object with rows
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+
+  assertthat::assert_that(is.logical(frequency),
                           msg="Non-boolean value provided for option frequency")
-  assertthat::assert_that(assertive::is_character(type),
+  assertthat::assert_that(is.character(type),
                           msg = "Non-character argument is not alowed for `type`. Please provide valid type (choose from: 'R', 'N', 'A')")
 
   if (type=="R"){
@@ -876,7 +882,7 @@ plot_class_counts <- function(class_data,
     assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
                             msg="n column is missing in the input. Invalid output of count_class().")
 
-    class_counts$class <- factor(class_counts$class, levels=c("unclassified", "unmodified", "modified"))
+    class_counts$class <- factor(class_counts$class, levels=c("unclassified", "blank", "decorated"))
 
     if (ncol(class_counts)>2) {
       grouping_colname = setdiff(colnames(class_counts),basic_colnames)
@@ -897,8 +903,8 @@ plot_class_counts <- function(class_data,
     }
 
     class_plot <- class_plot +
-      ggplot2::scale_fill_manual(values=c("modified" = "#ff6600",
-                                          "unmodified"= "#00aad4",
+      ggplot2::scale_fill_manual(values=c("decorated" = "#ff6600",
+                                          "blank"= "#00aad4",
                                           "unclassified"= "#808080"))
 
   } else if (type=="A") {
@@ -911,7 +917,7 @@ plot_class_counts <- function(class_data,
     assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
                             msg="n column is missing in the input. Invalid output of count_class().")
 
-    class_counts$class <- factor(class_counts$class, levels=c("unclassified", "unmodified", "modified"))
+    class_counts$class <- factor(class_counts$class, levels=c("unclassified", "blank", "decorated"))
 
     if (ncol(class_counts)>2) {
 
@@ -921,7 +927,7 @@ plot_class_counts <- function(class_data,
         class_counts <- class_counts %>% dplyr::left_join(class_counts %>%
                                                             dplyr::group_by(!!rlang::sym(grouping_colname)) %>%
                                                             dplyr::summarize(total = sum(n))) %>%
-          dplyr::ungroup() %>% dplyr::filter(class=="modified")%>% dplyr::mutate(prop=n/total)
+          dplyr::ungroup() %>% dplyr::filter(class=="decorated")%>% dplyr::mutate(prop=n/total)
 
         class_plot <- ggplot2::ggplot(class_counts,
                                       ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=class,y=prop)) +
@@ -932,7 +938,7 @@ plot_class_counts <- function(class_data,
 
       } else {
 
-        class_plot <- ggplot2::ggplot(class_counts%>% dplyr::filter(class=="modified"),
+        class_plot <- ggplot2::ggplot(class_counts%>% dplyr::filter(class=="decorated"),
                                       ggplot2::aes(x=!!rlang::sym(grouping_colname),fill=class,y=n)) +
           ggplot2::ylab("count")+ ggplot2::theme_bw() +
           ggplot2::labs(x="\nsample", fill="Class:",
@@ -942,14 +948,14 @@ plot_class_counts <- function(class_data,
 
     } else {
 
-      class_plot <- ggplot2::ggplot(class_counts %>% dplyr::filter(class=="modified"),ggplot2::aes(x=class,y=n)) +
+      class_plot <- ggplot2::ggplot(class_counts %>% dplyr::filter(class=="decorated"),ggplot2::aes(x=class,y=n)) +
         ggplot2::geom_bar(stat="identity") +
         ggplot2::labs(x="\nsample", y="count\n", fill="Class:", title="Reads with non-As in poly(A)")
 
     }
 
     class_plot <- class_plot +
-      ggplot2::scale_fill_manual(values=c("modified" = "#ff6600"))
+      ggplot2::scale_fill_manual(values=c("decorated" = "#ff6600"))
 
   } else{
     stop("Wrong type of plot defined. Please provide a valid type (choose from: 'R', 'N', 'A')",
@@ -1017,9 +1023,9 @@ plot_residue_counts <- function(residue_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(residue_data),
-                          msg = "Empty dataframe provided as an input")
-
+  #else: make sure that it is an object with rows
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
   if (by_read==TRUE){
     residue_data2 <- residue_data[!duplicated(residue_data[c("readname","prediction")]),]
@@ -1038,9 +1044,9 @@ plot_residue_counts <- function(residue_data,
   assertthat::assert_that(basic_colnames[2] %in% colnames(residue_counts),
                           msg="n column is missing in the input. Invalid output of count_residues().")
 
-  assertthat::assert_that(assertive::is_a_bool(by_read),
+  assertthat::assert_that(is.logical(by_read),
                           msg="Non-boolean value provided for option by_read")
-  assertthat::assert_that(assertive::is_a_bool(frequency),
+  assertthat::assert_that(is.logical(frequency),
                           msg="Non-boolean value provided for option frequency")
 
 
@@ -1126,14 +1132,16 @@ plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::has_rows(processing_info),
-                          msg = "Empty dataframe provided as an input")
+
+  if (!is.data.frame(processing_info) || nrow(processing_info) == 0) {
+    stop("Empty data frame provided as an input (processing_info). Please provide valid input")}
+
   basic_colnames = c("qc_tag","n")
   assertthat::assert_that(basic_colnames[1] %in% colnames(processing_info),
                           msg="qc_tag column is missing in the input. Is that valid output of nanopolish_qc()?")
   assertthat::assert_that(basic_colnames[2] %in% colnames(processing_info),
                           msg="n column is missing in the input. Is that valid output of nanopolish_qc()?")
-  assertthat::assert_that(assertive::is_a_bool(frequency),
+  assertthat::assert_that(is.logical(frequency),
                           msg="Non-boolean value provided for option frequency")
 
 
@@ -1281,7 +1289,7 @@ plot_tail_distribution <- function(input_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(assertive::is_character(variable_to_plot),
+  assertthat::assert_that(is.character(variable_to_plot),
                           msg=paste0("Variable_to_plot must be a string. Please provide a valid argument."))
 
   if (variable_to_plot=="polya_length"){
@@ -1311,7 +1319,7 @@ plot_tail_distribution <- function(input_data,
 
   if (!is.na(max_length)) {
 
-    assertthat::assert_that(assertive::is_numeric(max_length),
+    assertthat::assert_that(is.numeric(max_length),
                             msg="Please provide numeric value for max_length")
     plot_tails <- plot_tails + ggplot2::scale_x_continuous(limits=c(0,max_length))
   }
@@ -1437,7 +1445,7 @@ plot_panel_characteristics <- function(input_residue_data,
   summarized_nonA <- cgu_metrics <- main_metrics <- binned_length_pos <- rel_density_plot <- NULL
   distrib_plot <- general_read_categories <- residue_counts <- final <-design <- NULL
   nonA_residues <- prediction <- ygreki <- n <- est_nonA_pos <- est_nonA_pos_2 <- NULL
-  counts <- counts_C <- counts_G <- counts_U <- counts_nonA <- counts_unmod <- counts_total<- NULL
+  counts <- counts_C <- counts_G <- counts_U <- counts_nonA <- counts_blank <- counts_total<- NULL
   binned_lengths <- binned_positions <- polya_median <- polya_mean <- NULL
   counts_of_reads_equal_or_longer_than_est_position <- NULL
   counts_of_reads_with_nonA_in_given_position <- polya_length<- NULL
@@ -1446,14 +1454,14 @@ plot_panel_characteristics <- function(input_residue_data,
   ##############################################################################
 
   if (!is.na(max_length)) {
-    assertthat::assert_that(assertive::is_numeric(max_length),
+    assertthat::assert_that(is.numeric(max_length),
                             msg="Please provide numeric value for max_length")
   }
 
-  assertthat::assert_that(assertive::has_rows(input_residue_data),
-                          msg = "Empty input_residue_data dataframe provided as an input")
+  if (!is.data.frame(input_residue_data) || nrow(input_residue_data) == 0) {
+    stop("Empty data frame provided as an input (input_residue_data). Please provide valid input")}
 
-  assertthat::assert_that(assertive::is_character(type),
+  assertthat::assert_that(is.character(type),
                           msg=paste0("Type must be a string (either 'default' or 'moderna'). Please provide a valid argument."))
 
   if (is.null(input_class_data) && is.null(input_merged_nonA_tables_data)) stop("At least one dataframe should be provided - either input_class_data or input_merged_nonA_tables_data")
@@ -1485,7 +1493,7 @@ plot_panel_characteristics <- function(input_residue_data,
     dplyr::select(-dplyr::one_of(setdiff(names(input_merged_nonA_tables_data), colnames_to_save)))
 
   tail_distribution_data <-dplyr::bind_rows(
-    tail_distribution_data %>% dplyr::filter(is.na(nonA_residues)) %>% dplyr::mutate(type="unmod"),
+    tail_distribution_data %>% dplyr::filter(is.na(nonA_residues)) %>% dplyr::mutate(type="blank"),
     tail_distribution_data %>% dplyr::filter(!is.na(nonA_residues)) %>% dplyr::mutate(type="nonA"),
     tail_distribution_data %>% dplyr::mutate(type="total"))
 
@@ -1603,14 +1611,14 @@ plot_panel_characteristics <- function(input_residue_data,
   summarized_nonA <- summarized_nonA %>%
     dplyr::select(-polya_median, -polya_mean) %>%
     dplyr::mutate_if(is.numeric, ~round(., 3)) %>%
-    tidyr::pivot_longer(cols=c(counts_total, counts_unmod, counts_nonA, counts_C,
+    tidyr::pivot_longer(cols=c(counts_total, counts_blank, counts_nonA, counts_C,
                                counts_G, counts_U), names_to = "source", values_to = "counts")
   summarized_nonA$cat <- c(rep("main",3), rep("mods",3))
 
   ### divide into 2 separate subplots for general categories & c,g,u preds
   main_metrics <- summarized_nonA %>% dplyr::filter(cat=="main") %>%
     dplyr::mutate(label = paste0("(n=", counts, ")"))
-  main_metrics$source <- factor(main_metrics$source, levels=c("counts_nonA", "counts_unmod", "counts_total"))
+  main_metrics$source <- factor(main_metrics$source, levels=c("counts_nonA", "counts_blank", "counts_total"))
 
   cgu_metrics <- summarized_nonA %>% dplyr::filter(cat=="mods") %>%
     dplyr::mutate(label = paste0("(n=", counts, ")"))
@@ -1625,7 +1633,7 @@ plot_panel_characteristics <- function(input_residue_data,
   general_read_categories <-ggplot2::ggplot(data=main_metrics, ggplot2::aes(x=source, y=counts, fill=source)) +
     ggplot2::geom_bar(stat="identity") +
     ggplot2::scale_fill_manual(values=c("#ff6600", "#00aad4", "#174e73"),
-                               labels=c("with non-As", "unmodified", "total"),guide = ggplot2::guide_legend(reverse = TRUE)) +
+                               labels=c("with non-As", "blank", "total"),guide = ggplot2::guide_legend(reverse = TRUE)) +
     ggplot2::scale_x_discrete(breaks=main_metrics$source, labels=main_metrics$label) +
     ggplot2::coord_flip() + ggplot2::theme_bw() +
     ggplot2::theme(axis.title.y=ggplot2::element_blank(),
@@ -1653,7 +1661,7 @@ plot_panel_characteristics <- function(input_residue_data,
                                                     title=F,
                                                     grouping_factor = "type") +
     ggplot2::scale_color_manual(values=c("#ff6600", "#174e73", "#00aad4"),
-                                labels=c("with non-As", "total", "unmodified")) +
+                                labels=c("with non-As", "total", "blank")) +
     ggplot2::labs(title="Distribution of lengths of poly(A) tails",
                   color="read type",
                   tag="C") +
@@ -1749,4 +1757,174 @@ plot_panel_characteristics <- function(input_residue_data,
   return(final)
 }
 
+
+#' Scatterplot of nonA residue positions within poly(A) tail
+#'
+#' This function allows to produce the scatterplot of raw non-A
+#' residue predictions (y-axis) along the user-defined tail span
+#' (x-axis). The resulting plot also contains the rugs and ridges
+#' along the axes, which are a visual aid designed to better
+#' show the distributions of given residue.
+#'
+#' @param residue_data A dataframe or tibble containig non-A residue predictions
+#' made by ninetails pipeline.
+#'
+#' @param base character. One of the following ["C"/"G","U"]. This parameter
+#' defines which nonadenosine is to be plotted. It is obligatory to prevent
+#' the overplotting.
+#'
+#' @param max_length numeric [1]. This parameter controls maximum length
+#' of the poly(A) tail to be taken into consideration for plotting.
+#'
+#' @return a ggplot2 object
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' ninetails::plot_rug_density(residue_data=residue_data, base="C", max_length=100)
+#' }
+#'
+plot_rug_density <- function(residue_data, base, max_length){
+
+  #var binding
+  prediction <- polya_length <- est_nonA_pos <- NULL
+
+  #assertions
+
+
+  if(base=="C"){
+    colorscale<- ggplot2::scale_fill_manual(values=c("#3a424f"))
+    colorfill <- ggplot2::scale_color_manual(values=c("#3a424f"))
+  }else if(base=="G"){
+    colorscale<- ggplot2::scale_fill_manual(values=c("#50a675"))
+    colorfill <- ggplot2::scale_color_manual(values=c("#50a675"))
+  }else if(base=="U"){
+    colorscale<- ggplot2::scale_fill_manual(values=c("#b0bdd4"))
+    colorfill <- ggplot2::scale_color_manual(values=c("#b0bdd4"))
+  }else{
+    stop("Wrong base. Base must be either C, G or U")
+  }
+
+
+  data <- residue_data %>% dplyr::filter(prediction==base)
+
+  #main plot
+  pmain <- ggplot2::ggplot(data, ggplot2::aes(x = polya_length,
+                                              y = polya_length-est_nonA_pos,
+                                              color = prediction))+
+    ggplot2::geom_point(show.legend=FALSE)+
+    ggplot2::geom_rug(sides="tr",alpha=0.2,size=1.5,col = "#3a424f",show.legend=FALSE)+
+    ggplot2::scale_y_continuous(expand = c(0.1, 0.1))+
+    ggplot2::scale_x_continuous(expand = c(0.1, 0.1)) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(axis.line.x = ggplot2::element_line(size = 0.45, color = "#3a424f"),
+                   axis.line.y = ggplot2::element_line(size = 0.45, color = "#3a424f"))+
+    ggplot2::xlim(0,max_length) +
+    ggplot2::ylim(0,max_length) +
+    colorscale +
+    colorfill + ggplot2::labs(x="poly(A) length [nt]", y="estimated non-A positions [nt]")
+
+
+  # Marginal densities along x axis
+  xdens <- cowplot::axis_canvas(pmain, axis = "x")+
+    ggplot2::geom_density(data = data,
+                          ggplot2::aes(x = polya_length,
+                              fill = prediction),
+                          alpha = 0.5, size = 0.2,
+                          show.legend=FALSE) +
+    colorscale + colorfill
+  # Marginal densities along y axis
+  # Need to set coord_flip = TRUE, if you plan to use coord_flip()
+  ydens <- cowplot::axis_canvas(pmain, axis = "y", coord_flip = TRUE)+
+    ggplot2::geom_density(data = data,
+                          ggplot2::aes(x = polya_length-est_nonA_pos,
+                              fill = prediction),
+                          alpha = 0.5, size = 0.2,
+                          show.legend=FALSE) +
+    ggplot2::coord_flip() +
+    colorscale + colorfill
+
+
+  p1 <- cowplot::insert_xaxis_grob(pmain, xdens, grid::unit(.2, "null"), position = "top")
+  p2<- cowplot::insert_yaxis_grob(p1, ydens, grid::unit(.2, "null"), position = "right")
+  p3 <- cowplot::ggdraw(p2)
+
+  return(p3)
+}
+
+#' Plot abundances of reads with given amount of non-A residues per read
+#'
+#' This function plots frequencies of reads containing one, two or more separate
+#' instances (occurrences) of non-As reported by ninetails. The frequency
+#' is computed with respect to the total amount of decorated reads in the
+#' analyzed dataset.
+#'
+#' @param residue_data A dataframe or tibble containig non-A residue predictions
+#' made by ninetails pipeline
+#'
+#' @param grouping_factor character string. A grouping variable (e.g. "sample_name")
+#'
+#' @return ggplot2 object
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' plt <- ninetails::plot_nonA_abundance(residue_data = residue_data,
+#'                                       grouping_factor = "sample_name")
+#' plt
+#' }
+plot_nonA_abundance <- function(residue_data,
+                                grouping_factor=NA){
+
+  #var binding
+  instances <- count <- two <- more <- total <- psingle <- ptwo <- pmore <- value <- NULL
+
+  #assertions
+  if (missing(residue_data)) {
+    stop("Residue_data is missing. Please provide a valid residue_data argument",
+         call. = FALSE)
+  }
+
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+
+  if(!is.na(grouping_factor)) {
+    assertthat::assert_that(grouping_factor %in% colnames(residue_data),
+                            msg=paste0(grouping_factor," is not a column of input dataset"))}
+
+
+  nonA_counts <- ninetails::count_nonA_abundance(residue_data=residue_data,
+                                      grouping_factor=grouping_factor)
+
+
+  nonA_counts <- nonA_counts %>% tidyr::pivot_wider(names_from = instances,
+                                                    values_from = count) %>%
+    dplyr::mutate(total = single + two + more) %>%
+    dplyr::mutate_all(~replace_na(., 0)) %>%
+    dplyr::group_by(!!rlang::sym(grouping_factor)) %>%
+    dplyr::mutate(psingle = single/total,
+                  ptwo = two/total,
+                  pmore = more/total) %>%
+    dplyr::select(!!rlang::sym(grouping_factor), psingle, ptwo, pmore) %>%
+    dplyr::rename(single = psingle, two = ptwo, more = pmore) %>%
+    dplyr::ungroup() %>% tidyr::pivot_longer(cols = c(single, two, more),
+                                             names_to = "instances",
+                                             values_to = "value") %>%
+    dplyr::distinct()
+
+  nonA_counts$instances <- factor(nonA_counts$instances, levels=c("single", "two", "more"))
+
+  tp <- ggplot2::ggplot(nonA_counts, ggplot2::aes(x = !!rlang::sym(grouping_factor),
+                                                  y=value, fill = instances)) +
+    ggplot2::geom_bar(stat="identity", position="dodge") +
+    ggplot2::labs(y = "frequency", fill = "number of occurrences per read") +
+    ggplot2::scale_fill_manual(values = c("single" = "#91b7db",
+                                          "two" = "#0978e3",
+                                          "more" = "#0f304f")) +
+    ggplot2::theme_bw()
+
+
+  return(tp)
+
+}
 
