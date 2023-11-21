@@ -678,6 +678,8 @@ check_tails <- function(nanopolish,
 
     }
 
+
+
     cat(paste0('Thank you for using Ninetails.'))
 
     on.exit(closeAllConnections()) #fixed err
