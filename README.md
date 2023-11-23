@@ -64,6 +64,10 @@ devtools::install_github('LRB-IIMCB/ninetails')
 library(ninetails)
 ```
 
+**Important info: Ninetails requires additional components/third party tools to operate.**
+**For further info, read [Wiki](https://github.com/LRB-IIMCB/ninetails/wiki)**
+
+
 ## General usage
 
 ### Classification of reads using wrapper function
