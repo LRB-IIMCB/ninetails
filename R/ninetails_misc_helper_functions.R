@@ -336,7 +336,7 @@ correct_labels <- function(df) {
     df$class <- ifelse(df$class %in% c("unmodified", "unclassified"),
                        "blank",
                        ifelse(df$class == "blank",
-                              "unmodified",
+                              "unclassified",
                               "decorated"))
   }
 
