@@ -1497,6 +1497,11 @@ plot_panel_characteristics <- function(input_residue_data,
     tail_distribution_data %>% dplyr::filter(!is.na(nonA_residues)) %>% dplyr::mutate(type="nonA"),
     tail_distribution_data %>% dplyr::mutate(type="total"))
 
+  # factor level order! hotfix
+  tail_distribution_data$type <- factor(tail_distribution_data$type,
+                                        levels = c("nonA", "total", "blank"),
+                                        ordered = TRUE)
+
   ## RESIDUE DATA
   #clean the table from unneeded cols
   colnames_to_save <- c("readname", "prediction", "est_nonA_pos", "polya_length")
