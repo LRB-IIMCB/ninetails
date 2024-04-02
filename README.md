@@ -18,6 +18,8 @@
 -   It requires tail delimitation data produced by Nanopolish software
 -   It allows both for the detection of non-adenosine residues within the poly(A) tails and visual inspection of read signals
 
+**Important note! Since version 1.0.2 Ninetails is compatible also with tailfindR**
+
 Currently, **Ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
 <div>
 
