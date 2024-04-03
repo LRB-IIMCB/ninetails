@@ -104,6 +104,7 @@ This function returns a list consisting of two tables: **read_classes** and **no
 
 Moreover, the function also creates a log file in the directory specified by the user.
 
+The runtime depends on the hardware resources and sequencing depth. The processing of built-in test dataset should take around 1 minute.
 
 ### Output explanation
 
