@@ -65,7 +65,7 @@ Once you have `devtools` installed, you can install **Ninetails** using the comm
 devtools::install_github('LRB-IIMCB/ninetails')
 library(ninetails)
 ```
-The installation of the repo takes approx. 20 second on typical PC. Additional time is required to install and configure additional components.
+The installation of the repo takes approx. 20 seconds on typical PC. Additional time is required to install and configure additional components.
 
 
 **Important info: Ninetails requires additional components/third party tools to operate.**
