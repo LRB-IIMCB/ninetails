@@ -7,7 +7,7 @@
 
 # This is devel branch!
 
-Test submission
+This code is unstable. Do not recommend using!
 
 # Ninetails
 
