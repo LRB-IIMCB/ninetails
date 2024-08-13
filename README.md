@@ -4,7 +4,7 @@
 <img src="https://img.shields.io/badge/maintained-yes-blue" alt="maintained - yes">
 <a href="https://www.linux.org/" title="Go to Linux homepage"><img src="https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white" alt="OS - Linux"></a>
 <a href="https://www.microsoft.com/" title="Go to Microsoft homepage"><img src="https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white" alt="OS - Windows"></a>
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13309819.svg)](https://doi.org/10.5281/zenodo.13309819)
 
 # Ninetails
 
@@ -181,9 +181,7 @@ For the moment, **Ninetails** does not offer the possibility of processing large
 
 ## Citation
 
-Please cite **Ninetails** as: Gumińska N., Matylla-Kulińska K., Krawczyk P., Orzeł W., Maj M., Mroczek S., Dziembowski A. Direct detection of non-adenosine nucleotides within poly(A) tails -- a new tool for the analysis of post-transcriptional mRNA tailing, 27th Annual Meeting of the RNA Society, Boulder, Colorado, May 31 to June 5, 2022.
-
-Preprint is in the preparation.
+Please cite **Ninetails** as: Gumińska, N., Matylla-Kulińska, K., Pawel Krawczyk, Maj, M., Orzeł, W., Mackiewicz, Z., Brouze, A., Mroczek, S., & Dziembowski, A. (2024). LRB-IIMCB/ninetails: v.1.0.2_manuscript (v.1.0.2_manuscript). Zenodo. https://doi.org/10.5281/zenodo.13309819
 
 
 ## Troubleshooting
