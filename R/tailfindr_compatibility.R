@@ -55,6 +55,8 @@
 #' the long tibble will be printed to the console, which may crash your
 #' R session.
 #'
+#' @export
+#'
 #' @examples
 #'\dontrun{
 #'
