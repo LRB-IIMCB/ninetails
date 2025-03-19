@@ -181,7 +181,9 @@ For the moment, **Ninetails** does not offer the possibility of processing large
 
 ## Citation
 
-Please cite **Ninetails** as: Gumińska, N., Matylla-Kulińska, K., Pawel Krawczyk, Maj, M., Orzeł, W., Mackiewicz, Z., Brouze, A., Mroczek, S., & Dziembowski, A. (2024). LRB-IIMCB/ninetails: v.1.0.2_manuscript (v.1.0.2_manuscript). Zenodo. https://doi.org/10.5281/zenodo.13309819
+Please cite **Ninetails** as:
+
+Gumińska, N., Matylla-Kulińska, K., Krawczyk, P.S. et al. Direct profiling of non-adenosines in poly(A) tails of endogenous and therapeutic mRNAs with Ninetails. Nat Commun 16, 2664 (2025). https://doi.org/10.1038/s41467-025-57787-6
 
 
 ## Troubleshooting
