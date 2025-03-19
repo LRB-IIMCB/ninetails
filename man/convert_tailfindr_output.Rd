@@ -68,7 +68,7 @@ output - it is on your own risk.
 \examples{
 \dontrun{
 
-converted_tailfindr <- ninetails::convert_tailfindr_output(tailfindr_output = '/path/to/tailfindr/output.csv')
+df <- ninetails::convert_tailfindr_output(tailfindr_output = '/tf/out.csv')
 
 #The output of this function shall be passed to the Ninetails pipeline as
 nanopolish variable, for instance:
