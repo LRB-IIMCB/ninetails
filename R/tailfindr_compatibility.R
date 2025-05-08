@@ -111,3 +111,87 @@ convert_tailfindr_output <- function(tailfindr_output){
   return(converted_tailfindr_output)
 
 }
+
+
+#' Check and convert poly(A) length file format
+#'
+#' This function checks whether the input poly(A) length files store data from
+#' correct sequencing platform (Oxford Nanopore DRS sequencing) - if other data
+#' types are loaded, an error occurs.
+#'
+#' Please keep in mind:
+#' This function is an element of legacy pipeline which would probably
+#' be retired if fast5 format would be deprecated.
+#'
+#' @param input Path to file or data frame containing poly-A length data:
+#' either produced by nanopolish or tailfindr. In case of tailfindr, only DRS
+#' data are accepted.
+#'
+#' @return Standardized data frame in nanopolish-like format compatible with
+#' further ninetails processing steps
+#'
+#' @export
+#'
+#' @examples
+#'\dontrun{
+#'
+#' # run on nanopolish output
+#' test <- ninetails::check_polya_length_filetype(
+#' input = system.file('extdata',
+#'                     'test_data',
+#'                     'nanopolish_output.tsv',
+#'                     package = 'ninetails'))
+#'
+#' # run on tailfindr output
+#' test <- ninetails::check_polya_length_filetype(
+#' input = system.file('extdata',
+#'                     'test_data',
+#'                     'tailfindr_output.csv',
+#'                     package = 'ninetails'))
+#'
+#'}
+check_polya_length_filetype <- function(input) {
+
+  # Initialize result list
+  result <- list(
+    data = NULL,
+    file_type = NULL
+  )
+
+  # Accept either path to file or in-memory file
+  if (checkmate::test_string(input)) {
+    checkmate::assert_file_exists(input)
+    input_data <- vroom::vroom(input, show_col_types = FALSE)
+  } else {
+    if (!is.data.frame(input) || nrow(input) == 0) {
+      stop("Empty data frame provided as input. Please provide valid input")
+    }
+    input_data <- input
+  }
+
+  # Get column names
+  cols <- colnames(input_data)
+
+  # Check file type based on columns
+  is_nanopolish <- "qc_tag" %in% cols
+  is_tailfindr_drs <- all(c("read_id", "tail_start", "tail_end",
+                            "samples_per_nt", "tail_length") %in% cols)
+  is_tailfindr_cdna <- "tail_is_valid" %in% cols
+
+  # Process based on file type
+  if (is_nanopolish) {
+    result$data <- input_data
+    result$file_type <- "nanopolish"
+  } else if (is_tailfindr_drs) {
+    result$data <- ninetails::convert_tailfindr_output(input_data)
+    result$file_type <- "tailfindr_drs"
+  } else if (is_tailfindr_cdna) {
+    stop("Tailfindr cDNA output is not compatible with this pipeline.
+          Please provide DRS (direct RNA sequencing) data.", call. = FALSE)
+  } else {
+    stop("Unrecognized input format. This pipeline accepts only nanopolish poly(A)
+          or tailfindr DRS output. Please check your input file.", call. = FALSE)
+  }
+
+  return(result)
+}
