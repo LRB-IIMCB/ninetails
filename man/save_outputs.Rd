@@ -7,15 +7,26 @@
 save_outputs(outputs, save_dir, prefix = "")
 }
 \arguments{
-\item{outputs}{List containing read_classes and nonadenosine_residues data frames}
+\item{outputs}{List containing read_classes and nonadenosine_residues
+data frames produced by the ninetails pipeline}
 
-\item{save_dir}{Directory to save the files}
+\item{save_dir}{character string. Full path of the directory where the output
+files containing the tail composition information should be stored.}
 
-\item{prefix}{Optional prefix for file names}
+\item{prefix}{character string (optional). If provided, it will be inserted
+into the names of the output files, positioned between the timestamp
+and the suffix indicating the file type (either read classes or
+nonadenosine residues).}
 }
 \value{
 Invisible NULL
 }
 \description{
-Save pipeline outputs to files
+This function is not intended to be used as a standalone function, i.e., outside
+the \code{\link{check_tails_guppy}} function. It does not affect data
+processing; it only provides code to store results in files. It is enclosed
+as a separate function, called by the wrapper, to keep the code clean and
+modular, facilitating further development. Therefore, it should not be called
+manually by the user.
 }
+\keyword{internal}

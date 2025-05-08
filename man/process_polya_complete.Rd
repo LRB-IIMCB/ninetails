@@ -14,7 +14,8 @@ process_polya_complete(
   qc,
   save_dir,
   prefix,
-  cli_log
+  cli_log,
+  ...
 )
 }
 \arguments{
@@ -60,7 +61,9 @@ into the names of the output files, positioned between the timestamp
 and the suffix indicating the file type (either read classes or
 nonadenosine residues).}
 
-\item{cli_log}{Function for logging}
+\item{cli_log}{Function for logging. This function is encoded in main
+pipeline wrapper (in \code{\link{check_tails_guppy}} function). Its purpose
+is to provide neatly formatted & informative log file.}
 }
 \value{
 A list containing tail information organized by the read ID
@@ -69,19 +72,11 @@ A list containing tail information organized by the read ID
 This variant of the pipeline allows to process small to moderate size of
 poly(A) data (up to 100000 reads by default).
 }
-\examples{
-\dontrun{
-# Process a complete poly(A) dataset
-results <- ninetails::process_polya_complete(
-  polya_data = "path/to/polya_data.tsv",
-  sequencing_summary = "path/to/sequencing_summary.txt",
-  workspace = "path/to/fast5_files",
-  num_cores = 4,
-  basecall_group = "Basecall_1D_000",
-  pass_only = TRUE,
-  qc = TRUE,
-  save_dir = "path/to/output",
-  prefix = "experiment1",
-  cli_log = cli_log)
+\details{
+This function as well as \code{\link{process_polya_parts}}function is not
+intended to be used outside the \code{\link{check_tails_guppy}}function,
+as it requires cli_log which is a custom function within the pipeline wrapper
+required for log file & console prompts formatting. Therefore, should not be
+manually called by the user.
 }
-}
+\keyword{internal}

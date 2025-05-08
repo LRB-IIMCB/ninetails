@@ -131,15 +131,15 @@
 #'
 #' }
 check_tails_guppy <- function(polya_data,
-                          sequencing_summary,
-                          workspace,
-                          num_cores=1,
-                          basecall_group="Basecall_1D_000",
-                          pass_only=TRUE,
-                          qc=TRUE,
-                          save_dir,
-                          prefix="",
-                          part_size=1000000) {
+                              sequencing_summary,
+                              workspace,
+                              num_cores=1,
+                              basecall_group="Basecall_1D_000",
+                              pass_only=TRUE,
+                              qc=TRUE,
+                              save_dir,
+                              prefix="",
+                              part_size=1000000) {
 
   # Initialize warning flag
   warn_message <- FALSE
@@ -157,7 +157,10 @@ check_tails_guppy <- function(polya_data,
   # Initialize log collector
   log_collector <- vector("character")
   log_start_time <- Sys.time()
-  log_filename <- format(log_start_time, "%Y-%m-%d_%H-%M-%S_ninetails.log")
+  log_filename <- format(log_start_time,
+                         paste0("%Y-%m-%d_%H-%M-%S",
+                                if(nchar(prefix) > 0) paste0("_", prefix) else "",
+                                "_ninetails.log"))
   log_filepath <- file.path(save_dir, log_filename)
 
   # Helper functions for logging
@@ -186,16 +189,20 @@ check_tails_guppy <- function(polya_data,
     }
   }
 
-  cli_log <- function(message, type = "INFO", section = NULL) {
+  cli_log <- function(message, type = "INFO", section = NULL, bullet = FALSE) {
     if (!is.null(section)) {
       cli::cli_h2(section)
     }
 
-    switch(type,
-           "INFO" = cli::cli_alert_info(message),
-           "SUCCESS" = cli::cli_alert_success(message),
-           "WARNING" = cli::cli_alert_warning(message),
-           "ERROR" = cli::cli_alert_danger(message))
+    if (bullet) {
+      cli::cli_bullets(c("*" = message))
+    } else {
+      switch(type,
+             "INFO" = cli::cli_alert_info(message),
+             "SUCCESS" = cli::cli_alert_success(message),
+             "WARNING" = cli::cli_alert_warning(message),
+             "ERROR" = cli::cli_alert_danger(message))
+    }
     log_message(message, type, section)
   }
 
@@ -206,11 +213,29 @@ check_tails_guppy <- function(polya_data,
     # Initialize pipeline
     ###################################################
     cli::cli_h1("Ninetails {utils::packageVersion('ninetails')}")
-    log_message("Starting Ninetails pipeline")
+    cli_log(paste0("Welcome to Ninetails! ", {utils::packageVersion('ninetails')}), bullet = TRUE)
+    cli_log("Analysis toolkit for poly(A) tail composition in ONT data", bullet = TRUE)
+
+    cli_log("Launching *check_tails_guppy* pipeline", "INFO","Launching *check_tails_guppy* pipeline")
+
+    # Configuration logging display
+    #####################################################
+    cli_log("Configuration", "INFO", "Configuration")
+    cli_log(sprintf("Poly(A) length file:         %s",
+                    if(!is.object(polya_data)) polya_data else deparse(substitute(polya_data))), bullet = TRUE)
+    cli_log(sprintf("Sequencing summary:          %s",
+                    if(!is.object(sequencing_summary)) sequencing_summary else deparse(substitute(sequencing_summary))), bullet = TRUE)
+    cli_log(sprintf("Fast5 files directory:       %s", workspace), bullet = TRUE)
+    cli_log(sprintf("Number of cores:             %d", num_cores), bullet = TRUE)
+    cli_log(sprintf("Basecall group:              %s", basecall_group), bullet = TRUE)
+    cli_log(sprintf("Only PASS reads:             %s", pass_only), bullet = TRUE)
+    cli_log(sprintf("Output quality control:      %s", qc), bullet = TRUE)
+    cli_log(sprintf("Output directory:            %s", save_dir), bullet = TRUE)
+    cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
+
 
     # Input validation and configuration
-    cli_log("Validating input parameters", "INFO", "Validating inputs")
-
+    cli_log("Validating input parameters", "INFO", "Validating Inputs")
     # Assertions
     ###################################################
     assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
@@ -254,35 +279,20 @@ check_tails_guppy <- function(polya_data,
       assertthat::assert_that(is.data.frame(sequencing_summary) && nrow(sequencing_summary) > 0,
                               msg = "Sequencing summary must be a non-empty data frame or valid file path")
     }
+    cli_log("Provided input files/paths are in correct format", "SUCCESS")
 
 
-    # Configuration logging display
-    #####################################################
-    cli::cli_h2("Configuration")
-    cli_log(sprintf("Poly(A) length file:         %s",
-                    if(!is.object(polya_data)) polya_data else deparse(substitute(polya_data))))
-    cli_log(sprintf("Sequencing summary:          %s",
-                    if(!is.object(sequencing_summary)) sequencing_summary else deparse(substitute(sequencing_summary))))
-    cli_log(sprintf("Fast5 files directory:       %s", workspace))
-    cli_log(sprintf("Number of cores:             %d", num_cores))
-    cli_log(sprintf("Basecall group:              %s", basecall_group))
-    cli_log(sprintf("Only PASS reads:             %s", pass_only))
-    cli_log(sprintf("Output quality control:      %s", qc))
-    cli_log(sprintf("Output directory:            %s", save_dir))
-
-
-
-    # Validate FAST5 format first
-    cli_log("Checking FAST5 format...", "INFO", "Validating FAST5 Data")
+    # Validate FAST5 format whether multifast5 & DRS & basecalled
+    cli_log("Checking FAST5 format...", "INFO", "Validating FAST5 Data", bullet = TRUE)
     fast5_output <- utils::capture.output(
       ninetails::check_fast5_filetype(workspace, basecall_group)
     )
     log_message(paste(fast5_output, collapse = "\n"), "INFO")
-    cli_log("FAST5 format validated", "SUCCESS")
+    cli_log("FAST5 format validated; all data blocks present", "SUCCESS")
 
 
-    # Check input size
-    cli_log("Checking poly(A) data input size...", "INFO", "Poly(A) Input Size Check")
+    # Check poly(A) file input size
+    cli_log("Checking poly(A) data input size...", "INFO", "Poly(A) Input Size Check", bullet = TRUE)
     data_size <- if(is.character(polya_data)) {
       nrow(vroom::vroom(polya_data, show_col_types = FALSE))
     } else {
@@ -290,6 +300,7 @@ check_tails_guppy <- function(polya_data,
     }
 
     cli_log("Input validation passed", "SUCCESS")
+
 
     # Process based on size using part_size parameter
     if (data_size > part_size) {
@@ -333,7 +344,7 @@ check_tails_guppy <- function(polya_data,
     }
 
     # Save final outputs
-    cli_log("Saving final outputs...", "INFO", "Saving Results")
+    cli_log("Saving final outputs...", "INFO", "Saving Results", bullet = TRUE)
     ninetails::save_outputs(outputs, save_dir, prefix)
 
     # Pipeline statistics
@@ -341,14 +352,14 @@ check_tails_guppy <- function(polya_data,
     runtime <- difftime(log_end_time, log_start_time, units = "mins")
 
     cli_log("Pipeline Statistics", "INFO")
-    cli_log(sprintf("Total runtime: %.2f minutes", runtime))
+    cli_log(sprintf("Total runtime: %.2f minutes", runtime), bullet = TRUE)
     cli_log("Pipeline completed", "SUCCESS")
-    cli_log(sprintf("Log file saved at: %s", log_filepath), "INFO")
+    cli_log(sprintf("Log file saved at: %s", log_filepath), "INFO", bullet = TRUE)
 
     # Final status messages
     cli::cli_rule()
     cli_log("Pipeline completed successfully", "SUCCESS")
-    cli_log(sprintf("Output files saved in: %s", save_dir), "INFO")
+    cli_log(sprintf("Output files saved in: %s", save_dir), "INFO", bullet = TRUE)
 
     if (warn_message) {
       cli::cli_alert_warning(paste(
@@ -371,19 +382,39 @@ check_tails_guppy <- function(polya_data,
   })
 }
 
+
+
 ################################################################################
 # INTERNAL FUNCTIONS REQUIRED FOR PIPELINE
 ################################################################################
 
 #' Split large poly(A) data file into smaller polya_parts
 #'
-#' @param polya_data Data frame or path to file containing poly(A) data
+#' This function is not intended to be used as a standalone function, i.e., outside
+#' the \code{\link{check_tails_guppy}} function. It does not affect data
+#' processing; it only provides code to store results in files. It is enclosed
+#' as a separate function, called by the wrapper, to keep the code clean and
+#' modular, facilitating further development. Therefore, it should not be called
+#' manually by the user.
 #'
-#' @param part_size Maximum number of rows per polya_part
+#' @param polya_data character string. Full path of the .tsv file produced
+#' by either nanopolish polya function or tailfindr. Only DRS-derived tables are
+#' accepted. In case of tailfindr output, it would be immediately converted to
+#' nanopolish-like format.
 #'
-#' @param save_dir Directory to save polya_parts
+#' @param part_size numeric [100000] (optional). If provided, defines maximum
+#' number of rows in the poly(A) length containing input processed at once.
+#' This value must be >=1000 (defaults to 1000000).If the size of
+#' nanopolish/tailfindr output exceeds default 100000 rows, the input dataframe
+#' would be splitted into parts and processed sequentially to avoid memory
+#' overflow and pipeline crush.
+#'
+#' @param save_dir character string. Full path of the directory where the output
+#' files containing the tail composition information should be stored.
 #'
 #' @return List of file paths to created polya_parts
+#'
+#' @keywords internal
 #'
 #' @export
 split_polya_data <- function(polya_data, part_size = 100000, save_dir) {
@@ -428,13 +459,27 @@ split_polya_data <- function(polya_data, part_size = 100000, save_dir) {
 
 #' Save pipeline outputs to files
 #'
-#' @param outputs List containing read_classes and nonadenosine_residues data frames
+#' This function is not intended to be used as a standalone function, i.e., outside
+#' the \code{\link{check_tails_guppy}} function. It does not affect data
+#' processing; it only provides code to store results in files. It is enclosed
+#' as a separate function, called by the wrapper, to keep the code clean and
+#' modular, facilitating further development. Therefore, it should not be called
+#' manually by the user.
 #'
-#' @param save_dir Directory to save the files
+#' @param outputs List containing read_classes and nonadenosine_residues
+#' data frames produced by the ninetails pipeline
 #'
-#' @param prefix Optional prefix for file names
+#' @param save_dir character string. Full path of the directory where the output
+#' files containing the tail composition information should be stored.
+#'
+#' @param prefix character string (optional). If provided, it will be inserted
+#' into the names of the output files, positioned between the timestamp
+#' and the suffix indicating the file type (either read classes or
+#' nonadenosine residues).
 #'
 #' @return Invisible NULL
+#'
+#' @keywords internal
 #'
 #' @export
 save_outputs <- function(outputs, save_dir, prefix = "") {
@@ -466,6 +511,12 @@ save_outputs <- function(outputs, save_dir, prefix = "") {
 #'
 #' This variant of the pipeline allows to process small to moderate size of
 #' poly(A) data (up to 100000 reads by default).
+#'
+#' This function as well as \code{\link{process_polya_parts}}function is not
+#' intended to be used outside the \code{\link{check_tails_guppy}}function,
+#' as it requires cli_log which is a custom function within the pipeline wrapper
+#' required for log file & console prompts formatting. Therefore, should not be
+#' manually called by the user.
 #'
 #' @param polya_data character string. Full path of the .tsv file produced
 #' by either nanopolish polya function or tailfindr. Only DRS-derived tables are
@@ -509,27 +560,15 @@ save_outputs <- function(outputs, save_dir, prefix = "") {
 #' and the suffix indicating the file type (either read classes or
 #' nonadenosine residues).
 #'
-#' @param cli_log Function for logging
+#' @param cli_log Function for logging. This function is encoded in main
+#' pipeline wrapper (in \code{\link{check_tails_guppy}} function). Its purpose
+#' is to provide neatly formatted & informative log file.
 #'
 #' @return A list containing tail information organized by the read ID
 #'
-#' @export
+#' @keywords internal
 #'
-#' @examples
-#' \dontrun{
-#' # Process a complete poly(A) dataset
-#' results <- ninetails::process_polya_complete(
-#'   polya_data = "path/to/polya_data.tsv",
-#'   sequencing_summary = "path/to/sequencing_summary.txt",
-#'   workspace = "path/to/fast5_files",
-#'   num_cores = 4,
-#'   basecall_group = "Basecall_1D_000",
-#'   pass_only = TRUE,
-#'   qc = TRUE,
-#'   save_dir = "path/to/output",
-#'   prefix = "experiment1",
-#'   cli_log = cli_log)
-#' }
+#' @export
 process_polya_complete <- function(polya_data,
                                    sequencing_summary,
                                    workspace,
@@ -539,13 +578,15 @@ process_polya_complete <- function(polya_data,
                                    qc,
                                    save_dir,
                                    prefix,
-                                   cli_log) {
+                                   cli_log,
+                                   ...) {
 
   # Initialize warning flag
   warn_message <- FALSE
 
   # Validate and convert poly(A) data format
-  cli_log("Checking poly-A length file format...", "INFO", "Processing Input")
+  cli_log("Checking poly(A) length file format...", "INFO", "Processing Poly(A) length data", bullet = TRUE)
+
   polya_data <- tryCatch({
     result <- check_polya_length_filetype(polya_data)
     if (result$file_type == "nanopolish") {
@@ -553,17 +594,20 @@ process_polya_complete <- function(polya_data,
     } else if (result$file_type == "tailfindr_drs") {
       cli_log("Tailfindr DRS output detected. Converting to nanopolish-compatible format.", "WARNING")
       cli_log("NOTE: Tailfindr does not provide quality metrics for poly(A) tail calling.", "WARNING")
-      cli_log("Results should be interpreted with caution. Quality tags are assigned based on tail length only (PASS for >= 10nt, NOREGION for < 10nt).", "WARNING")
+      cli_log("Results should be interpreted with caution.", "WARNING")
+      cli_log("Quality tags are assigned based on tail length only (PASS for >= 10nt, NOREGION for < 10nt).", "WARNING")
     }
-    cli_log("Input format validated", "SUCCESS")
+    cli_log("Input poly(A) format validated", "SUCCESS")
     result$data
   }, error = function(e) {
-    cli_log(sprintf("Error in input validation: %s", e$message), "ERROR")
+    cli_log(sprintf("Error in poly(A) input validation: %s", e$message), "ERROR")
     stop(e$message, call. = FALSE)
   })
 
-  # Create feature list
-  cli_log("Creating tail feature list...", "INFO", "Creating Features")
+  #####################################################
+  # CREATING TAIL FEATURE LIST
+  #####################################################
+  cli_log("Creating tail feature list...", "INFO", "Creating Features", bullet = TRUE)
   tail_feature_list <- tryCatch({
     # Suppress text output while keeping progress bar visible
     invisible(utils::capture.output(
@@ -577,6 +621,8 @@ process_polya_complete <- function(polya_data,
       )
     ))
 
+    # Sanity checks
+    #####################################################
     # Basic sanity check
     if (length(features$tail_feature_list) == 0) {
       stop("Produced feature list is of length 0. Check your input (nanopolish, fast5 files) for integrity.",
@@ -607,8 +653,10 @@ process_polya_complete <- function(polya_data,
   })
   cli_log("Feature extraction completed", "SUCCESS")
 
-  # Create chunks
-  cli_log("Creating tail segmentation data...", "INFO", "Creating Chunks")
+  #####################################################
+  # CREATING TAIL CHUNK LIST
+  #####################################################
+  cli_log("Creating tail segmentation data...", "INFO", "Creating Chunks", bullet = TRUE)
   tail_chunk_list <- tryCatch({
     invisible(utils::capture.output(
       result <- ninetails::create_tail_chunk_list(
@@ -623,8 +671,10 @@ process_polya_complete <- function(polya_data,
   })
   cli_log("Chunk creation completed", "SUCCESS")
 
-  # Create GAFs
-  cli_log("Computing gramian angular fields...", "INFO", "Generating GAFs")
+  #####################################################
+  # CREATING GAF LIST
+  #####################################################
+  cli_log("Computing gramian angular fields...", "INFO", "Generating GAFs", bullet = TRUE)
   gaf_list <- tryCatch({
     invisible(utils::capture.output(
       result <- ninetails::create_gaf_list(
@@ -639,8 +689,10 @@ process_polya_complete <- function(polya_data,
   })
   cli_log("GAF computation completed", "SUCCESS")
 
-  # Predict classes
-  cli_log("Running predictions...", "INFO", "Predicting Classes")
+  #####################################################
+  # PREDICT CLASSES
+  #####################################################
+  cli_log("Running predictions...", "INFO", "Predicting Classes", bullet = TRUE)
   predicted_list <- tryCatch({
     invisible(utils::capture.output(
       result <- ninetails::predict_gaf_classes(gaf_list),
@@ -653,8 +705,10 @@ process_polya_complete <- function(polya_data,
   })
   cli_log("Predictions completed", "SUCCESS")
 
-  # Create outputs
-  cli_log("Creating final outputs...", "INFO", "Creating Output")
+  #####################################################
+  # CREATE OUTPUT
+  #####################################################
+  cli_log("Creating final outputs...", "INFO", "Creating Output", bullet = TRUE)
   outputs <- tryCatch({
     invisible(utils::capture.output(
       result <- ninetails::create_outputs(
@@ -684,6 +738,12 @@ process_polya_complete <- function(polya_data,
 #' overflow and facilitate potential debugging.
 #'
 #' Creates individual outputs for each part and merges them into final results.
+#'
+#' This function as well as \code{\link{process_polya_complete}}function is not
+#' intended to be used outside the \code{\link{check_tails_guppy}}function,
+#' as it requires cli_log which is a custom function within the pipeline wrapper
+#' required for log file & console prompts formatting. Therefore, should not be
+#' manually called by the user.
 #'
 #' @param part_files List of file paths to poly(A) data parts
 #'
@@ -728,21 +788,9 @@ process_polya_complete <- function(polya_data,
 #'
 #' @return A list containing tail information organized by the read ID.
 #'
-#' @export
+#' @keywords internal
 #'
-#' @examples
-#' \dontrun{
-#' test <- ninetails::process_polya_parts(
-#'   part_files=list_of_files,
-#'   sequencing_summary = "/seq/summary/dir/sequencing_summary.txt",
-#'   workspace = "/dir/with/basecalled/fast5/",
-#'   num_cores = 2,
-#'   basecall_group = 'Basecall_1D_000',
-#'   pass_only = TRUE,
-#'   qc = TRUE,
-#'   save_dir = '~/Downloads',
-#'   prefix = "test")
-#' }
+#' @export
 process_polya_parts <- function(part_files,
                                 sequencing_summary,
                                 workspace,
@@ -752,7 +800,8 @@ process_polya_parts <- function(part_files,
                                 qc,
                                 save_dir,
                                 prefix,
-                                cli_log) {
+                                cli_log,
+                                ...) {
 
   # Initialize results containers
   all_read_classes <- list()
@@ -760,9 +809,11 @@ process_polya_parts <- function(part_files,
   num_parts <- length(part_files)
 
   cli_log(sprintf("Starting sequential processing of %d poly(A) data parts", num_parts),
-          "INFO", "Poly(A) Parts Processing")
+          "INFO", "Poly(A) Parts Processing", bullet = TRUE)
 
-  # Process each chunk
+  #####################################################
+  # LOOP FOR EACH FILE PART PROCESSING
+  #####################################################
   for (i in seq_along(part_files)) {
     part_name <- sprintf("part_%d_of_%d", i, num_parts)
     part_dir <- file.path(save_dir, part_name)
@@ -772,9 +823,9 @@ process_polya_parts <- function(part_files,
     }
 
     cli_log(sprintf("Processing part %d of %d", i, num_parts),
-            "INFO", sprintf("Part %d Processing", i))
+            "INFO", sprintf("Part %d Processing", i), bullet = TRUE)
 
-    # Process individual part
+    # Process each part (small file)
     part_output <- ninetails::process_polya_complete(
       polya_data = part_files[i],
       sequencing_summary = sequencing_summary,
@@ -785,8 +836,7 @@ process_polya_parts <- function(part_files,
       qc = qc,
       save_dir = part_dir,
       prefix = part_name,
-      cli_log = cli_log
-    )
+      cli_log = cli_log)
 
     # Save part-specific outputs
     tryCatch({
@@ -829,14 +879,4 @@ process_polya_parts <- function(part_files,
 
   return(merged_output)
 }
-
-
-
-
-
-
-
-
-
-
 

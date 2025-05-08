@@ -14,7 +14,8 @@ process_polya_parts(
   qc,
   save_dir,
   prefix,
-  cli_log
+  cli_log,
+  ...
 )
 }
 \arguments{
@@ -69,18 +70,11 @@ overflow and facilitate potential debugging.
 }
 \details{
 Creates individual outputs for each part and merges them into final results.
+
+This function as well as \code{\link{process_polya_complete}}function is not
+intended to be used outside the \code{\link{check_tails_guppy}}function,
+as it requires cli_log which is a custom function within the pipeline wrapper
+required for log file & console prompts formatting. Therefore, should not be
+manually called by the user.
 }
-\examples{
-\dontrun{
-test <- ninetails::process_polya_parts(
-  part_files=list_of_files,
-  sequencing_summary = "/seq/summary/dir/sequencing_summary.txt",
-  workspace = "/dir/with/basecalled/fast5/",
-  num_cores = 2,
-  basecall_group = 'Basecall_1D_000',
-  pass_only = TRUE,
-  qc = TRUE,
-  save_dir = '~/Downloads',
-  prefix = "test")
-}
-}
+\keyword{internal}
