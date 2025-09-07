@@ -4,12 +4,7 @@
 \alias{process_dorado_summary}
 \title{Process and optionally split dorado summary file}
 \usage{
-process_dorado_summary(
-  dorado_summary,
-  save_dir,
-  part_size = 1e+05,
-  cli_log = message
-)
+process_dorado_summary(dorado_summary, save_dir, part_size, cli_log)
 }
 \arguments{
 \item{dorado_summary}{character string or data.frame. Either full path of the .txt file
@@ -34,8 +29,32 @@ Otherwise, it creates a copy in the summary directory. All files are saved in
 'dorado_summary_dir' within the specified save directory.
 }
 \details{
+The function performs the following steps:
+1. Validates input parameters and checks file existence
+2. Reads the summary file if provided as path, or uses the provided data frame
+3. Determines the number of parts needed based on total reads and part_size
+4. Creates output files with naming pattern: original_filename_partn.txt
+5. Splits and saves the data maintaining the original format
+
+If input is a data frame, uses "summary" as the default prefix for output files.
+
 The 'dorado_summary_dir' folder structure:
 - If input size <= part_size: Contains a single file named 'dorado_summary.txt'
 - If input size > part_size: Contains multiple files named 'part_XX.txt' where XX
   is a zero-padded number indicating the part number
+
+ Important notes:
+- Output files are tab-separated text files
+- The original file name (without extension) is used as prefix for part files
+- Directory structure will be created if it doesn't exist
+}
+\examples{
+\dontrun{
+results <- process_dorado_summary(
+  dorado_summary = "path/to/summary.txt",
+  save_dir = "output/directory",
+  prefix = "experiment1",
+  part_size = 1000
+)
+}
 }

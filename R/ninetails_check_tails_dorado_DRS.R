@@ -75,6 +75,9 @@ check_tails_dorado_DRS <- function(bam_file,
                                    prefix = "",
                                    part_size = 1000) {
 
+  # Declare variables to avoid R CMD check notes
+  outputs <- NULL
+
   # Initialize warning flag
   warn_message <- FALSE
 
@@ -165,7 +168,6 @@ check_tails_dorado_DRS <- function(bam_file,
     cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
 
     # Preprocess input files
-    #####################################################
     processed_files <- preprocess_dorado_input(
       bam_file = bam_file,
       dorado_summary = dorado_summary,
@@ -213,5 +215,4 @@ check_tails_dorado_DRS <- function(bam_file,
     cli::cli_alert_danger("Ninetails aborted")
   })
 }
-
 

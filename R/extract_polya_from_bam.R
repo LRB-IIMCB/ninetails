@@ -1,20 +1,23 @@
 #' Extract poly(A) tail information from BAM file
 #'
 #' This function extracts poly(A) tail information from a BAM file produced by
-#' Dorado basecaller. The function processes BAM files containing pt (poly(A) tail length)
-#' and pa (poly(A) region coordinates) tags, filtering out unmapped and non-primary
-#' alignments. Only reads containing valid pt tags are included in the output.
+#' Dorado basecaller.
 #'
-#' The BAM file must be produced with Dorado version 1.0.0 or higher
-#' and contain pt and pa tags for poly(A) tail information. Files produced with earlier
-#' versions of Dorado will not generate correct output due to differences in tags.
+#' - Requires BAM files produced by dorado version >= 1.0.0 for poly(A) coordinate information
+#' - The pa tag should contain 5 values: anchor position and poly(A) region coordinates
+#' - Returns empty data frame if no valid reads are found
+#' - Uses memory-efficient vector pre-allocation for large files
 #'
-#' The function applies the following filtering criteria:\itemize{
-#' \item Excludes reads without pt tag
-#' \item Excludes unmapped reads
-#' \item Excludes non-primary alignments
-#' \item Removes duplicate read names (keeps first occurrence)
-#' }
+#' The function performs the following steps:
+#' 1. Validates input BAM and summary files
+#' 2. Reads pod5 file mappings from summary file
+#' 3. Extracts BAM tags (pt for poly(A) tail length, pa for positions)
+#' 4. Filters out:
+#'    - Unmapped reads
+#'    - Non-primary alignments
+#'    - Reads without poly(A) tags
+#' 5. Combines BAM information with pod5 file mappings
+#' 6. Handles duplicate reads by keeping first occurrence
 #'
 #' Progress and filtering statistics are reported during execution.
 #'
@@ -22,50 +25,102 @@
 #' basecalling results. The BAM file must contain pt and pa tags for poly(A) tail
 #' information.
 #'
-#' @return A nested list organized by read names, where each element corresponds to a read and contains:\itemize{
-#' \item reference - Reference sequence name
-#' \item ref_start - Start position on the reference
-#' \item ref_end - End position on the reference
-#' \item mapq - Mapping quality score
-#' \item polya_length - Poly(A) tail length from pt tag
-#' \item anchor_pos - Anchor position from pa tag
-#' \item polya_start - Poly(A) start position from pa tag
-#' \item polya_end - Poly(A) end position from pa tag
-#' \item secondary_polya_start - Secondary poly(A) start position from pa tag
-#' \item secondary_polya_end - Secondary poly(A) end position from pa tag
+#' @param summary_file Character string. Path to the corresponding dorado
+#' summary file containing read to pod5 file mappings.
+#'
+#' @param cli_log Function for logging. This function is encoded in main
+#' pipeline wrapper. Its purpose is to provide neatly formatted & informative log file.
+#'
+#' @return A data frame containing poly(A) information with the following columns:
+#' \describe{
+#'   \item{read_id}{Character. Read identifier}
+#'   \item{pod5_file}{Character. Path to the corresponding pod5 file}
+#'   \item{reference}{Character. Reference sequence name}
+#'   \item{ref_start}{Integer. Start position on reference}
+#'   \item{ref_end}{Integer. End position on reference}
+#'   \item{mapq}{Integer. Mapping quality score}
+#'   \item{polya_length}{Numeric. Length of poly(A) tail}
+#'   \item{anchor_pos}{Integer. Position of poly(A) anchor (-1 if not available)}
+#'   \item{polya_start}{Integer. Start position of poly(A) region (-1 if not available)}
+#'   \item{polya_end}{Integer. End position of poly(A) region (-1 if not available)}
+#'   \item{secondary_polya_start}{Integer. Start position of secondary poly(A) region (-1 if not available)}
+#'   \item{secondary_polya_end}{Integer. End position of secondary poly(A) region (-1 if not available)}
 #' }
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' polya_data <- extract_polya_from_bam("/path/to/basecalled.bam")
+#' # Extract poly(A) information from BAM file
+#' polya_data <- extract_polya_from_bam(
+#'   bam_file = "path/to/dorado_calls.bam",
+#'   summary_file = "path/to/summary_part1.txt"
+#' )
+#'
+#' # Check results
+#' head(polya_data)
 #' }
 #'
-extract_polya_from_bam <- function(bam_file) {
+extract_polya_from_bam <- function(bam_file, summary_file, cli_log) {
 
   # Assertions
   if (!file.exists(bam_file)) {
     stop("BAM file does not exist: ", bam_file)}
+  if (!file.exists(summary_file)) {
+    stop("Summary file does not exist: ", summary_file)}
+
+  # Read summary file efficiently (only needed columns)
+  cli_log(sprintf("Reading summary file: %s", base::basename(summary_file)), "INFO")
+  summary_data <- data.table::fread(summary_file, select = c("filename", "read_id"))
+  # Create lookup for pod5 files
+  pod5_lookup <- summary_data$filename
+  names(pod5_lookup) <- summary_data$read_id
+  # Clear summary_data to free memory
+  rm(summary_data)
+  gc()
 
   # Create parameter settings for scanning BAM file
   param <- Rsamtools::ScanBamParam(
     tag = c("pt", "pa"),  # tags to extract
     what = c("qname", "rname", "pos", "mapq", "flag", "cigar"))
 
-  # messages for logging
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Reading BAM file: ', base::basename(bam_file), '\n', sep=''))
+  # Process BAM file
+  cli_log(sprintf("Reading BAM file: %s", base::basename(bam_file)), "INFO")
   bam_data <- Rsamtools::scanBam(bam_file, param = param)[[1]]
   initial_count <- length(bam_data$qname)
-  cat(paste0('[', as.character(Sys.time()), '] ', sprintf('Total read count: %d', initial_count), '\n', sep=''))
+  cli_log(sprintf("Total read count: %d", initial_count), "INFO")
 
-  # Create output list structure
-  polya_reads <- list()
+  # Check if pa tag exists in the BAM file
+  if (is.null(bam_data$tag$pa) || all(sapply(bam_data$tag$pa, is.null))) {
+    cli_log("ERROR: poly(A) coordinate information (pa tag) not found in BAM file.", "ERROR")
+    cli_log("Please ensure data were basecalled with dorado version >= 1.0.0", "ERROR")
+    stop("poly(A) coordinate information (pa tag) not found in BAM file")
+  }
+
+  # Pre-allocate vectors with maximum possible size
+  read_ids <- character(initial_count)
+  references <- character(initial_count)
+  ref_starts <- integer(initial_count)
+  ref_ends <- integer(initial_count)
+  mapqs <- integer(initial_count)
+  polya_lengths <- numeric(initial_count)
+  anchor_positions <- integer(initial_count)
+  polya_starts <- integer(initial_count)
+  polya_ends <- integer(initial_count)
+  secondary_polya_starts <- integer(initial_count)
+  secondary_polya_ends <- integer(initial_count)
+  pod5_files <- character(initial_count)  # New vector for pod5 files
+
+  # Counter for valid entries
+  valid_count <- 0
+
+  # Counters for logging
   mapped_count <- 0
   primary_count <- 0
   pt_tag_count <- 0
 
   # Process reads directly from BAM data
+  cli_log("Processing reads...", "INFO")
   for (i in seq_along(bam_data$qname)) {
     # Skip if no pt tag or if it's NA
     if (is.null(bam_data$tag$pt[[i]]) || is.na(bam_data$tag$pt[[i]])) {
@@ -88,53 +143,111 @@ extract_polya_from_bam <- function(bam_file) {
     polya_length <- bam_data$tag$pt[[i]]
     pt_tag_count <- pt_tag_count + 1
 
-    read_info <- list(
-      reference = as.character(bam_data$rname[i]),
-      ref_start = bam_data$pos[i],
-      ref_end = bam_data$pos[i] + nchar(bam_data$cigar[i]),
-      mapq = bam_data$mapq[i],
-      polya_length = polya_length,
-      anchor_pos = -1L,
-      polya_start = -1L,
-      polya_end = -1L,
-      secondary_polya_start = -1L,
-      secondary_polya_end = -1L)
+    # Initialize pa tag values
+    anchor_pos <- -1L
+    polya_start <- -1L
+    polya_end <- -1L
+    secondary_polya_start <- -1L
+    secondary_polya_end <- -1L
 
     # Add pa tag information if it exists and is valid
-    #
     if (!is.null(bam_data$tag$pa[[i]]) && length(bam_data$tag$pa[[i]]) == 5) {
       pa_values <- bam_data$tag$pa[[i]]
       if (!any(is.na(pa_values))) {
-        read_info$anchor_pos <- pa_values[1]
-        read_info$polya_start <- pa_values[2]
-        read_info$polya_end <- pa_values[3]
-        read_info$secondary_polya_start <- pa_values[4]
-        read_info$secondary_polya_end <- pa_values[5]
+        anchor_pos <- pa_values[1]
+        polya_start <- pa_values[2]
+        polya_end <- pa_values[3]
+        secondary_polya_start <- pa_values[4]
+        secondary_polya_end <- pa_values[5]
       }
     }
 
-    polya_reads[[bam_data$qname[i]]] <- read_info
+    # Get pod5 file from lookup
+    current_read_id <- bam_data$qname[i]
+    pod5_file <- pod5_lookup[current_read_id]
+    if (is.na(pod5_file)) {
+      next  # Skip if no matching pod5 file found
+    }
+
+    # Increment counter and store values
+    valid_count <- valid_count + 1
+    read_ids[valid_count] <- current_read_id
+    references[valid_count] <- as.character(bam_data$rname[i])
+    ref_starts[valid_count] <- bam_data$pos[i]
+    ref_ends[valid_count] <- bam_data$pos[i] + nchar(bam_data$cigar[i])
+    mapqs[valid_count] <- bam_data$mapq[i]
+    polya_lengths[valid_count] <- polya_length
+    anchor_positions[valid_count] <- anchor_pos
+    polya_starts[valid_count] <- polya_start
+    polya_ends[valid_count] <- polya_end
+    secondary_polya_starts[valid_count] <- secondary_polya_start
+    secondary_polya_ends[valid_count] <- secondary_polya_end
+    pod5_files[valid_count] <- pod5_file
   }
 
   # Output filtering statistics for logging
-  cat(paste0('[', as.character(Sys.time()), '] ', sprintf('Mapped reads filtered: %d', mapped_count), '\n', sep=''))
-  cat(paste0('[', as.character(Sys.time()), '] ', sprintf('Primary alignment filtered: %d', primary_count), '\n', sep=''))
-  cat(paste0('[', as.character(Sys.time()), '] ', sprintf('Reads with pt tag filtered: %d', pt_tag_count), '\n', sep=''))
+  cli_log(sprintf("Mapped reads filtered: %d", mapped_count), "INFO")
+  cli_log(sprintf("Primary alignment filtered: %d", primary_count), "INFO")
+  cli_log(sprintf("Reads with pt tag filtered: %d", pt_tag_count), "INFO")
 
-  # Check for duplicates in the final output (debuging purpose)
-  if (length(polya_reads) > 0) {
-    duplicate_reads <- duplicated(names(polya_reads))
+  # Create data frame if we have any results
+  if (valid_count > 0) {
+    # Trim vectors to actual size
+    read_ids <- read_ids[1:valid_count]
+    references <- references[1:valid_count]
+    ref_starts <- ref_starts[1:valid_count]
+    ref_ends <- ref_ends[1:valid_count]
+    mapqs <- mapqs[1:valid_count]
+    polya_lengths <- polya_lengths[1:valid_count]
+    anchor_positions <- anchor_positions[1:valid_count]
+    polya_starts <- polya_starts[1:valid_count]
+    polya_ends <- polya_ends[1:valid_count]
+    secondary_polya_starts <- secondary_polya_starts[1:valid_count]
+    secondary_polya_ends <- secondary_polya_ends[1:valid_count]
+    pod5_files <- pod5_files[1:valid_count]
+
+    # Check for duplicates
+    duplicate_reads <- duplicated(read_ids)
     if (any(duplicate_reads)) {
-      cat(paste0('[', as.character(Sys.time()), '] ',
-                 sprintf('WARNING: Found %d duplicate read names, keeping first occurrence only', sum(duplicate_reads)),
-                 '\n', sep=''))
-      polya_reads <- polya_reads[!duplicate_reads]
+      cli_log(sprintf("WARNING: Found %d duplicate read names, keeping first occurrence only",
+                      sum(duplicate_reads)), "WARNING")
+      # Keep only unique entries
+      keep_idx <- !duplicate_reads
+      read_ids <- read_ids[keep_idx]
+      references <- references[keep_idx]
+      ref_starts <- ref_starts[keep_idx]
+      ref_ends <- ref_ends[keep_idx]
+      mapqs <- mapqs[keep_idx]
+      polya_lengths <- polya_lengths[keep_idx]
+      anchor_positions <- anchor_positions[keep_idx]
+      polya_starts <- polya_starts[keep_idx]
+      polya_ends <- polya_ends[keep_idx]
+      secondary_polya_starts <- secondary_polya_starts[keep_idx]
+      secondary_polya_ends <- secondary_polya_ends[keep_idx]
+      pod5_files <- pod5_files[keep_idx]
     }
 
-    cat(paste0('[', as.character(Sys.time()), '] ', 'Processing complete', '\n', sep=''))
-    return(polya_reads)
+    # Create the final data frame
+    polya_df <- data.frame(
+      read_id = read_ids,
+      pod5_file = pod5_files,  # Added pod5 file information
+      reference = references,
+      ref_start = ref_starts,
+      ref_end = ref_ends,
+      mapq = mapqs,
+      polya_length = polya_lengths,
+      anchor_pos = anchor_positions,
+      polya_start = polya_starts,
+      polya_end = polya_ends,
+      secondary_polya_start = secondary_polya_starts,
+      secondary_polya_end = secondary_polya_ends,
+      stringsAsFactors = FALSE
+    )
+
+    cli_log("Processing complete", "SUCCESS")
+    return(polya_df)
   } else {
-    cat(paste0('[', as.character(Sys.time()), '] ', 'No reads with poly(A) information found after filtering', '\n', sep=''))
-    return(list())
+    cli_log("No reads with poly(A) information found after filtering", "WARNING")
+    return(data.frame())
   }
 }

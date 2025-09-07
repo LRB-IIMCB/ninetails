@@ -4,50 +4,69 @@
 \alias{extract_polya_from_bam}
 \title{Extract poly(A) tail information from BAM file}
 \usage{
-extract_polya_from_bam(bam_file)
+extract_polya_from_bam(bam_file, summary_file, cli_log)
 }
 \arguments{
 \item{bam_file}{character string. Full path to the BAM file containing Dorado
 basecalling results. The BAM file must contain pt and pa tags for poly(A) tail
 information.}
+
+\item{summary_file}{Character string. Path to the corresponding dorado
+summary file containing read to pod5 file mappings.}
+
+\item{cli_log}{Function for logging. This function is encoded in main
+pipeline wrapper. Its purpose is to provide neatly formatted & informative log file.}
 }
 \value{
-A nested list organized by read names, where each element corresponds to a read and contains:\itemize{
-\item reference - Reference sequence name
-\item ref_start - Start position on the reference
-\item ref_end - End position on the reference
-\item mapq - Mapping quality score
-\item polya_length - Poly(A) tail length from pt tag
-\item anchor_pos - Anchor position from pa tag
-\item polya_start - Poly(A) start position from pa tag
-\item polya_end - Poly(A) end position from pa tag
-\item secondary_polya_start - Secondary poly(A) start position from pa tag
-\item secondary_polya_end - Secondary poly(A) end position from pa tag
+A data frame containing poly(A) information with the following columns:
+\describe{
+  \item{read_id}{Character. Read identifier}
+  \item{pod5_file}{Character. Path to the corresponding pod5 file}
+  \item{reference}{Character. Reference sequence name}
+  \item{ref_start}{Integer. Start position on reference}
+  \item{ref_end}{Integer. End position on reference}
+  \item{mapq}{Integer. Mapping quality score}
+  \item{polya_length}{Numeric. Length of poly(A) tail}
+  \item{anchor_pos}{Integer. Position of poly(A) anchor (-1 if not available)}
+  \item{polya_start}{Integer. Start position of poly(A) region (-1 if not available)}
+  \item{polya_end}{Integer. End position of poly(A) region (-1 if not available)}
+  \item{secondary_polya_start}{Integer. Start position of secondary poly(A) region (-1 if not available)}
+  \item{secondary_polya_end}{Integer. End position of secondary poly(A) region (-1 if not available)}
 }
 }
 \description{
 This function extracts poly(A) tail information from a BAM file produced by
-Dorado basecaller. The function processes BAM files containing pt (poly(A) tail length)
-and pa (poly(A) region coordinates) tags, filtering out unmapped and non-primary
-alignments. Only reads containing valid pt tags are included in the output.
+Dorado basecaller.
 }
 \details{
-The BAM file must be produced with Dorado version 1.0.0 or higher
-and contain pt and pa tags for poly(A) tail information. Files produced with earlier
-versions of Dorado will not generate correct output due to differences in tags.
+- Requires BAM files produced by dorado version >= 1.0.0 for poly(A) coordinate information
+- The pa tag should contain 5 values: anchor position and poly(A) region coordinates
+- Returns empty data frame if no valid reads are found
+- Uses memory-efficient vector pre-allocation for large files
 
-The function applies the following filtering criteria:\itemize{
-\item Excludes reads without pt tag
-\item Excludes unmapped reads
-\item Excludes non-primary alignments
-\item Removes duplicate read names (keeps first occurrence)
-}
+The function performs the following steps:
+1. Validates input BAM and summary files
+2. Reads pod5 file mappings from summary file
+3. Extracts BAM tags (pt for poly(A) tail length, pa for positions)
+4. Filters out:
+   - Unmapped reads
+   - Non-primary alignments
+   - Reads without poly(A) tags
+5. Combines BAM information with pod5 file mappings
+6. Handles duplicate reads by keeping first occurrence
 
 Progress and filtering statistics are reported during execution.
 }
 \examples{
 \dontrun{
-polya_data <- extract_polya_from_bam("/path/to/basecalled.bam")
+# Extract poly(A) information from BAM file
+polya_data <- extract_polya_from_bam(
+  bam_file = "path/to/dorado_calls.bam",
+  summary_file = "path/to/summary_part1.txt"
+)
+
+# Check results
+head(polya_data)
 }
 
 }
