@@ -19,15 +19,15 @@ Imports:
     dplyr,
     forcats,
     foreach,
-    ggplot2,
     keras,
     magrittr,
     parallel,
     purrr,
     reshape2,
-    rhdf5,
     rlang,
     rrapply,
+    Rsamtools,
+    S4Vectors,
     stats,
     stringr,
     tibble,
@@ -43,5 +43,7 @@ Suggests:
     cowplot,
     ggdist,
     gghalves,
-    patchwork
+    patchwork,
+    rhdf5,
+    ggplot2
 Config/testthat/edition: 3
