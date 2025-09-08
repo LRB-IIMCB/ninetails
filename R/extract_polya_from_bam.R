@@ -31,6 +31,16 @@
 #' }
 extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
 
+  # Check for required Bioconductor packages
+  if (!requireNamespace("Rsamtools", quietly = TRUE)) {
+    stop("Package 'Rsamtools' is required for extract_polya_from_bam(). Please install it.",
+         call. = FALSE)
+  }
+  if (!requireNamespace("S4Vectors", quietly = TRUE)) {
+    stop("Package 'S4Vectors' is required for extract_polya_from_bam(). Please install it.",
+         call. = FALSE)
+  }
+
   # Assertions
   if (!file.exists(bam_file)) {
     stop("BAM file does not exist: ", bam_file)
@@ -41,7 +51,9 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
 
   # Read summary file efficiently (only needed columns)
   cli_log(sprintf("Reading summary file: %s", base::basename(summary_file)), "INFO")
-  summary_data <- data.table::fread(summary_file, select = c("filename", "read_id"))
+  summary_data <- vroom::vroom(summary_file,
+                               col_select = c("filename", "read_id"),
+                               show_col_types = FALSE)
   # Create lookup for pod5 files
   pod5_lookup <- summary_data$filename
   names(pod5_lookup) <- summary_data$read_id
@@ -198,7 +210,7 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
     }
 
     # Create the final data frame
-    polya_df <- data.frame(
+    polya_df <- tibble::tibble(
       read_id = read_ids,
       pod5_file = pod5_files,  # Added pod5 file information
       reference = references,
@@ -210,14 +222,13 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
       polya_start = polya_starts,
       polya_end = polya_ends,
       secondary_polya_start = secondary_polya_starts,
-      secondary_polya_end = secondary_polya_ends,
-      stringsAsFactors = FALSE
+      secondary_polya_end = secondary_polya_ends
     )
 
     cli_log("Processing complete", "SUCCESS")
     return(polya_df)
   } else {
     cli_log("No reads with poly(A) information found after filtering", "WARNING")
-    return(data.frame())
+    return(tibble::tibble())
   }
 }

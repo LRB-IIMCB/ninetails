@@ -92,7 +92,7 @@ preprocess_dorado_input <- function(bam_file,
   }
 
   # Process summary file - handles size checking internally
-  part_files <- process_dorado_summary(
+  part_files <- ninetails::process_dorado_summary(
     dorado_summary = dorado_summary,
     save_dir = summary_dir,  # Now saving directly to summary_dir
     part_size = part_size,
@@ -173,7 +173,7 @@ preprocess_dorado_input <- function(bam_file,
     cli_log(sprintf("Processing BAM file %d/%d for poly(A) extraction", i, length(bam_files)), "INFO")
 
     # Extract poly(A) data from current BAM file with corresponding summary
-    polya_data <- extract_polya_from_bam(
+    polya_data <- ninetails::extract_polya_from_bam(
       bam_file = current_bam,
       summary_file = current_summary,
       cli_log = cli_log  # Added cli_log
@@ -186,7 +186,7 @@ preprocess_dorado_input <- function(bam_file,
                                        ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
                                        i))
 
-      data.table::fwrite(polya_data, output_file, sep="\t")
+      vroom::vroom_write(polya_data, output_file, delim = "\t")
       polya_files[i] <- output_file
       cli_log(sprintf("Saved poly(A) data for BAM %d to %s (%d reads)",
                       i, output_file, nrow(polya_data)), "INFO")

@@ -24,11 +24,11 @@ process_dorado_summary <- function(dorado_summary,
 
   # Assertions
   if (missing(part_size)) {
-    stop("Number of reads per file chunk (part_size) is missing. Please provide a valid part_size argument.", call. = FALSE)
+    stop("Number of reads per file part (part_size) is missing. Please provide a valid part_size argument.", call. = FALSE)
   }
 
   assertthat::assert_that(is.numeric(part_size), part_size > 0,
-                          msg = paste0("Reads per chunk must be numeric and positive. Please provide a valid argument."))
+                          msg = paste0("Reads per part must be numeric and positive. Please provide a valid argument."))
 
   # Handle input data and get prefix
   if (is.character(dorado_summary)) {
@@ -38,11 +38,11 @@ process_dorado_summary <- function(dorado_summary,
     cli_log("Checking file structure...", "INFO")
     tryCatch({
       # Read first few lines to check structure
-      headers <- names(data.table::fread(dorado_summary, nrows = 1))
+      headers <- names(vroom::vroom(dorado_summary, n_max = 1, show_col_types = FALSE))
       cli_log(sprintf("Found columns: %s", paste(headers, collapse=", ")), "INFO")
 
       # Now read the actual data
-      summary_data <- data.table::fread(dorado_summary)
+      summary_data <- vroom::vroom(dorado_summary, show_col_types = FALSE)
 
       if (!"read_id" %in% headers) {
         cli_log("WARNING: 'read_id' column not found. Available columns are:", "WARNING")
@@ -58,7 +58,7 @@ process_dorado_summary <- function(dorado_summary,
     # Extract prefix from original file name
     summary_prefix <- tools::file_path_sans_ext(basename(dorado_summary))
   } else if (is.data.frame(dorado_summary)) {
-    summary_data <- data.table::as.data.table(dorado_summary)
+    summary_data <- tibble::as_tibble(dorado_summary)
     # Check for required columns in data frame
     if (!"read_id" %in% names(summary_data)) {
       cli_log("Required column 'read_id' not found in data frame", "ERROR")
@@ -91,16 +91,16 @@ process_dorado_summary <- function(dorado_summary,
     end_idx <- min(i * part_size, total_reads)
 
     # Extract subset of data
-    part_data <- summary_data[start_idx:end_idx]
+    part_data <- summary_data[start_idx:end_idx, ]
 
     # Create output filename using prefix from original file
     output_file <- file.path(save_dir,
                              sprintf("%s_part%d.txt", summary_prefix, i))
 
     # Save data
-    data.table::fwrite(part_data,
+    vroom::vroom_write(part_data,
                        file = output_file,
-                       sep = "\t")
+                       delim = "\t")
 
     output_files[i] <- output_file
 

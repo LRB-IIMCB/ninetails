@@ -170,7 +170,7 @@ check_tails_dorado_DRS <- function(bam_file,
     cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
 
     # Preprocess input files
-    processed_files <- preprocess_dorado_input(
+    processed_files <- ninetails::preprocess_dorado_input(
       bam_file = bam_file,
       dorado_summary = dorado_summary,
       pod5_dir = pod5_dir,

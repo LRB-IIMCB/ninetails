@@ -29,6 +29,17 @@ split_bam_file <- function(bam_file,
   # Variable binding (suppressing R CMD check from throwing an error)
   read_id <- NULL
 
+  # Check for required Bioconductor packages
+  if (!requireNamespace("Rsamtools", quietly = TRUE)) {
+    stop("Package 'Rsamtools' is required for split_bam_file(). Please install it.",
+         call. = FALSE)
+  }
+  if (!requireNamespace("S4Vectors", quietly = TRUE)) {
+    stop("Package 'S4Vectors' is required for split_bam_file(). Please install it.",
+         call. = FALSE)
+  }
+
+
   # Input validation
   if (missing(bam_file)) {
     stop("BAM file is missing. Please provide a valid bam_file argument.",
