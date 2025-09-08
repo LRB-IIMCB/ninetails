@@ -1,45 +1,36 @@
-#' Initially preprocess dorado input files before passing them to the
-#' main ninetails pipeline
+#' Preprocess Dorado input files for poly(A) analysis
 #'
-#' Preprocesses dorado input files by validating inputs and splitting large files
-#' into manageable parts if needed, so they can be efficiently parsed with
-#' the main ninetails pipeline without memory overload.
+#' @param bam_file Path to the BAM file containing aligned reads
+#' @param dorado_summary Path to Dorado summary file or a data frame containing summary information
+#' @param pod5_dir Directory containing pod5 files
+#' @param num_cores Number of CPU cores to use for processing
+#' @param qc Logical indicating whether to perform quality control checks
+#' @param save_dir Directory where output files will be saved
+#' @param prefix Prefix to add to output file names (optional)
+#' @param part_size Number of reads to process in each chunk
+#' @param cli_log Function for logging messages and progress
 #'
-#' @param bam_file character string. Full path to the input BAM file.
-#'
-#' @param dorado_summary character string or data.frame. Path to dorado summary file
-#' or a data frame containing the summary data.
-#'
-#' @param pod5_dir character string. Directory containing pod5 files.
-#'
-#' @param num_cores numeric [1]. Number of cores to use for processing.
-#'
-#' @param qc logical [TRUE/FALSE]. Whether to perform quality control.
-#'
-#' @param save_dir character string. Directory where output files will be saved.
-#'
-#' @param prefix character string. Prefix for output files.
-#'
-#' @param part_size numeric [100000]. Maximum number of reads to process in each part.
-#'
-#' @param cli_log Function for logging. This function is encoded in main pipeline wrapper.
-#'
-#' @returns A list containing paths to processed files and status information
-#'
+#' @returns A list containing paths to processed files:
+#'   \itemize{
+#'     \item summary_files - Paths to split summary files
+#'     \item bam_files - Paths to split BAM files
+#'     \item polya_files - Paths to extracted poly(A) data files
+#'   }
 #' @export
 #'
 #' @examples
-#'\dontrun{
-#'
-#' # Split a BAM file based on dorado summary part
-#' split_bam_file(
-#'   bam_file = '/path/to/input.bam',
-#'   dorado_summary = '/path/to/summary_part.txt',
-#'   save_dir = '/path/to/output',
-#'   part_size = 1000
+#' \dontrun{
+#' processed_files <- preprocess_dorado_input(
+#'   bam_file = "path/to/aligned.bam",
+#'   dorado_summary = "path/to/summary.txt",
+#'   pod5_dir = "path/to/pod5/",
+#'   num_cores = 2,
+#'   qc = TRUE,
+#'   save_dir = "path/to/output/",
+#'   prefix = "experiment1",
+#'   part_size = 40000
 #' )
-#'
-#'}
+#' }
 preprocess_dorado_input <- function(bam_file,
                                     dorado_summary,
                                     pod5_dir,
@@ -143,7 +134,9 @@ preprocess_dorado_input <- function(bam_file,
         bam_file = bam_file,
         dorado_summary = current_summary,
         part_size = part_size,
-        save_dir = bam_dir
+        save_dir = bam_dir,
+        part_number = i,  # Added part number
+        cli_log = cli_log  # Added cli_log
       )
     }
 
@@ -177,14 +170,13 @@ preprocess_dorado_input <- function(bam_file,
     current_bam <- bam_files[i]
     current_summary <- part_files[i]
 
-    cat(paste0('[', as.character(Sys.time()), '] ',
-               sprintf('Processing BAM file %d/%d for poly(A) extraction', i, length(bam_files)),
-               '\n', sep=''))
+    cli_log(sprintf("Processing BAM file %d/%d for poly(A) extraction", i, length(bam_files)), "INFO")
 
     # Extract poly(A) data from current BAM file with corresponding summary
     polya_data <- extract_polya_from_bam(
       bam_file = current_bam,
-      summary_file = current_summary
+      summary_file = current_summary,
+      cli_log = cli_log  # Added cli_log
     )
 
     # Save results if we have any
@@ -196,14 +188,10 @@ preprocess_dorado_input <- function(bam_file,
 
       data.table::fwrite(polya_data, output_file, sep="\t")
       polya_files[i] <- output_file
-      cat(paste0('[', as.character(Sys.time()), '] ',
-                 sprintf('Saved poly(A) data for BAM %d to %s (%d reads)',
-                         i, output_file, nrow(polya_data)),
-                 '\n', sep=''))
+      cli_log(sprintf("Saved poly(A) data for BAM %d to %s (%d reads)",
+                      i, output_file, nrow(polya_data)), "INFO")
     } else {
-      cat(paste0('[', as.character(Sys.time()), '] ',
-                 sprintf('No poly(A) data extracted from BAM %d', i),
-                 '\n', sep=''))
+      cli_log(sprintf("No poly(A) data extracted from BAM %d", i), "INFO")
     }
 
     # Explicitly trigger garbage collection after processing each BAM file
@@ -214,13 +202,9 @@ preprocess_dorado_input <- function(bam_file,
   polya_files <- polya_files[file.exists(polya_files)]
 
   if (length(polya_files) > 0) {
-    cat(paste0('[', as.character(Sys.time()), '] ',
-               sprintf('Successfully processed %d BAM files', length(polya_files)),
-               '\n', sep=''))
+    cli_log(sprintf("Successfully processed %d BAM files", length(polya_files)), "SUCCESS")
   } else {
-    cat(paste0('[', as.character(Sys.time()), '] ',
-               'No poly(A) data was extracted from any BAM file',
-               '\n', sep=''))
+    cli_log("No poly(A) data was extracted from any BAM file", "WARNING")
   }
 
   # Return processed file paths

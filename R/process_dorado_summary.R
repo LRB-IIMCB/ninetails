@@ -1,51 +1,20 @@
-#' Process and optionally split dorado summary file
+#' Process and split Dorado summary file into smaller parts
 #'
-#' This function processes a dorado alignment summary file. If the file contains more
-#' reads than the specified part_size, it splits it into multiple smaller files.
-#' Otherwise, it creates a copy in the summary directory. All files are saved in
-#' 'dorado_summary_dir' within the specified save directory.
+#' @param dorado_summary Path to Dorado summary file or a data frame containing summary information
+#' @param save_dir Directory where split summary files will be saved
+#' @param part_size Number of reads per file part when splitting the summary file
+#' @param cli_log Function for logging messages and progress
 #'
-#' The function performs the following steps:
-#' 1. Validates input parameters and checks file existence
-#' 2. Reads the summary file if provided as path, or uses the provided data frame
-#' 3. Determines the number of parts needed based on total reads and part_size
-#' 4. Creates output files with naming pattern: original_filename_partn.txt
-#' 5. Splits and saves the data maintaining the original format
-#'
-#' If input is a data frame, uses "summary" as the default prefix for output files.
-#'
-#' The 'dorado_summary_dir' folder structure:
-#' - If input size <= part_size: Contains a single file named 'dorado_summary.txt'
-#' - If input size > part_size: Contains multiple files named 'part_XX.txt' where XX
-#'   is a zero-padded number indicating the part number
-#'
-#'  Important notes:
-#' - Output files are tab-separated text files
-#' - The original file name (without extension) is used as prefix for part files
-#' - Directory structure will be created if it doesn't exist
-#'
-#' @param dorado_summary character string or data.frame. Either full path of the .txt file
-#' with dorado summary or an in-memory data.frame containing dorado summary data.
-#'
-#' @param save_dir character string. Full path of the directory where the processed
-#' files should be stored.
-#'
-#' @param part_size numeric [100000] (optional). If provided, defines maximum
-#' number of reads per output part.
-#'
-#' @param cli_log Function for logging. This function is encoded in main
-#' pipeline wrapper. Its purpose is to provide neatly formatted & informative log file.
-#'
-#' @returns A character vector containing paths to the generated files.
+#' @returns Character vector containing paths to the split summary files
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' results <- process_dorado_summary(
+#' summary_files <- process_dorado_summary(
 #'   dorado_summary = "path/to/summary.txt",
-#'   save_dir = "output/directory",
-#'   prefix = "experiment1",
-#'   part_size = 1000
+#'   save_dir = "path/to/output/",
+#'   part_size = 40000,
+#'   cli_log = message
 #' )
 #' }
 process_dorado_summary <- function(dorado_summary,
@@ -64,11 +33,37 @@ process_dorado_summary <- function(dorado_summary,
   # Handle input data and get prefix
   if (is.character(dorado_summary)) {
     cli_log(sprintf("Reading summary file: %s", basename(dorado_summary)), "INFO")
-    summary_data <- data.table::fread(dorado_summary)
+
+    # First, let's peek at the file structure
+    cli_log("Checking file structure...", "INFO")
+    tryCatch({
+      # Read first few lines to check structure
+      headers <- names(data.table::fread(dorado_summary, nrows = 1))
+      cli_log(sprintf("Found columns: %s", paste(headers, collapse=", ")), "INFO")
+
+      # Now read the actual data
+      summary_data <- data.table::fread(dorado_summary)
+
+      if (!"read_id" %in% headers) {
+        cli_log("WARNING: 'read_id' column not found. Available columns are:", "WARNING")
+        cli_log(paste(headers, collapse=", "), "WARNING")
+        stop("Required column 'read_id' not found in summary file")
+      }
+
+    }, error = function(e) {
+      cli_log(sprintf("Error reading summary file: %s", e$message), "ERROR")
+      stop(e$message)
+    })
+
     # Extract prefix from original file name
     summary_prefix <- tools::file_path_sans_ext(basename(dorado_summary))
   } else if (is.data.frame(dorado_summary)) {
     summary_data <- data.table::as.data.table(dorado_summary)
+    # Check for required columns in data frame
+    if (!"read_id" %in% names(summary_data)) {
+      cli_log("Required column 'read_id' not found in data frame", "ERROR")
+      stop("Required column 'read_id' not found in data frame")
+    }
     # Use default prefix for data frame input
     summary_prefix <- "summary"
   } else {

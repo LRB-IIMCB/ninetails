@@ -1,73 +1,43 @@
-#' Extract poly(A) tail information from BAM file
+
+#' Extract poly(A) information from BAM file
 #'
-#' This function extracts poly(A) tail information from a BAM file produced by
-#' Dorado basecaller.
+#' @param bam_file Path to the BAM file containing aligned reads with poly(A) information
+#' @param summary_file Path to the summary file containing read_id and filename mapping
+#' @param cli_log Function for logging messages, defaults to message
 #'
-#' - Requires BAM files produced by dorado version >= 1.0.0 for poly(A) coordinate information
-#' - The pa tag should contain 5 values: anchor position and poly(A) region coordinates
-#' - Returns empty data frame if no valid reads are found
-#' - Uses memory-efficient vector pre-allocation for large files
-#'
-#' The function performs the following steps:
-#' 1. Validates input BAM and summary files
-#' 2. Reads pod5 file mappings from summary file
-#' 3. Extracts BAM tags (pt for poly(A) tail length, pa for positions)
-#' 4. Filters out:
-#'    - Unmapped reads
-#'    - Non-primary alignments
-#'    - Reads without poly(A) tags
-#' 5. Combines BAM information with pod5 file mappings
-#' 6. Handles duplicate reads by keeping first occurrence
-#'
-#' Progress and filtering statistics are reported during execution.
-#'
-#' @param bam_file character string. Full path to the BAM file containing Dorado
-#' basecalling results. The BAM file must contain pt and pa tags for poly(A) tail
-#' information.
-#'
-#' @param summary_file Character string. Path to the corresponding dorado
-#' summary file containing read to pod5 file mappings.
-#'
-#' @param cli_log Function for logging. This function is encoded in main
-#' pipeline wrapper. Its purpose is to provide neatly formatted & informative log file.
-#'
-#' @return A data frame containing poly(A) information with the following columns:
-#' \describe{
-#'   \item{read_id}{Character. Read identifier}
-#'   \item{pod5_file}{Character. Path to the corresponding pod5 file}
-#'   \item{reference}{Character. Reference sequence name}
-#'   \item{ref_start}{Integer. Start position on reference}
-#'   \item{ref_end}{Integer. End position on reference}
-#'   \item{mapq}{Integer. Mapping quality score}
-#'   \item{polya_length}{Numeric. Length of poly(A) tail}
-#'   \item{anchor_pos}{Integer. Position of poly(A) anchor (-1 if not available)}
-#'   \item{polya_start}{Integer. Start position of poly(A) region (-1 if not available)}
-#'   \item{polya_end}{Integer. End position of poly(A) region (-1 if not available)}
-#'   \item{secondary_polya_start}{Integer. Start position of secondary poly(A) region (-1 if not available)}
-#'   \item{secondary_polya_end}{Integer. End position of secondary poly(A) region (-1 if not available)}
-#' }
-#'
+#' @returns A data frame containing poly(A) information with columns:
+#'   \itemize{
+#'     \item read_id - unique read identifier
+#'     \item pod5_file - corresponding pod5 file path
+#'     \item reference - reference sequence name
+#'     \item ref_start - alignment start position
+#'     \item ref_end - alignment end position
+#'     \item mapq - mapping quality score
+#'     \item polya_length - length of poly(A) tail
+#'     \item anchor_pos - anchor position from pa tag
+#'     \item polya_start - poly(A) start position
+#'     \item polya_end - poly(A) end position
+#'     \item secondary_polya_start - secondary poly(A) start position
+#'     \item secondary_polya_end - secondary poly(A) end position
+#'   }
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Extract poly(A) information from BAM file
 #' polya_data <- extract_polya_from_bam(
-#'   bam_file = "path/to/dorado_calls.bam",
-#'   summary_file = "path/to/summary_part1.txt"
+#'   bam_file = "path/to/aligned.bam",
+#'   summary_file = "path/to/summary.txt"
 #' )
-#'
-#' # Check results
-#' head(polya_data)
 #' }
-#'
-extract_polya_from_bam <- function(bam_file, summary_file, cli_log) {
+extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
 
   # Assertions
   if (!file.exists(bam_file)) {
-    stop("BAM file does not exist: ", bam_file)}
+    stop("BAM file does not exist: ", bam_file)
+  }
   if (!file.exists(summary_file)) {
-    stop("Summary file does not exist: ", summary_file)}
+    stop("Summary file does not exist: ", summary_file)
+  }
 
   # Read summary file efficiently (only needed columns)
   cli_log(sprintf("Reading summary file: %s", base::basename(summary_file)), "INFO")
@@ -92,7 +62,7 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log) {
 
   # Check if pa tag exists in the BAM file
   if (is.null(bam_data$tag$pa) || all(sapply(bam_data$tag$pa, is.null))) {
-    cli_log("ERROR: poly(A) coordinate information (pa tag) not found in BAM file.", "ERROR")
+    cli_log("poly(A) coordinate information (pa tag) not found in BAM file.", "ERROR")
     cli_log("Please ensure data were basecalled with dorado version >= 1.0.0", "ERROR")
     stop("poly(A) coordinate information (pa tag) not found in BAM file")
   }

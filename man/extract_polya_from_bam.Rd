@@ -2,71 +2,42 @@
 % Please edit documentation in R/extract_polya_from_bam.R
 \name{extract_polya_from_bam}
 \alias{extract_polya_from_bam}
-\title{Extract poly(A) tail information from BAM file}
+\title{Extract poly(A) information from BAM file}
 \usage{
-extract_polya_from_bam(bam_file, summary_file, cli_log)
+extract_polya_from_bam(bam_file, summary_file, cli_log = message)
 }
 \arguments{
-\item{bam_file}{character string. Full path to the BAM file containing Dorado
-basecalling results. The BAM file must contain pt and pa tags for poly(A) tail
-information.}
+\item{bam_file}{Path to the BAM file containing aligned reads with poly(A) information}
 
-\item{summary_file}{Character string. Path to the corresponding dorado
-summary file containing read to pod5 file mappings.}
+\item{summary_file}{Path to the summary file containing read_id and filename mapping}
 
-\item{cli_log}{Function for logging. This function is encoded in main
-pipeline wrapper. Its purpose is to provide neatly formatted & informative log file.}
+\item{cli_log}{Function for logging messages, defaults to message}
 }
 \value{
-A data frame containing poly(A) information with the following columns:
-\describe{
-  \item{read_id}{Character. Read identifier}
-  \item{pod5_file}{Character. Path to the corresponding pod5 file}
-  \item{reference}{Character. Reference sequence name}
-  \item{ref_start}{Integer. Start position on reference}
-  \item{ref_end}{Integer. End position on reference}
-  \item{mapq}{Integer. Mapping quality score}
-  \item{polya_length}{Numeric. Length of poly(A) tail}
-  \item{anchor_pos}{Integer. Position of poly(A) anchor (-1 if not available)}
-  \item{polya_start}{Integer. Start position of poly(A) region (-1 if not available)}
-  \item{polya_end}{Integer. End position of poly(A) region (-1 if not available)}
-  \item{secondary_polya_start}{Integer. Start position of secondary poly(A) region (-1 if not available)}
-  \item{secondary_polya_end}{Integer. End position of secondary poly(A) region (-1 if not available)}
-}
+A data frame containing poly(A) information with columns:
+  \itemize{
+    \item read_id - unique read identifier
+    \item pod5_file - corresponding pod5 file path
+    \item reference - reference sequence name
+    \item ref_start - alignment start position
+    \item ref_end - alignment end position
+    \item mapq - mapping quality score
+    \item polya_length - length of poly(A) tail
+    \item anchor_pos - anchor position from pa tag
+    \item polya_start - poly(A) start position
+    \item polya_end - poly(A) end position
+    \item secondary_polya_start - secondary poly(A) start position
+    \item secondary_polya_end - secondary poly(A) end position
+  }
 }
 \description{
-This function extracts poly(A) tail information from a BAM file produced by
-Dorado basecaller.
-}
-\details{
-- Requires BAM files produced by dorado version >= 1.0.0 for poly(A) coordinate information
-- The pa tag should contain 5 values: anchor position and poly(A) region coordinates
-- Returns empty data frame if no valid reads are found
-- Uses memory-efficient vector pre-allocation for large files
-
-The function performs the following steps:
-1. Validates input BAM and summary files
-2. Reads pod5 file mappings from summary file
-3. Extracts BAM tags (pt for poly(A) tail length, pa for positions)
-4. Filters out:
-   - Unmapped reads
-   - Non-primary alignments
-   - Reads without poly(A) tags
-5. Combines BAM information with pod5 file mappings
-6. Handles duplicate reads by keeping first occurrence
-
-Progress and filtering statistics are reported during execution.
+Extract poly(A) information from BAM file
 }
 \examples{
 \dontrun{
-# Extract poly(A) information from BAM file
 polya_data <- extract_polya_from_bam(
-  bam_file = "path/to/dorado_calls.bam",
-  summary_file = "path/to/summary_part1.txt"
+  bam_file = "path/to/aligned.bam",
+  summary_file = "path/to/summary.txt"
 )
-
-# Check results
-head(polya_data)
 }
-
 }

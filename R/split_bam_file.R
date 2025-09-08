@@ -1,40 +1,29 @@
-#' Split BAM file into parts based on readnames from dorado summary
+#' Split BAM file into smaller parts based on read IDs from summary file
 #'
-#' This function splits a large BAM file into multiple smaller BAM files based on
-#' unique read identifiers (readnames) from a dorado alignment summary file parts.
+#' @param bam_file Path to the BAM file to be split
+#' @param dorado_summary Path to the Dorado summary file containing read IDs for filtering
+#' @param part_size Number of reads per output file part (default: 100000)
+#' @param save_dir Directory where split BAM files will be saved
+#' @param part_number Numerical identifier for the current part being processed
+#' @param cli_log Function for logging messages and progress (default: message)
 #'
-#' @param bam_file character string. Full path to the input BAM file.
-#'
-#' @param dorado_summary character string. Full path to the dorado summary part file.
-#'
-#' @param part_size numeric [100000] (optional). If provided, defines maximum
-#' number of reads per output part.
-#'
-#' @param save_dir character string. Full path of the directory where the processed
-#' BAM files should be stored.
-#'
-#' @param cli_log Function for logging. This function is encoded in main
-#' pipeline wrapper. Its purpose is to detailed log file.
-#'
-#' @returns A character vector containing paths to the generated BAM files.
+#' @returns Character vector containing paths to the split BAM files
 #' @export
 #'
 #' @examples
-#'\dontrun{
-#'
-#' # Split a BAM file based on dorado summary part
-#' split_bam_file(
-#'   bam_file = '/path/to/input.bam',
-#'   dorado_summary = '/path/to/summary_part.txt',
-#'   save_dir = '/path/to/output',
-#'   part_size = 1000
+#' \dontrun{
+#' bam_files <- split_bam_file(
+#'   bam_file = "path/to/aligned.bam",
+#'   dorado_summary = "path/to/summary_part1.txt",
+#'   save_dir = "path/to/output/",
+#'   part_number = 1
 #' )
-#'
-#'}
+#' }
 split_bam_file <- function(bam_file,
                            dorado_summary,
                            part_size = 100000,
                            save_dir,
+                           part_number,
                            cli_log = message) {
 
   # Variable binding (suppressing R CMD check from throwing an error)
@@ -63,13 +52,11 @@ split_bam_file <- function(bam_file,
   assertthat::assert_that(dir.exists(save_dir),
                           msg = "Output directory does not exist")
 
-  # Get part number from summary file name for output naming
-  part_num <- sub(".*part_(\\d+)\\.txt$", "\\1", basename(dorado_summary))
   input_basename <- base::basename(bam_file)
   input_noext <- base::sub("\\.bam$", "", input_basename)
 
-  # Create output prefix using the part number
-  output_prefix <- file.path(save_dir, sprintf("%s_part%s", input_noext, part_num))
+  # Create output prefix using the provided part number
+  output_prefix <- file.path(save_dir, sprintf("%s_part_%d", input_noext, part_number))
 
   # Read and process the summary file
   cli_log(sprintf("[INFO] Reading summary file: %s", basename(dorado_summary)))

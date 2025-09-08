@@ -2,47 +2,43 @@
 % Please edit documentation in R/split_bam_file.R
 \name{split_bam_file}
 \alias{split_bam_file}
-\title{Split BAM file into parts based on readnames from dorado summary}
+\title{Split BAM file into smaller parts based on read IDs from summary file}
 \usage{
 split_bam_file(
   bam_file,
   dorado_summary,
   part_size = 1e+05,
   save_dir,
+  part_number,
   cli_log = message
 )
 }
 \arguments{
-\item{bam_file}{character string. Full path to the input BAM file.}
+\item{bam_file}{Path to the BAM file to be split}
 
-\item{dorado_summary}{character string. Full path to the dorado summary part file.}
+\item{dorado_summary}{Path to the Dorado summary file containing read IDs for filtering}
 
-\item{part_size}{numeric [100000] (optional). If provided, defines maximum
-number of reads per output part.}
+\item{part_size}{Number of reads per output file part (default: 100000)}
 
-\item{save_dir}{character string. Full path of the directory where the processed
-BAM files should be stored.}
+\item{save_dir}{Directory where split BAM files will be saved}
 
-\item{cli_log}{Function for logging. This function is encoded in main
-pipeline wrapper. Its purpose is to detailed log file.}
+\item{part_number}{Numerical identifier for the current part being processed}
+
+\item{cli_log}{Function for logging messages and progress (default: message)}
 }
 \value{
-A character vector containing paths to the generated BAM files.
+Character vector containing paths to the split BAM files
 }
 \description{
-This function splits a large BAM file into multiple smaller BAM files based on
-unique read identifiers (readnames) from a dorado alignment summary file parts.
+Split BAM file into smaller parts based on read IDs from summary file
 }
 \examples{
 \dontrun{
-
-# Split a BAM file based on dorado summary part
-split_bam_file(
-  bam_file = '/path/to/input.bam',
-  dorado_summary = '/path/to/summary_part.txt',
-  save_dir = '/path/to/output',
-  part_size = 1000
+bam_files <- split_bam_file(
+  bam_file = "path/to/aligned.bam",
+  dorado_summary = "path/to/summary_part1.txt",
+  save_dir = "path/to/output/",
+  part_number = 1
 )
-
 }
 }

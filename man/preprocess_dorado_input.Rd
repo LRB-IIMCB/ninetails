@@ -2,8 +2,7 @@
 % Please edit documentation in R/preprocess_dorado_input.R
 \name{preprocess_dorado_input}
 \alias{preprocess_dorado_input}
-\title{Initially preprocess dorado input files before passing them to the
-main ninetails pipeline}
+\title{Preprocess Dorado input files for poly(A) analysis}
 \usage{
 preprocess_dorado_input(
   bam_file,
@@ -18,43 +17,46 @@ preprocess_dorado_input(
 )
 }
 \arguments{
-\item{bam_file}{character string. Full path to the input BAM file.}
+\item{bam_file}{Path to the BAM file containing aligned reads}
 
-\item{dorado_summary}{character string or data.frame. Path to dorado summary file
-or a data frame containing the summary data.}
+\item{dorado_summary}{Path to Dorado summary file or a data frame containing summary information}
 
-\item{pod5_dir}{character string. Directory containing pod5 files.}
+\item{pod5_dir}{Directory containing pod5 files}
 
-\item{num_cores}{numeric [1]. Number of cores to use for processing.}
+\item{num_cores}{Number of CPU cores to use for processing}
 
-\item{qc}{logical [TRUE/FALSE]. Whether to perform quality control.}
+\item{qc}{Logical indicating whether to perform quality control checks}
 
-\item{save_dir}{character string. Directory where output files will be saved.}
+\item{save_dir}{Directory where output files will be saved}
 
-\item{prefix}{character string. Prefix for output files.}
+\item{prefix}{Prefix to add to output file names (optional)}
 
-\item{part_size}{numeric [100000]. Maximum number of reads to process in each part.}
+\item{part_size}{Number of reads to process in each chunk}
 
-\item{cli_log}{Function for logging. This function is encoded in main pipeline wrapper.}
+\item{cli_log}{Function for logging messages and progress}
 }
 \value{
-A list containing paths to processed files and status information
+A list containing paths to processed files:
+  \itemize{
+    \item summary_files - Paths to split summary files
+    \item bam_files - Paths to split BAM files
+    \item polya_files - Paths to extracted poly(A) data files
+  }
 }
 \description{
-Preprocesses dorado input files by validating inputs and splitting large files
-into manageable parts if needed, so they can be efficiently parsed with
-the main ninetails pipeline without memory overload.
+Preprocess Dorado input files for poly(A) analysis
 }
 \examples{
 \dontrun{
-
-# Split a BAM file based on dorado summary part
-split_bam_file(
-  bam_file = '/path/to/input.bam',
-  dorado_summary = '/path/to/summary_part.txt',
-  save_dir = '/path/to/output',
-  part_size = 1000
+processed_files <- preprocess_dorado_input(
+  bam_file = "path/to/aligned.bam",
+  dorado_summary = "path/to/summary.txt",
+  pod5_dir = "path/to/pod5/",
+  num_cores = 2,
+  qc = TRUE,
+  save_dir = "path/to/output/",
+  prefix = "experiment1",
+  part_size = 40000
 )
-
 }
 }
