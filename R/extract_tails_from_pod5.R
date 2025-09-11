@@ -39,7 +39,29 @@ extract_tails_from_pod5 <- function(polya_data, pod5_dir) {
   ## variable bindings to satisfy R CMD check
   i <- reader <- NULL
 
-  # ensure pod56 python module is available before import (clear message)
+  # Assertions
+  assertthat::assert_that(is.character(pod5_dir), dir.exists(pod5_dir),
+                          msg = "pod5_dir must be a valid directory path (character string and directory must exist)")
+
+  assertthat::assert_that(is.data.frame(polya_data) && nrow(polya_data) > 0,
+                          msg = "polya_data must be a non-empty data frame")
+
+  required_cols <- c("read_id", "pod5_file", "polya_start", "polya_end")
+  missing_cols <- setdiff(required_cols, colnames(polya_data))
+  if (length(missing_cols) > 0) {
+    stop(sprintf("polya_data is missing required columns: %s", paste(missing_cols, collapse = ", ")))
+  }
+
+  assertthat::assert_that(is.character(polya_data$read_id),
+                          msg = "polya_data$read_id must be a character vector")
+  assertthat::assert_that(is.character(polya_data$pod5_file),
+                          msg = "polya_data$pod5_file must be a character vector")
+  assertthat::assert_that(is.numeric(polya_data$polya_start),
+                          msg = "polya_data$polya_start must be numeric")
+  assertthat::assert_that(is.numeric(polya_data$polya_end),
+                          msg = "polya_data$polya_end must be numeric")
+
+  # ensure pod5 python module is available before import (clear message)
   if (!reticulate::py_module_available("pod5")) {
     stop("Python module 'pod5' is not available in the current environment.")
   }
@@ -79,15 +101,12 @@ extract_tails_from_pod5 <- function(polya_data, pod5_dir) {
         signal <- reticulate::py_to_r(reads_by_id[[read_id]]$signal)
         start_idx <- current_data$polya_start[i]
         end_idx <- current_data$polya_end[i]
-        message(sprintf("Extracting: %s, signal length: %d, start: %d, end: %d",
-                        read_id, length(signal), start_idx, end_idx))
-        if (is.numeric(start_idx) && is.numeric(end_idx) &&
-            start_idx > 0 && end_idx > 0 &&
-            start_idx < end_idx && end_idx <= length(signal)) {
+        # Diagnostic print
+        message(sprintf("Extracting: %s, signal length: %d, start: %d, end: %d", read_id, length(signal), start_idx, end_idx))
+        if (is.numeric(start_idx) && is.numeric(end_idx) && start_idx > 0 && end_idx > 0 && start_idx < end_idx && end_idx <= length(signal)) {
           polya_signal <- signal[start_idx:end_idx]
         } else {
-          message(sprintf("Invalid indices for read %s: start=%d, end=%d, signal_length=%d",
-                          read_id, start_idx, end_idx, length(signal)))
+          message(sprintf("Invalid indices for read %s: start=%d, end=%d, signal_length=%d", read_id, start_idx, end_idx, length(signal)))
           polya_signal <- numeric(0)
         }
         list(
@@ -97,19 +116,11 @@ extract_tails_from_pod5 <- function(polya_data, pod5_dir) {
           signal_length = length(polya_signal)
         )
       })
-
-      # close pod5 reader instance
       reader$close()
-
-      # build result tibble:
-      # - read_id / pod5_file: scalar character
-      # - polya_signal: list-column where each element is an atomic numeric vector (possibly length 0)
-      # - signal_length: integer
       result_df <- tibble::tibble(
         read_id = vapply(result, function(x) x$read_id, character(1)),
         pod5_file = vapply(result, function(x) x$pod5_file, character(1)),
-        # coerce to vector column
-        polya_signal = I(vapply(result, function(x) x$polya_signal, numeric(lengths(result)))),
+        polya_signal = lapply(result, function(x) x$polya_signal),
         signal_length = vapply(result, function(x) x$signal_length, numeric(1))
       )
       dplyr::left_join(current_data, result_df, by = c("read_id", "pod5_file"))
@@ -122,3 +133,6 @@ extract_tails_from_pod5 <- function(polya_data, pod5_dir) {
   results <- dplyr::bind_rows(results)
   return(results)
 }
+
+
+
