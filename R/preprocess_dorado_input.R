@@ -152,7 +152,7 @@ preprocess_dorado_input <- function(bam_file,
   }
 
   ###################################################
-  # EXTRACTING POLYA FROM BAM & SUMMARY
+  # EXTRACTING POLYA FROM BAM
   ###################################################
 
   # Inform that poly(A) will be extracted
