@@ -211,6 +211,12 @@ preprocess_inputs <- function(bam_file,
     cli_log("No poly(A) data was extracted from any BAM file", "WARNING")
   }
 
+  ###################################################
+  # EXTRACTING POLYA SIGNALS FROM POD5
+  ###################################################
+  cli_log("Signal extracting", "INFO", "Signal Extracting")
+  cli_log("Extracting poly(A) signals from pod5 file...", "INFO", bullet = TRUE)
+
   # Create polya_signal_dir for extracted signals
   polya_signal_dir <- file.path(save_dir, "polya_signal_dir")
   if (!dir.exists(polya_signal_dir)) {
