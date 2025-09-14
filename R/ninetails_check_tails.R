@@ -108,7 +108,7 @@
 #' @examples
 #' \dontrun{
 #'
-#'results <- ninetails::check_tails_guppy(
+#'results <- ninetails::check_tails(
 #'  polya_data = system.file('extdata',
 #'                           'test_data',
 #'                           'nanopolish_output.tsv',
@@ -130,16 +130,16 @@
 #'  part_size=2000)
 #'
 #' }
-check_tails_guppy <- function(polya_data,
-                              sequencing_summary,
-                              workspace,
-                              num_cores=1,
-                              basecall_group="Basecall_1D_000",
-                              pass_only=TRUE,
-                              qc=TRUE,
-                              save_dir,
-                              prefix="",
-                              part_size=1000000) {
+check_tails <- function(polya_data,
+                        sequencing_summary,
+                        workspace,
+                        num_cores=1,
+                        basecall_group="Basecall_1D_000",
+                        pass_only=TRUE,
+                        qc=TRUE,
+                        save_dir,
+                        prefix="",
+                        part_size=1000000) {
 
   # Initialize warning flag
   warn_message <- FALSE
