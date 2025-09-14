@@ -190,7 +190,7 @@ preprocess_inputs <- function(bam_file,
                                        ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
                                        i))
 
-      vroom::vroom_write(polya_data, output_file, delim = "\t")
+      vroom::vroom_write(polya_data, output_file, delim = "\t", show_col_types = FALSE)
       polya_files[i] <- output_file
       cli_log(sprintf("Saved poly(A) data for BAM %d to %s (%d reads)",
                       i, output_file, nrow(polya_data)), "INFO")
@@ -226,7 +226,7 @@ preprocess_inputs <- function(bam_file,
   # Extract signals from pod5 files for each polya data file
   polya_signal_files <- character(length(polya_files))
   for (i in seq_along(polya_files)) {
-    polya_data <- vroom::vroom(polya_files[i], delim = "\t")
+    polya_data <- vroom::vroom(polya_files[i], delim = "\t", show_col_types = FALSE)
     signal_list <- extract_tails_from_pod5(polya_data, pod5_dir)
     output_file <- file.path(polya_signal_dir,
                              sprintf("%spolya_signal_part%d.rds",
