@@ -7,39 +7,26 @@
 extract_tails_from_pod5(polya_data, pod5_dir)
 }
 \arguments{
-\item{polya_data}{A data frame with at least the following columns:
+\item{polya_data}{Data frame with columns:
 \describe{
- \item{read_id}{Character: ONT read identifiers.}
- \item{pod5_file}{Character: corresponding POD5 filename (relative to `pod5_dir`).}
- \item{polya_start}{Integer/numeric: start index of the poly(A) region in the signal.}
- \item{polya_end}{Integer/numeric: end index of the poly(A) region in the signal.}
+  \item{read_id}{Character: ONT read identifiers}
+  \item{pod5_file}{Character: corresponding POD5 filename}
+  \item{poly_tail_start}{Integer/numeric: start index of the poly(A) region}
+  \item{polya_end}{Integer/numeric: end index of the poly(A) region}
 }}
 
-\item{pod5_dir}{Character string. Path to the directory containing POD5 files referenced in
-`polya_data$pod5_file`. Equivalent to guppy workspace.}
+\item{pod5_dir}{Character. Path to the directory containing POD5 files.}
 }
 \value{
-A tibble combining the original rows from `polya_data` with:
-\describe{
- \item{polya_signal}{list-column: each element is an atomic numeric vector
- with the extracted signal (length may be zero if extraction failed or read missing).}
- \item{signal_length}{integer: length of the extracted `polya_signal`.}
-}
+List of numeric vectors, each containing the extracted signal for a read.
 }
 \description{
-The function uses \pkg{reticulate} to import the Python library `pod5`. For each pod5 file referenced in
-`polya_data` it opens a `pod5.Reader`, enumerates reads, matches `read_id` and extracts the numeric
-slice `signal[polya_start:polya_end]` whenever indices are valid. If a read is missing or indices are
-invalid, `polya_signal` for that row will be `numeric(0)` and `signal_length = 0`.
-}
-\details{
-The function performs several input checks and will stop early with informative messages when
-required arguments or columns are missing or have incorrect types.
+Uses reticulate to import the Python library `pod5`. For each pod5 file referenced in
+`polya_data`, opens a `pod5.Reader`, matches `read_id`, and extracts the numeric
+slice `signal[poly_tail_start:polya_end]` if indices are valid. Applies winsorization and interpolation.
 }
 \examples{
 \dontrun{
 res <- extract_tails_from_pod5(polya_data, "/path/to/pod5_dir")
 }
-
-
 }

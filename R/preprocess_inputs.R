@@ -1,26 +1,29 @@
 #' Preprocess Dorado input files for poly(A) analysis
 #'
-#' @param bam_file Path to the BAM file containing aligned reads
-#' @param dorado_summary Path to Dorado summary file or a data frame containing summary information
-#' @param pod5_dir Directory containing pod5 files
-#' @param num_cores Number of CPU cores to use for processing
-#' @param qc Logical indicating whether to perform quality control checks
-#' @param save_dir Directory where output files will be saved
-#' @param prefix Prefix to add to output file names (optional)
-#' @param part_size Number of reads to process in each chunk
-#' @param cli_log Function for logging messages and progress
+#' Validates and splits input files, extracts poly(A) information and signals, and prepares all files for downstream analysis.
 #'
-#' @returns A list containing paths to processed files:
-#'   \itemize{
-#'     \item summary_files - Paths to split summary files
-#'     \item bam_files - Paths to split BAM files
-#'     \item polya_files - Paths to extracted poly(A) data files
+#' @param bam_file Character. Path to the BAM file containing aligned reads.
+#' @param dorado_summary Character or data frame. Path to Dorado summary file or data frame.
+#' @param pod5_dir Character. Directory containing pod5 files.
+#' @param num_cores Integer. Number of CPU cores to use.
+#' @param qc Logical. Whether to perform quality control.
+#' @param save_dir Character. Directory where output files will be saved.
+#' @param prefix Character. Prefix to add to output file names (optional).
+#' @param part_size Integer. Number of reads to process in each chunk.
+#' @param cli_log Function for logging messages and progress.
+#'
+#' @return List containing paths to processed files:
+#'   \describe{
+#'     \item{summary_files}{Paths to split summary files}
+#'     \item{bam_files}{Paths to split BAM files}
+#'     \item{polya_files}{Paths to extracted poly(A) data files}
+#'     \item{polya_signal_files}{Paths to extracted poly(A) signal files}
 #'   }
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' processed_files <- preprocess_dorado_input(
+#' processed_files <- preprocess_inputs(
 #'   bam_file = "path/to/aligned.bam",
 #'   dorado_summary = "path/to/summary.txt",
 #'   pod5_dir = "path/to/pod5/",
@@ -28,18 +31,19 @@
 #'   qc = TRUE,
 #'   save_dir = "path/to/output/",
 #'   prefix = "experiment1",
-#'   part_size = 40000
+#'   part_size = 40000,
+#'   cli_log = message
 #' )
 #' }
-preprocess_dorado_input <- function(bam_file,
-                                    dorado_summary,
-                                    pod5_dir,
-                                    num_cores,
-                                    qc,
-                                    save_dir,
-                                    prefix,
-                                    part_size,
-                                    cli_log) {
+preprocess_inputs <- function(bam_file,
+                              dorado_summary,
+                              pod5_dir,
+                              num_cores,
+                              qc,
+                              save_dir,
+                              prefix,
+                              part_size,
+                              cli_log) {
   # Input validation and configuration
   cli_log("Validating input parameters", "INFO", "Validating Inputs")
   # Assertions
@@ -207,10 +211,32 @@ preprocess_dorado_input <- function(bam_file,
     cli_log("No poly(A) data was extracted from any BAM file", "WARNING")
   }
 
-  # Return processed file paths
+  # Create polya_signal_dir for extracted signals
+  polya_signal_dir <- file.path(save_dir, "polya_signal_dir")
+  if (!dir.exists(polya_signal_dir)) {
+    dir.create(polya_signal_dir, recursive = TRUE)
+  }
+
+  # Extract signals from pod5 files for each polya data file
+  polya_signal_files <- character(length(polya_files))
+  for (i in seq_along(polya_files)) {
+    polya_data <- vroom::vroom(polya_files[i], delim = "\t")
+    signal_list <- extract_tails_from_pod5(polya_data, pod5_dir)
+    output_file <- file.path(polya_signal_dir,
+                             sprintf("%spolya_signal_part%d.rds",
+                                     ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
+                                     i))
+    saveRDS(signal_list, output_file)
+    polya_signal_files[i] <- output_file
+    cli_log(sprintf("Saved extracted signals for poly(A) data part %d to %s", i, output_file), "INFO")
+  }
+
+  # Add polya_signal_files to the returned list
   return(list(
     summary_files = part_files,
     bam_files = bam_files,
-    polya_files = polya_files
+    polya_files = polya_files,
+    polya_signal_files = polya_signal_files
   ))
 }
+

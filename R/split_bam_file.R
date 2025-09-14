@@ -1,13 +1,21 @@
 #' Split BAM file into smaller parts based on read IDs from summary file
 #'
-#' @param bam_file Path to the BAM file to be split
-#' @param dorado_summary Path to the Dorado summary file containing read IDs for filtering
-#' @param part_size Number of reads per output file part (default: 100000)
-#' @param save_dir Directory where split BAM files will be saved
-#' @param part_number Numerical identifier for the current part being processed
-#' @param cli_log Function for logging messages and progress (default: message)
+#' Splits a BAM file into multiple smaller BAM files, each containing reads matching a subset of read IDs from a summary file.
 #'
-#' @returns Character vector containing paths to the split BAM files
+#' @param bam_file Character path to the BAM file to be split.
+#'
+#' @param dorado_summary Character path to the Dorado summary file containing read IDs for filtering.
+#'
+#' @param part_size Integer. Number of reads per output file part (default: 100000).
+#'
+#' @param save_dir Character path to directory where split BAM files will be saved.
+#'
+#' @param part_number Integer. Numerical identifier for the current part being processed.
+#'
+#' @param cli_log Function for logging messages and progress (default: message).
+#'
+#' @return Character vector containing paths to the split BAM files.
+#'
 #' @export
 #'
 #' @examples
@@ -151,4 +159,3 @@ split_bam_file <- function(bam_file,
 
   return(output_files)
 }
-

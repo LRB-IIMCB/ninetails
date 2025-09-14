@@ -229,7 +229,7 @@ extract_tail_data <- function(readname,
   moves_tail_range <- round(stats::approx(moves_tail_range, method = "linear", n=ceiling(0.2 * length(moves_tail_range)))[[2]], digits=0)
 
   # filter signal to find local minima & maxima corresponding to potential C, G, U modifications
-  pseudomoves <- filter_signal_by_threshold(signal)
+  pseudomoves <- ninetails::filter_signal_by_threshold(signal)
 
   extracted_data_single_list = list() # creating empty list for the extracted fast5 data
 

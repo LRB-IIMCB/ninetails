@@ -1,25 +1,28 @@
-
 #' Extract poly(A) information from BAM file
 #'
-#' @param bam_file Path to the BAM file containing aligned reads with poly(A) information
-#' @param summary_file Path to the summary file containing read_id and filename mapping
-#' @param cli_log Function for logging messages, defaults to message
+#' Extracts poly(A) tail coordinates and related information from a BAM file using a summary file for pod5 file mapping.
 #'
-#' @returns A data frame containing poly(A) information with columns:
-#'   \itemize{
-#'     \item read_id - unique read identifier
-#'     \item pod5_file - corresponding pod5 file path
-#'     \item reference - reference sequence name
-#'     \item ref_start - alignment start position
-#'     \item ref_end - alignment end position
-#'     \item mapq - mapping quality score
-#'     \item polya_length - length of poly(A) tail
-#'     \item anchor_pos - anchor position from pa tag
-#'     \item polya_start - poly(A) start position
-#'     \item polya_end - poly(A) end position
-#'     \item secondary_polya_start - secondary poly(A) start position
-#'     \item secondary_polya_end - secondary poly(A) end position
+#' @param bam_file Character path to the BAM file containing aligned reads with poly(A) information.
+#'
+#' @param summary_file Character path to the summary file containing read_id and filename mapping.
+#'
+#' @param cli_log Function for logging messages, defaults to message.
+#'
+#' @return A data frame containing poly(A) information with columns:
+#'   \describe{
+#'     \item{read_id}{Unique read identifier}
+#'     \item{pod5_file}{Corresponding pod5 file name}
+#'     \item{reference}{Reference sequence name}
+#'     \item{ref_start}{Alignment start position}
+#'     \item{ref_end}{Alignment end position}
+#'     \item{mapq}{Mapping quality score}
+#'     \item{poly_tail_length}{Length of poly(A) tail}
+#'     \item{poly_tail_start}{Poly(A) start position}
+#'     \item{polya_end}{Poly(A) end position}
+#'     \item{poly_tail2_start}{Secondary poly(A) start position}
+#'     \item{poly_tail2_end}{Secondary poly(A) end position}
 #'   }
+#'
 #' @export
 #'
 #' @examples
@@ -85,12 +88,12 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
   ref_starts <- integer(initial_count)
   ref_ends <- integer(initial_count)
   mapqs <- integer(initial_count)
-  polya_lengths <- numeric(initial_count)
-  anchor_positions <- integer(initial_count)
-  polya_starts <- integer(initial_count)
+  poly_tail_lengths <- numeric(initial_count)
+  #anchor_positions <- integer(initial_count)
+  poly_tail_starts <- integer(initial_count)
   polya_ends <- integer(initial_count)
-  secondary_polya_starts <- integer(initial_count)
-  secondary_polya_ends <- integer(initial_count)
+  poly_tail2_starts <- integer(initial_count)
+  poly_tail2_ends <- integer(initial_count)
   pod5_files <- character(initial_count)  # New vector for pod5 files
 
   # Counter for valid entries
@@ -122,25 +125,25 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
     primary_count <- primary_count + 1
 
     # Get polyA length from pt tag
-    polya_length <- bam_data$tag$pt[[i]]
+    poly_tail_length <- bam_data$tag$pt[[i]]
     pt_tag_count <- pt_tag_count + 1
 
     # Initialize pa tag values
-    anchor_pos <- -1L
-    polya_start <- -1L
+    #anchor_pos <- -1L
+    poly_tail_start <- -1L
     polya_end <- -1L
-    secondary_polya_start <- -1L
-    secondary_polya_end <- -1L
+    poly_tail2_start <- -1L
+    poly_tail2_end <- -1L
 
     # Add pa tag information if it exists and is valid
     if (!is.null(bam_data$tag$pa[[i]]) && length(bam_data$tag$pa[[i]]) == 5) {
       pa_values <- bam_data$tag$pa[[i]]
       if (!any(is.na(pa_values))) {
-        anchor_pos <- pa_values[1]
-        polya_start <- pa_values[2]
+        #anchor_pos <- pa_values[1]
+        poly_tail_start <- pa_values[2]
         polya_end <- pa_values[3]
-        secondary_polya_start <- pa_values[4]
-        secondary_polya_end <- pa_values[5]
+        poly_tail2_start <- pa_values[4]
+        poly_tail2_end <- pa_values[5]
       }
     }
 
@@ -158,12 +161,12 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
     ref_starts[valid_count] <- bam_data$pos[i]
     ref_ends[valid_count] <- bam_data$pos[i] + nchar(bam_data$cigar[i])
     mapqs[valid_count] <- bam_data$mapq[i]
-    polya_lengths[valid_count] <- polya_length
-    anchor_positions[valid_count] <- anchor_pos
-    polya_starts[valid_count] <- polya_start
+    poly_tail_lengths[valid_count] <- poly_tail_length
+    #anchor_positions[valid_count] <- anchor_pos
+    poly_tail_starts[valid_count] <- poly_tail_start
     polya_ends[valid_count] <- polya_end
-    secondary_polya_starts[valid_count] <- secondary_polya_start
-    secondary_polya_ends[valid_count] <- secondary_polya_end
+    poly_tail2_starts[valid_count] <- poly_tail2_start
+    poly_tail2_ends[valid_count] <- poly_tail2_end
     pod5_files[valid_count] <- pod5_file
   }
 
@@ -180,12 +183,12 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
     ref_starts <- ref_starts[1:valid_count]
     ref_ends <- ref_ends[1:valid_count]
     mapqs <- mapqs[1:valid_count]
-    polya_lengths <- polya_lengths[1:valid_count]
-    anchor_positions <- anchor_positions[1:valid_count]
-    polya_starts <- polya_starts[1:valid_count]
+    poly_tail_lengths <- poly_tail_lengths[1:valid_count]
+    #anchor_positions <- anchor_positions[1:valid_count]
+    poly_tail_starts <- poly_tail_starts[1:valid_count]
     polya_ends <- polya_ends[1:valid_count]
-    secondary_polya_starts <- secondary_polya_starts[1:valid_count]
-    secondary_polya_ends <- secondary_polya_ends[1:valid_count]
+    poly_tail2_starts <- poly_tail2_starts[1:valid_count]
+    poly_tail2_ends <- poly_tail2_ends[1:valid_count]
     pod5_files <- pod5_files[1:valid_count]
 
     # Check for duplicates
@@ -200,12 +203,12 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
       ref_starts <- ref_starts[keep_idx]
       ref_ends <- ref_ends[keep_idx]
       mapqs <- mapqs[keep_idx]
-      polya_lengths <- polya_lengths[keep_idx]
-      anchor_positions <- anchor_positions[keep_idx]
-      polya_starts <- polya_starts[keep_idx]
+      poly_tail_lengths <- poly_tail_lengths[keep_idx]
+      #anchor_positions <- anchor_positions[keep_idx]
+      poly_tail_starts <- poly_tail_starts[keep_idx]
       polya_ends <- polya_ends[keep_idx]
-      secondary_polya_starts <- secondary_polya_starts[keep_idx]
-      secondary_polya_ends <- secondary_polya_ends[keep_idx]
+      poly_tail2_starts <- poly_tail2_starts[keep_idx]
+      poly_tail2_ends <- poly_tail2_ends[keep_idx]
       pod5_files <- pod5_files[keep_idx]
     }
 
@@ -217,12 +220,12 @@ extract_polya_from_bam <- function(bam_file, summary_file, cli_log = message) {
       ref_start = ref_starts,
       ref_end = ref_ends,
       mapq = mapqs,
-      polya_length = polya_lengths,
-      anchor_pos = anchor_positions,
-      polya_start = polya_starts,
+      poly_tail_length = poly_tail_lengths,
+      #anchor_pos = anchor_positions,
+      poly_tail_start = poly_tail_starts,
       polya_end = polya_ends,
-      secondary_polya_start = secondary_polya_starts,
-      secondary_polya_end = secondary_polya_ends
+      poly_tail2_start = poly_tail2_starts,
+      poly_tail2_end = poly_tail2_ends
     )
 
     cli_log("Processing complete", "SUCCESS")

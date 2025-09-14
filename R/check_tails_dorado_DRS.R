@@ -13,14 +13,15 @@
 #' \item Splits large BAM and summary files into manageable parts
 #' \item Extracts poly(A) information from BAM files
 #' \item Performs quality control if enabled
-#' \item Generates comprehensive output files and logs
+#' \item Generates output files and logs
 #' }
 #'
-#' The processing pipeline creates several subdirectories in the specified
-#' output directory:\itemize{
-#' \item dorado_summary_dir - Contains split summary files
-#' \item bam_dir - Contains split BAM files
-#' \item polya_data_dir - Contains extracted poly(A) information
+#' Output subdirectories:
+#' \itemize{
+#'   \item dorado_summary_dir - Split summary files
+#'   \item bam_dir - Split BAM files
+#'   \item polya_data_dir - Extracted poly(A) information
+#'   \item polya_signal_dir - Extracted poly(A) signals
 #' }
 #'
 #' @param bam_file Character string. Full path to the BAM file produced by Dorado
@@ -71,14 +72,14 @@
 #'   part_size = 40000
 #' )
 #' }
-check_tails_dorado_DRS <- function(bam_file,
-                                   dorado_summary,
-                                   pod5_dir,
-                                   num_cores = 1,
-                                   qc = TRUE,
-                                   save_dir,
-                                   prefix = "",
-                                   part_size = 1000) {
+check_tails_dorado_DRS<- function(bam_file,
+                                  dorado_summary,
+                                  pod5_dir,
+                                  num_cores = 1,
+                                  qc = TRUE,
+                                  save_dir,
+                                  prefix = "",
+                                  part_size = 1000) {
 
   # Initialize warning flag
   warn_message <- FALSE
@@ -170,7 +171,7 @@ check_tails_dorado_DRS <- function(bam_file,
     cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
 
     # Preprocess input files
-    processed_files <- ninetails::preprocess_dorado_input(
+    processed_files <- preprocess_inputs(
       bam_file = bam_file,
       dorado_summary = dorado_summary,
       pod5_dir = pod5_dir,
@@ -217,3 +218,4 @@ check_tails_dorado_DRS <- function(bam_file,
     cli::cli_alert_danger("Ninetails aborted")
   })
 }
+

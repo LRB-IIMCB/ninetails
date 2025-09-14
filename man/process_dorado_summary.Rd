@@ -7,19 +7,19 @@
 process_dorado_summary(dorado_summary, save_dir, part_size, cli_log)
 }
 \arguments{
-\item{dorado_summary}{Path to Dorado summary file or a data frame containing summary information}
+\item{dorado_summary}{Character path to Dorado summary file, or a data frame containing summary information.}
 
-\item{save_dir}{Directory where split summary files will be saved}
+\item{save_dir}{Character path to directory where split summary files will be saved.}
 
-\item{part_size}{Number of reads per file part when splitting the summary file}
+\item{part_size}{Integer. Number of reads per file part when splitting the summary file.}
 
-\item{cli_log}{Function for logging messages and progress}
+\item{cli_log}{Function for logging messages and progress.}
 }
 \value{
-Character vector containing paths to the split summary files
+Character vector containing paths to the split summary files.
 }
 \description{
-Process and split Dorado summary file into smaller parts
+Splits a Dorado summary file or data frame into multiple smaller files for downstream analysis.
 }
 \examples{
 \dontrun{

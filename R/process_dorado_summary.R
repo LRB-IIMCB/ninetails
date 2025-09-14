@@ -1,11 +1,17 @@
 #' Process and split Dorado summary file into smaller parts
 #'
-#' @param dorado_summary Path to Dorado summary file or a data frame containing summary information
-#' @param save_dir Directory where split summary files will be saved
-#' @param part_size Number of reads per file part when splitting the summary file
-#' @param cli_log Function for logging messages and progress
+#' Splits a Dorado summary file or data frame into multiple smaller files for downstream analysis.
 #'
-#' @returns Character vector containing paths to the split summary files
+#' @param dorado_summary Character path to Dorado summary file, or a data frame containing summary information.
+#'
+#' @param save_dir Character path to directory where split summary files will be saved.
+#'
+#' @param part_size Integer. Number of reads per file part when splitting the summary file.
+#'
+#' @param cli_log Function for logging messages and progress.
+#'
+#' @return Character vector containing paths to the split summary files.
+#'
 #' @export
 #'
 #' @examples

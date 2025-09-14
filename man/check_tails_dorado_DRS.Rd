@@ -62,14 +62,15 @@ The function performs several key steps:\itemize{
 \item Splits large BAM and summary files into manageable parts
 \item Extracts poly(A) information from BAM files
 \item Performs quality control if enabled
-\item Generates comprehensive output files and logs
+\item Generates output files and logs
 }
 
-The processing pipeline creates several subdirectories in the specified
-output directory:\itemize{
-\item dorado_summary_dir - Contains split summary files
-\item bam_dir - Contains split BAM files
-\item polya_data_dir - Contains extracted poly(A) information
+Output subdirectories:
+\itemize{
+  \item dorado_summary_dir - Split summary files
+  \item bam_dir - Split BAM files
+  \item polya_data_dir - Extracted poly(A) information
+  \item polya_signal_dir - Extracted poly(A) signals
 }
 }
 \examples{

@@ -7,31 +7,30 @@
 extract_polya_from_bam(bam_file, summary_file, cli_log = message)
 }
 \arguments{
-\item{bam_file}{Path to the BAM file containing aligned reads with poly(A) information}
+\item{bam_file}{Character path to the BAM file containing aligned reads with poly(A) information.}
 
-\item{summary_file}{Path to the summary file containing read_id and filename mapping}
+\item{summary_file}{Character path to the summary file containing read_id and filename mapping.}
 
-\item{cli_log}{Function for logging messages, defaults to message}
+\item{cli_log}{Function for logging messages, defaults to message.}
 }
 \value{
 A data frame containing poly(A) information with columns:
-  \itemize{
-    \item read_id - unique read identifier
-    \item pod5_file - corresponding pod5 file path
-    \item reference - reference sequence name
-    \item ref_start - alignment start position
-    \item ref_end - alignment end position
-    \item mapq - mapping quality score
-    \item polya_length - length of poly(A) tail
-    \item anchor_pos - anchor position from pa tag
-    \item polya_start - poly(A) start position
-    \item polya_end - poly(A) end position
-    \item secondary_polya_start - secondary poly(A) start position
-    \item secondary_polya_end - secondary poly(A) end position
+  \describe{
+    \item{read_id}{Unique read identifier}
+    \item{pod5_file}{Corresponding pod5 file name}
+    \item{reference}{Reference sequence name}
+    \item{ref_start}{Alignment start position}
+    \item{ref_end}{Alignment end position}
+    \item{mapq}{Mapping quality score}
+    \item{poly_tail_length}{Length of poly(A) tail}
+    \item{poly_tail_start}{Poly(A) start position}
+    \item{polya_end}{Poly(A) end position}
+    \item{poly_tail2_start}{Secondary poly(A) start position}
+    \item{poly_tail2_end}{Secondary poly(A) end position}
   }
 }
 \description{
-Extract poly(A) information from BAM file
+Extracts poly(A) tail coordinates and related information from a BAM file using a summary file for pod5 file mapping.
 }
 \examples{
 \dontrun{
