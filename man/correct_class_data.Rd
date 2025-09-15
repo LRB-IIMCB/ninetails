@@ -50,9 +50,9 @@ In order to plot the output of this function directly, one should rename
 }
 \examples{
 \dontrun{
-# the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
+# the output of function \code{\link{check_tails}} or \code{\link{create_outputs}}
 # is required (below denoted as "results") to run the following example
-# for details see the documentation for the \code{\link{check_tails_guppy}}
+# for details see the documentation for the \code{\link{check_tails}}
 # and \code{\link{create_outputs}}
 
 class_data_corrected <- ninetails::correct_class_data(residue_data_edited = residue_data_edited,

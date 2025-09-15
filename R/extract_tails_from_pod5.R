@@ -23,6 +23,13 @@
 extract_tails_from_pod5 <- function(polya_data, pod5_dir) {
   i <- reader <- NULL
 
+  # Check for required columns
+  required_cols <- c("read_id", "pod5_file", "poly_tail_start", "polya_end")
+  missing_cols <- setdiff(required_cols, colnames(polya_data))
+  if (length(missing_cols) > 0) {
+    stop(sprintf("polya_data is missing required columns: %s", paste(missing_cols, collapse = ", ")))
+  }
+
   if (!reticulate::py_module_available("pod5")) {
     stop("Python module 'pod5' is not available in the current environment.")
   }

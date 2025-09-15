@@ -15,7 +15,7 @@
 #' @return List containing paths to processed files:
 #'   \describe{
 #'     \item{summary_files}{Paths to split summary files}
-#'     \item{bam_files}{Paths to split BAM files}
+#'     \item{bam_files}{Paths to split BAM files (if BAM processing performed)}
 #'     \item{polya_files}{Paths to extracted poly(A) data files}
 #'     \item{polya_signal_files}{Paths to extracted poly(A) signal files}
 #'   }
@@ -46,33 +46,22 @@ preprocess_inputs <- function(bam_file,
                               cli_log) {
   # Input validation and configuration
   cli_log("Validating input parameters", "INFO", "Validating Inputs")
-  # Assertions
-  ###################################################
   assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
                           msg = "Number of cores must be a positive numeric value")
-
   assertthat::assert_that(is.character(pod5_dir), dir.exists(pod5_dir),
                           msg = "Pod5 files directory does not exist or path is invalid")
-
   assertthat::assert_that(is.character(save_dir),
                           msg = "Output directory path must be a character string")
-
   assertthat::assert_that(is.logical(qc),
                           msg = "qc must be logical [TRUE/FALSE]")
-
-  # Validate prefix (if provided)
   if (nchar(prefix) > 0) {
     assertthat::assert_that(is.character(prefix),
                             msg = "File name prefix must be a character string")
   }
-
-  # Validate BAM input
   if (checkmate::test_string(bam_file)) {
     assertthat::assert_that(file.exists(bam_file),
                             msg = "BAM file does not exist")
   }
-
-  # Validate sequencing summary input
   if (checkmate::test_string(dorado_summary)) {
     assertthat::assert_that(file.exists(dorado_summary),
                             msg = "Dorado summary file does not exist")
@@ -82,148 +71,128 @@ preprocess_inputs <- function(bam_file,
   }
   cli_log("Provided input files/paths are in correct format", "SUCCESS")
 
-  ###################################################
+  ################################################################################
+  # CHECK FOR POLYA COLUMNS IN SUMMARY
+  ################################################################################
+  if (is.character(dorado_summary)) {
+    summary_preview <- vroom::vroom(dorado_summary, n_max = 1, show_col_types = FALSE)
+    summary_cols <- colnames(summary_preview)
+  } else if (is.data.frame(dorado_summary)) {
+    summary_cols <- colnames(dorado_summary)
+  } else {
+    stop("dorado_summary must be a file path or a data frame")
+  }
+  has_polya_cols <- all(c("poly_tail_length", "poly_tail_start", "polya_end") %in% summary_cols)
+
+  ################################################################################
   # DORADO SUMMARY PROCESSING
-  ###################################################
-
-  # Process dorado summary
+  ################################################################################
   cli_log("Processing dorado summary...", "INFO", "Dorado Summary Processing", bullet = TRUE)
-
-  # Create dorado summary directory (single level)
   summary_dir <- file.path(save_dir, "dorado_summary_dir")
   if (!dir.exists(summary_dir)) {
     dir.create(summary_dir, recursive = TRUE)
   }
-
-  # Process summary file - handles size checking internally
-  part_files <- ninetails::process_dorado_summary(
+  part_files <- process_dorado_summary(
     dorado_summary = dorado_summary,
-    save_dir = summary_dir,  # Now saving directly to summary_dir
+    save_dir = summary_dir,
     part_size = part_size,
     cli_log = cli_log
   )
-
-  # Verify summary parts were created
   if (length(part_files) == 0) {
     stop("No summary parts were created")
   }
 
-  ###################################################
-  # BAM PRE-PROCESSING
-  ###################################################
-  # Create BAM directory
-  bam_dir <- file.path(save_dir, "bam_dir")
-  if (!dir.exists(bam_dir)) {
-    dir.create(bam_dir, recursive = TRUE)
-  }
-
-  # Process BAM file based on whether summary was split
-  cli_log("Processing BAM file...", "INFO", "BAM Processing", bullet = TRUE)
-
-  if (length(part_files) > 1) {
-    cli_log(sprintf("Splitting BAM file to match %d summary parts", length(part_files)), "INFO")
-
-    bam_files <- vector("character", length(part_files))
-
-    for (i in seq_along(part_files)) {
-      cli_log(sprintf("Processing BAM part %d/%d", i, length(part_files)), "INFO")
-
-      current_summary <- part_files[i]
-      # Verify summary file exists before proceeding
-      if (!file.exists(current_summary)) {
-        stop(sprintf("Summary file does not exist: %s", current_summary))
+  ################################################################################
+  # ROUTE SELECTION: DIRECT SUMMARY OR BAM PROCESSING
+  ################################################################################
+  if (has_polya_cols) {
+    cli_log("Summary contains poly(A) columns. Skipping BAM processing.", "INFO", "Route Selection", bullet = TRUE)
+    bam_files <- NULL
+    polya_files <- part_files
+  } else {
+    cli_log("Summary does not contain poly(A) columns. Performing BAM processing.", "INFO", "Route Selection", bullet = TRUE)
+    ################################################################################
+    # BAM PRE-PROCESSING
+    ################################################################################
+    bam_dir <- file.path(save_dir, "bam_dir")
+    if (!dir.exists(bam_dir)) {
+      dir.create(bam_dir, recursive = TRUE)
+    }
+    cli_log("Processing BAM file...", "INFO", "BAM Processing", bullet = TRUE)
+    if (length(part_files) > 1) {
+      cli_log(sprintf("Splitting BAM file to match %d summary parts", length(part_files)), "INFO")
+      bam_files <- vector("character", length(part_files))
+      for (i in seq_along(part_files)) {
+        cli_log(sprintf("Processing BAM part %d/%d", i, length(part_files)), "INFO")
+        current_summary <- part_files[i]
+        if (!file.exists(current_summary)) {
+          stop(sprintf("Summary file does not exist: %s", current_summary))
+        }
+        bam_files[i] <- split_bam_file(
+          bam_file = bam_file,
+          dorado_summary = current_summary,
+          part_size = part_size,
+          save_dir = bam_dir,
+          part_number = i,
+          cli_log = cli_log
+        )
       }
-
-      bam_files[i] <- split_bam_file(
-        bam_file = bam_file,
-        dorado_summary = current_summary,
-        part_size = part_size,
-        save_dir = bam_dir,
-        part_number = i,  # Added part number
-        cli_log = cli_log  # Added cli_log
-      )
-    }
-
-    cli_log(sprintf("BAM file split into %d parts", length(bam_files)), "SUCCESS")
-
-  } else {
-    # Just copy the original BAM file
-    new_bam_path <- file.path(bam_dir, basename(bam_file))
-    file.copy(from = bam_file, to = new_bam_path)
-    bam_files <- new_bam_path
-
-    cli_log("BAM file copied as single file", "SUCCESS")
-  }
-
-  ###################################################
-  # EXTRACTING POLYA FROM BAM
-  ###################################################
-
-  # Inform that poly(A) will be extracted
-  cli_log("Extracting poly(A) info from BAM file...", "INFO", "Poly(A) info Extracting", bullet = TRUE)
-  # Create polya directory
-  polya_dir <- file.path(save_dir, "polya_data_dir")
-  if (!dir.exists(polya_dir)) {
-    dir.create(polya_dir, recursive = TRUE)
-  }
-
-  # Process BAM files sequentially with their corresponding summary parts
-  polya_files <- character(length(bam_files))
-
-  for (i in seq_along(bam_files)) {
-    current_bam <- bam_files[i]
-    current_summary <- part_files[i]
-
-    cli_log(sprintf("Processing BAM file %d/%d for poly(A) extraction", i, length(bam_files)), "INFO")
-
-    # Extract poly(A) data from current BAM file with corresponding summary
-    polya_data <- ninetails::extract_polya_from_bam(
-      bam_file = current_bam,
-      summary_file = current_summary,
-      cli_log = cli_log  # Added cli_log
-    )
-
-    # Save results if we have any
-    if (nrow(polya_data) > 0) {
-      output_file <- file.path(polya_dir,
-                               sprintf("%spolya_data_part%d.tsv",
-                                       ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                       i))
-
-      vroom::vroom_write(polya_data, output_file, delim = "\t", show_col_types = FALSE)
-      polya_files[i] <- output_file
-      cli_log(sprintf("Saved poly(A) data for BAM %d to %s (%d reads)",
-                      i, output_file, nrow(polya_data)), "INFO")
+      cli_log(sprintf("BAM file split into %d parts", length(bam_files)), "SUCCESS")
     } else {
-      cli_log(sprintf("No poly(A) data extracted from BAM %d", i), "INFO")
+      new_bam_path <- file.path(bam_dir, basename(bam_file))
+      file.copy(from = bam_file, to = new_bam_path)
+      bam_files <- new_bam_path
+      cli_log("BAM file copied as single file", "SUCCESS")
     }
-
-    # Explicitly trigger garbage collection after processing each BAM file
-    gc()
+    ################################################################################
+    # EXTRACTING POLYA FROM BAM
+    ################################################################################
+    cli_log("Extracting poly(A) info from BAM file...", "INFO", "Poly(A) info Extracting", bullet = TRUE)
+    polya_dir <- file.path(save_dir, "polya_data_dir")
+    if (!dir.exists(polya_dir)) {
+      dir.create(polya_dir, recursive = TRUE)
+    }
+    polya_files <- character(length(bam_files))
+    for (i in seq_along(bam_files)) {
+      current_bam <- bam_files[i]
+      current_summary <- part_files[i]
+      cli_log(sprintf("Processing BAM file %d/%d for poly(A) extraction", i, length(bam_files)), "INFO")
+      polya_data <- extract_polya_from_bam(
+        bam_file = current_bam,
+        summary_file = current_summary,
+        cli_log = cli_log
+      )
+      if (nrow(polya_data) > 0) {
+        output_file <- file.path(polya_dir,
+                                 sprintf("%spolya_data_part%d.tsv",
+                                         ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
+                                         i))
+        vroom::vroom_write(polya_data, output_file, delim = "\t")
+        polya_files[i] <- output_file
+        cli_log(sprintf("Saved poly(A) data for BAM %d to %s (%d reads)",
+                        i, output_file, nrow(polya_data)), "INFO")
+      } else {
+        cli_log(sprintf("No poly(A) data extracted from BAM %d", i), "INFO")
+      }
+      gc()
+    }
+    polya_files <- polya_files[file.exists(polya_files)]
+    if (length(polya_files) > 0) {
+      cli_log(sprintf("Successfully processed %d BAM files", length(polya_files)), "SUCCESS")
+    } else {
+      cli_log("No poly(A) data was extracted from any BAM file", "WARNING")
+    }
   }
 
-  # Filter out any empty results
-  polya_files <- polya_files[file.exists(polya_files)]
-
-  if (length(polya_files) > 0) {
-    cli_log(sprintf("Successfully processed %d BAM files", length(polya_files)), "SUCCESS")
-  } else {
-    cli_log("No poly(A) data was extracted from any BAM file", "WARNING")
-  }
-
-  ###################################################
+  ################################################################################
   # EXTRACTING POLYA SIGNALS FROM POD5
-  ###################################################
+  ################################################################################
   cli_log("Signal extracting", "INFO", "Signal Extracting")
   cli_log("Extracting poly(A) signals from pod5 file...", "INFO", bullet = TRUE)
-
-  # Create polya_signal_dir for extracted signals
   polya_signal_dir <- file.path(save_dir, "polya_signal_dir")
   if (!dir.exists(polya_signal_dir)) {
     dir.create(polya_signal_dir, recursive = TRUE)
   }
-
-  # Extract signals from pod5 files for each polya data file
   polya_signal_files <- character(length(polya_files))
   for (i in seq_along(polya_files)) {
     polya_data <- vroom::vroom(polya_files[i], delim = "\t", show_col_types = FALSE)
@@ -237,7 +206,9 @@ preprocess_inputs <- function(bam_file,
     cli_log(sprintf("Saved extracted signals for poly(A) data part %d to %s", i, output_file), "INFO")
   }
 
-  # Add polya_signal_files to the returned list
+  ################################################################################
+  # RETURN OUTPUT FILE PATHS
+  ################################################################################
   return(list(
     summary_files = part_files,
     bam_files = bam_files,
@@ -245,4 +216,3 @@ preprocess_inputs <- function(bam_file,
     polya_signal_files = polya_signal_files
   ))
 }
-

@@ -39,7 +39,7 @@ preprocess_inputs(
 List containing paths to processed files:
   \describe{
     \item{summary_files}{Paths to split summary files}
-    \item{bam_files}{Paths to split BAM files}
+    \item{bam_files}{Paths to split BAM files (if BAM processing performed)}
     \item{polya_files}{Paths to extracted poly(A) data files}
     \item{polya_signal_files}{Paths to extracted poly(A) signal files}
   }

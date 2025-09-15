@@ -20,7 +20,7 @@ Many thanks to the NanoTail developer for help and advice!}
 a [tibble] with read_classes predictions
 }
 \description{
-This is the basic function used to import read_classes output from check_tails_guppy
+This is the basic function used to import read_classes output from check_tails
 to R.
 }
 \examples{

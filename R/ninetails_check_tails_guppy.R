@@ -12,9 +12,7 @@
 #' poly(A) tail estimates has been moved to legacy mode.
 #' To ensure backward compatibility with direct RNA sequencing (DRS) data
 #' generated using earlier chemistries and algorithms,
-#' this processing pipeline (previously implemented as
-#' `check_tails()` in earlier versions of *ninetails*)
-#' is now maintained as `check_tails_guppy()`.
+#' this processing pipeline is still included, but will not be further optimized.
 #'
 #' This function accepts either nanopolish or tailfindr outputs.
 #'
@@ -108,7 +106,7 @@
 #' @examples
 #' \dontrun{
 #'
-#'results <- ninetails::check_tails(
+#'results <- ninetails::check_tails_guppy(
 #'  polya_data = system.file('extdata',
 #'                           'test_data',
 #'                           'nanopolish_output.tsv',
@@ -130,16 +128,16 @@
 #'  part_size=2000)
 #'
 #' }
-check_tails <- function(polya_data,
-                        sequencing_summary,
-                        workspace,
-                        num_cores=1,
-                        basecall_group="Basecall_1D_000",
-                        pass_only=TRUE,
-                        qc=TRUE,
-                        save_dir,
-                        prefix="",
-                        part_size=1000000) {
+check_tails_guppy <- function(polya_data,
+                              sequencing_summary,
+                              workspace,
+                              num_cores=1,
+                              basecall_group="Basecall_1D_000",
+                              pass_only=TRUE,
+                              qc=TRUE,
+                              save_dir,
+                              prefix="",
+                              part_size=1000000) {
 
   # Initialize warning flag
   warn_message <- FALSE
@@ -507,7 +505,7 @@ save_outputs <- function(outputs, save_dir, prefix = "") {
 }
 
 
-#' Variant of Check_tails_guppy processing of unsplitted poly(A) data.
+#' Variant of check_tails_guppy processing of unsplitted poly(A) data (guppy).
 #'
 #' This variant of the pipeline allows to process small to moderate size of
 #' poly(A) data (up to 100000 reads by default).

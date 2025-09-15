@@ -20,7 +20,7 @@ Many thanks to the NanoTail developer for help and advice!}
 a [tibble] with non-A predictions
 }
 \description{
-This is the basic function used to import output from \code{\link{check_tails_guppy}} to R:
+This is the basic function used to import output from \code{\link{check_tails}} to R:
 it imports the dataframe containing non-A detailed position info
 (nonadenosine_residues).
 }

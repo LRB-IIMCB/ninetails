@@ -59,9 +59,9 @@ peak calling per transcript.
 }
 \examples{
 \dontrun{
-# the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
+# the output of function \code{\link{check_tails}} or \code{\link{create_outputs}}
 # is required (below denoted as "results") to run the following example
-# for details see the documentation for the \code{\link{check_tails_guppy}}
+# for details see the documentation for the \code{\link{check_tails}}
 # and \code{\link{create_outputs}}
 
 residue_data_edited <- ninetails::correct_residue_data(class_data=results[[1]],
