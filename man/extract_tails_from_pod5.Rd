@@ -10,9 +10,9 @@ extract_tails_from_pod5(polya_data, pod5_dir)
 \item{polya_data}{Data frame with columns:
 \describe{
   \item{read_id}{Character: ONT read identifiers}
-  \item{pod5_file}{Character: corresponding POD5 filename}
+  \item{filename}{Character: corresponding POD5 filename}
   \item{poly_tail_start}{Integer/numeric: start index of the poly(A) region}
-  \item{polya_end}{Integer/numeric: end index of the poly(A) region}
+  \item{poly_tail_end}{Integer/numeric: end index of the poly(A) region}
 }}
 
 \item{pod5_dir}{Character. Path to the directory containing POD5 files.}
@@ -23,7 +23,7 @@ List of numeric vectors, each containing the extracted signal for a read.
 \description{
 Uses reticulate to import the Python library `pod5`. For each pod5 file referenced in
 `polya_data`, opens a `pod5.Reader`, matches `read_id`, and extracts the numeric
-slice `signal[poly_tail_start:polya_end]` if indices are valid. Applies winsorization and interpolation.
+slice `signal[poly_tail_start:poly_tail_end]` if indices are valid. Applies winsorization and interpolation.
 }
 \examples{
 \dontrun{

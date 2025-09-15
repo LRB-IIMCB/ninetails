@@ -82,7 +82,7 @@ preprocess_inputs <- function(bam_file,
   } else {
     stop("dorado_summary must be a file path or a data frame")
   }
-  has_polya_cols <- all(c("poly_tail_length", "poly_tail_start", "polya_end") %in% summary_cols)
+  has_polya_cols <- all(c("poly_tail_length", "poly_tail_start", "poly_tail_end") %in% summary_cols)
 
   ################################################################################
   # DORADO SUMMARY PROCESSING
