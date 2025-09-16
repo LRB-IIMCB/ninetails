@@ -17,14 +17,14 @@ extract_polya_from_bam(bam_file, summary_file, cli_log = message)
 A data frame containing poly(A) information with columns:
   \describe{
     \item{read_id}{Unique read identifier}
-    \item{pod5_file}{Corresponding pod5 file name}
+    \item{filename}{Corresponding pod5 file name}
     \item{reference}{Reference sequence name}
     \item{ref_start}{Alignment start position}
     \item{ref_end}{Alignment end position}
     \item{mapq}{Mapping quality score}
     \item{poly_tail_length}{Length of poly(A) tail}
     \item{poly_tail_start}{Poly(A) start position}
-    \item{polya_end}{Poly(A) end position}
+    \item{poly_tail_end}{Poly(A) end position}
     \item{poly_tail2_start}{Secondary poly(A) start position}
     \item{poly_tail2_end}{Secondary poly(A) end position}
   }

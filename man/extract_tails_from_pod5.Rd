@@ -25,6 +25,13 @@ Uses reticulate to import the Python library `pod5`. For each pod5 file referenc
 `polya_data`, opens a `pod5.Reader`, matches `read_id`, and extracts the numeric
 slice `signal[poly_tail_start:poly_tail_end]` if indices are valid. Applies winsorization and interpolation.
 }
+\details{
+Only keeps reads if:
+\itemize{
+  \item `poly_tail_length > 10` (if the column exists), and
+  \item `poly_tail_start > 0` (to exclude artifacts, e.g. caused by clogged pores).
+}
+}
 \examples{
 \dontrun{
 res <- extract_tails_from_pod5(polya_data, "/path/to/pod5_dir")

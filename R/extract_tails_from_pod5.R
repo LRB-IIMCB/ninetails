@@ -4,6 +4,12 @@
 #' `polya_data`, opens a `pod5.Reader`, matches `read_id`, and extracts the numeric
 #' slice `signal[poly_tail_start:poly_tail_end]` if indices are valid. Applies winsorization and interpolation.
 #'
+#' Only keeps reads if:
+#' \itemize{
+#'   \item `poly_tail_length > 10` (if the column exists), and
+#'   \item `poly_tail_start > 0` (to exclude artifacts, e.g. caused by clogged pores).
+#' }
+#'
 #' @param polya_data Data frame with columns:
 #'   \describe{
 #'     \item{read_id}{Character: ONT read identifiers}
@@ -35,11 +41,18 @@ extract_tails_from_pod5 <- function(polya_data, pod5_dir) {
   }
   pod5 <- reticulate::import("pod5")
 
-  # Only keep reads with poly_tail_length > 10 if column exists
+  # Keep only valid reads:
+  # - poly_tail_length > 10 (if column exists)
+  # - poly_tail_start > 0
   if ("poly_tail_length" %in% colnames(polya_data)) {
-    polya_data <- polya_data[polya_data$poly_tail_length > 10, ]
+    polya_data <- polya_data[polya_data$poly_tail_length > 10 & polya_data$poly_tail_start > 0, ]
     if (nrow(polya_data) == 0) {
-      stop("No reads with poly_tail_length > 10 found in polya_data.")
+      stop("No valid reads found: require poly_tail_length > 10 and poly_tail_start > 0.")
+    }
+  } else {
+    polya_data <- polya_data[polya_data$poly_tail_start > 0, ]
+    if (nrow(polya_data) == 0) {
+      stop("No valid reads found: require poly_tail_start > 0.")
     }
   }
 
