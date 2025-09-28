@@ -94,7 +94,9 @@ results <- ninetails::check_tails_dorado_DRS(
    prefix = "experiment1")
 ```
 
-In **Ninetails <1.0.4** , `check_tails()` is the main function which allows to classify sequencing reads based on presence/absence of non-adenosine residues within their poly(A) tails (and additional conditions, such as minimal read length and qc_tag assigned by Nanopolish polya function). In newer versions (1.0.4+) this was replaced by `check_tails_guppy()`. This is a legacy pipeline which wouldnot be further developed (with exception of critical bug fixes).
+In **Ninetails <1.0.4** , `check_tails()` is the main function which allows to classify sequencing reads based on presence/absence of non-adenosine residues within their poly(A) tails (and additional conditions, such as minimal read length and qc_tag assigned by Nanopolish polya function). 
+
+In newer versions (1.0.4+) this was replaced by `check_tails_guppy()`. This is a **legacy pipeline which would not be further developed** (with exception of critical bug fixes).
 
 Below is an example of how to use `check_tails_guppy()` function:
 
