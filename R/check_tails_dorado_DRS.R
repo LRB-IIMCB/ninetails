@@ -17,9 +17,10 @@
 #'   \item \strong{Signal Extraction}: Extracts poly(A) tail signals from POD5 files
 #'   \item \strong{Feature Engineering}: Computes pseudomoves and signal characteristics
 #'   \item \strong{Segmentation}: Identifies candidate modification regions
-#'   \item \strong{GAF Generation}: Creates Gramian Angular Fields for CNN input
+#'   \item \strong{GAF Creation}: Creates Gramian Angular Fields for CNN input
 #'   \item \strong{Classification}: Applies trained neural networks for prediction
-#'   \item \strong{Output Generation}: Produces comprehensive results and statistics
+#'   \item \strong{Output Creation}: Produces comprehensive results and statistics
+#'   \item \strong{Cleanup}: Optionally removes intermediate files to save disk space
 #' }
 #'
 #' @section Input Requirements:
@@ -29,7 +30,6 @@
 #'     \code{read_id}, \code{filename}, \code{poly_tail_length},
 #'     \code{poly_tail_start}, \code{poly_tail_end}
 #'   \item \strong{POD5 Files}: Raw signal files corresponding to reads in summary
-#'   \item \strong{No BAM Processing}: This pipeline bypasses BAM file processing for performance
 #' }
 #'
 #' @section Output Structure:
@@ -113,6 +113,13 @@
 #'   enable processing of very large datasets on memory-constrained systems.
 #'   Optimal values typically range from 10,000 to 100,000 depending on available RAM.
 #'
+#' @param cleanup Logical [FALSE]. Controls removal of intermediate files after
+#'   successful analysis completion. When \code{TRUE}, removes all temporary
+#'   subdirectories (\code{dorado_summary_dir}, \code{polya_signal_dir},
+#'   \code{nonA_temp_dir}, \code{polya_chunks_dir}) keeping only final results
+#'   and log files. When \code{FALSE}, preserves all intermediate files for
+#'   debugging or detailed inspection. Recommended to keep \code{TRUE} to save disk space.
+#'
 #' @return A named list containing comprehensive analysis results:
 #' \describe{
 #'   \item{\code{read_classes}}{Data frame with per-read classification results including:
@@ -154,7 +161,7 @@
 #'   \item \strong{Python}: >= 3.6 with pod5 module (\code{pip install pod5})
 #'   \item \strong{Memory}: >= 8GB RAM (16GB+ recommended for large datasets)
 #'   \item \strong{Storage}: Temporary space ~2-5x input file size
-#'   \item \strong{Dependencies}: TensorFlow/Keras for neural network inference
+#'   \item \strong{Dependencies}: Tensorflow/Keras for neural network inference
 #' }
 #'
 #' @section Error Handling:
@@ -208,17 +215,18 @@
 #'   qc = TRUE,
 #'   save_dir = "path/to/output/",
 #'   prefix = "experiment1",
-#'   part_size = 40000
+#'   part_size = 40000,
+#'   cleanup = TRUE
 #' )
 #' }
-
 check_tails_dorado_DRS <- function(dorado_summary,
                                    pod5_dir,
                                    num_cores = 1,
                                    qc = TRUE,
                                    save_dir,
                                    prefix = "",
-                                   part_size = 40000) {
+                                   part_size = 40000,
+                                   cleanup = FALSE) {
 
   # Initialize warning flag
   warn_message <- FALSE
@@ -258,7 +266,7 @@ check_tails_dorado_DRS <- function(dorado_summary,
   # Now set up the proper log file path
   log_filepath <- file.path(save_dir, log_filename)
 
-  # Helper functions for logging
+  # Helper functions for logging (same as original)
   log_message <- function(message, type = "INFO", section = NULL) {
     timestamp <- format(Sys.time(), "[%Y-%m-%d %H:%M:%S]")
 
@@ -338,6 +346,7 @@ check_tails_dorado_DRS <- function(dorado_summary,
     cli_log(sprintf("Output quality control:      %s", qc), bullet = TRUE)
     cli_log(sprintf("Output directory:            %s", save_dir), bullet = TRUE)
     cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
+    cli_log(sprintf("Cleanup intermediate files:  %s", cleanup), bullet = TRUE)
 
     # Preprocess input files
     #####################################################
@@ -384,7 +393,7 @@ check_tails_dorado_DRS <- function(dorado_summary,
         stop("create_outputs_dorado must return a list", call. = FALSE)
       }
 
-      # Check for expected components (adjust names as needed based on your function)
+      # Check for expected components
       expected_names <- c("read_classes", "nonadenosine_residues")
       if (!all(expected_names %in% names(result))) {
         cli_log("Warning: Output does not contain expected components. Found components:", "WARNING")
@@ -404,6 +413,90 @@ check_tails_dorado_DRS <- function(dorado_summary,
 
     # Use the same save_outputs function as in guppy pipeline
     ninetails::save_outputs(outputs, save_dir, prefix)
+
+    # Cleanup intermediate files if requested
+    #####################################################
+    if (cleanup) {
+      cli_log("Cleaning up intermediate files...", "INFO", "Cleanup", bullet = TRUE)
+
+      # List of intermediate directories to remove
+      intermediate_dirs <- c(
+        file.path(save_dir, "dorado_summary_dir"),
+        file.path(save_dir, "polya_signal_dir"),
+        file.path(save_dir, "nonA_temp_dir"),
+        file.path(save_dir, "polya_chunks_dir")
+      )
+
+      cleanup_summary <- data.frame(
+        directory = character(0),
+        status = character(0),
+        files_removed = integer(0),
+        stringsAsFactors = FALSE
+      )
+
+      for (dir_path in intermediate_dirs) {
+        if (dir.exists(dir_path)) {
+          tryCatch({
+            # Count files before removal
+            files_count <- length(list.files(dir_path, recursive = TRUE))
+
+            # Remove directory and all contents
+            unlink(dir_path, recursive = TRUE)
+
+            # Verify removal
+            if (!dir.exists(dir_path)) {
+              cli_log(sprintf("Removed: %s (%d files)", basename(dir_path), files_count), "SUCCESS")
+              cleanup_summary <- rbind(cleanup_summary,
+                                       data.frame(directory = basename(dir_path),
+                                                  status = "removed",
+                                                  files_removed = files_count,
+                                                  stringsAsFactors = FALSE))
+            } else {
+              cli_log(sprintf("Failed to remove: %s", basename(dir_path)), "WARNING")
+              cleanup_summary <- rbind(cleanup_summary,
+                                       data.frame(directory = basename(dir_path),
+                                                  status = "failed",
+                                                  files_removed = 0,
+                                                  stringsAsFactors = FALSE))
+            }
+          }, error = function(e) {
+            cli_log(sprintf("Error removing %s: %s", basename(dir_path), e$message), "WARNING")
+            cleanup_summary <<- rbind(cleanup_summary,
+                                      data.frame(directory = basename(dir_path),
+                                                 status = "error",
+                                                 files_removed = 0,
+                                                 stringsAsFactors = FALSE))
+          })
+        } else {
+          cli_log(sprintf("Directory not found: %s", basename(dir_path)), "INFO")
+        }
+      }
+
+      # Summary of cleanup
+      total_removed <- sum(cleanup_summary$files_removed)
+      successful_removals <- sum(cleanup_summary$status == "removed")
+
+      if (successful_removals > 0) {
+        cli_log(sprintf("Cleanup completed: %d directories removed, %d files deleted",
+                        successful_removals, total_removed), "SUCCESS")
+      } else {
+        cli_log("No intermediate directories were removed", "INFO")
+      }
+
+    } else {
+      cli_log("Cleanup disabled - all intermediate files preserved", "INFO", "Cleanup", bullet = TRUE)
+      cli_log("Intermediate directories available for inspection:", "INFO")
+
+      # List preserved directories
+      intermediate_dirs <- c("dorado_summary_dir", "polya_signal_dir", "nonA_temp_dir", "polya_chunks_dir")
+      for (dir_name in intermediate_dirs) {
+        dir_path <- file.path(save_dir, dir_name)
+        if (dir.exists(dir_path)) {
+          file_count <- length(list.files(dir_path, recursive = TRUE))
+          cli_log(sprintf("- %s (%d files)", dir_name, file_count), "INFO")
+        }
+      }
+    }
 
     # Pipeline statistics
     #####################################################
@@ -434,6 +527,7 @@ check_tails_dorado_DRS <- function(dorado_summary,
 
   }, error = function(e) {
     cli::cli_alert_danger("Error: {e$message}")
+    cli_log(sprintf("Pipeline error: %s", e$message), "ERROR")
     cli::cli_alert_danger("Ninetails aborted")
     return(invisible(NULL))
   })

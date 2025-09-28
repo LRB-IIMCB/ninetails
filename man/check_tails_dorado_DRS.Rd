@@ -11,7 +11,8 @@ check_tails_dorado_DRS(
   qc = TRUE,
   save_dir,
   prefix = "",
-  part_size = 40000
+  part_size = 40000,
+  cleanup = FALSE
 )
 }
 \arguments{
@@ -60,6 +61,13 @@ file partition. Must be >= 1. Larger values increase memory usage but may
 improve processing efficiency. Smaller values reduce memory footprint and
 enable processing of very large datasets on memory-constrained systems.
 Optimal values typically range from 10,000 to 100,000 depending on available RAM.}
+
+\item{cleanup}{Logical [FALSE]. Controls removal of intermediate files after
+successful analysis completion. When \code{TRUE}, removes all temporary
+subdirectories (\code{dorado_summary_dir}, \code{polya_signal_dir},
+\code{nonA_temp_dir}, \code{polya_chunks_dir}) keeping only final results
+and log files. When \code{FALSE}, preserves all intermediate files for
+debugging or detailed inspection. Recommended to keep \code{TRUE} to save disk space.}
 }
 \value{
 A named list containing comprehensive analysis results:
@@ -114,9 +122,10 @@ The analysis pipeline consists of several integrated stages:
   \item \strong{Signal Extraction}: Extracts poly(A) tail signals from POD5 files
   \item \strong{Feature Engineering}: Computes pseudomoves and signal characteristics
   \item \strong{Segmentation}: Identifies candidate modification regions
-  \item \strong{GAF Generation}: Creates Gramian Angular Fields for CNN input
+  \item \strong{GAF Creation}: Creates Gramian Angular Fields for CNN input
   \item \strong{Classification}: Applies trained neural networks for prediction
-  \item \strong{Output Generation}: Produces comprehensive results and statistics
+  \item \strong{Output Creation}: Produces comprehensive results and statistics
+  \item \strong{Cleanup}: Optionally removes intermediate files to save disk space
 }
 }
 
@@ -128,7 +137,6 @@ This pipeline requires specific input formats:
     \code{read_id}, \code{filename}, \code{poly_tail_length},
     \code{poly_tail_start}, \code{poly_tail_end}
   \item \strong{POD5 Files}: Raw signal files corresponding to reads in summary
-  \item \strong{No BAM Processing}: This pipeline bypasses BAM file processing for performance
 }
 }
 
@@ -194,7 +202,7 @@ The \code{comments} column in \code{read_classes} uses standardized codes:
   \item \strong{Python}: >= 3.6 with pod5 module (\code{pip install pod5})
   \item \strong{Memory}: >= 8GB RAM (16GB+ recommended for large datasets)
   \item \strong{Storage}: Temporary space ~2-5x input file size
-  \item \strong{Dependencies}: TensorFlow/Keras for neural network inference
+  \item \strong{Dependencies}: Tensorflow/Keras for neural network inference
 }
 }
 
@@ -230,7 +238,8 @@ results <- check_tails_dorado_DRS(
   qc = TRUE,
   save_dir = "path/to/output/",
   prefix = "experiment1",
-  part_size = 40000
+  part_size = 40000,
+  cleanup = TRUE
 )
 }
 }
