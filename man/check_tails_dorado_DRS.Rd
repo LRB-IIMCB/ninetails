@@ -2,81 +2,228 @@
 % Please edit documentation in R/check_tails_dorado_DRS.R
 \name{check_tails_dorado_DRS}
 \alias{check_tails_dorado_DRS}
-\title{Wrapper function for complete DRS processing by ninetails package (Dorado mode).}
+\title{Complete Oxford Nanopore poly(A) tail analysis pipeline for Dorado DRS data.}
 \usage{
 check_tails_dorado_DRS(
-  bam_file,
   dorado_summary,
   pod5_dir,
   num_cores = 1,
   qc = TRUE,
   save_dir,
   prefix = "",
-  part_size = 1000
+  part_size = 40000
 )
 }
 \arguments{
-\item{bam_file}{Character string. Full path to the BAM file produced by Dorado
-(>=1.0.0) containing poly(A) information in 'pt' and 'pa' tags.}
+\item{dorado_summary}{Character string or data frame. Either the full path to a
+Dorado summary file (.txt, .tsv, .csv) or an in-memory data frame containing
+summary information. \strong{Required columns}: \code{read_id} (unique identifier),
+\code{filename} (POD5 file name), \code{poly_tail_length} (tail length in nucleotides),
+\code{poly_tail_start} (start coordinate), \code{poly_tail_end} (end coordinate).
+Additional columns such as \code{alignment_genome}, \code{alignment_mapq} are
+automatically included if present.}
 
-\item{dorado_summary}{Character string or data frame. Either the full path to
-the Dorado summary file (.txt) or a data frame containing the summary
-information with required columns (filename, read_id).}
+\item{pod5_dir}{Character string. Full path to the directory containing POD5 files.
+The directory should contain POD5 files referenced in the \code{filename} column
+of the Dorado summary. Files can be organized in subdirectories (recursive search
+is performed). Typical ONT directory structures are automatically handled.}
 
-\item{pod5_dir}{Character string. Full path to the directory containing POD5
-files. These files must correspond to the reads in the BAM file.}
+\item{num_cores}{Integer [1]. Number of physical CPU cores to use for parallel
+processing. Should not exceed \code{parallel::detectCores() - 1} to maintain
+system responsiveness. Higher core counts significantly reduce processing time
+for large datasets. Memory usage scales approximately linearly with core count.}
 
-\item{num_cores}{Numeric [1]. Number of physical cores to use for processing.
-Should not exceed one less than the total available cores. Defaults to 1.}
+\item{qc}{Logical [TRUE]. Enable comprehensive quality control filtering.
+When \code{TRUE}, applies stringent filters including:
+\itemize{
+  \item Minimum poly(A) tail length (10 nucleotides)
+  \item Coordinate validation and sanitization
+  \item Terminal position masking (reduces false positives)
+  \item Statistical outlier detection and removal
+}
+Set to \code{FALSE} only for preliminary analysis or when using pre-filtered data.}
 
-\item{qc}{Logical [TRUE/FALSE]. If TRUE, performs quality control on the
-output data. This includes checking for read duplicates and validating
-poly(A) coordinates. Enabled by default.}
+\item{save_dir}{Character string. Full path to the output directory where all
+results, intermediate files, and logs will be saved. The directory will be
+created if it doesn't exist. If the directory contains existing files, the
+user will be prompted to choose whether to abort or overwrite. Requires
+sufficient disk space (depending on dataset size).}
 
-\item{save_dir}{Character string. Full path to the directory where output
-files and subdirectories will be created.}
+\item{prefix}{Character string [""]. Optional prefix for output filenames.
+When provided, this string is prepended to all output files between the
+timestamp and file type identifier. Useful for organizing multiple analyses
+or experimental conditions. Should contain only filesystem-safe characters
+(alphanumeric, underscore, hyphen).}
 
-\item{prefix}{Character string (optional). When provided, this string is
-prepended to output filenames, positioned between the timestamp and the
-file type suffix.}
-
-\item{part_size}{Numeric [40000]. Defines the maximum number of reads to
-process in each file part. Must be >=1000. Used to split large inputs
-into manageable parts to prevent memory overflow.}
+\item{part_size}{Integer [40000]. Maximum number of reads to process in each
+file partition. Must be >= 1. Larger values increase memory usage but may
+improve processing efficiency. Smaller values reduce memory footprint and
+enable processing of very large datasets on memory-constrained systems.
+Optimal values typically range from 10,000 to 100,000 depending on available RAM.}
 }
 \value{
-A list containing processed file paths and analysis results. Always
-assign the returned list to a variable to prevent console overflow. The
-function also generates a log file and output files in the specified
-save_dir.
+A named list containing comprehensive analysis results:
+\describe{
+  \item{\code{read_classes}}{Data frame with per-read classification results including:
+    \itemize{
+      \item \code{readname}: Unique read identifier
+      \item \code{contig}: Reference genome/transcript name (if aligned)
+      \item \code{polya_length}: Estimated poly(A) tail length
+      \item \code{qc_tag}: Quality control status
+      \item \code{class}: Classification result ("decorated", "blank", "unclassified")
+      \item \code{comments}: Detailed classification rationale using standard codes
+    }
+  }
+  \item{\code{nonadenosine_residues}}{Data frame with detailed information about
+    detected non-A nucleotides including:
+    \itemize{
+      \item \code{readname}: Read identifier
+      \item \code{contig}: Reference information
+      \item \code{prediction}: Predicted nucleotide type (C, G, U)
+      \item \code{est_nonA_pos}: Estimated position within poly(A) tail
+      \item \code{polya_length}: Total tail length
+      \item \code{qc_tag}: Quality metrics
+    }
+  }
+}
 }
 \description{
-This function processes Oxford Nanopore direct RNA sequencing (DRS) data
-generated using Dorado basecaller (>=1.0.0) and POD5 file format. It extracts
-and analyzes poly(A) tail information from BAM files containing 'pt' and 'pa'
-tags, which store poly(A) tail length and coordinates respectively.
+This comprehensive wrapper function orchestrates the complete analysis of Oxford Nanopore
+direct RNA sequencing (DRS) data processed with Dorado basecaller (>=1.0.0) using POD5
+file format. The pipeline identifies and characterizes non-adenosine nucleotides within
+poly(A) tails through advanced signal processing, machine learning-based classification,
+and statistical analysis.
 }
-\details{
-The function performs several key steps:\itemize{
-\item Validates and preprocesses input files
-\item Splits large BAM and summary files into manageable parts
-\item Extracts poly(A) information from BAM files
-\item Performs quality control if enabled
-\item Generates output files and logs
+\note{
+\strong{Important considerations}:
+\itemize{
+  \item This function may take several hours for large datasets (>100K reads)
+  \item Ensure sufficient disk space (typically 2-5x input size) in \code{save_dir}
+  \item The function generates detailed log files for troubleshooting
+  \item Results should always be assigned to a variable to prevent console overflow
+  \item POD5 files must correspond exactly to reads in the Dorado summary
+  \item For datasets >1M reads, consider batch processing or increased \code{part_size}
+}
+}
+\section{Pipeline Overview}{
+
+The analysis pipeline consists of several integrated stages:
+\enumerate{
+  \item \strong{Input Validation}: Validates Dorado summary files and POD5 directories
+  \item \strong{Data Preprocessing}: Splits large datasets and applies quality filters
+  \item \strong{Signal Extraction}: Extracts poly(A) tail signals from POD5 files
+  \item \strong{Feature Engineering}: Computes pseudomoves and signal characteristics
+  \item \strong{Segmentation}: Identifies candidate modification regions
+  \item \strong{GAF Generation}: Creates Gramian Angular Fields for CNN input
+  \item \strong{Classification}: Applies trained neural networks for prediction
+  \item \strong{Output Generation}: Produces comprehensive results and statistics
+}
 }
 
-Output subdirectories:
+\section{Input Requirements}{
+
+This pipeline requires specific input formats:
 \itemize{
-  \item dorado_summary_dir - Split summary files
-  \item bam_dir - Split BAM files
-  \item polya_data_dir - Extracted poly(A) information
-  \item polya_signal_dir - Extracted poly(A) signals
+  \item \strong{Dorado Summary}: Must contain poly(A) information columns:
+    \code{read_id}, \code{filename}, \code{poly_tail_length},
+    \code{poly_tail_start}, \code{poly_tail_end}
+  \item \strong{POD5 Files}: Raw signal files corresponding to reads in summary
+  \item \strong{No BAM Processing}: This pipeline bypasses BAM file processing for performance
 }
 }
+
+\section{Output Structure}{
+
+The function creates several output subdirectories:
+\describe{
+  \item{\code{dorado_summary_dir/}}{Split summary files for parallel processing}
+  \item{\code{polya_signal_dir/}}{Extracted poly(A) signals in RDS format}
+  \item{\code{nonA_temp_dir/}}{Intermediate non-A prediction files}
+  \item{\code{polya_chunks_dir/}}{Signal segmentation data}
+}
+}
+
+\section{Performance Characteristics}{
+
+\itemize{
+  \item \strong{Scalability}: Efficient parallel processing across multiple cores
+  \item \strong{Memory Management}: Smart data partitioning prevents memory overflow
+  \item \strong{Progress Tracking}: Comprehensive logging and progress indicators
+  \item \strong{Error Handling}: Robust error recovery and informative diagnostics
+}
+}
+
+\section{Quality Control}{
+
+When \code{qc = TRUE}, the pipeline applies several quality filters:
+\itemize{
+  \item Poly(A) tail length filtering (minimum 10 nucleotides)
+  \item Coordinate validation (start < end positions)
+  \item Terminal position masking to reduce false positives
+  \item Duplicate read detection and handling
+}
+}
+
+\section{Algorithm Details}{
+
+The pipeline employs several sophisticated algorithms:
+\itemize{
+  \item \strong{Pseudomove Computation}: Z-score based outlier detection with adaptive windowing
+  \item \strong{Signal Segmentation}: Run-length encoding for modification region identification
+  \item \strong{GAF Transformation}: Gramian Angular Field generation for CNN compatibility
+  \item \strong{Neural Classification}: Pre-trained CNNs for nucleotide type prediction
+}
+}
+
+\section{Classification Codes}{
+
+The \code{comments} column in \code{read_classes} uses standardized codes:
+\describe{
+  \item{YAY}{Non-A residue detected (successful classification)}
+  \item{MAU}{Move transition absent, no non-A residue detected}
+  \item{MPU}{Move transition present, but no non-A residue detected}
+  \item{IRL}{Insufficient read length for reliable analysis}
+  \item{QCF}{Quality control filtering failed}
+}
+}
+
+\section{System Requirements}{
+
+\itemize{
+  \item \strong{R Version}: >= 3.5.0
+  \item \strong{Python}: >= 3.6 with pod5 module (\code{pip install pod5})
+  \item \strong{Memory}: >= 8GB RAM (16GB+ recommended for large datasets)
+  \item \strong{Storage}: Temporary space ~2-5x input file size
+  \item \strong{Dependencies}: TensorFlow/Keras for neural network inference
+}
+}
+
+\section{Error Handling}{
+
+The function implements comprehensive error handling:
+\itemize{
+  \item Input validation with informative error messages
+  \item Graceful handling of corrupted or missing files
+  \item Automatic retry mechanisms for transient failures
+  \item Detailed logging of all errors and warnings
+  \item Safe cleanup of temporary files on failure
+}
+}
+
+\section{Performance Tips}{
+
+\itemize{
+  \item Use SSDs for \code{save_dir} to improve I/O performance
+  \item Adjust \code{part_size} based on available RAM (larger = faster, more memory)
+  \item Use \code{num_cores = parallel::detectCores() - 1} for maximum speed
+  \item Ensure POD5 files and output directory are on fast storage
+  \item Consider preprocessing very large datasets (>1M reads) in batches
+}
+}
+
 \examples{
 \dontrun{
 results <- check_tails_dorado_DRS(
-  bam_file = "path/to/basecalled.bam",
   dorado_summary = "path/to/alignment_summary.txt",
   pod5_dir = "path/to/pod5/",
   num_cores = 2,
@@ -87,3 +234,12 @@ results <- check_tails_dorado_DRS(
 )
 }
 }
+\seealso{
+\code{\link{check_tails_guppy}} for legacy Guppy-based analysis,
+\code{\link{preprocess_inputs}} for input preprocessing,
+\code{\link{process_dorado_signal_files}} for signal processing,
+\code{\link{create_outputs_dorado}} for output generation,
+\code{\link{filter_signal_by_threshold}} for signal analysis
+}
+\concept{dorado_functions}
+\concept{pipeline_functions}

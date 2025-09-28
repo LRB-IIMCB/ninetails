@@ -26,6 +26,7 @@ Imports:
     parallel,
     purrr,
     reshape2,
+    reticulate,
     rlang,
     rrapply,
     stringr,
@@ -41,9 +42,6 @@ Suggests:
     gghalves,
     ggplot2,
     patchwork,
-    reticulate,
     rhdf5,
-    Rsamtools,
-    S4Vectors,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

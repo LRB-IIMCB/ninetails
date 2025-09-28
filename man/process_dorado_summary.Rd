@@ -19,7 +19,9 @@ process_dorado_summary(dorado_summary, save_dir, part_size, cli_log)
 Character vector containing paths to the split summary files.
 }
 \description{
-Splits a Dorado summary file or data frame into multiple smaller files for downstream analysis.
+Splits a Dorado summary file or data frame (in-memory file) into multiple
+smaller files for downstream analysis. This helps to avoid memory overflow
+and data loss during processing.
 }
 \examples{
 \dontrun{

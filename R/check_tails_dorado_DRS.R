@@ -1,68 +1,207 @@
 ################################################################################
 # WRAPPER FUNCTION FOR DORADO OUTPUTS
 ################################################################################
-#' Wrapper function for complete DRS processing by ninetails package (Dorado mode).
+#' Complete Oxford Nanopore poly(A) tail analysis pipeline for Dorado DRS data.
 #'
-#' This function processes Oxford Nanopore direct RNA sequencing (DRS) data
-#' generated using Dorado basecaller (>=1.0.0) and POD5 file format. It extracts
-#' and analyzes poly(A) tail information from BAM files containing 'pt' and 'pa'
-#' tags, which store poly(A) tail length and coordinates respectively.
+#' This comprehensive wrapper function orchestrates the complete analysis of Oxford Nanopore
+#' direct RNA sequencing (DRS) data processed with Dorado basecaller (>=1.0.0) using POD5
+#' file format. The pipeline identifies and characterizes non-adenosine nucleotides within
+#' poly(A) tails through advanced signal processing, machine learning-based classification,
+#' and statistical analysis.
 #'
-#' The function performs several key steps:\itemize{
-#' \item Validates and preprocesses input files
-#' \item Splits large BAM and summary files into manageable parts
-#' \item Extracts poly(A) information from BAM files
-#' \item Performs quality control if enabled
-#' \item Generates output files and logs
+#' @section Pipeline Overview:
+#' The analysis pipeline consists of several integrated stages:
+#' \enumerate{
+#'   \item \strong{Input Validation}: Validates Dorado summary files and POD5 directories
+#'   \item \strong{Data Preprocessing}: Splits large datasets and applies quality filters
+#'   \item \strong{Signal Extraction}: Extracts poly(A) tail signals from POD5 files
+#'   \item \strong{Feature Engineering}: Computes pseudomoves and signal characteristics
+#'   \item \strong{Segmentation}: Identifies candidate modification regions
+#'   \item \strong{GAF Generation}: Creates Gramian Angular Fields for CNN input
+#'   \item \strong{Classification}: Applies trained neural networks for prediction
+#'   \item \strong{Output Generation}: Produces comprehensive results and statistics
 #' }
 #'
-#' Output subdirectories:
+#' @section Input Requirements:
+#' This pipeline requires specific input formats:
 #' \itemize{
-#'   \item dorado_summary_dir - Split summary files
-#'   \item bam_dir - Split BAM files
-#'   \item polya_data_dir - Extracted poly(A) information
-#'   \item polya_signal_dir - Extracted poly(A) signals
+#'   \item \strong{Dorado Summary}: Must contain poly(A) information columns:
+#'     \code{read_id}, \code{filename}, \code{poly_tail_length},
+#'     \code{poly_tail_start}, \code{poly_tail_end}
+#'   \item \strong{POD5 Files}: Raw signal files corresponding to reads in summary
+#'   \item \strong{No BAM Processing}: This pipeline bypasses BAM file processing for performance
 #' }
 #'
-#' @param bam_file Character string. Full path to the BAM file produced by Dorado
-#' (>=1.0.0) containing poly(A) information in 'pt' and 'pa' tags.
+#' @section Output Structure:
+#' The function creates several output subdirectories:
+#' \describe{
+#'   \item{\code{dorado_summary_dir/}}{Split summary files for parallel processing}
+#'   \item{\code{polya_signal_dir/}}{Extracted poly(A) signals in RDS format}
+#'   \item{\code{nonA_temp_dir/}}{Intermediate non-A prediction files}
+#'   \item{\code{polya_chunks_dir/}}{Signal segmentation data}
+#' }
 #'
-#' @param dorado_summary Character string or data frame. Either the full path to
-#' the Dorado summary file (.txt) or a data frame containing the summary
-#' information with required columns (filename, read_id).
+#' @section Performance Characteristics:
+#' \itemize{
+#'   \item \strong{Scalability}: Efficient parallel processing across multiple cores
+#'   \item \strong{Memory Management}: Smart data partitioning prevents memory overflow
+#'   \item \strong{Progress Tracking}: Comprehensive logging and progress indicators
+#'   \item \strong{Error Handling}: Robust error recovery and informative diagnostics
+#' }
 #'
-#' @param pod5_dir Character string. Full path to the directory containing POD5
-#' files. These files must correspond to the reads in the BAM file.
+#' @section Quality Control:
+#' When \code{qc = TRUE}, the pipeline applies several quality filters:
+#' \itemize{
+#'   \item Poly(A) tail length filtering (minimum 10 nucleotides)
+#'   \item Coordinate validation (start < end positions)
+#'   \item Terminal position masking to reduce false positives
+#'   \item Duplicate read detection and handling
+#' }
 #'
-#' @param num_cores Numeric [1]. Number of physical cores to use for processing.
-#' Should not exceed one less than the total available cores. Defaults to 1.
+#' @section Algorithm Details:
+#' The pipeline employs several sophisticated algorithms:
+#' \itemize{
+#'   \item \strong{Pseudomove Computation}: Z-score based outlier detection with adaptive windowing
+#'   \item \strong{Signal Segmentation}: Run-length encoding for modification region identification
+#'   \item \strong{GAF Transformation}: Gramian Angular Field generation for CNN compatibility
+#'   \item \strong{Neural Classification}: Pre-trained CNNs for nucleotide type prediction
+#' }
 #'
-#' @param qc Logical [TRUE/FALSE]. If TRUE, performs quality control on the
-#' output data. This includes checking for read duplicates and validating
-#' poly(A) coordinates. Enabled by default.
+#' @param dorado_summary Character string or data frame. Either the full path to a
+#'   Dorado summary file (.txt, .tsv, .csv) or an in-memory data frame containing
+#'   summary information. \strong{Required columns}: \code{read_id} (unique identifier),
+#'   \code{filename} (POD5 file name), \code{poly_tail_length} (tail length in nucleotides),
+#'   \code{poly_tail_start} (start coordinate), \code{poly_tail_end} (end coordinate).
+#'   Additional columns such as \code{alignment_genome}, \code{alignment_mapq} are
+#'   automatically included if present.
 #'
-#' @param save_dir Character string. Full path to the directory where output
-#' files and subdirectories will be created.
+#' @param pod5_dir Character string. Full path to the directory containing POD5 files.
+#'   The directory should contain POD5 files referenced in the \code{filename} column
+#'   of the Dorado summary. Files can be organized in subdirectories (recursive search
+#'   is performed). Typical ONT directory structures are automatically handled.
 #'
-#' @param prefix Character string (optional). When provided, this string is
-#' prepended to output filenames, positioned between the timestamp and the
-#' file type suffix.
+#' @param num_cores Integer [1]. Number of physical CPU cores to use for parallel
+#'   processing. Should not exceed \code{parallel::detectCores() - 1} to maintain
+#'   system responsiveness. Higher core counts significantly reduce processing time
+#'   for large datasets. Memory usage scales approximately linearly with core count.
 #'
-#' @param part_size Numeric [40000]. Defines the maximum number of reads to
-#' process in each file part. Must be >=1000. Used to split large inputs
-#' into manageable parts to prevent memory overflow.
+#' @param qc Logical [TRUE]. Enable comprehensive quality control filtering.
+#'   When \code{TRUE}, applies stringent filters including:
+#'   \itemize{
+#'     \item Minimum poly(A) tail length (10 nucleotides)
+#'     \item Coordinate validation and sanitization
+#'     \item Terminal position masking (reduces false positives)
+#'     \item Statistical outlier detection and removal
+#'   }
+#'   Set to \code{FALSE} only for preliminary analysis or when using pre-filtered data.
 #'
-#' @return A list containing processed file paths and analysis results. Always
-#' assign the returned list to a variable to prevent console overflow. The
-#' function also generates a log file and output files in the specified
-#' save_dir.
+#' @param save_dir Character string. Full path to the output directory where all
+#'   results, intermediate files, and logs will be saved. The directory will be
+#'   created if it doesn't exist. If the directory contains existing files, the
+#'   user will be prompted to choose whether to abort or overwrite. Requires
+#'   sufficient disk space (depending on dataset size).
+#'
+#' @param prefix Character string [""]. Optional prefix for output filenames.
+#'   When provided, this string is prepended to all output files between the
+#'   timestamp and file type identifier. Useful for organizing multiple analyses
+#'   or experimental conditions. Should contain only filesystem-safe characters
+#'   (alphanumeric, underscore, hyphen).
+#'
+#' @param part_size Integer [40000]. Maximum number of reads to process in each
+#'   file partition. Must be >= 1. Larger values increase memory usage but may
+#'   improve processing efficiency. Smaller values reduce memory footprint and
+#'   enable processing of very large datasets on memory-constrained systems.
+#'   Optimal values typically range from 10,000 to 100,000 depending on available RAM.
+#'
+#' @return A named list containing comprehensive analysis results:
+#' \describe{
+#'   \item{\code{read_classes}}{Data frame with per-read classification results including:
+#'     \itemize{
+#'       \item \code{readname}: Unique read identifier
+#'       \item \code{contig}: Reference genome/transcript name (if aligned)
+#'       \item \code{polya_length}: Estimated poly(A) tail length
+#'       \item \code{qc_tag}: Quality control status
+#'       \item \code{class}: Classification result ("decorated", "blank", "unclassified")
+#'       \item \code{comments}: Detailed classification rationale using standard codes
+#'     }
+#'   }
+#'   \item{\code{nonadenosine_residues}}{Data frame with detailed information about
+#'     detected non-A nucleotides including:
+#'     \itemize{
+#'       \item \code{readname}: Read identifier
+#'       \item \code{contig}: Reference information
+#'       \item \code{prediction}: Predicted nucleotide type (C, G, U)
+#'       \item \code{est_nonA_pos}: Estimated position within poly(A) tail
+#'       \item \code{polya_length}: Total tail length
+#'       \item \code{qc_tag}: Quality metrics
+#'     }
+#'   }
+#' }
+#'
+#' @section Classification Codes:
+#' The \code{comments} column in \code{read_classes} uses standardized codes:
+#' \describe{
+#'   \item{YAY}{Non-A residue detected (successful classification)}
+#'   \item{MAU}{Move transition absent, no non-A residue detected}
+#'   \item{MPU}{Move transition present, but no non-A residue detected}
+#'   \item{IRL}{Insufficient read length for reliable analysis}
+#'   \item{QCF}{Quality control filtering failed}
+#' }
+#'
+#' @section System Requirements:
+#' \itemize{
+#'   \item \strong{R Version}: >= 3.5.0
+#'   \item \strong{Python}: >= 3.6 with pod5 module (\code{pip install pod5})
+#'   \item \strong{Memory}: >= 8GB RAM (16GB+ recommended for large datasets)
+#'   \item \strong{Storage}: Temporary space ~2-5x input file size
+#'   \item \strong{Dependencies}: TensorFlow/Keras for neural network inference
+#' }
+#'
+#' @section Error Handling:
+#' The function implements comprehensive error handling:
+#' \itemize{
+#'   \item Input validation with informative error messages
+#'   \item Graceful handling of corrupted or missing files
+#'   \item Automatic retry mechanisms for transient failures
+#'   \item Detailed logging of all errors and warnings
+#'   \item Safe cleanup of temporary files on failure
+#' }
+#'
+#' @section Performance Tips:
+#' \itemize{
+#'   \item Use SSDs for \code{save_dir} to improve I/O performance
+#'   \item Adjust \code{part_size} based on available RAM (larger = faster, more memory)
+#'   \item Use \code{num_cores = parallel::detectCores() - 1} for maximum speed
+#'   \item Ensure POD5 files and output directory are on fast storage
+#'   \item Consider preprocessing very large datasets (>1M reads) in batches
+#' }
+#'
+#' @family pipeline_functions
+#' @family dorado_functions
+#'
+#' @seealso
+#' \code{\link{check_tails_guppy}} for legacy Guppy-based analysis,
+#' \code{\link{preprocess_inputs}} for input preprocessing,
+#' \code{\link{process_dorado_signal_files}} for signal processing,
+#' \code{\link{create_outputs_dorado}} for output generation,
+#' \code{\link{filter_signal_by_threshold}} for signal analysis
 #'
 #' @export
+#'
+#' @note
+#' \strong{Important considerations}:
+#' \itemize{
+#'   \item This function may take several hours for large datasets (>100K reads)
+#'   \item Ensure sufficient disk space (typically 2-5x input size) in \code{save_dir}
+#'   \item The function generates detailed log files for troubleshooting
+#'   \item Results should always be assigned to a variable to prevent console overflow
+#'   \item POD5 files must correspond exactly to reads in the Dorado summary
+#'   \item For datasets >1M reads, consider batch processing or increased \code{part_size}
+#' }
 #'
 #' @examples
 #' \dontrun{
 #' results <- check_tails_dorado_DRS(
-#'   bam_file = "path/to/basecalled.bam",
 #'   dorado_summary = "path/to/alignment_summary.txt",
 #'   pod5_dir = "path/to/pod5/",
 #'   num_cores = 2,
@@ -72,35 +211,51 @@
 #'   part_size = 40000
 #' )
 #' }
-check_tails_dorado_DRS<- function(bam_file,
-                                  dorado_summary,
-                                  pod5_dir,
-                                  num_cores = 1,
-                                  qc = TRUE,
-                                  save_dir,
-                                  prefix = "",
-                                  part_size = 1000) {
+
+check_tails_dorado_DRS <- function(dorado_summary,
+                                   pod5_dir,
+                                   num_cores = 1,
+                                   qc = TRUE,
+                                   save_dir,
+                                   prefix = "",
+                                   part_size = 40000) {
 
   # Initialize warning flag
   warn_message <- FALSE
 
-  # Create output directory if needed
-  tryCatch({
-    if (!dir.exists(save_dir)) {
-      dir.create(save_dir, recursive = TRUE)
-    }
-  }, error = function(e) {
-    cli::cli_alert_danger("Failed to create output directory: {e$message}")
-    stop(e$message, call. = FALSE)
-  })
-
-  # Initialize log collector
+  # Initialize log collector (needed for directory checking)
   log_collector <- vector("character")
   log_start_time <- Sys.time()
   log_filename <- format(log_start_time,
                          paste0("%Y-%m-%d_%H-%M-%S",
                                 if(nchar(prefix) > 0) paste0("_", prefix) else "",
                                 "_ninetails.log"))
+
+  # Create a temporary log message function for directory checking
+  temp_log_message <- function(message, type = "INFO", section = NULL) {
+    timestamp <- format(Sys.time(), "[%Y-%m-%d %H:%M:%S]")
+
+    if (!is.null(section)) {
+      header <- paste0("\n-- ", section, " --\n")
+      log_collector <<- c(log_collector, header)
+    }
+
+    log_entry <- sprintf("%s %s: %s", timestamp, type, message)
+    log_collector <<- c(log_collector, log_entry)
+    # For now, also print to console since file doesn't exist yet
+    cat(sprintf("%s\n", log_entry))
+  }
+
+  # Check and handle output directory BEFORE creating it
+  #####################################################
+  should_proceed <- ninetails::check_output_directory(save_dir, temp_log_message)
+
+  if (!should_proceed) {
+    cat("Analysis aborted by user.\n")
+    return(invisible(NULL))
+  }
+
+  # Now set up the proper log file path
   log_filepath <- file.path(save_dir, log_filename)
 
   # Helper functions for logging
@@ -150,18 +305,32 @@ check_tails_dorado_DRS<- function(bam_file,
   # PIPELINE START
   #####################################################
   tryCatch({
-    # Initialize pipeline
+    # Initialize pipeline and log file with header
     ###################################################
     cli::cli_h1("Ninetails {utils::packageVersion('ninetails')}")
-    cli_log(paste0("Welcome to Ninetails! ", {utils::packageVersion('ninetails')}), bullet = TRUE)
-    cli_log("Analysis toolkit for poly(A) tail composition in ONT data", bullet = TRUE)
+    cli::cli_alert_info(paste0("Welcome to Ninetails! ", {utils::packageVersion('ninetails')}))
+    cli::cli_alert_info("Analysis toolkit for poly(A) tail composition in ONT data")
+
+    # Write log file header with welcome message (only once)
+    cat(sprintf("Ninetails Analysis Log - %s\n", format(log_start_time, "%Y-%m-%d %H:%M:%S")),
+        file = log_filepath, append = FALSE)
+    cat(sprintf("Ninetails v%s - Analysis toolkit for poly(A) tail composition in ONT data\n",
+                utils::packageVersion('ninetails')),
+        file = log_filepath, append = TRUE)
+    cat("=====================================\n\n", file = log_filepath, append = TRUE)
+
+    # Write any messages from directory checking to the log file
+    if (length(log_collector) > 0) {
+      for (entry in log_collector) {
+        cat(paste0(entry, "\n"), file = log_filepath, append = TRUE)
+      }
+    }
 
     cli_log("Launching *check_tails_dorado_DRS* pipeline", "INFO","Launching *check_tails_dorado_DRS* pipeline")
 
     # Configuration logging display
     #####################################################
     cli_log("Configuration", "INFO", "Configuration")
-    cli_log(sprintf("BAM file:                    %s", bam_file), bullet = TRUE)
     cli_log(sprintf("Dorado summary:              %s",
                     if(!is.object(dorado_summary)) dorado_summary else deparse(substitute(dorado_summary))), bullet = TRUE)
     cli_log(sprintf("Pod5 files directory:        %s", pod5_dir), bullet = TRUE)
@@ -171,8 +340,8 @@ check_tails_dorado_DRS<- function(bam_file,
     cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
 
     # Preprocess input files
-    processed_files <- preprocess_inputs(
-      bam_file = bam_file,
+    #####################################################
+    processed_files <- ninetails::preprocess_inputs(
       dorado_summary = dorado_summary,
       pod5_dir = pod5_dir,
       num_cores = num_cores,
@@ -183,11 +352,61 @@ check_tails_dorado_DRS<- function(bam_file,
       cli_log = cli_log
     )
 
+    # Process Dorado data
+    #####################################################
+    polya_signal_files <- processed_files$polya_signal_files
+    nonA_temp_dir <- file.path(save_dir, "nonA_temp_dir")
+    polya_chunks_dir <- file.path(save_dir, "polya_chunks_dir")
+    nonA_results <- ninetails::process_dorado_signal_files(
+      polya_signal_files,
+      nonA_temp_dir,
+      polya_chunks_dir,
+      num_cores,
+      cli_log)
+
+    # Run create_outputs to generate tabular outputs
+    #####################################################
+    cli_log("Creating final outputs...", "INFO", "Creating Output", bullet = TRUE)
+    dorado_summary_dir <- file.path(save_dir, "dorado_summary_dir")
+
+    # Ensure create_outputs_dorado processes all files and returns proper format
+    outputs <- tryCatch({
+      result <- ninetails::create_outputs_dorado(
+        dorado_summary_dir = dorado_summary_dir,
+        nonA_temp_dir = nonA_temp_dir,
+        polya_chunks_dir = polya_chunks_dir,
+        num_cores = num_cores,
+        qc = qc
+      )
+
+      # Validate output format - should be a list with read_classes and nonadenosine_residues
+      if (!is.list(result)) {
+        stop("create_outputs_dorado must return a list", call. = FALSE)
+      }
+
+      # Check for expected components (adjust names as needed based on your function)
+      expected_names <- c("read_classes", "nonadenosine_residues")
+      if (!all(expected_names %in% names(result))) {
+        cli_log("Warning: Output does not contain expected components. Found components:", "WARNING")
+        cli_log(paste(names(result), collapse = ", "), "WARNING")
+      }
+
+      result
+    }, error = function(e) {
+      cli_log(sprintf("Error in output creation: %s", e$message), "ERROR")
+      stop(e$message, call. = FALSE)
+    })
+    cli_log("Output creation completed", "SUCCESS")
+
     # Save final outputs
+    #####################################################
     cli_log("Saving final outputs...", "INFO", "Saving Results", bullet = TRUE)
-    # ninetails::save_outputs(outputs, save_dir, prefix)
+
+    # Use the same save_outputs function as in guppy pipeline
+    ninetails::save_outputs(outputs, save_dir, prefix)
 
     # Pipeline statistics
+    #####################################################
     log_end_time <- Sys.time()
     runtime <- difftime(log_end_time, log_start_time, units = "mins")
 
@@ -204,7 +423,7 @@ check_tails_dorado_DRS<- function(bam_file,
     if (warn_message) {
       cli::cli_alert_warning(paste(
         "Ninetails exited with WARNING.\n\n",
-        "HERE SHOULD BE WARNING"
+        "Check your Dorado outputs and POD5 files for consistency. Some reads may have been omitted from analysis."
       ))
     }
 
@@ -216,6 +435,122 @@ check_tails_dorado_DRS<- function(bam_file,
   }, error = function(e) {
     cli::cli_alert_danger("Error: {e$message}")
     cli::cli_alert_danger("Ninetails aborted")
+    return(invisible(NULL))
   })
 }
 
+
+#' Process Dorado poly(A) signal files for non-A prediction and tail chunk extraction
+#'
+#' This function takes a set of Dorado poly(A) signal files (RDS format),
+#' extracts features, segments tails, generates Gramian Angular Fields (GAFs),
+#' applies classification models to predict non-A residues, and saves both
+#' prediction results and tail chunk lists as RDS files in specified output directories.
+#' Progress is logged using a cli logging function. This function is not intended
+#' to be used outside the pipeline wrapper.
+#'
+#' @param polya_signal_files Character vector of paths to poly(A) signal files
+#' (RDS format) generated from Dorado outputs.
+#' @param nonA_temp_dir Character path to the directory where non-A prediction
+#' results will be written. Directory will be created if it does not exist.
+#' @param polya_chunks_dir Character path to the directory where tail chunk list
+#' RDS files will be written. Directory will be created if it does not exist.
+#' @param num_cores Integer number of CPU cores to use for parallel feature
+#' extraction and downstream computations.
+#' @param cli_log Function used for logging messages.
+#'
+#' @returns An (invisible) list summarizing processing results for each input file.
+#' Each element contains:
+#'   \itemize{
+#'     \item \code{success} (logical): whether the file was processed successfully
+#'     \item \code{file} (character): path to the non-A prediction RDS file if successful
+#'     \item \code{chunks_file} (character): path to the tail chunk list RDS file if successful
+#'     \item \code{error} (character): error message if processing failed
+#'   }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Example usage
+#' signal_files <- list.files("signals/", pattern = "polya_signal.*\\.rds$", full.names = TRUE)
+#' results <- process_dorado_signal_files(
+#'   polya_signal_files = signal_files,
+#'   nonA_temp_dir = "nonA_predictions/",
+#'   polya_chunks_dir = "tail_chunks/",
+#'   num_cores = 4,
+#'   cli_log = function(msg, level, ...) message(sprintf("[%s] %s", level, msg))
+#' )
+#' }
+process_dorado_signal_files <- function(polya_signal_files,
+                                        nonA_temp_dir,
+                                        polya_chunks_dir,
+                                        num_cores,
+                                        cli_log) {
+
+  # Assertions
+  if (!dir.exists(nonA_temp_dir)) {
+    dir.create(nonA_temp_dir, recursive = TRUE)
+  }
+  if (!dir.exists(polya_chunks_dir)) {
+    dir.create(polya_chunks_dir, recursive = TRUE)
+  }
+  results_summary <- list()
+  for (signal_file in polya_signal_files) {
+    input_basename <- basename(signal_file)
+    output_basename <- sub("polya_signal", "nonA_pred", input_basename)
+    output_file <- file.path(nonA_temp_dir, output_basename)
+    chunks_basename <- sub("polya_signal", "tail_chunks", input_basename)
+    chunks_file <- file.path(polya_chunks_dir, chunks_basename)
+
+    # Section header for each file
+    #####################################################
+    cli_log(sprintf("-- SIGNAL DATA ANALYSIS: %s --", input_basename), "INFO", sprintf("SIGNAL DATA ANALYSIS: %s", input_basename))
+    cli_log(sprintf("Processing %s for nonA prediction", input_basename), "INFO")
+
+    result <- tryCatch({
+      # Computing Pseudomoves
+      #####################################################
+      cli_log("Computing pseudomoves...", "INFO", "Computing Pseudomoves", bullet = TRUE)
+      signal_list <- readRDS(signal_file)
+      features <- ninetails::create_tail_features_list_dorado(signal_list, num_cores = num_cores)
+      if (!is.null(features$zeromoved_readnames) && length(features$zeromoved_readnames) > 0) {
+        cli_log(sprintf("%d reads had zero moves", length(features$zeromoved_readnames)), "WARNING")
+      }
+      if (!is.null(features$nonpseudomoved_readnames) && length(features$nonpseudomoved_readnames) > 0) {
+        cli_log(sprintf("%d reads did not meet pseudomove criteria", length(features$nonpseudomoved_readnames)), "WARNING")
+      }
+      cli_log("Feature extraction completed", "SUCCESS")
+
+      # Creating Chunks
+      #####################################################
+      cli_log("Creating tail segmentation data...", "INFO", "Creating Chunks", bullet = TRUE)
+      chunks <- ninetails::create_tail_chunk_list_dorado(features, num_cores = num_cores)
+      cli_log("Chunk creation completed", "SUCCESS")
+      saveRDS(chunks, chunks_file)
+      cli_log(sprintf("Saved tail chunk list to %s", chunks_file), "SUCCESS")
+
+      # Generating GAFs
+      #####################################################
+      cli_log("Computing gramian angular fields...", "INFO", "Generating GAFs", bullet = TRUE)
+      gafs <- ninetails::create_gaf_list(chunks, num_cores = num_cores)
+      cli_log("GAF computation completed", "SUCCESS")
+
+      # Predicting Classes
+      #####################################################
+      cli_log("Running predictions...", "INFO", "Predicting Classes", bullet = TRUE)
+      preds <- ninetails::predict_gaf_classes(gafs)
+      cli_log("Predictions completed", "SUCCESS")
+
+      saveRDS(preds, output_file)
+      cli_log(sprintf("Saved predictions to %s", output_file), "SUCCESS")
+      list(success = TRUE, file = output_file, chunks_file = chunks_file)
+    }, error = function(e) {
+      cli_log(sprintf("Error processing %s: %s", input_basename, e$message), "ERROR")
+      list(success = FALSE, error = e$message)
+    })
+    results_summary[[input_basename]] <- result
+  }
+  cli_log("nonA prediction completed for all signal files", "SUCCESS")
+  invisible(results_summary)
+}

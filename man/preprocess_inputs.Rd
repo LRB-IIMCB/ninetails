@@ -2,10 +2,9 @@
 % Please edit documentation in R/ninetails_core_functions_dorado_DRS.R
 \name{preprocess_inputs}
 \alias{preprocess_inputs}
-\title{Preprocess Dorado input files for poly(A) analysis}
+\title{Preprocess Dorado inputs for ninetails analysis (no BAM processing)}
 \usage{
 preprocess_inputs(
-  bam_file,
   dorado_summary,
   pod5_dir,
   num_cores,
@@ -17,8 +16,6 @@ preprocess_inputs(
 )
 }
 \arguments{
-\item{bam_file}{Character. Path to the BAM file containing aligned reads.}
-
 \item{dorado_summary}{Character or data frame. Path to Dorado summary file or data frame.}
 
 \item{pod5_dir}{Character. Directory containing pod5 files.}
@@ -39,18 +36,17 @@ preprocess_inputs(
 List containing paths to processed files:
   \describe{
     \item{summary_files}{Paths to split summary files}
-    \item{bam_files}{Paths to split BAM files (if BAM processing performed)}
-    \item{polya_files}{Paths to extracted poly(A) data files}
     \item{polya_signal_files}{Paths to extracted poly(A) signal files}
   }
 }
 \description{
-Validates and splits input files, extracts poly(A) information and signals, and prepares all files for downstream analysis.
+This function prepares Dorado summary files and extracts poly(A) signals
+from POD5 files for downstream analysis. It splits large summary files into
+manageable parts and extracts corresponding poly(A) signals.
 }
 \examples{
 \dontrun{
 processed_files <- preprocess_inputs(
-  bam_file = "path/to/aligned.bam",
   dorado_summary = "path/to/summary.txt",
   pod5_dir = "path/to/pod5/",
   num_cores = 2,
