@@ -124,7 +124,6 @@ Moreover, the function also creates a log file in the directory specified by the
 
 The runtime depends on the hardware resources and sequencing depth. The processing of built-in test dataset should take around 1 minute.
 
-**Pipeline compatible with Dorado basecaller can be launched as follows:**
 
 ### Output explanation
 
