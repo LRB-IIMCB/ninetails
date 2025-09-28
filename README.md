@@ -18,7 +18,11 @@
 -   It requires tail delimitation data produced by Nanopolish software
 -   It allows both for the detection of non-adenosine residues within the poly(A) tails and visual inspection of read signals
 
-**Important note! Since version 1.0.2 Ninetails is compatible also with tailfindR**
+**Important notes!** 
+
+-   **Since version 1.0.4 Ninetails is compatible with Dorado basecaller & pod5 format**
+-   **Since version 1.0.2 Ninetails is compatible also with tailfindR**
+
 
 Currently, **Ninetails** can distinguish characteristic signatures of four types of nucleotides: adenosines (A), cytosines (C), guanosines (G), and uridines (U).
 <div>
@@ -76,12 +80,26 @@ The installation of the repo takes approx. 20 seconds on typical PC. Additional 
 
 ### Classification of reads using wrapper function
 
-`check_tails()` is the main function which allows to classify sequencing reads based on presence/absence of non-adenosine residues within their poly(A) tails (and additional conditions, such as minimal read length and qc_tag assigned by Nanopolish polya function).
+The pipeline wrappers available in **Ninetails** begin with `check_tails` prefix. 
 
-Below is an example of how to use `check_tails()` function:
+In **Ninetails 1.0.4+**, `check_tails_dorado_DRS()` is the pipeline wrapper designed to classify reads/non-adenosines in ONT DRS data. 
+``` r
+
+results <- ninetails::check_tails_dorado_DRS(
+   dorado_summary = "path/to/dorado_alignment_summary.txt",
+   pod5_dir = "path/to/pod5_dir/",
+   num_cores = 2,
+   qc = TRUE,
+   save_dir = "~/Downloads",
+   prefix = "experiment1")
+```
+
+In **Ninetails <1.0.4** , `check_tails()` is the main function which allows to classify sequencing reads based on presence/absence of non-adenosine residues within their poly(A) tails (and additional conditions, such as minimal read length and qc_tag assigned by Nanopolish polya function). In newer versions (1.0.4+) this was replaced by `check_tails_guppy()`. This is a legacy pipeline which wouldnot be further developed (with exception of critical bug fixes).
+
+Below is an example of how to use `check_tails_guppy()` function:
 
 ``` r
-results <- ninetails::check_tails(
+results <- ninetails::check_tails_guppy(
   nanopolish = system.file('extdata', 
                            'test_data', 
                            'nanopolish_output.tsv', 
@@ -105,6 +123,8 @@ This function returns a list consisting of two tables: **read_classes** and **no
 Moreover, the function also creates a log file in the directory specified by the user.
 
 The runtime depends on the hardware resources and sequencing depth. The processing of built-in test dataset should take around 1 minute.
+
+**Pipeline compatible with Dorado basecaller can be launched as follows:**
 
 ### Output explanation
 
@@ -160,9 +180,6 @@ Before running the program, it is recommended to ascertain that the given argume
 > 
 </div>
 
-For the moment, **Ninetails** does not offer the possibility of processing large data sets in chunks behind the scenes (under development). Therefore, to minimise the risk of unexpected crashes, it is highly recommended to split the output of the `Nanopolish` polyA function into smaller files to make it easier to process the data in subsets and then merge the final results.
-
-
 <div>
 
 > **Note**
@@ -175,7 +192,7 @@ For the moment, **Ninetails** does not offer the possibility of processing large
 
 > **Note**
 > 
->**Ninetails** relies on Nanopolish segmentation and therefore may underestimate terminal modifications (last and penultimate nucleotides of the tail).
+>**Ninetails** relies on external signal segmentation (Nanopolish/Tailfindr/Dorado) and therefore may underestimate terminal modifications (last and penultimate nucleotides of the tail).
 >
 </div>
 
