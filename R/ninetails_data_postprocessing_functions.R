@@ -1,6 +1,6 @@
 #' Reads ninetails read_classes dataframe from file.
 #'
-#' This is the basic function used to import read_classes output from check_tails
+#' This is the basic function used to import read_classes output from check_tails_guppy
 #' to R.
 #'
 #' @param class_path a character string. Path to ninetails output file
@@ -211,7 +211,7 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 
 #' Reads ninetails nonadenosine_residues data from file.
 #'
-#' This is the basic function used to import output from \code{\link{check_tails}} to R:
+#' This is the basic function used to import output from \code{\link{check_tails_guppy}} to R:
 #' it imports the dataframe containing non-A detailed position info
 #' (nonadenosine_residues).
 #'
@@ -751,9 +751,9 @@ nanopolish_qc <- function(class_data,
 #'
 #' @examples
 #' \dontrun{
-#' # the output of function \code{\link{check_tails}} or \code{\link{create_outputs}}
+#' # the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
 #' # is required (below denoted as "results") to run the following example
-#' # for details see the documentation for the \code{\link{check_tails}}
+#' # for details see the documentation for the \code{\link{check_tails_guppy}}
 #' # and \code{\link{create_outputs}}
 #'
 #' residue_data_edited <- ninetails::correct_residue_data(class_data=results[[1]],
@@ -919,9 +919,9 @@ correct_residue_data <- function(class_data,
 #'
 #' @examples
 #' \dontrun{
-#' # the output of function \code{\link{check_tails}} or \code{\link{create_outputs}}
+#' # the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
 #' # is required (below denoted as "results") to run the following example
-#' # for details see the documentation for the \code{\link{check_tails}}
+#' # for details see the documentation for the \code{\link{check_tails_guppy}}
 #' # and \code{\link{create_outputs}}
 #'
 #' class_data_corrected <- ninetails::correct_class_data(residue_data_edited = residue_data_edited,

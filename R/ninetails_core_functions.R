@@ -229,7 +229,7 @@ extract_tail_data <- function(readname,
   moves_tail_range <- round(stats::approx(moves_tail_range, method = "linear", n=ceiling(0.2 * length(moves_tail_range)))[[2]], digits=0)
 
   # filter signal to find local minima & maxima corresponding to potential C, G, U modifications
-  pseudomoves <- filter_signal_by_threshold(signal)
+  pseudomoves <- ninetails::filter_signal_by_threshold(signal)
 
   extracted_data_single_list = list() # creating empty list for the extracted fast5 data
 
@@ -709,7 +709,7 @@ create_tail_chunk_list <- function(tail_feature_list,
                                       .options.snow = opts,
                                       .options.multicore = mc_options) %dopar% {
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
-                                        }
+                                      }
 
   #close(pb)
 
@@ -890,7 +890,7 @@ combine_gafs <- function(tail_chunk){
 #'
 #'}
 create_gaf_list <- function(tail_chunk_list,
-                             num_cores){
+                            num_cores){
 
   #variable biding
   i <- NULL
@@ -941,7 +941,7 @@ create_gaf_list <- function(tail_chunk_list,
                                .options.snow = opts,
                                .options.multicore = mc_options) %dopar% {
                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
-                                }
+                               }
 
   #close(pb)
 
@@ -1283,7 +1283,7 @@ create_outputs <- function(tail_feature_list,
 
   decorated_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
   decorated_reads <- decorated_reads %>% dplyr::mutate(class = "decorated",
-                                                     comments = "YAY")
+                                                       comments = "YAY")
 
   #merge read_classes tabular output:
   nanopolish_polya_table <- rbind(decorated_reads, discarded_reads)

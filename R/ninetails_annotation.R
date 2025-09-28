@@ -78,13 +78,14 @@ annotate_with_biomart <- function(input_data,
   if (!is.null(organism) && !is.null(mart_to_use)) {
     stop("Only one of 'organism' or 'mart_to_use' can be provided.")
   }
+
   # Check that at least one of organism and mart_to_use is provided
   if (is.null(organism) && is.null(mart_to_use)) {
     stop("Either 'organism' or 'mart_to_use' must be provided.")
   }
 
   # Check that mart_to_use is a mart object if it is provided
-  if (!is.null(mart_to_use) && !class(mart_to_use)=="Mart") {
+  if (!is.null(mart_to_use) && !inherits(mart_to_use, "Mart")) {
     stop("The 'mart_to_use' must be a mart. Please provide valid object.")
   }
 

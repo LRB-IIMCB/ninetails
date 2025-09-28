@@ -343,3 +343,205 @@ correct_labels <- function(df) {
   return(df)
 }
 
+################################################################################
+# REQUIRED BY DORADO-DEPENDENT PIPELINES
+################################################################################
+#' Filter Dorado summary file for reads fulfilling ninetails qualit criteria
+#'
+#' This function takes a Dorado summary file (from ONT Dorado basecaller)
+#' or a data frame containing equivalent summary information,
+#' and filters out reads that do not meet ninetails quality and alignment criteria.
+#' Specifically, it removes reads with missing alignments, low mapping quality,
+#' poly(A) start positions indicating most likely artifacts,
+#' or poly(A) tails shorter than 10 bases.
+#'
+#' @param dorado_summary Character path to a Dorado summary file (tab-delimited),
+#' or a data frame containing summary information.
+#'
+#' @returns A filtered tibble or data frame containing only reads that meet
+#' the filtering criteria.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # From file
+#' filtered <- filter_dorado_summary("dorado_summary.txt")
+#'
+#' # From data frame
+#' df <- data.frame(
+#'   read_id = c("read1", "read2"),
+#'   alignment_direction = c("+", "*"),
+#'   alignment_mapq = c(60, 0),
+#'   poly_tail_start = c(100, 0),
+#'   poly_tail_length = c(20, 5)
+#' )
+#' filtered <- filter_dorado_summary(df)
+#' }
+filter_dorado_summary <- function(dorado_summary){
+
+  # Variable binding (suppressing R CMD check from throwing an error)
+  alignment_direction <- alignment_mapq <- poly_tail_start <- poly_tail_length <- NULL
+
+  # If input is a file path, read with vroom
+  if (is.character(dorado_summary)) {
+    dorado_summary <- vroom::vroom(dorado_summary, delim = "\t")
+  }
+  # Ensure it's a data.frame/tibble
+  if (!is.data.frame(dorado_summary)) {
+    stop("Input must be a data.frame, tibble, or a valid file path.")
+  }
+  required_cols <- c("read_id", "poly_tail_length")
+  missing_cols <- setdiff(required_cols, names(dorado_summary))
+  if (length(missing_cols) > 0) {
+    stop(sprintf("Required columns missing: %s", paste(missing_cols, collapse = ", ")))
+  }
+
+  dorado_summary_filtered <- dorado_summary %>%
+    dplyr::filter(alignment_direction!="*" &
+                  alignment_mapq!=0 &
+                  poly_tail_start!=0 &
+                  poly_tail_length>=10)
+
+
+  return(dorado_summary_filtered)
+
+}
+
+
+
+#' Check and handle existing output directory for ninetails analysis
+#'
+#' This function checks if the specified output directory already exists and contains
+#' files that might be overwritten by the ninetails analysis. If the directory exists
+#' and is not empty, it prompts the user for action and logs the decision.
+#'
+#' This function is not intended to be used outside the pipeline wrapper.
+#'
+#' @section User Interaction:
+#' When an existing non-empty directory is detected, the function will:
+#' \itemize{
+#'   \item Display the directory path and file count
+#'   \item Prompt the user to choose: abort analysis or overwrite existing files
+#'   \item Wait for user input (a/A for abort, o/O for overwrite)
+#'   \item Log the user's decision and proceed accordingly
+#' }
+#'
+#' @section Directory States:
+#' The function handles several directory states:
+#' \itemize{
+#'   \item \strong{Non-existent}: Creates the directory and logs creation
+#'   \item \strong{Empty}: Uses existing directory and logs confirmation
+#'   \item \strong{Non-empty}: Prompts user for overwrite decision
+#' }
+#'
+#' @param save_dir Character string. Full path to the output directory where
+#'   ninetails results will be saved.
+#' @param log_message Function for logging messages to both console and log file.
+#'   Should accept parameters: message, type, section.
+#'
+#' @returns Logical. Returns TRUE if the analysis should proceed, FALSE if the
+#'   user chose to abort the analysis.
+#'
+#' @section Implementation Notes:
+#' \itemize{
+#'   \item Uses \code{readline()} for interactive user input
+#'   \item Logs all decisions and actions for audit trail
+#'   \item Handles edge cases like permission errors
+#'   \item Validates user input with retry mechanism
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Example with logging function
+#' log_func <- function(msg, type = "INFO", section = NULL) {
+#'   cat(sprintf("[%s] %s\n", type, msg))
+#' }
+#'
+#' # Check directory and proceed if allowed
+#' should_proceed <- check_output_directory("/path/to/output", log_func)
+#' if (should_proceed) {
+#'   # Continue with analysis
+#' } else {
+#'   # User chose to abort
+#' }
+#' }
+check_output_directory <- function(save_dir, log_message) {
+
+  # Check if directory exists
+  if (!dir.exists(save_dir)) {
+    # Directory doesn't exist, create it
+    tryCatch({
+      dir.create(save_dir, recursive = TRUE)
+      log_message(sprintf("Created output directory: %s", save_dir), "INFO", "Directory Setup")
+      return(TRUE)
+    }, error = function(e) {
+      log_message(sprintf("Failed to create output directory: %s", e$message), "ERROR", "Directory Setup")
+      stop(sprintf("Cannot create output directory: %s", e$message), call. = FALSE)
+    })
+  }
+
+  # Directory exists, check if it's empty
+  existing_files <- list.files(save_dir, recursive = TRUE, include.dirs = FALSE)
+
+  if (length(existing_files) == 0) {
+    # Directory is empty, safe to proceed
+    log_message(sprintf("Using existing empty directory: %s", save_dir), "INFO", "Directory Setup")
+    return(TRUE)
+  }
+
+  # Directory contains files, prompt user
+  log_message(sprintf("Output directory already exists and contains %d files", length(existing_files)),
+              "WARNING", "Directory Conflict")
+  log_message(sprintf("Directory path: %s", save_dir), "WARNING")
+
+  # Display warning to user
+  cat("\n")
+  cli::cli_alert_warning("Output directory already exists and is not empty!")
+  cli::cli_text(sprintf("Directory: {.path %s}", save_dir))
+  cli::cli_text(sprintf("Contains: {.val %d} files", length(existing_files)))
+  cat("\n")
+
+  # Show some example files if there are many
+  if (length(existing_files) <= 5) {
+    cli::cli_text("Existing files:")
+    for (file in existing_files) {
+      cli::cli_li(file)
+    }
+  } else {
+    cli::cli_text("Example existing files:")
+    for (file in existing_files[1:3]) {
+      cli::cli_li(file)
+    }
+    cli::cli_text(sprintf("... and %d more files", length(existing_files) - 3))
+  }
+
+  cat("\n")
+  cli::cli_text("Choose an action:")
+  cli::cli_li("{.strong a} = Abort analysis (recommended if unsure)")
+  cli::cli_li("{.strong c} = Continue and overwrite some of existing files")
+  cat("\n")
+
+  # Get user input with validation
+  while (TRUE) {
+    user_input <- readline(prompt = "Enter your choice (a/c): ")
+    user_input <- tolower(trimws(user_input))
+
+    if (user_input %in% c("a", "abort")) {
+      log_message("User chose to abort analysis due to existing files", "INFO", "User Decision")
+      cli::cli_alert_info("Analysis aborted by user.")
+      return(FALSE)
+
+    } else if (user_input %in% c("c", "continue")) {
+      log_message("User chose to continue and overwrite existing files", "WARNING", "User Decision")
+      log_message(sprintf("Proceeding with analysis in directory: %s", save_dir), "WARNING")
+      cli::cli_alert_warning("Proceeding with analysis. Existing files may be overwritten.")
+      return(TRUE)
+
+    } else {
+      cli::cli_alert_danger("Invalid input. Please enter 'a' to abort or 'c' to continue.")
+    }
+  }
+}
