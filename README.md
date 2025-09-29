@@ -102,7 +102,7 @@ Below is an example of how to use `check_tails_guppy()` function:
 
 ``` r
 results <- ninetails::check_tails_guppy(
-  nanopolish = system.file('extdata', 
+  polya_data = system.file('extdata', 
                            'test_data', 
                            'nanopolish_output.tsv', 
                            package = 'ninetails'),
