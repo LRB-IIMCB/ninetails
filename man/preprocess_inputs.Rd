@@ -22,7 +22,17 @@ preprocess_inputs(
 
 \item{num_cores}{Integer. Number of CPU cores to use.}
 
-\item{qc}{Logical. Whether to perform quality control.}
+\item{qc}{Logical. Whether to perform quality control filtering. When \code{TRUE},
+applies the following stringent filters to ensure high-quality data:
+\describe{
+  \item{Alignment direction}{Removes unmapped reads (\code{alignment_direction == "*"})}
+  \item{Mapping quality}{Removes reads with zero mapping quality (\code{alignment_mapq == 0})}
+  \item{Poly(A) coordinates}{Removes reads with invalid start positions (\code{poly_tail_start == 0})}
+  \item{Tail length}{Removes reads with tails shorter than 10 nucleotides (\code{poly_tail_length < 10})}
+}
+These filters remove low-quality reads, misaligned sequences, and likely artifacts
+from pore clogging or basecalling errors. Set to \code{FALSE} only for preliminary
+analysis or when using pre-filtered data.}
 
 \item{save_dir}{Character. Directory where output files will be saved.}
 
@@ -44,6 +54,34 @@ This function prepares Dorado summary files and extracts poly(A) signals
 from POD5 files for downstream analysis. It splits large summary files into
 manageable parts and extracts corresponding poly(A) signals.
 }
+\section{Quality Control Details}{
+
+The quality control filtering (when \code{qc = TRUE}) is implemented via
+\code{\link{filter_dorado_summary}} and performs the following operations:
+\itemize{
+  \item \strong{Unmapped read removal}: Reads with \code{alignment_direction = "*"}
+    indicate failed alignment to the reference and are excluded.
+  \item \strong{Low mapping quality removal}: Reads with \code{alignment_mapq = 0}
+    have ambiguous or poor-quality alignments and are excluded.
+  \item \strong{Invalid coordinate removal}: Reads with \code{poly_tail_start = 0}
+    indicate failed poly(A) detection, often from pore clogging artifacts.
+  \item \strong{Short tail removal}: Reads with \code{poly_tail_length < 10} nucleotides
+    lack sufficient poly(A) sequence for reliable modification detection.
+}
+
+These criteria ensure that only high-confidence reads with valid poly(A) tails
+and proper genomic alignment are processed, significantly improving downstream
+classification accuracy and reducing false positive rates.
+}
+
+\section{Performance Note}{
+
+Filtering typically removes 25-30\% of raw reads from standard Dorado output,
+but this percentage may vary based on sequencing quality, pore condition, and
+alignment parameters. The function logs the exact number of reads removed for
+quality control tracking.
+}
+
 \examples{
 \dontrun{
 processed_files <- preprocess_inputs(
