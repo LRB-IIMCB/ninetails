@@ -385,7 +385,8 @@ check_tails_dorado_DRS <- function(dorado_summary,
         nonA_temp_dir = nonA_temp_dir,
         polya_chunks_dir = polya_chunks_dir,
         num_cores = num_cores,
-        qc = qc
+        qc = qc,
+        original_summary = dorado_summary
       )
 
       # Validate output format - should be a list with read_classes and nonadenosine_residues
