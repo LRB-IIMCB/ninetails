@@ -1541,8 +1541,8 @@ create_outputs_dorado <- function(dorado_summary_dir,
 
   #merge read_classes tabular output:
   read_classes <- rbind(dorado_summary, dorado_summary_qc_passed)
-  #corece tibble to df
-  read_classes <- data.frame(read_classes)
+  #corece tibble to df (strip attributes)
+  read_classes <- as.data.frame(read_classes)
 
   # Format read_classes columns
   read_classes$filename <- NULL
