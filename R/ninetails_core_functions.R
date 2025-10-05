@@ -1226,10 +1226,14 @@ create_outputs <- function(tail_feature_list,
   moved_chunks_table$readname <- sub('\\_.*', '', moved_chunks_table$chunkname)
 
   #substitute predictions with letter code
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==0] <- "A"
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==1] <- "C"
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==2] <- "G"
-  moved_chunks_table$prediction[moved_chunks_table$prediction ==3] <- "U"
+  # moved_chunks_table$prediction[moved_chunks_table$prediction ==0] <- "A"
+  # moved_chunks_table$prediction[moved_chunks_table$prediction ==1] <- "C"
+  # moved_chunks_table$prediction[moved_chunks_table$prediction ==2] <- "G"
+  # moved_chunks_table$prediction[moved_chunks_table$prediction ==3] <- "U"
+
+  # vectorized substitution of predictions with letter code
+  prediction_dict <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")
+  moved_chunks_table$prediction <- prediction_dict[as.character(moved_chunks_table$prediction)]
 
   #extract reads with move==1 and modification absent (not detected)
   moved_blank_readnames <- names(which(with(moved_chunks_table, tapply(prediction, readname, unique) == 'A')))
@@ -1282,8 +1286,12 @@ create_outputs <- function(tail_feature_list,
 
 
   decorated_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
-  decorated_reads <- decorated_reads %>% dplyr::mutate(class = "decorated",
-                                                       comments = "YAY")
+
+
+  # decorated_reads <- decorated_reads %>% dplyr::mutate(class = "decorated",
+  #                                                      comments = "YAY")
+  decorated_reads$class <- "decorated"
+  decorated_reads$comments <- "YAY"
 
   #merge read_classes tabular output:
   nanopolish_polya_table <- rbind(decorated_reads, discarded_reads)

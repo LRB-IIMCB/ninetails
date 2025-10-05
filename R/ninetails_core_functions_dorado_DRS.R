@@ -1107,225 +1107,280 @@ create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
 #' Create Ninetails output tables for Dorado DRS pipeline
 #'
 #' This function integrates Dorado poly(A) tail summaries, non-adenosine
-#' predictions, and poly(A) chunk information to generate two main outputs:
-#' per-read classifications and non-adenosine residue predictions with
-#' estimated positions along the poly(A) tail.
+#' predictions from CNN models, and poly(A) chunk information to generate
+#' two main outputs: per-read classifications and non-adenosine residue
+#' predictions with estimated positions along the poly(A) tail.
 #'
-#' @param dorado_summary_dir Character string. Path to a directory containing Dorado
-#'   summary files (.txt, .tsv, or .csv) with per-read poly(A) tail information
-#'   for reads that passed quality control filtering.
+#' The function implements a complete read accounting system that classifies
+#' ALL reads from the original summary file into biologically meaningful
+#' categories based on both quality control metrics and modification detection
+#' results.
+#'
+#' This function is not intended to be used outside the pipeline wrapper
+#' (as standalone function).
+#'
+#' @param dorado_summary_dir Character string. Path to a directory containing
+#'   Dorado summary files (.txt, .tsv, or .csv) with per-read poly(A) tail
+#'   information for reads that passed Ninetails quality control filtering.
+#'   These files should contain only reads meeting the four QC criteria:
+#'   (I) mapped to reference, (II) MAPQ > 0, (III) valid poly(A) coordinates
+#'   (poly_tail_start != 0), and (IV) poly(A) tail length >= 10 nt.
 #'
 #' @param nonA_temp_dir Character string. Path to a directory containing
-#'   non-adenosine prediction RDS files generated from CNN models.
+#'   non-adenosine prediction RDS files generated from CNN models. Each RDS
+#'   file contains predictions for signal chunks, stored as either named
+#'   vectors or lists with 'chunkname' and 'prediction' elements.
 #'
 #' @param polya_chunks_dir Character string. Path to a directory containing
-#'   poly(A) chunk RDS files used for position inference of predictions.
+#'   poly(A) chunk RDS files. These files contain segmented signal chunks
+#'   with positional information (chunk_start_pos, chunk_end_pos) used for
+#'   calculating estimated positions of non-A residues along the poly(A) tail.
 #'
-#' @param num_cores Integer. Number of cores to use for parallelized file loading
-#'   and processing. Must be a positive integer. Default is 1.
+#' @param num_cores Integer. Number of cores to use for parallelized file
+#'   loading and processing. Must be a positive integer. Default is 1.
+#'   Parallel processing uses \pkg{foreach} with \pkg{doSNOW} backend and
+#'   displays progress bars during file loading operations.
 #'
 #' @param qc Logical. Whether to apply quality control filtering of terminal
-#'   predictions (removing predictions near the ends of poly(A) tails, within 2 nt
-#'   of either terminus). Default is TRUE.
+#'   predictions. When \code{TRUE} (default), predictions within 2 nt of
+#'   either end of the poly(A) tail are removed to reduce false positives
+#'   from adapter-tail boundary artifacts. Reads with only terminal predictions
+#'   are reclassified as blank (MPU).
 #'
-#' @param original_summary Character string or data frame (optional). Path to the
-#'   original unfiltered Dorado summary file, or the data frame itself. When
-#'   provided, the function will include ALL reads in the final \code{read_classes}
-#'   output with appropriate classification for reads filtered during preprocessing.
-#'   This provides complete read accounting while maintaining computational
-#'   efficiency (only high-quality reads are processed through POD5 extraction
-#'   and CNN prediction). If \code{NULL} (default), only reads that passed
-#'   preprocessing filters are included.
+#' @param original_summary Character string or data frame. Path to the original
+#'   unfiltered Dorado summary file, or the data frame itself. This file should
+#'   contain ALL reads from the sequencing run, including those that failed
+#'   QC filtering. Required for complete read accounting - the function will
+#'   classify all reads, including those filtered during preprocessing.
+#'   Must contain columns: filename, read_id, poly_tail_length, poly_tail_start,
+#'   poly_tail_end, alignment_genome, alignment_direction, alignment_mapq.
 #'
 #' @return A named list with two data frames:
 #'   \describe{
-#'     \item{read_classes}{Data frame with per-read classification results,
-#'       including columns for read name, contig, poly(A) length, QC tag, class,
-#'       and comments. Only contains mapped reads (unmapped reads with
-#'       alignment_genome == "*" are excluded).}
+#'     \item{read_classes}{Data frame with per-read classification results for
+#'       ALL reads in original_summary. Includes columns: readname, contig,
+#'       polya_length, qc_tag (MAPQ), class (decorated/blank/unclassified),
+#'       and comments (classification code).}
 #'     \item{nonadenosine_residues}{Data frame with per-chunk predictions of
-#'       non-adenosine residues, including estimated positions along the poly(A)
-#'       tail. Only includes reads that passed preprocessing filters and have
-#'       non-A predictions.}
+#'       non-adenosine residues for decorated reads only. Includes columns:
+#'       readname, contig, prediction (C/G/U), est_nonA_pos (estimated position
+#'       from 3' end), polya_length, qc_tag (MAPQ). Empty dataframe if no
+#'       non-A residues detected.}
 #'   }
 #'
-#' @section Read Classification:
-#'   Reads are classified into the following categories based on a priority system:
-#'   \describe{
-#'     \item{qc_failed}{Reads that failed quality control (see BAC comment code)}
-#'     \item{blank}{Reads with only adenosine residues or insufficient tail length}
-#'     \item{decorated}{Reads with detected non-adenosine residues}
+#' @section Read Classification System:
+#'   The function classifies reads into three main categories with specific
+#'   biological interpretations:
+#'
+#'   \strong{1. decorated} - Reads with detected non-adenosine modifications
+#'   \itemize{
+#'     \item Comment code: YAY (Yes, A modification was detected - Yeah!)
+#'     \item Criteria: Read passed all QC filters AND CNN detected at least
+#'       one non-A residue (C, G, or U) that survived terminal filtering
+#'     \item Biological meaning: Poly(A) tail contains non-adenosine residues,
+#'       indicating potential guanylation, uridylation, or cytidylation
 #'   }
 #'
-#' @section Classification Codes:
-#'   The \code{comments} column uses standardized 3-letter codes to indicate
-#'   the specific reason for classification:
-#'   \describe{
-#'     \item{YAY}{Non-A residue detected (decorated read)}
-#'     \item{MAU}{Move transition absent, unmodified (blank read - no predictions)}
-#'     \item{MPU}{Move transition present, unmodified (blank read - all predictions are A)}
-#'     \item{IRL}{Insufficient read length (poly(A) tail < 10 nt, classified as blank)}
-#'     \item{BAC}{Bad coordinates (poly_tail_start == 0, classified as qc_failed)}
+#'   \strong{2. blank} - Reads without detected modifications
+#'   \itemize{
+#'     \item MAU (Move transition Absent, Unmodified): No signal deviations
+#'       detected; tail appears to be pure poly(A)
+#'     \item MPU (Move transition Present, Unmodified): Signal deviations
+#'       detected but CNN predicted only A residues, or predictions were
+#'       filtered as terminal artifacts
+#'     \item IRL (Insufficient Read Length): Poly(A) tail < 10 nt; too short
+#'       for reliable modification detection
+#'     \item Biological meaning: Poly(A) tail contains only adenosine residues
+#'       or is too short/ambiguous for modification calling
 #'   }
 #'
-#' @section Classification Priority:
-#'   The function applies classifications in the following order:
+#'   \strong{3. unclassified} - Reads that failed quality control
+#'   \itemize{
+#'     \item UNM (UnMapped): Read unmapped to reference (alignment_direction = "*"
+#'       AND alignment_mapq = 0); cannot determine tail context
+#'     \item BAC (BAd Coordinates): Invalid poly(A) tail coordinates
+#'       (poly_tail_start = 0); indicates segmentation failure
+#'     \item Biological meaning: Technical failures preventing reliable
+#'       modification analysis; excluded from biological interpretation
+#'   }
+#'
+#'
+#' @section Position Estimation:
+#'   Non-adenosine residue positions are estimated using the formula:
+#'
+#'   \code{est_nonA_pos = round(poly_tail_length - ((poly_tail_length * centr_signal_pos) / signal_length), 0)}
+#'
+#'   Where:
+#'   \itemize{
+#'     \item \code{centr_signal_pos}: Mean of chunk start and end positions
+#'       in signal space
+#'     \item \code{signal_length}: 0.2 × (poly_tail_end - poly_tail_start)
+#'       converts signal coordinates to nucleotide space
+#'     \item \code{poly_tail_length}: Total poly(A) tail length from Dorado
+#'   }
+#'
+#'   Positions are reported as distance from the 3' end of the tail
+#'   (position 1 = most 3' nucleotide). In Dorado pipeline, all position
+#'   calculations are rounded to integers, unlike the Guppy legacy pipeline
+#'   which uses decimal precision.
+#'
+#' @section Quality Control Criteria:
+#'   Reads in \code{dorado_summary_dir} must meet four criteria to be
+#'   processed by the neural network:
 #'   \enumerate{
-#'     \item Unmapped reads (alignment_genome == "*") are filtered out completely
-#'     \item BAC: Bad coordinates (poly_tail_start == 0) → qc_failed
-#'     \item IRL: Insufficient tail length (< 10 nt, excluding BAC) → blank
-#'     \item YAY: Decorated (has non-A predictions) → decorated
-#'     \item MPU: Blank with predictions (all-A predictions) → blank
-#'     \item MAU: Blank without predictions (default) → blank
+#'     \item \strong{Mapped}: alignment_direction is "+" or "-", not "*"
+#'     \item \strong{High mapping quality}: alignment_mapq > 0
+#'     \item \strong{Valid coordinates}: poly_tail_start != 0 (in DRS, adapter
+#'       passes through pore first, so poly(A) cannot start at position 0)
+#'     \item \strong{Sufficient length}: poly_tail_length >= 10 nt
 #'   }
 #'
-#' @section Data Filtering:
-#'   \itemize{
-#'     \item Unmapped reads (alignment_genome == "*") are automatically filtered
-#'       out when \code{original_summary} is provided and excluded from all outputs.
-#'     \item Terminal predictions (within 2 nt of tail ends) are removed when
-#'       \code{qc = TRUE} to reduce false positives.
-#'     \item Reads with only A predictions are classified as blank (MPU).
-#'   }
+#'   Reads failing any criterion are marked with appropriate comment codes
+#'   (UNM, BAC, IRL) but are still included in the output for complete
+#'   read accounting.
 #'
-#' @section Performance:
-#'   \itemize{
-#'     \item Uses parallel processing with \pkg{foreach} and \pkg{doSNOW}
-#'     \item Progress bars display during file loading operations
-#'     \item Only necessary columns are loaded from summary files
-#'     \item Using \code{original_summary} adds minimal overhead (~5 seconds)
-#'       while providing complete read accounting
-#'   }
-#'
-#' @section Output Format:
+#' @section Output Format Details:
 #'   \strong{read_classes columns:}
-#'   \itemize{
-#'     \item readname: Read identifier
-#'     \item contig: Reference contig name
-#'     \item polya_length: Length of poly(A) tail in nucleotides
-#'     \item qc_tag: Mapping quality score (MAPQ)
-#'     \item class: Read classification (decorated/blank/qc_failed)
-#'     \item comments: Classification code (YAY/MAU/MPU/IRL/BAC)
+#'   \describe{
+#'     \item{readname}{Read identifier (UUID)}
+#'     \item{contig}{Reference contig/transcript name}
+#'     \item{polya_length}{Poly(A) tail length in nucleotides}
+#'     \item{qc_tag}{Mapping quality score (MAPQ)}
+#'     \item{class}{Read classification: decorated, blank, or unclassified}
+#'     \item{comments}{3-letter code: YAY, MAU, MPU, IRL, UNM, or BAC}
 #'   }
 #'
 #'   \strong{nonadenosine_residues columns:}
-#'   \itemize{
-#'     \item readname: Read identifier
-#'     \item contig: Reference contig name
-#'     \item prediction: Predicted nucleotide (C/G/U)
-#'     \item est_nonA_pos: Estimated position in poly(A) tail (nucleotides from 3' end)
-#'     \item polya_length: Total poly(A) tail length
-#'     \item qc_tag: Mapping quality score (MAPQ)
+#'   \describe{
+#'     \item{readname}{Read identifier (UUID)}
+#'     \item{contig}{Reference contig/transcript name}
+#'     \item{prediction}{Predicted nucleotide: C, G, or U (A excluded)}
+#'     \item{est_nonA_pos}{Estimated position from 3' end (integer, 1-based)}
+#'     \item{polya_length}{Total poly(A) tail length in nucleotides}
+#'     \item{qc_tag}{Mapping quality score (MAPQ)}
 #'   }
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#' # Basic usage with complete read accounting
 #' results <- create_outputs_dorado(
-#'   dorado_summary_dir = "data/dorado_summaries",
-#'   nonA_temp_dir = "data/nonA_predictions",
-#'   polya_chunks_dir = "data/polya_chunks",
-#'   num_cores = 4,
+#'   dorado_summary_dir = "data/filtered_summaries",
+#'   nonA_temp_dir = "data/cnn_predictions",
+#'   polya_chunks_dir = "data/signal_chunks",
+#'   num_cores = 8,
 #'   qc = TRUE,
-#'   original_summary = "data/original_summary.txt"
+#'   original_summary = "data/original_dorado_summary.tsv"
 #' )
 #' }
-#'
 create_outputs_dorado <- function(dorado_summary_dir,
                                   nonA_temp_dir,
                                   polya_chunks_dir,
                                   num_cores = 1,
                                   qc = TRUE,
-                                  original_summary = NULL) {
+                                  original_summary) {
 
   # Variable binding for R CMD check
-  i <- read_id <- alignment_genome <- alignment_mapq <- poly_tail_length <- NULL
-  poly_tail_start <- poly_tail_end <- NULL
+  read_id <- alignment_genome <- alignment_mapq <- poly_tail_length <- NULL
+  poly_tail_start <- poly_tail_end <- chunkname <- prediction <- NULL
+  centr_signal_pos <- signal_length <- est_nonA_pos <- class <- comments <- NULL
+  alignment_direction <- NULL
 
   # Assertions
   if (missing(dorado_summary_dir)) stop("Dorado summary directory is missing.", call. = FALSE)
   if (missing(nonA_temp_dir)) stop("Non-A predictions directory is missing.", call. = FALSE)
   if (missing(polya_chunks_dir)) stop("PolyA chunks directory is missing.", call. = FALSE)
+  if (missing(num_cores)) stop("Number of cores is missing.", call. = FALSE)
+
+  # Batch argument validation
+  args <- list(dorado_summary_dir, nonA_temp_dir, polya_chunks_dir)
+  dirs_exist <- sapply(args, function(x) is.character(x) && length(x) == 1 && dir.exists(x))
+  if (!all(dirs_exist)) {
+    stop("All directory arguments must be valid existing paths.", call. = FALSE)
+  }
+
   if (!is.numeric(num_cores) || num_cores < 1) {
     stop("num_cores must be a positive integer.", call. = FALSE)
   }
 
-  # Check directories exist
-  if (!dir.exists(dorado_summary_dir)) stop("dorado_summary_dir does not exist", call. = FALSE)
-  if (!dir.exists(nonA_temp_dir)) stop("nonA_temp_dir does not exist", call. = FALSE)
-  if (!dir.exists(polya_chunks_dir)) stop("polya_chunks_dir does not exist", call. = FALSE)
-
-  # Check files exist
+  # Check files exist (batch operation)
   dorado_files <- list.files(dorado_summary_dir, pattern = "\\.txt$|\\.tsv$|\\.csv$", full.names = TRUE)
   chunk_files <- list.files(polya_chunks_dir, pattern = "\\.rds$", full.names = TRUE)
-  rds_files <- list.files(nonA_temp_dir, pattern = "\\.rds$", full.names = TRUE)
+  nonA_files <- list.files(nonA_temp_dir, pattern = "\\.rds$", full.names = TRUE)
 
   if (length(dorado_files) == 0) stop("No summary files found in dorado_summary_dir", call. = FALSE)
   if (length(chunk_files) == 0) stop("No RDS files found in polya_chunks_dir", call. = FALSE)
-  if (length(rds_files) == 0) stop("No prediction files found in nonA_temp_dir", call. = FALSE)
+  if (length(nonA_files) == 0) stop("No prediction files found in nonA_temp_dir", call. = FALSE)
 
   ################################################################################
-  # STEP 1: LOAD DATA (ONLY NECESSARY COLUMNS)
+  # LOAD SUMMARY DATA: ORIGINAL AND PARTS
   ################################################################################
 
-  # Load filtered summary (NN-processed reads)
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Loading filtered summary (NN-processed reads)...', '\n'))
-  filtered_summary <- dplyr::bind_rows(lapply(dorado_files, function(f) {
-    suppressMessages(vroom::vroom(f, delim = "\t", show_col_types = FALSE,
-                                  col_select = c(read_id, alignment_genome, alignment_mapq,
-                                                 poly_tail_length, poly_tail_start, poly_tail_end)))
+  # columns to keep (the rest are an unnecessary burden on memory)
+  # they refer to all summary files (original and filtered)
+  selected_cols <- c("filename", "read_id", "poly_tail_length", "poly_tail_start",
+                     "poly_tail_end", "alignment_genome", "alignment_direction",
+                     "alignment_mapq")
+
+  # Load filtered dorado summary parts and reuse it
+  ################################################################################
+  # these contain only reads that fulfill classification criteria by Ninetails
+  # (I) they are mapped to the reference (the alignment has a direction, either + or –, not a placeholder *),
+  # (II) the mapping quality is greater than 0,
+  # (III) poly(A) tail coordinates are correctly indicated (the poly(A) start cannot be 0 in the signal
+  # because, in DRS, the adapter region passes through the pore first),
+  # (IV) the poly(A) tail must be at least 10 nt long
+
+  cat("Loading Dorado summary files...\n")
+  dorado_summary_qc_passed <- dplyr::bind_rows(lapply(dorado_files, function(x) {
+    suppressMessages(vroom::vroom(x, delim = "\t", show_col_types = FALSE,
+                                  col_select = tidyselect::all_of(selected_cols)))
   }))
-  nn_processed_reads <- unique(filtered_summary$read_id)
-  cat(sprintf("Loaded %d NN-processed reads\n", length(nn_processed_reads)))
 
-  # Load original summary if provided (only necessary columns)
-  if (!is.null(original_summary)) {
-    cat(paste0('[', as.character(Sys.time()), '] ', 'Loading original summary...', '\n'))
-    if (is.character(original_summary)) {
-      if (!file.exists(original_summary)) {
-        stop("Original summary file does not exist: ", original_summary)
-      }
-      all_summary <- vroom::vroom(original_summary, show_col_types = FALSE,
-                                  col_select = c(read_id, alignment_genome, alignment_mapq,
-                                                 poly_tail_length, poly_tail_start))
-    } else if (is.data.frame(original_summary)) {
-      all_summary <- original_summary[, c("read_id", "alignment_genome", "alignment_mapq",
-                                          "poly_tail_length", "poly_tail_start")]
-    } else {
-      stop("original_summary must be a file path or data frame")
-    }
+  qc_passed_reads <- unique(dorado_summary_qc_passed$read_id)
+  cat(sprintf("Loaded %d reads that passed QC filtering\n", length(qc_passed_reads)))
 
-    # FILTER OUT UNMAPPED READS (alignment_genome == "*")
-    n_before <- nrow(all_summary)
-    all_summary <- all_summary[all_summary$alignment_genome != "*", ]
-    n_removed <- n_before - nrow(all_summary)
 
-    cat(sprintf("Loaded %d total reads from original summary\n", n_before))
-    cat(sprintf("Removed %d unmapped reads (alignment_genome == '*')\n", n_removed))
-    cat(sprintf("Retained %d mapped reads\n", nrow(all_summary)))
+  # Load original summary data
+  ################################################################################
+  # This file may or may not contain unmapped reads, depending on the source BAM file
+  # and the options used when it was created. This is to ensure robust classification
+  # and to avoid potential errors. The Ninetails pipeline considers only mapped reads;
+  # the rest are marked as unclassified.
+
+
+  # keep only columns of interest
+  if (is.character(original_summary)) {
+    cat("Loading original dorado summary for complete read classification...\n")
+    dorado_summary <- vroom::vroom(original_summary, show_col_types = FALSE,
+                                   col_select = tidyselect::all_of(selected_cols))
+    cat(sprintf("Loaded %d total reads from original summary\n", nrow(dorado_summary)))
+  } else if (is.data.frame(original_summary)){
+    dorado_summary <- original_summary[, selected_cols, drop = FALSE]
   } else {
-    all_summary <- filtered_summary[, c("read_id", "alignment_genome", "alignment_mapq",
-                                        "poly_tail_length", "poly_tail_start")]
+    stop("original_summary must be a file path or data frame")
   }
 
+
   ################################################################################
-  # STEP 2: LOAD PREDICTIONS WITH PROGRESS BAR
+  # LOAD PREDICTIONS
   ################################################################################
 
-  # Set up cluster
-  my_cluster <- parallel::makeCluster(min(num_cores, length(rds_files)))
+  # creating cluster for parallel computing
+  my_cluster <- parallel::makeCluster(min(num_cores, length(nonA_files)))
   on.exit(parallel::stopCluster(my_cluster), add = TRUE)
   doSNOW::registerDoSNOW(my_cluster)
   `%dopar%` <- foreach::`%dopar%`
+  `%do%` <- foreach::`%do%`
   mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
-  # Progress bar header
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Loading prediction files...', '\n'))
+  # header for progress bar
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Loading non-A prediction files...', '\n'))
 
-  # Set up progress bar
+  # progress bar
   pb <- utils::txtProgressBar(min = 0,
-                              max = length(rds_files),
+                              max = length(nonA_files),
                               style = 3,
                               width = 50,
                               char = "=",
@@ -1333,171 +1388,202 @@ create_outputs_dorado <- function(dorado_summary_dir,
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-  # Load predictions in parallel
-  all_predictions <- foreach::foreach(i = seq_along(rds_files),
-                                      .combine = c,
+  # Load all predictions in parallel
+  all_predictions <- foreach::foreach(i = seq_along(nonA_files),
                                       .inorder = TRUE,
                                       .errorhandling = 'pass',
                                       .options.snow = opts,
                                       .options.multicore = mc_options) %dopar% {
-                                        preds <- readRDS(rds_files[i])
+                                        preds <- readRDS(nonA_files[i])
+
+                                        # Standardize prediction format
                                         if (is.list(preds) && 'chunkname' %in% names(preds)) {
-                                          list(data.frame(chunkname = preds$chunkname, prediction = preds$prediction, stringsAsFactors = FALSE))
+                                          data.frame(chunkname = preds$chunkname, prediction = preds$prediction, stringsAsFactors = FALSE)
                                         } else if (is.list(preds)) {
-                                          list(data.frame(chunkname = names(preds), prediction = unlist(preds), stringsAsFactors = FALSE))
+                                          data.frame(chunkname = names(preds), prediction = unlist(preds), stringsAsFactors = FALSE)
                                         } else {
-                                          list(data.frame(chunkname = names(preds), prediction = as.vector(preds), stringsAsFactors = FALSE))
+                                          data.frame(chunkname = names(preds), prediction = as.vector(preds), stringsAsFactors = FALSE)
                                         }
                                       }
 
-  predictions <- dplyr::bind_rows(all_predictions)
+  # Combine all predictions
+  cat("Combining all predictions...\n")
+  moved_chunks_table <- dplyr::bind_rows(all_predictions)
 
-  if (nrow(predictions) == 0) {
-    warning("No predictions found")
-    return(list(read_classes = data.frame(), nonadenosine_residues = data.frame()))
-  }
+  ################################################################################
+  # HANDLE  PREDICTIONS
+  ################################################################################
+  # Extract readnames from polya predictions
+  moved_chunks_table$read_id <- sub('_.*', '', moved_chunks_table$chunkname)
 
-  predictions$read_id <- sub('_.*', '', predictions$chunkname)
-  predictions$prediction <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")[as.character(predictions$prediction)]
+  # vectorized substitution of predictions with letter code
+  prediction_dict <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")
+  moved_chunks_table$prediction <- prediction_dict[as.character(moved_chunks_table$prediction)]
 
-  # Identify blank reads (all predictions are A)
-  pred_by_read <- split(predictions$prediction, predictions$read_id)
-  all_A_reads <- names(pred_by_read)[sapply(pred_by_read, function(x) all(x == "A"))]
 
-  # Remove blank reads and A predictions
-  predictions <- predictions[!(predictions$read_id %in% all_A_reads | predictions$prediction == "A"), ]
+  #extract reads with move==1 and modification absent (not detected)
+  moved_blank_readnames <- names(which(with(moved_chunks_table, tapply(prediction, read_id, unique) == 'A')))
+
+  # cleaned chunks_table from A-exclusive
+  moved_chunks_table <- subset(moved_chunks_table, !(read_id %in% moved_blank_readnames))
+  # cleaned chunks_table A-containing rows (other remain)
+  moved_chunks_table <- moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
+
+  ################################################################################
+  # POSITION ESTIMATION
+  ################################################################################
+
+  # header for progress bar
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Loading chunk files for position estimation...', '\n'))
+
+  # progress bar
+  pb <- utils::txtProgressBar(min = 0,
+                              max = length(chunk_files),
+                              style = 3,
+                              width = 50,
+                              char = "=",
+                              file = stderr())
+  progress <- function(n) utils::setTxtProgressBar(pb, n)
+  opts <- list(progress = progress)
+
+  # Load chunks to extract positional information
+  chunk_data_list <- foreach::foreach(i = seq_along(chunk_files),
+                                      .inorder = TRUE,
+                                      .errorhandling = 'pass',
+                                      .options.snow = opts,
+                                      .options.multicore = mc_options) %dopar% {
+                                        readRDS(chunk_files[i])
+                                      }
+
+  all_chunks <- do.call(c, chunk_data_list)
 
   cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n'))
 
-  ################################################################################
-  # STEP 3: POSITION ESTIMATION WITH PROGRESS BAR
-  ################################################################################
-  if (nrow(predictions) > 0) {
-    cat(paste0('[', as.character(Sys.time()), '] ', 'Loading chunk files for position estimation...', '\n'))
+  # Create position list
+  non_a_position_list <- lapply(seq_along(all_chunks), function(i) {
+    read_name <- names(all_chunks)[i]
+    chunks <- all_chunks[[i]]
+    if (is.null(chunks) || length(chunks) == 0) return(NULL)
 
-    # Set up progress bar
-    pb <- utils::txtProgressBar(min = 0,
-                                max = length(chunk_files),
-                                style = 3,
-                                width = 50,
-                                char = "=",
-                                file = stderr())
-    progress <- function(n) utils::setTxtProgressBar(pb, n)
-    opts <- list(progress = progress)
-
-    # Load chunks in parallel
-    chunk_data_list <- foreach::foreach(i = seq_along(chunk_files),
-                                        .combine = c,
-                                        .inorder = TRUE,
-                                        .errorhandling = 'pass',
-                                        .options.snow = opts,
-                                        .options.multicore = mc_options) %dopar% {
-                                          list(readRDS(chunk_files[i]))
-                                        }
-
-    all_chunks <- do.call(c, chunk_data_list)
-
-    cat(paste0('[', as.character(Sys.time()), '] ', 'Computing chunk positions...', '\n'))
-
-    positions <- dplyr::bind_rows(lapply(seq_along(all_chunks), function(j) {
-      chunks <- all_chunks[[j]]
-      if (is.null(chunks) || length(chunks) == 0) return(NULL)
-      data.frame(
-        read_id = names(all_chunks)[j],
-        chunkname = paste0(names(all_chunks)[j], '_', seq_along(chunks)),
-        centr_signal_pos = sapply(chunks, function(x) mean(c(x$chunk_start_pos, x$chunk_end_pos))),
-        stringsAsFactors = FALSE
-      )
-    }))
-
-    positions$chunkname <- sub('_.*\\*', '', positions$chunkname)
-    positions <- dplyr::left_join(positions, filtered_summary, by = "read_id")
-    positions$signal_length <- 0.2 * (positions$poly_tail_end - positions$poly_tail_start)
-
-    predictions <- dplyr::left_join(predictions, positions, by = c("read_id", "chunkname"))
-    predictions$est_nonA_pos <- round(
-      predictions$poly_tail_length - ((predictions$poly_tail_length * predictions$centr_signal_pos) / predictions$signal_length),
-      2
+    data.frame(
+      read_id = rep(read_name, length(chunks)),
+      chunkname = paste0(read_name, '_', seq_along(chunks)),
+      centr_signal_pos = sapply(chunks, function(x) mean(c(x$chunk_start_pos, x$chunk_end_pos))),
+      stringsAsFactors = FALSE
     )
+  })
 
-    # QC: Remove terminal predictions
-    if (qc) {
-      terminal <- (predictions$est_nonA_pos < 2) |
-        (predictions$est_nonA_pos > predictions$poly_tail_length - 2)
-      all_A_reads <- unique(c(all_A_reads, unique(predictions$read_id[terminal])))
-      predictions <- predictions[!terminal, ]
-    }
+  non_a_position_list <- dplyr::bind_rows(non_a_position_list)
+  non_a_position_list$chunkname <- sub('_.*\\*', '', non_a_position_list$chunkname)
 
-    cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n'))
+  # Merge with FILTERED summary data for position calculation (already loaded)
+  non_a_position_list <- dplyr::left_join(non_a_position_list, dorado_summary_qc_passed, by = "read_id")
+  non_a_position_list$signal_length <- 0.2 * (non_a_position_list$poly_tail_end - non_a_position_list$poly_tail_start)
+
+  # Final merge of chunk table with nonAs and position calculations
+  moved_chunks_table <- dplyr::left_join(moved_chunks_table, non_a_position_list,
+                                         by = c("read_id", "chunkname"))
+
+  # estimate non-A nucleotide position
+  ##############################################################################
+  # in the Dorado pipeline, all calculations are rounded to integer values
+  #unline in the Guppy legacy pipeline
+  moved_chunks_table$est_nonA_pos <- round(moved_chunks_table$poly_tail_length - ((moved_chunks_table$poly_tail_length * moved_chunks_table$centr_signal_pos) / moved_chunks_table$signal_length), 0)
+
+  # clean up the output nonA table (safer by colnames):
+  moved_chunks_table <- moved_chunks_table[, c("read_id", "alignment_genome", "prediction", "est_nonA_pos",
+                                               "poly_tail_length", "signal_length", "alignment_mapq")]
+
+  ################################################################################
+  # CLASSIFY READS
+  ################################################################################
+
+  # Quality control on predictions (remove terminal predictions)
+  if (qc == TRUE) {
+    potential_artifacts <- with(moved_chunks_table,
+                                (est_nonA_pos < 2) | (est_nonA_pos > poly_tail_length - 2))
+
+    moved_chunks_table_discarded_ids <- unique(moved_chunks_table$read_id[potential_artifacts])
+
+    moved_chunks_table <- moved_chunks_table[!potential_artifacts, ]
+
+    # Update blank reads
+    moved_blank_readnames <- unique(c(moved_blank_readnames, moved_chunks_table_discarded_ids))
+
   }
 
-  decorated_reads <- unique(predictions$read_id)
+  # Select readnames of decorated ones
+  decorated_read_ids <- unique(moved_chunks_table$read_id)
 
-  ################################################################################
-  # STEP 4: CLASSIFY READS
-  ################################################################################
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Classifying reads...', '\n'))
+  # Handle other (discarded) reads - they are in original dorado summary
+  ##############################################################################
+  dorado_summary <- dorado_summary[!dorado_summary$read_id %in% decorated_read_ids,]
 
-  # Initialize with defaults
-  all_summary$class <- "blank"
-  all_summary$comments <- "MAU"
+  # # Initialize ALL reads with default classification
+  # dorado_summary$class <- "unclassified"
+  # dorado_summary$comments <- "MAU"
+  dorado_summary <- dorado_summary %>%
+    dplyr::filter(!read_id %in% decorated_read_ids) %>%
+    dplyr::mutate(
+      comments = dplyr::case_when((alignment_direction=="*" & alignment_mapq==0) ~ "UNM",
+                                  !(alignment_direction=="*" & alignment_mapq==0) & poly_tail_length < 10 ~ "IRL",
+                                  !(!(alignment_direction=="*" & alignment_mapq==0) & poly_tail_length < 10) & poly_tail_start == 0 ~ "BAC",
+                                  read_id %in% moved_blank_readnames ~ "MPU",
+                                  TRUE ~ "MAU"),
+      class = dplyr::case_when(read_id %in% moved_blank_readnames ~ "blank",
+                               comments == "MAU" ~ "blank",
+                               TRUE ~ "unclassified"))
+  # Handle decorated reads
+  dorado_summary_qc_passed <- dorado_summary_qc_passed[dorado_summary_qc_passed$read_id %in% decorated_read_ids,]
 
-  # Tag QC-failed reads (not in NN-processed set)
-  qc_failed <- !all_summary$read_id %in% nn_processed_reads
+  dorado_summary_qc_passed$class <- "decorated"
+  dorado_summary_qc_passed$comments <- "YAY"
 
-  # PRIORITY 1: BAC - Bad coordinates (poly_tail_start == 0)
-  bac <- all_summary$poly_tail_start == 0
-  all_summary$class[bac] <- "qc_failed"
-  all_summary$comments[bac] <- "BAC"
+  #merge read_classes tabular output:
+  read_classes <- rbind(dorado_summary, dorado_summary_qc_passed)
+  #corece tibble to df
+  read_classes <- data.frame(read_classes)
 
-  # PRIORITY 2: IRL - Insufficient read length (excludes BAC)
-  # Class = "blank" for mapped reads, they just have short tails
-  irl <- !bac & all_summary$poly_tail_length < 10
-  all_summary$class[irl] <- "blank"
-  all_summary$comments[irl] <- "IRL"
-
-  # PRIORITY 3: Decorated - Has non-A predictions (only for NN-processed, non-IRL, non-qc_failed reads)
-  decorated <- all_summary$read_id %in% decorated_reads & all_summary$class != "qc_failed" & !irl
-  all_summary$class[decorated] <- "decorated"
-  all_summary$comments[decorated] <- "YAY"
-
-  # PRIORITY 4: Blank MPU - NN-processed with all-A predictions
-  blank_mpu <- all_summary$read_id %in% all_A_reads & all_summary$class != "qc_failed" & !irl
-  all_summary$class[blank_mpu] <- "blank"
-  all_summary$comments[blank_mpu] <- "MPU"
-
-  ################################################################################
-  # STEP 5: FORMAT OUTPUT
-  ################################################################################
-
-  # Read classes
-  read_classes <- all_summary[!duplicated(all_summary$read_id), ]
-  names(read_classes) <- c("readname", "contig", "qc_tag", "polya_length", "poly_tail_start", "class", "comments")
+  # Format read_classes columns
+  read_classes$filename <- NULL
+  names(read_classes)[names(read_classes) == "read_id"] <- "readname"
+  names(read_classes)[names(read_classes) == "alignment_genome"] <- "contig"
+  names(read_classes)[names(read_classes) == "poly_tail_length"] <- "polya_length"
+  names(read_classes)[names(read_classes) == "alignment_mapq"] <- "qc_tag"
+  # order columns
   read_classes <- read_classes[, c("readname", "contig", "polya_length", "qc_tag", "class", "comments")]
 
-  # Non-adenosine residues
-  if (nrow(predictions) > 0) {
-    nonadenosine_residues <- predictions[, c("read_id", "alignment_genome", "prediction",
-                                             "est_nonA_pos", "poly_tail_length", "alignment_mapq")]
-    names(nonadenosine_residues) <- c("readname", "contig", "prediction", "est_nonA_pos",
-                                      "polya_length", "qc_tag")
-  } else {
-    nonadenosine_residues <- data.frame(
-      readname = character(), contig = character(), prediction = character(),
-      est_nonA_pos = numeric(), polya_length = numeric(), qc_tag = numeric()
-    )
-  }
 
-  # Summary
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n'))
+  # Handle moved chunk table
+  # It can be cleaned now, since some cols can be finally dropped
+  moved_chunks_table$signal_length <- NULL
+  names(moved_chunks_table)[names(moved_chunks_table) == "read_id"] <- "readname"
+  names(moved_chunks_table)[names(moved_chunks_table) == "alignment_genome"] <- "contig"
+  names(moved_chunks_table)[names(moved_chunks_table) == "poly_tail_length"] <- "polya_length"
+  names(moved_chunks_table)[names(moved_chunks_table) == "alignment_mapq"] <- "qc_tag"
+  # order columns
+  moved_chunks_table <- moved_chunks_table[, c("readname", "contig","prediction", "est_nonA_pos", "polya_length", "qc_tag")]
+
+  # Summary statistics
   cat("\n=== Classification Summary ===\n")
-  print(table(read_classes$class))
-  if (!is.null(original_summary)) {
-    cat("\n=== Comment Codes ===\n")
-    print(table(read_classes$comments))
+  class_counts <- table(read_classes$class)
+  for (cls in names(class_counts)) {
+    cat(sprintf("  %-12s: %d reads\n", cls, class_counts[cls]))
   }
-  cat(sprintf("\nTotal reads: %d\n", nrow(read_classes)))
-  cat(sprintf("Non-A predictions: %d\n", nrow(nonadenosine_residues)))
 
-  return(list(read_classes = read_classes, nonadenosine_residues = nonadenosine_residues))
+  if (!is.null(original_summary)) {
+    cat("\n=== Comment Code Breakdown ===\n")
+    comment_counts <- table(read_classes$comments)
+    for (cmt in names(comment_counts)) {
+      cat(sprintf("  %-12s: %d reads\n", cmt, comment_counts[cmt]))
+    }
+  }
+
+  cat(sprintf("\nTotal reads in output: %d\n", nrow(read_classes)))
+  cat(sprintf("Non-A predictions: %d\n", nrow(moved_chunks_table)))
+
+  return(list(read_classes = read_classes, nonadenosine_residues = moved_chunks_table))
+
 }
+
+

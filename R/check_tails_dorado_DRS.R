@@ -9,6 +9,35 @@
 #' poly(A) tails through advanced signal processing, machine learning-based classification,
 #' and statistical analysis.
 #'
+#' Reads are classified into three main categories with specific biological
+#' interpretations. The classification system is hierarchical, with quality
+#' control failures taking precedence over biological interpretation.
+#'
+#' The Dorado and Guppy pipelines share the same core algorithm but differ in
+#' several technical details that affect output interpretation.
+#'
+#' \describe{
+#'   \item{Dorado}{Summary files include alignment_direction field explicitly.
+#'     Unmapped reads have direction = "*"}
+#'   \item{Dorado}{Integer positions: \code{round(position, 0)}. Reflects the
+#'     discrete nature of nucleotide positions unlike nanopolish-based predictions}
+#'   \item{Dorado}{Does provides move data in BAM files, however iteration through
+#'     them is time-consuming, so it was omitted in dorado pipelines. Pseudomoves
+#'     are computed from raw signal using z-score peak detection algorithm.}
+#'   \item{Dorado}{BAC code specifically checks poly_tail_start = 0. In DRS,
+#'     this is definitively an error as adapter sequences precede poly(A) signal}
+#' }
+#'
+#' Despite these technical differences, both pipelines produce compatible output
+#' tables with identical column names and interpretable values. Users can compare
+#' results across pipelines by accounting for the integer vs decimal position
+#' difference. Classification categories (decorated/blank/unclassified) have
+#' identical biological meanings across both pipelines.
+#'
+#' \strong{Recommendation:} Use Dorado pipeline for new analyses (modern format,
+#' actively maintained). Use Guppy pipeline only for legacy data or when POD5
+#' conversion is not feasible.
+#'
 #' @section Pipeline Overview:
 #' The analysis pipeline consists of several integrated stages:
 #' \enumerate{
@@ -31,6 +60,19 @@
 #'     \code{poly_tail_start}, \code{poly_tail_end}
 #'   \item \strong{POD5 Files}: Raw signal files corresponding to reads in summary
 #' }
+#'
+#' @section Output table explanation:
+#'
+#' \strong{1. read_classes Table}
+#' This table provides a complete accounting of ALL reads in the analysis, with
+#' each read assigned to one of three biological categories (class) and given
+#' a specific technical code (comments) explaining the classification.
+#'
+#' \strong{2. nonadenosine_residues Table}
+#'
+#' This table provides modification-level detail for decorated reads only. Each
+#' row represents a single predicted non-adenosine residue within a poly(A) tail.
+#' Reads can have multiple rows if multiple modifications detected.
 #'
 #' @section Output Structure:
 #' The function creates several output subdirectories:
@@ -146,13 +188,19 @@
 #' }
 #'
 #' @section Classification Codes:
-#' The \code{comments} column in \code{read_classes} uses standardized codes:
+#'
+#' The \code{comments} column uses standardized 3-letter codes for precise
+#' technical documentation. These codes are essential for filtering datasets
+#' and understanding pipeline behavior:
+#'
+#' \strong{Comments:}
 #' \describe{
-#'   \item{YAY}{Non-A residue detected (successful classification)}
-#'   \item{MAU}{Move transition absent, no non-A residue detected}
-#'   \item{MPU}{Move transition present, but no non-A residue detected}
-#'   \item{IRL}{Insufficient read length for reliable analysis}
-#'   \item{QCF}{Quality control filtering failed}
+#'   \item{YAY}{Non-A residue successfully detected and classified}
+#'   \item{MAU}{No signal deviations detected; pure poly(A) signal}
+#'   \item{MPU}{Signal deviations present but predicted as adenosine only}
+#'   \item{IRL}{Poly(A) tail too short (< 10 nt) for reliable analysis}
+#'   \item{UNM}{Read unmapped to reference genome}
+#'   \item{BAC}{Invalid coordinate system (poly_tail_start = 0)}
 #' }
 #'
 #' @section System Requirements:
@@ -165,7 +213,6 @@
 #' }
 #'
 #' @section Error Handling:
-#' The function implements comprehensive error handling:
 #' \itemize{
 #'   \item Input validation with informative error messages
 #'   \item Graceful handling of corrupted or missing files
@@ -198,12 +245,12 @@
 #' @note
 #' \strong{Important considerations}:
 #' \itemize{
-#'   \item This function may take several hours for large datasets (>100K reads)
 #'   \item Ensure sufficient disk space (typically 2-5x input size) in \code{save_dir}
 #'   \item The function generates detailed log files for troubleshooting
 #'   \item Results should always be assigned to a variable to prevent console overflow
 #'   \item POD5 files must correspond exactly to reads in the Dorado summary
 #'   \item For datasets >1M reads, consider batch processing or increased \code{part_size}
+#'   \item Position estimates are approximate (±2-3 nt accuracy); validate critical findings
 #' }
 #'
 #' @examples

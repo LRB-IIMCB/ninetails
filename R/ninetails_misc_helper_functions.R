@@ -397,6 +397,13 @@ filter_dorado_summary <- function(dorado_summary){
     stop(sprintf("Required columns missing: %s", paste(missing_cols, collapse = ", ")))
   }
 
+  #These are the reads that fulfill the quality criteria for classification by Ninetails:
+  #(I) they are mapped to the reference (the alignment has a direction, either + or –, not a placeholder *),
+  #(II) the mapping quality is greater than 0,
+  #(III) poly(A) tail coordinates are correctly indicated (the poly(A) start
+  #cannot be 0 in the signal because, in DRS, the adapter region passes through the pore first),
+  #(IV) the poly(A) tail must be at least 10 nt long (shorter tails cannot be reliably processed by the CNN).
+
   dorado_summary_filtered <- dorado_summary %>%
     dplyr::filter(alignment_direction!="*" &
                   alignment_mapq!=0 &
