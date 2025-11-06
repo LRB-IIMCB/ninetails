@@ -968,10 +968,9 @@ split_tail_centered_dorado <- function(readname, tail_feature_list) {
   # extract signal chunks centered on potential modification
   # - If the start position is < 1, left-pad with NAs
   # - Later, NAs are imputed with frequent signal values
-  list_1 <- lapply(seq_along(start_positions), function(i) {
-    if (start_positions[i] > 0) signal[start_positions[i]:end_positions[i]]
-    else c(rep(NA, abs(start_positions[i] - 1)), signal[1:end_positions[i]])
-  })
+  # extract signal chunks centered on potential modification
+  list_1 <- lapply(1:length(start_positions), function(i) if(start_positions[i] >0) signal[start_positions[i]:end_positions[i]]
+                   else c(rep(NA, abs(start_positions[i]-1)), signal[1:end_positions[i]]))
 
   # NAs introduced by left-padding are replaced by random draws
   # from the 5 most frequent observed signal values.
