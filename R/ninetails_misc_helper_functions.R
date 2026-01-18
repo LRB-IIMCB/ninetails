@@ -346,7 +346,7 @@ correct_labels <- function(df) {
 ################################################################################
 # REQUIRED BY DORADO-DEPENDENT PIPELINES
 ################################################################################
-#' Filter Dorado summary file for reads fulfilling ninetails qualit criteria
+#' Filter Dorado summary file for reads fulfilling ninetails quality criteria
 #'
 #' This function takes a Dorado summary file (from ONT Dorado basecaller)
 #' or a data frame containing equivalent summary information,

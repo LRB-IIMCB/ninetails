@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{filter_dorado_summary}
 \alias{filter_dorado_summary}
-\title{Filter Dorado summary file for reads fulfilling ninetails qualit criteria}
+\title{Filter Dorado summary file for reads fulfilling ninetails quality criteria}
 \usage{
 filter_dorado_summary(dorado_summary)
 }

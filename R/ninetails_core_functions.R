@@ -200,7 +200,7 @@ extract_tail_data <- function(readname,
   sampling_rate <- channel_id$sampling_rate # number of data points collected per second
 
   #read parameters (attrs) stored in basecall_1d_template
-  basecall_1d_template <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/Analyses/Basecall_1D_000/Summary/basecall_1d_template")) # parent dir for attributes (within fast5)
+  basecall_1d_template <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group,"/Summary/basecall_1d_template")) # parent dir for attributes (within fast5); fixed hardcoding bug
   stride <- basecall_1d_template$block_stride #  this parameter allows to sample data elements along a dimension
   called_events <- basecall_1d_template$called_events # number of events (nanopore translocations) recorded by device for given read
   number_of_events <- called_events * stride # number of events expanded for whole signal vec (this is estimation of signal length, however keep in mind that decimal values are ignored)
