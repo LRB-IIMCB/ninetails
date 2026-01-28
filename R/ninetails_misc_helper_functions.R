@@ -552,3 +552,102 @@ check_output_directory <- function(save_dir, log_message) {
     }
   }
 }
+
+################################################################################
+# cDNA PIPELINE HELPERS
+################################################################################
+#' Count trailing occurrences of a character in a string
+#'
+#' This helper function counts how many times a specific character appears
+#' consecutively at the end of a string, working backwards from the last character.
+#'
+#' @param string Character string to analyze
+#' @param char Single character to count at the end of the string
+#'
+#' @return Integer count of trailing character occurrences
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' count_trailing_chars("ACGTTTTT", "T")  # Returns 4
+#' count_trailing_chars("ACGT", "A")      # Returns 0
+#' }
+count_trailing_chars <- function(string, char) {
+  count <- 0
+  len <- nchar(string)
+  for (i in len:1) {
+    if (substr(string, i, i) == char) {
+      count <- count + 1
+    } else {
+      break
+    }
+  }
+  return(count)
+}
+
+#' Generate reverse complement of a DNA sequence
+#'
+#' This function creates the reverse complement of a DNA sequence string,
+#' handling standard nucleotide bases (A, T, G, C) and ambiguous bases (N).
+#'
+#' @param sequence Character string containing DNA sequence
+#'
+#' @return Character string with reverse complement sequence
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' reverse_complement("ATCG")    # Returns "CGAT"
+#' reverse_complement("AAATTT")  # Returns "AAATTT"
+#' }
+reverse_complement <- function(sequence) {
+  complement_map <- c(A="T", T="A", G="C", C="G", N="N")
+  chars <- strsplit(sequence, "")[[1]]
+  comp <- sapply(chars, function(c) complement_map[c], USE.NAMES = FALSE)
+  paste(rev(comp), collapse = "")
+}
+
+#' Calculate edit distance with sliding window matching
+#'
+#' This function implements edit distance calculation with HW mode, where
+#' the query sequence can align anywhere within the target sequence using
+#' a sliding window approach. It finds the minimum edit distance across
+#' all possible alignments.
+#'
+#' @param query Character string with the primer/query sequence
+#' @param target Character string with the target sequence window
+#'
+#' @return Integer representing the minimum edit distance found
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' edit_distance_hw("ATCG", "XXATCGXX")  # Returns 0 (perfect match inside)
+#' edit_distance_hw("ATCG", "ATTT")      # Returns minimum distance
+#' }
+edit_distance_hw <- function(query, target) {
+  query_len <- nchar(query)
+  target_len <- nchar(target)
+
+  if (query_len == 0 || target_len == 0) {
+    return(query_len)
+  }
+
+  # Simulate HW mode by sliding query across target
+  min_dist <- .Machine$integer.max
+
+  # Slide query across target
+  if (target_len >= query_len) {
+    for (i in 1:(target_len - query_len + 1)) {
+      window <- substr(target, i, i + query_len - 1)
+      dist <- utils::adist(query, window)[1, 1]
+      min_dist <- min(min_dist, dist)
+    }
+  }
+
+  # Also try full alignment
+  full_dist <- adist(query, target)[1, 1]
+  min_dist <- min(min_dist, full_dist)
+
+  return(min_dist)
+}

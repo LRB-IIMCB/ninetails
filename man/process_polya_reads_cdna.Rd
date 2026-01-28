@@ -5,8 +5,8 @@
 \title{Process polyA reads using standard ninetails pipeline}
 \usage{
 process_polya_reads_cdna(
-  polya_files,
-  polya_signal_files,
+  polya_sequences,
+  signal_files,
   num_cores = 1,
   qc = TRUE,
   save_dir,
@@ -15,9 +15,10 @@ process_polya_reads_cdna(
 )
 }
 \arguments{
-\item{polya_files}{Character vector. Paths to polyA-classified sequence files.}
+\item{polya_sequences}{Data frame/tibble. PolyA-classified sequences with
+read_id and tail_type columns.}
 
-\item{polya_signal_files}{Character vector. Paths to signal files containing
+\item{signal_files}{Character vector. Paths to signal files containing
 poly(A) tail signals extracted from POD5 files.}
 
 \item{num_cores}{Integer. Number of CPU cores to use for parallel processing.}
@@ -33,24 +34,23 @@ poly(A) tail signals extracted from POD5 files.}
 \value{
 List containing polyA processing results:
   \describe{
-    \item{read_classes}{Data frame with read classification results}
-    \item{nonadenosine_residues}{Data frame with predicted modifications}
+    \item{read_classes}{Data frame with read classification results (with tail_type preserved)}
+    \item{nonadenosine_residues}{Data frame with predicted modifications (with tail_type preserved)}
     \item{processing_stats}{Summary statistics for polyA processing}
     \item{tail_type}{Character indicating this is "polyA" data}
   }
 }
 \description{
 This function processes reads that have been classified as polyA-containing
-through the cDNA classification pipeline. It applies the standard ninetails
-analysis pipeline including feature extraction, signal segmentation,
-GAF creation, and neural network prediction to identify non-adenosine
-residues within polyA tails.
+through the cDNA classification pipeline. Updated to work with tibble input
+instead of separate files. It applies the standard ninetails analysis
+pipeline to identify non-adenosine residues within polyA tails.
 }
 \examples{
 \dontrun{
 polya_results <- process_polya_reads_cdna(
-  polya_files = c("polya_sequences_part1.tsv"),
-  polya_signal_files = c("polya_signal_part1.rds"),
+  polya_sequences = polya_tibble,
+  signal_files = c("polya_signal_part1.rds"),
   num_cores = 4,
   qc = TRUE,
   save_dir = "path/to/output/",

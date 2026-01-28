@@ -180,19 +180,24 @@ split_bam_file_cdna <- function(bam_file,
 }
 
 ################################################################################
-# SEQUENCE EXTRACTION FUNCTION FROM BAM FILES
+# DATA (SEQUENCE) EXTRACTION FUNCTION FROM BAM FILES
 ################################################################################
 
-#' Extract basecalled sequences from BAM file for cDNA analysis
+#' Extract data from BAM file for cDNA analysis
 #'
-#' This function extracts basecalled sequences from BAM files for reads that
+#' This function extracts various informations from BAM files for reads that
 #' are present in the corresponding Dorado summary file. It returns a data frame
-#' with read IDs and their corresponding basecalled sequences, which can then
-#' be used for orientation classification (polyA vs polyT) in the cDNA pipeline.
+#' with read IDs and their corresponding additional info, such as basecalled
+#' sequences, poly(A) lengths, poly(A) coordinates etc., which can then be used
+#' in downstream analyses.
 #'
 #' @param bam_file Character string. Path to BAM file containing basecalled sequences.
 #' @param summary_file Character string. Path to corresponding Dorado summary file
 #' containing read IDs to extract.
+#' @param seq_only logical [TRUE]. When \code{TRUE}, only minimal information is
+#' extracted, including read id, pod5 file name, and basecalled sequence.
+#' If \code{FALSE}, a more comprehensive information is extracted, including poly(A)
+#' tail length, coordinates etc.
 #' @param cli_log Function for logging messages and progress.
 #'
 #' @return Data frame with columns:
@@ -206,13 +211,14 @@ split_bam_file_cdna <- function(bam_file,
 #'
 #' @examples
 #' \dontrun{
-#' sequences <- extract_sequences_from_bam(
+#' sequences <- extract_data_from_bam(
 #'   bam_file = "aligned_reads.bam",
 #'   summary_file = "dorado_summary.txt",
+#'   seq_only = TRUE,
 #'   cli_log = message
 #' )
 #' }
-extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message) {
+extract_data_from_bam <- function(bam_file, summary_file, seq_only = TRUE, cli_log = message) {
 
   # Check for required Bioconductor packages
   if (!requireNamespace("Rsamtools", quietly = TRUE)) {
@@ -230,6 +236,11 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
   }
   if (!file.exists(summary_file)) {
     stop("Summary file does not exist: ", summary_file)
+  }
+
+  # added parameter to filter only crucial info
+  if (!is.logical(seq_only)) {
+    stop("`seq_only` must be logical")
   }
 
   # Read summary file efficiently (only needed columns)
@@ -265,17 +276,21 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
   # Pre-allocate vectors with maximum possible size
   read_ids <- character(initial_count)
   references <- character(initial_count)
-  #ref_starts <- integer(initial_count)
-  #ref_ends <- integer(initial_count)
   mapqs <- integer(initial_count)
   poly_tail_lengths <- numeric(initial_count)
-  #anchor_positions <- integer(initial_count)
-  #poly_tail_starts <- integer(initial_count)
-  #polya_ends <- integer(initial_count)
-  #poly_tail2_starts <- integer(initial_count)
-  #poly_tail2_ends <- integer(initial_count)
   pod5_files <- character(initial_count)  # New vector for pod5 files
   seqs <- character(initial_count) # basecalled sequences
+
+  # conditionally for variant with more detailed info extraction
+  if (seq_only == FALSE){
+    ref_starts <- integer(initial_count)
+    ref_ends <- integer(initial_count)
+    anchor_positions <- integer(initial_count)
+    poly_tail_starts <- integer(initial_count)
+    polya_ends <- integer(initial_count)
+    poly_tail2_starts <- integer(initial_count)
+    poly_tail2_ends <- integer(initial_count)
+  }
 
   # Counter for valid entries
   valid_count <- 0
@@ -309,24 +324,27 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
     poly_tail_length <- bam_data$tag$pt[[i]]
     pt_tag_count <- pt_tag_count + 1
 
-    # Initialize pa tag values
-    #anchor_pos <- -1L
-    #poly_tail_start <- -1L
-    #polya_end <- -1L
-    #poly_tail2_start <- -1L
-    #poly_tail2_end <- -1L
+    # check whether extracting detailed info or not
+    if (seq_only == FALSE){
+      # Initialize pa tag values
+      #anchor_pos <- -1L
+      poly_tail_start <- -1L
+      polya_end <- -1L
+      poly_tail2_start <- -1L
+      poly_tail2_end <- -1L
 
-    # Add pa tag information if it exists and is valid
-    # if (!is.null(bam_data$tag$pa[[i]]) && length(bam_data$tag$pa[[i]]) == 5) {
-    #   pa_values <- bam_data$tag$pa[[i]]
-    #   if (!any(is.na(pa_values))) {
-    #     #anchor_pos <- pa_values[1]
-    #     poly_tail_start <- pa_values[2]
-    #     polya_end <- pa_values[3]
-    #     poly_tail2_start <- pa_values[4]
-    #     poly_tail2_end <- pa_values[5]
-    #   }
-    # }
+      # Add pa tag information if it exists and is valid
+      if (!is.null(bam_data$tag$pa[[i]]) && length(bam_data$tag$pa[[i]]) == 5) {
+        pa_values <- bam_data$tag$pa[[i]]
+        if (!any(is.na(pa_values))) {
+          #anchor_pos <- pa_values[1]
+          poly_tail_start <- pa_values[2]
+          polya_end <- pa_values[3]
+          poly_tail2_start <- pa_values[4]
+          poly_tail2_end <- pa_values[5]
+        }
+      }
+    }
 
     # Get pod5 file from lookup
     current_read_id <- bam_data$qname[i]
@@ -335,21 +353,26 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
       next  # Skip if no matching pod5 file found
     }
 
+
     # Increment counter and store values
     valid_count <- valid_count + 1
     read_ids[valid_count] <- current_read_id
     references[valid_count] <- as.character(bam_data$rname[i])
-    #ref_starts[valid_count] <- bam_data$pos[i]
-    #ref_ends[valid_count] <- bam_data$pos[i] + nchar(bam_data$cigar[i])
     mapqs[valid_count] <- bam_data$mapq[i]
-    #poly_tail_lengths[valid_count] <- poly_tail_length
-    #anchor_positions[valid_count] <- anchor_pos
-    #poly_tail_starts[valid_count] <- poly_tail_start
-    #polya_ends[valid_count] <- polya_end
-    #poly_tail2_starts[valid_count] <- poly_tail2_start
-    #poly_tail2_ends[valid_count] <- poly_tail2_end
     pod5_files[valid_count] <- pod5_file
     seqs[valid_count] <- bam_data$seq[i] # basecalled sequences
+
+    # optional values
+    if (seq_only == FALSE){
+      ref_starts[valid_count] <- bam_data$pos[i]
+      ref_ends[valid_count] <- bam_data$pos[i] + nchar(bam_data$cigar[i])
+      poly_tail_lengths[valid_count] <- poly_tail_length
+      #anchor_positions[valid_count] <- anchor_pos
+      poly_tail_starts[valid_count] <- poly_tail_start
+      polya_ends[valid_count] <- polya_end
+      poly_tail2_starts[valid_count] <- poly_tail2_start
+      poly_tail2_ends[valid_count] <- poly_tail2_end
+    }
 
   }
 
@@ -363,17 +386,21 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
     # Trim vectors to actual size
     read_ids <- read_ids[1:valid_count]
     references <- references[1:valid_count]
-    #ref_starts <- ref_starts[1:valid_count]
-    #ref_ends <- ref_ends[1:valid_count]
     mapqs <- mapqs[1:valid_count]
-    #poly_tail_lengths <- poly_tail_lengths[1:valid_count]
-    #anchor_positions <- anchor_positions[1:valid_count]
-    #poly_tail_starts <- poly_tail_starts[1:valid_count]
-    #polya_ends <- polya_ends[1:valid_count]
-    #poly_tail2_starts <- poly_tail2_starts[1:valid_count]
-    #poly_tail2_ends <- poly_tail2_ends[1:valid_count]
     pod5_files <- pod5_files[1:valid_count]
     seqs <- seqs[1:valid_count] # basecalled sequences
+
+    if (seq_only == FALSE){
+      ref_starts <- ref_starts[1:valid_count]
+      ref_ends <- ref_ends[1:valid_count]
+      poly_tail_lengths <- poly_tail_lengths[1:valid_count]
+      #anchor_positions <- anchor_positions[1:valid_count]
+      poly_tail_starts <- poly_tail_starts[1:valid_count]
+      polya_ends <- polya_ends[1:valid_count]
+      poly_tail2_starts <- poly_tail2_starts[1:valid_count]
+      poly_tail2_ends <- poly_tail2_ends[1:valid_count]
+    }
+
 
     # Check for duplicates
     duplicate_reads <- duplicated(read_ids)
@@ -384,40 +411,57 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
       keep_idx <- !duplicate_reads
       read_ids <- read_ids[keep_idx]
       references <- references[keep_idx]
-      #ref_starts <- ref_starts[keep_idx]
-      #ref_ends <- ref_ends[keep_idx]
-      #mapqs <- mapqs[keep_idx]
-      #poly_tail_lengths <- poly_tail_lengths[keep_idx]
-      #anchor_positions <- anchor_positions[keep_idx]
-      #poly_tail_starts <- poly_tail_starts[keep_idx]
-      #polya_ends <- polya_ends[keep_idx]
-      #poly_tail2_starts <- poly_tail2_starts[keep_idx]
-      #poly_tail2_ends <- poly_tail2_ends[keep_idx]
       pod5_files <- pod5_files[keep_idx]
       seqs <- seqs[keep_idx]
+      # add more data categories if extended output is expected
+      if (seq_only == FALSE){
+        ref_starts <- ref_starts[keep_idx]
+        ref_ends <- ref_ends[keep_idx]
+        mapqs <- mapqs[keep_idx]
+        poly_tail_lengths <- poly_tail_lengths[keep_idx]
+        anchor_positions <- anchor_positions[keep_idx]
+        poly_tail_starts <- poly_tail_starts[keep_idx]
+        polya_ends <- polya_ends[keep_idx]
+        poly_tail2_starts <- poly_tail2_starts[keep_idx]
+        poly_tail2_ends <- poly_tail2_ends[keep_idx]
+      }
     }
 
     # Create the final data frame
-    polya_df <- tibble::tibble(
-      read_id = read_ids,
-      pod5_file = pod5_files,  # Added pod5 file information
-      reference = references,
-      #ref_start = ref_starts,
-      #ref_end = ref_ends,
-      #mapq = mapqs,
-      #poly_tail_length = poly_tail_lengths,
-      #anchor_pos = anchor_positions,
-      #poly_tail_start = poly_tail_starts,
-      #polya_end = polya_ends,
-      #poly_tail2_start = poly_tail2_starts,
-      #poly_tail2_end = poly_tail2_ends,
-      sequence = seqs # bug fix: column name adjustment
-    )
+    if (seq_only == TRUE){
+      polya_df <- tibble::tibble(
+        read_id = read_ids,
+        pod5_file = pod5_files,  # Added pod5 file information
+        reference = references,
+        sequence = seqs # bug fix: column name adjustment
+      )
+    } else if (seq_only == FALSE) {
+      polya_df <- tibble::tibble(
+        read_id = read_ids,
+        pod5_file = pod5_files,  # Added pod5 file information
+        reference = references,
+        ref_start = ref_starts,
+        ref_end = ref_ends,
+        mapq = mapqs,
+        poly_tail_length = poly_tail_lengths,
+        #anchor_pos = anchor_positions,
+        poly_tail_start = poly_tail_starts,
+        polya_end = polya_ends,
+        poly_tail2_start = poly_tail2_starts,
+        poly_tail2_end = poly_tail2_ends,
+        sequence = seqs
+      )
+    } else {
+      cli_log("Wrong type of seq_only variable introduced (logical - TRUE/FALSE - required)", "ERROR")
+      stop("seq_only is not logical")
+    }
+
+
 
     cli_log("Processing complete", "SUCCESS")
     return(polya_df)
   } else {
-    cli_log("No reads with basecalled sequences found after filtering", "WARNING")
+    cli_log("No reads with extracted info found after filtering", "WARNING")
     return(tibble::tibble())
   }
 }
@@ -432,7 +476,7 @@ extract_sequences_from_bam <- function(bam_file, summary_file, cli_log = message
 #' This function prepares inputs for the cDNA pipeline by processing BAM files,
 #' Dorado summary files, and extracting both basecalled sequences and poly(A)
 #' signals from POD5 files. Unlike the DRS pipeline, this function additionally
-#' extracts basecalled sequences from BAM files for orientation classification.
+#' extracts basecalled sequences from BAM files for read orientation classification.
 #'
 #' @param bam_file Character string. Path to BAM file containing aligned cDNA reads
 #' with basecalled sequences.
@@ -520,7 +564,7 @@ preprocess_inputs_cdna <- function(bam_file,
 
   cli_log("Provided input files/paths are in correct format", "SUCCESS")
 
-  ################################################################################
+
   # DORADO SUMMARY PROCESSING
   ################################################################################
 
@@ -546,7 +590,7 @@ preprocess_inputs_cdna <- function(bam_file,
     stop("No summary parts were created")
   }
 
-  ################################################################################
+
   # BAM FILE PROCESSING AND SPLITTING
   ################################################################################
 
@@ -594,7 +638,7 @@ preprocess_inputs_cdna <- function(bam_file,
     cli_log("BAM file copied as single file", "SUCCESS")
   }
 
-  ################################################################################
+
   # SEQUENCE EXTRACTION FROM BAM FILES
   ################################################################################
 
@@ -616,9 +660,10 @@ preprocess_inputs_cdna <- function(bam_file,
     cli_log(sprintf("Extracting sequences from BAM file %d/%d", i, length(bam_files)), "INFO")
 
     # Extract sequences from current BAM file
-    sequence_data <- ninetails::extract_sequences_from_bam(
+    sequence_data <- ninetails::extract_data_from_bam(
       bam_file = current_bam,
       summary_file = current_summary,
+      seq_only = TRUE,
       cli_log = cli_log
     )
 
@@ -652,8 +697,6 @@ preprocess_inputs_cdna <- function(bam_file,
   }
 
 
-
-  ################################################################################
   # SIGNAL EXTRACTION FROM POD5 FILES
   ################################################################################
 
@@ -709,7 +752,6 @@ preprocess_inputs_cdna <- function(bam_file,
     cli_log("Warning: No signals were extracted from POD5 files", "WARNING")
   }
 
-  ################################################################################
   # RETURN PROCESSED FILES
   ################################################################################
 
@@ -726,67 +768,133 @@ preprocess_inputs_cdna <- function(bam_file,
 
 
 ################################################################################
-# READ ORIENTATION CLASSIFICATION FUNCTION
+# Detect orientation single
 ################################################################################
-
-#' Classify read orientations based on primer alignment
+#' Detect poly tail type for a single sequence using Dorado-style algorithm
 #'
-#' This function classifies cDNA reads as polyA, polyT, or unidentified based on
-#' local alignment of specific primers to the first portion of each read sequence.
-#' The classification determines which processing path (polyA or polyT) each read
-#' should follow in the downstream analysis.
+#' This function implements the Dorado-style poly tail detection algorithm
+#' for a single cDNA sequence. It uses edit distance matching of SSP and VNP
+#' primer sequences at both ends of the read to determine orientation,
+#' testing both forward (polyA) and reverse (polyT) strand configurations.
 #'
-#' @param sequence_files Character vector. Paths to sequence files (TSV format)
-#' containing read_id and sequence columns.
-#' @param save_dir Character string. Directory where classified sequence files
-#' will be saved.
-#' @param prefix Character string. Optional prefix for output file names.
-#' @param num_cores Integer. Number of CPU cores to use for parallel processing.
-#' @param cli_log Function for logging messages and progress.
+#' @param sequence Character string containing the DNA sequence to classify
 #'
-#' @return List containing paths to classified sequence files:
-#'   \describe{
-#'     \item{polya_files}{Paths to files containing polyA-classified sequences}
-#'     \item{polyt_files}{Paths to files containing polyT-classified sequences}
-#'     \item{unidentified_files}{Paths to files containing unidentified sequences}
-#'     \item{classification_stats}{Summary statistics of classification results}
-#'   }
+#' @return Character string: "A" for polyA orientation, "T" for polyT orientation,
+#'   or "unknown" for unclassified sequences
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' classification_results <- classify_read_orientations(
+#' detect_orientation_single("TTTCTGTTGGTGCTGATATTGCTTT...")  # Returns "A"
+#' detect_orientation_single("ACTTGCCTGTCGCTCTATCTTCAG...")   # Returns "T"
+#' }
+detect_orientation_single <- function(sequence) {
+  # Dorado primer sequences and parameters
+  front_primer <- "TTTCTGTTGGTGCTGATATTGCTTT"  # SSP from dorado
+  rear_primer <- "ACTTGCCTGTCGCTCTATCTTCAGAGGAGAGTCCGCCGCCCGCAAGTTTT"  # VNP from dorado
+  primer_window <- 150
+  flank_threshold <- 0.6
+  min_primer_separation <- 10
+
+  # Handle empty or very short sequences
+  if (is.na(sequence) || nchar(sequence) < 50) {
+    return("unknown")
+  }
+
+  tryCatch({
+    # Trim trailing Ts from rear_primer
+    trailing_Ts <- count_trailing_chars(rear_primer, 'T')
+    rear_primer_trimmed <- if (trailing_Ts > 0) {
+      substr(rear_primer, 1, nchar(rear_primer) - trailing_Ts)
+    } else {
+      rear_primer
+    }
+
+    # Generate reverse complements
+    front_primer_rc <- reverse_complement(front_primer)
+    rear_primer_rc <- reverse_complement(rear_primer_trimmed)
+
+    # Extract windows
+    seq_len <- nchar(sequence)
+    read_top <- substr(sequence, 1, min(primer_window, seq_len))
+    bottom_start <- max(1, seq_len - primer_window + 1)
+    read_bottom <- substr(sequence, bottom_start, seq_len)
+
+    # Test forward strand (poly-A)
+    dist_v1 <- edit_distance_hw(front_primer, read_top) +
+      edit_distance_hw(rear_primer_rc, read_bottom)
+
+    # Test reverse strand (poly-T)
+    dist_v2 <- edit_distance_hw(rear_primer_trimmed, read_top) +
+      edit_distance_hw(front_primer_rc, read_bottom)
+
+    # Determine winner
+    fwd <- dist_v1 < dist_v2
+
+    # Calculate score
+    total_primer_length <- nchar(front_primer) + nchar(rear_primer_trimmed)
+    flank_score <- 1.0 - (min(dist_v1, dist_v2) / total_primer_length)
+
+    # Validate
+    score_passes <- flank_score >= flank_threshold
+    separation_passes <- abs(dist_v1 - dist_v2) > min_primer_separation
+    proceed <- score_passes && separation_passes
+
+    # Return tail type
+    if (!proceed) {
+      return("unknown")
+    } else if (fwd) {
+      return("A")  # Forward strand -> poly-A
+    } else {
+      return("T")  # Reverse strand -> poly-T
+    }
+
+  }, error = function(e) {
+    return("unknown")
+  })
+}
+
+
+
+################################################################################
+# Detect orientation multiple
+################################################################################
+#' Classify multiple cDNA read orientations using Dorado-style poly tail detection
+#'
+#' This function analyzes Nanopore cDNA sequences using the Dorado-style approach
+#' for poly tail type detection. It uses edit distance-based matching of SSP and VNP
+#' primer sequences at both ends of reads, testing forward and reverse orientations
+#' to determine if reads contain poly(A) or poly(T) tails. The method uses sliding
+#' window matching and requires both score and separation thresholds to be met.
+#' The tail_type column is added to original sequence files and all sequences
+#' are returned as a single tibble.
+#'
+#' @param sequence_files Character vector. Paths to sequence files (TSV format)
+#' containing read_id and sequence columns.
+#' @param num_cores Integer. Number of CPU cores to use for parallel processing.
+#' @param cli_log Function for logging messages and progress.
+#'
+#' @return Data frame/tibble containing all sequences with added tail_type column
+#' ("polyA", "polyT", or "unidentified") based on Dorado-style edit distance matching
+#' of SSP and VNP primers with score and separation validation.
+#' The tail_type column is also written back to the original sequence files for persistence.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' classified_sequences <- detect_orientation_multiple(
 #'   sequence_files = c("sequences_part1.tsv", "sequences_part2.tsv"),
-#'   save_dir = "path/to/output/",
-#'   prefix = "experiment1",
 #'   num_cores = 4,
 #'   cli_log = message
 #' )
 #' }
-classify_read_orientations <- function(sequence_files,
-                                       save_dir,
-                                       prefix = "",
-                                       num_cores = 1,
-                                       cli_log = message) {
-
-  # Check for required Bioconductor packages
-  if (!requireNamespace("Biostrings", quietly = TRUE)) {
-    stop("Package 'Biostrings' is required for classify_read_orientations(). Please install it from Bioconductor.",
-         call. = FALSE)
-  }
-  if (!requireNamespace("pwalign", quietly = TRUE)) {
-    stop("Package 'pwalign' is required for classify_read_orientations(). Please install it from Bioconductor.",
-         call. = FALSE)
-  }
+detect_orientation_multiple <- function(sequence_files,
+                                        num_cores = 1,
+                                        cli_log = message) {
 
   # Input validation
   if (missing(sequence_files)) {
     stop("Sequence files are missing. Please provide valid sequence_files argument.",
-         call. = FALSE)
-  }
-
-  if (missing(save_dir)) {
-    stop("Output directory is missing. Please provide a valid save_dir argument.",
          call. = FALSE)
   }
 
@@ -799,196 +907,69 @@ classify_read_orientations <- function(sequence_files,
 
   cli_log("Starting read orientation classification", "INFO", "Sequence Classification")
 
-  # Create output directories
-  classification_dir <- file.path(save_dir, "classification_dir")
-  if (!dir.exists(classification_dir)) {
-    dir.create(classification_dir, recursive = TRUE)
-  }
-
-  polya_dir <- file.path(classification_dir, "polya_sequences")
-  polyt_dir <- file.path(classification_dir, "polyt_sequences")
-  unidentified_dir <- file.path(classification_dir, "unidentified_sequences")
-
-  for (dir in c(polya_dir, polyt_dir, unidentified_dir)) {
-    if (!dir.exists(dir)) {
-      dir.create(dir, recursive = TRUE)
-    }
-  }
-
-  # Define primer sequences and alignment parameters
-  ################################################################################
-  front_primer <- Biostrings::DNAString("TTTCTGTTGGTGCTGATATTGCTTT")
-  rear_primer <- Biostrings::DNAString("ACTTGCCTGTCGCTCTATCTTCAGAGGAGAGTCCGCCGCCCGCAAGTTTT")
-
-  # Alignment parameters
-  match <- 1
-  mismatch <- -1
-  type <- 'local'
-  gapOpening <- 0
-  gapExtension <- 1
-
-  # Create substitution matrix
-  submat <- pwalign::nucleotideSubstitutionMatrix(match = match,
-                                                  mismatch = mismatch,
-                                                  baseOnly = TRUE)
-
-  # Classification parameters
-  threshold <- 0.6
-  search_window <- 140
-
-  cli_log(sprintf("Using alignment parameters: threshold=%.2f, search_window=%d",
-                  threshold, search_window), "INFO")
-
-  # Initialize output file vectors
-  polya_files <- character(length(sequence_files))
-  polyt_files <- character(length(sequence_files))
-  unidentified_files <- character(length(sequence_files))
+  # Initialize collection for all sequences
+  all_classified_sequences <- tibble::tibble()
 
   # Initialize statistics
   total_polya <- 0
   total_polyt <- 0
   total_unidentified <- 0
-  total_processed <- 0
 
   # Process each sequence file
   ################################################################################
   for (i in seq_along(sequence_files)) {
     current_file <- sequence_files[i]
-    file_basename <- tools::file_path_sans_ext(basename(current_file))
 
     cli_log(sprintf("Processing sequence file %d/%d: %s",
                     i, length(sequence_files), basename(current_file)), "INFO")
 
-    # Read sequence data
     tryCatch({
+      # Read sequence file
       sequence_data <- vroom::vroom(current_file, show_col_types = FALSE)
 
-      # Validate required columns
-      if (!all(c("read_id", "sequence") %in% colnames(sequence_data))) {
-        cli_log(sprintf("Skipping file %s: missing required columns (read_id, sequence)",
-                        basename(current_file)), "WARNING")
-        next
-      }
-
-      if (nrow(sequence_data) == 0) {
-        cli_log(sprintf("Skipping empty file: %s", basename(current_file)), "WARNING")
+      if (!"sequence" %in% colnames(sequence_data)) {
+        cli_log(sprintf("Warning: No 'sequence' column found in %s", basename(current_file)), "WARNING")
         next
       }
 
       cli_log(sprintf("Loaded %d sequences for classification", nrow(sequence_data)), "INFO")
 
-      # Apply classification function to each sequence
-      ##############################################################################
+      # Apply Dorado-style classification to all sequences
+      cli_log("Applying Dorado-style poly tail classification...", "INFO")
 
-      # Classification function
-      classify_single_read <- function(sequence_str) {
-        # Handle empty or very short sequences
-        if (is.na(sequence_str) || nchar(sequence_str) < 25) {
-          return("unidentified")
-        }
+      # Apply classification and map results to ninetails naming convention
+      raw_classifications <- sapply(sequence_data$sequence, ninetails::detect_orientation_single)
 
-        # Extract search window from beginning of sequence
-        search_seq <- substr(sequence_str, 1, min(search_window, nchar(sequence_str)))
-        search_dna <- Biostrings::DNAString(search_seq)
+      # Map Dorado results to ninetails naming
+      classifications <- sapply(raw_classifications, function(result) {
+        switch(result,
+               "A" = "polyA",
+               "T" = "polyT",
+               "unknown" = "unidentified",
+               "unidentified")  # Default fallback
+      })
 
-        tryCatch({
-          # Align both primers to the search window
-          align_front <- pwalign::pairwiseAlignment(pattern = front_primer,
-                                                    subject = search_dna,
-                                                    substitutionMatrix = submat,
-                                                    type = type,
-                                                    scoreOnly = FALSE,
-                                                    gapOpening = gapOpening,
-                                                    gapExtension = gapExtension)
-
-          align_rear <- pwalign::pairwiseAlignment(pattern = rear_primer,
-                                                   subject = search_dna,
-                                                   substitutionMatrix = submat,
-                                                   type = type,
-                                                   scoreOnly = FALSE,
-                                                   gapOpening = gapOpening,
-                                                   gapExtension = gapExtension)
-
-          # Calculate normalized alignment scores
-          score_front <- align_front@score / length(front_primer)
-          score_rear <- align_rear@score / length(rear_primer)
-
-          # Apply classification logic
-          if (score_front > score_rear && score_front > threshold) {
-            return("polyA")
-          } else if (score_front < score_rear && score_rear > threshold) {
-            return("polyT")
-          } else {
-            return("unidentified")
-          }
-
-        }, error = function(e) {
-          return("unidentified")
-        })
-      }
-
-      # Apply classification to all sequences
-      cli_log("Applying primer alignment classification...", "INFO")
-
-      # Use sequential processing for reliability
-      classifications <- sapply(sequence_data$sequence, classify_single_read)
-
-      # Add classification results to data frame
+      # Add tail_type column
       sequence_data$tail_type <- classifications
 
-      # Count results for this file
+      # Update statistics
       file_polya <- sum(classifications == "polyA")
       file_polyt <- sum(classifications == "polyT")
       file_unidentified <- sum(classifications == "unidentified")
 
-      cli_log(sprintf("Classification complete: %d polyA, %d polyT, %d unidentified",
-                      file_polya, file_polyt, file_unidentified), "INFO")
-
-      # Update totals
       total_polya <- total_polya + file_polya
       total_polyt <- total_polyt + file_polyt
       total_unidentified <- total_unidentified + file_unidentified
-      total_processed <- total_processed + nrow(sequence_data)
 
-      # Split and save classified sequences
-      ##############################################################################
+      cli_log(sprintf("Classification complete: %d polyA, %d polyT, %d unidentified",
+                      file_polya, file_polyt, file_unidentified), "INFO")
 
-      # Save polyA sequences
-      if (file_polya > 0) {
-        polya_data <- sequence_data[sequence_data$tail_type == "polyA", ]
-        polya_file <- file.path(polya_dir,
-                                sprintf("%spolya_%s.tsv",
-                                        ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                        file_basename))
-        vroom::vroom_write(polya_data, polya_file, delim = "\t")
-        polya_files[i] <- polya_file
-        cli_log(sprintf("Saved %d polyA sequences to %s", file_polya, basename(polya_file)), "INFO")
-      }
+      # Write back to original file with tail_type column
+      vroom::vroom_write(sequence_data, current_file, delim = "\t")
+      cli_log(sprintf("Updated %s with tail_type column", basename(current_file)), "INFO")
 
-      # Save polyT sequences
-      if (file_polyt > 0) {
-        polyt_data <- sequence_data[sequence_data$tail_type == "polyT", ]
-        polyt_file <- file.path(polyt_dir,
-                                sprintf("%spolyt_%s.tsv",
-                                        ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                        file_basename))
-        vroom::vroom_write(polyt_data, polyt_file, delim = "\t")
-        polyt_files[i] <- polyt_file
-        cli_log(sprintf("Saved %d polyT sequences to %s", file_polyt, basename(polyt_file)), "INFO")
-      }
-
-      # Save unidentified sequences
-      if (file_unidentified > 0) {
-        unidentified_data <- sequence_data[sequence_data$tail_type == "unidentified", ]
-        unidentified_file <- file.path(unidentified_dir,
-                                       sprintf("%sunidentified_%s.tsv",
-                                               ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                               file_basename))
-        vroom::vroom_write(unidentified_data, unidentified_file, delim = "\t")
-        unidentified_files[i] <- unidentified_file
-        cli_log(sprintf("Saved %d unidentified sequences to %s",
-                        file_unidentified, basename(unidentified_file)), "INFO")
-      }
+      # Add to collection
+      all_classified_sequences <- dplyr::bind_rows(all_classified_sequences, sequence_data)
 
     }, error = function(e) {
       cli_log(sprintf("Error processing file %s: %s", basename(current_file), e$message), "ERROR")
@@ -998,22 +979,24 @@ classify_read_orientations <- function(sequence_files,
     gc()
   }
 
-  # Filter out empty file paths and compile results
-  ################################################################################
-  polya_files <- polya_files[file.exists(polya_files)]
-  polyt_files <- polyt_files[file.exists(polyt_files)]
-  unidentified_files <- unidentified_files[file.exists(unidentified_files)]
-
-  # Create classification statistics
+  # Create classification statistics from collected data
   classification_stats <- list(
-    total_reads = total_processed,
+    total_reads = nrow(all_classified_sequences),
     polya_reads = total_polya,
     polyt_reads = total_polyt,
-    unidentified_reads = total_unidentified,
-    polya_percentage = round(total_polya / total_processed * 100, 2),
-    polyt_percentage = round(total_polyt / total_processed * 100, 2),
-    unidentified_percentage = round(total_unidentified / total_processed * 100, 2)
+    unidentified_reads = total_unidentified
   )
+
+  # Add percentages
+  if (classification_stats$total_reads > 0) {
+    classification_stats$polya_percentage <- round(classification_stats$polya_reads / classification_stats$total_reads * 100, 2)
+    classification_stats$polyt_percentage <- round(classification_stats$polyt_reads / classification_stats$total_reads * 100, 2)
+    classification_stats$unidentified_percentage <- round(classification_stats$unidentified_reads / classification_stats$total_reads * 100, 2)
+  } else {
+    classification_stats$polya_percentage <- 0
+    classification_stats$polyt_percentage <- 0
+    classification_stats$unidentified_percentage <- 0
+  }
 
   # Final logging
   ################################################################################
@@ -1028,32 +1011,26 @@ classify_read_orientations <- function(sequence_files,
 
   cli_log("Read orientation classification completed", "SUCCESS")
 
-  # Return results
-  return(list(
-    polya_files = polya_files,
-    polyt_files = polyt_files,
-    unidentified_files = unidentified_files,
-    classification_stats = classification_stats
-  ))
+  # Return the classified sequences tibble
+  return(all_classified_sequences)
 }
 
 
 
-
 ################################################################################
-# POLYA READS PROCESSING FUNCTION FOR cDNA
+# POLYA READS PROCESSING FUNCTION FOR cDNA (UPDATED)
 ################################################################################
 
 #' Process polyA reads using standard ninetails pipeline
 #'
 #' This function processes reads that have been classified as polyA-containing
-#' through the cDNA classification pipeline. It applies the standard ninetails
-#' analysis pipeline including feature extraction, signal segmentation,
-#' GAF creation, and neural network prediction to identify non-adenosine
-#' residues within polyA tails.
+#' through the cDNA classification pipeline. Updated to work with tibble input
+#' instead of separate files. It applies the standard ninetails analysis
+#' pipeline to identify non-adenosine residues within polyA tails.
 #'
-#' @param polya_files Character vector. Paths to polyA-classified sequence files.
-#' @param polya_signal_files Character vector. Paths to signal files containing
+#' @param polya_sequences Data frame/tibble. PolyA-classified sequences with
+#' read_id and tail_type columns.
+#' @param signal_files Character vector. Paths to signal files containing
 #' poly(A) tail signals extracted from POD5 files.
 #' @param num_cores Integer. Number of CPU cores to use for parallel processing.
 #' @param qc Logical. Whether to apply quality control filtering.
@@ -1063,8 +1040,8 @@ classify_read_orientations <- function(sequence_files,
 #'
 #' @return List containing polyA processing results:
 #'   \describe{
-#'     \item{read_classes}{Data frame with read classification results}
-#'     \item{nonadenosine_residues}{Data frame with predicted modifications}
+#'     \item{read_classes}{Data frame with read classification results (with tail_type preserved)}
+#'     \item{nonadenosine_residues}{Data frame with predicted modifications (with tail_type preserved)}
 #'     \item{processing_stats}{Summary statistics for polyA processing}
 #'     \item{tail_type}{Character indicating this is "polyA" data}
 #'   }
@@ -1073,8 +1050,8 @@ classify_read_orientations <- function(sequence_files,
 #' @examples
 #' \dontrun{
 #' polya_results <- process_polya_reads_cdna(
-#'   polya_files = c("polya_sequences_part1.tsv"),
-#'   polya_signal_files = c("polya_signal_part1.rds"),
+#'   polya_sequences = polya_tibble,
+#'   signal_files = c("polya_signal_part1.rds"),
 #'   num_cores = 4,
 #'   qc = TRUE,
 #'   save_dir = "path/to/output/",
@@ -1082,8 +1059,8 @@ classify_read_orientations <- function(sequence_files,
 #'   cli_log = message
 #' )
 #' }
-process_polya_reads_cdna <- function(polya_files,
-                                     polya_signal_files,
+process_polya_reads_cdna <- function(polya_sequences,
+                                     signal_files,
                                      num_cores = 1,
                                      qc = TRUE,
                                      save_dir,
@@ -1091,13 +1068,13 @@ process_polya_reads_cdna <- function(polya_files,
                                      cli_log = message) {
 
   # Input validation
-  if (missing(polya_files)) {
-    stop("PolyA files are missing. Please provide valid polya_files argument.",
+  if (missing(polya_sequences)) {
+    stop("PolyA sequences are missing. Please provide valid polya_sequences argument.",
          call. = FALSE)
   }
 
-  if (missing(polya_signal_files)) {
-    stop("PolyA signal files are missing. Please provide valid polya_signal_files argument.",
+  if (missing(signal_files)) {
+    stop("Signal files are missing. Please provide valid signal_files argument.",
          call. = FALSE)
   }
 
@@ -1106,25 +1083,22 @@ process_polya_reads_cdna <- function(polya_files,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.character(polya_files),
-                          msg = "polya_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(polya_files)),
-                          msg = "All polyA files must exist")
-  assertthat::assert_that(is.character(polya_signal_files),
-                          msg = "polya_signal_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(polya_signal_files)),
-                          msg = "All polyA signal files must exist")
-  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                          msg = "Number of cores must be a positive numeric value")
+  assertthat::assert_that(is.data.frame(polya_sequences),
+                          msg = "polya_sequences must be a data frame")
+  assertthat::assert_that("read_id" %in% colnames(polya_sequences),
+                          msg = "polya_sequences must contain a 'read_id' column")
+  assertthat::assert_that(is.character(signal_files),
+                          msg = "signal_files must be a character vector of file paths")
+  assertthat::assert_that(all(file.exists(signal_files)),
+                          msg = "All signal files must exist")
 
   cli_log("Starting polyA reads processing", "INFO", "PolyA Processing")
 
   # Create output directories for polyA processing
   polya_processing_dir <- file.path(save_dir, "polya_processing_dir")
   polya_temp_dir <- file.path(polya_processing_dir, "polya_temp_dir")
-  polya_chunks_dir <- file.path(polya_processing_dir, "polya_chunks_dir")
 
-  for (dir in c(polya_processing_dir, polya_temp_dir, polya_chunks_dir)) {
+  for (dir in c(polya_processing_dir, polya_temp_dir)) {
     if (!dir.exists(dir)) {
       dir.create(dir, recursive = TRUE)
     }
@@ -1136,30 +1110,17 @@ process_polya_reads_cdna <- function(polya_files,
 
   cli_log("Filtering signals for polyA reads...", "INFO", bullet = TRUE)
 
-  # Collect all polyA read IDs from classified sequences
-  polya_read_ids <- character(0)
+  # Get polyA read IDs
+  polya_read_ids <- polya_sequences$read_id
+  cli_log(sprintf("Found %d polyA read IDs for processing", length(polya_read_ids)), "INFO")
 
-  for (polya_file in polya_files) {
-    tryCatch({
-      polya_data <- vroom::vroom(polya_file, show_col_types = FALSE)
-      if ("read_id" %in% colnames(polya_data)) {
-        polya_read_ids <- c(polya_read_ids, polya_data$read_id)
-      }
-    }, error = function(e) {
-      cli_log(sprintf("Error reading polyA file %s: %s", basename(polya_file), e$message), "WARNING")
-    })
-  }
+  # Load and filter signal files to keep only polyA reads
+  all_polya_signals <- list()
 
-  polya_read_ids <- unique(polya_read_ids)
-  cli_log(sprintf("Found %d unique polyA read IDs for processing", length(polya_read_ids)), "INFO")
-
-  # Filter signal files to keep only polyA reads
-  filtered_signal_files <- character(length(polya_signal_files))
-
-  for (i in seq_along(polya_signal_files)) {
-    signal_file <- polya_signal_files[i]
+  for (i in seq_along(signal_files)) {
+    signal_file <- signal_files[i]
     cli_log(sprintf("Filtering signal file %d/%d: %s",
-                    i, length(polya_signal_files), basename(signal_file)), "INFO")
+                    i, length(signal_files), basename(signal_file)), "INFO")
 
     tryCatch({
       # Load signal data
@@ -1168,20 +1129,10 @@ process_polya_reads_cdna <- function(polya_files,
       # Filter to keep only polyA reads
       polya_signals <- signal_list[names(signal_list) %in% polya_read_ids]
 
-      cli_log(sprintf("Filtered signals: %d polyA reads from %d total reads",
-                      length(polya_signals), length(signal_list)), "INFO")
-
-      # Save filtered signals
       if (length(polya_signals) > 0) {
-        output_file <- file.path(polya_processing_dir,
-                                 sprintf("%spolya_filtered_signals_part%d.rds",
-                                         ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                         i))
-        saveRDS(polya_signals, output_file)
-        filtered_signal_files[i] <- output_file
-        cli_log(sprintf("Saved filtered signals to %s", basename(output_file)), "INFO")
-      } else {
-        cli_log(sprintf("No polyA signals found in part %d", i), "WARNING")
+        all_polya_signals <- c(all_polya_signals, polya_signals)
+        cli_log(sprintf("Added %d polyA signals from %s",
+                        length(polya_signals), basename(signal_file)), "INFO")
       }
 
     }, error = function(e) {
@@ -1189,202 +1140,100 @@ process_polya_reads_cdna <- function(polya_files,
     })
   }
 
-  # Remove empty entries
-  filtered_signal_files <- filtered_signal_files[file.exists(filtered_signal_files)]
-
-  if (length(filtered_signal_files) == 0) {
-    stop("No polyA signals were found for processing")
+  if (length(all_polya_signals) == 0) {
+    cli_log("No polyA signals were found for processing", "WARNING")
+    return(list(
+      read_classes = data.frame(),
+      nonadenosine_residues = data.frame(),
+      processing_stats = list(total_reads_processed = 0),
+      tail_type = "polyA"
+    ))
   }
 
-  ################################################################################
-  # STANDARD NINETAILS PROCESSING PIPELINE
-  ################################################################################
-
-  # Process each filtered signal file through the ninetails pipeline
-  all_outputs <- list()
-
-  for (i in seq_along(filtered_signal_files)) {
-    signal_file <- filtered_signal_files[i]
-
-    cli_log(sprintf("Processing polyA signals %d/%d through ninetails pipeline",
-                    i, length(filtered_signal_files)), "INFO")
-
-    tryCatch({
-      # Load signal data
-      signal_list <- readRDS(signal_file)
-
-      if (length(signal_list) == 0) {
-        cli_log(sprintf("Skipping empty signal file: %s", basename(signal_file)), "WARNING")
-        next
-      }
-
-      #####################################################
-      # CREATE TAIL FEATURES LIST
-      #####################################################
-      cli_log("Creating tail features list...", "INFO", bullet = TRUE)
-
-      tail_feature_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_tail_features_list_dorado(
-            signal_list = signal_list,
-            num_cores = num_cores
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in feature extraction: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Created features for %d reads", length(tail_feature_list)), "INFO")
-
-      #####################################################
-      # CREATE TAIL CHUNK LIST
-      #####################################################
-      cli_log("Creating tail segmentation data...", "INFO", bullet = TRUE)
-
-      tail_chunk_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_tail_chunk_list_dorado(
-            tail_feature_list = tail_feature_list,
-            num_cores = num_cores
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in chunk creation: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Created chunks for %d reads", length(tail_chunk_list)), "INFO")
-
-      #####################################################
-      # CREATE GAF LIST
-      #####################################################
-      cli_log("Computing gramian angular fields...", "INFO", bullet = TRUE)
-
-      gaf_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_gaf_list(
-            tail_chunk_list = tail_chunk_list,
-            num_cores = num_cores
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in GAF computation: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Created GAFs for %d chunks", length(gaf_list)), "INFO")
-
-      #####################################################
-      # PREDICT CLASSES
-      #####################################################
-      cli_log("Running predictions with polyA model...", "INFO", bullet = TRUE)
-
-      predicted_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::predict_gaf_classes(gaf_list),
-          type = "message"  # Captures message output from TensorFlow
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in class prediction: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Completed predictions for %d GAFs", length(predicted_list$chunkname)), "INFO")
-
-      #####################################################
-      # CREATE OUTPUTS FOR THIS PART
-      #####################################################
-      cli_log("Creating outputs...", "INFO", bullet = TRUE)
-
-      # Create a temporary summary for this subset of polyA reads
-      # We need to reconstruct summary information for the output creation function
-      temp_summary <- data.frame(
-        readname = names(signal_list),
-        polya_length = sapply(signal_list, length),
-        qc_tag = "PASS"  # Assume all classified polyA reads pass QC
-      )
-
-      part_outputs <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_outputs(
-            tail_feature_list = tail_feature_list,
-            tail_chunk_list = tail_chunk_list,
-            nanopolish = temp_summary,  # Use temp summary
-            predicted_list = predicted_list,
-            num_cores = num_cores,
-            pass_only = FALSE,  # We've already filtered
-            qc = qc
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in output creation: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log("Output creation completed", "SUCCESS")
-
-      # Store this part's outputs
-      all_outputs[[i]] <- part_outputs
-
-      # Save intermediate results
-      output_basename <- sprintf("%spolya_results_part%d.rds",
-                                 ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                 i)
-      output_file <- file.path(polya_temp_dir, output_basename)
-      saveRDS(part_outputs, output_file)
-
-      cli_log(sprintf("Saved intermediate results to %s", basename(output_file)), "INFO")
-
-    }, error = function(e) {
-      cli_log(sprintf("Error processing signal file %d: %s", i, e$message), "ERROR")
-    })
-
-    # Explicit garbage collection
-    gc()
-  }
+  cli_log(sprintf("Total polyA signals loaded: %d", length(all_polya_signals)), "SUCCESS")
 
   ################################################################################
-  # MERGE ALL POLYΑ RESULTS
+  # NINETAILS PROCESSING PIPELINE FOR POLYA (DRS-STYLE)
   ################################################################################
 
-  cli_log("Merging polyA processing results...", "INFO", "Merging PolyA Results")
+  # Create intermediate directories following DRS pattern
+  nonA_temp_dir <- file.path(polya_processing_dir, "nonA_temp_dir")
+  polya_chunks_dir <- file.path(polya_processing_dir, "polya_chunks_dir")
+  dorado_summary_dir <- file.path(polya_processing_dir, "dorado_summary_dir")
 
-  if (length(all_outputs) == 0) {
-    stop("No polyA results were generated")
-  }
-
-  # Combine read classes from all parts
-  all_read_classes <- do.call(rbind, lapply(all_outputs, function(x) {
-    if (!is.null(x$read_classes)) {
-      return(x$read_classes)
-    } else {
-      return(data.frame())
+  for (dir in c(nonA_temp_dir, polya_chunks_dir, dorado_summary_dir)) {
+    if (!dir.exists(dir)) {
+      dir.create(dir, recursive = TRUE)
     }
-  }))
-
-  # Combine nonadenosine residues from all parts
-  all_nonadenosine <- do.call(rbind, lapply(all_outputs, function(x) {
-    if (!is.null(x$nonadenosine_residues)) {
-      return(x$nonadenosine_residues)
-    } else {
-      return(data.frame())
-    }
-  }))
-
-  # Add tail type information to results
-  if (nrow(all_read_classes) > 0) {
-    all_read_classes$tail_type <- "polyA"
   }
 
-  if (nrow(all_nonadenosine) > 0) {
-    all_nonadenosine$tail_type <- "polyA"
+  # Step 1: Create and save summary file (following DRS pattern)
+  cli_log("Creating summary file for polyA reads...", "INFO", bullet = TRUE)
+
+  temp_summary_data <- data.frame(
+    read_id = names(all_polya_signals),
+    readname = names(all_polya_signals),
+    contig = "polya_tail",
+    poly_tail_length = sapply(all_polya_signals, length),
+    poly_tail_start = 1,  # Dummy values for compatibility
+    poly_tail_end = sapply(all_polya_signals, length),
+    alignment_genome = "polya_tail",
+    alignment_mapq = 60,  # Good quality score
+    stringsAsFactors = FALSE
+  )
+
+  # Save summary file to directory
+  summary_file <- file.path(dorado_summary_dir, "polya_summary_part1.txt")
+  vroom::vroom_write(temp_summary_data, summary_file, delim = "\t")
+
+  cli_log(sprintf("Created summary file with %d polyA reads", nrow(temp_summary_data)), "INFO")
+
+  # Step 2: Process signals using DRS-style approach
+  cli_log("Processing polyA signals through ninetails pipeline...", "INFO", bullet = TRUE)
+
+  # Save signals to RDS file for processing
+  signal_file <- file.path(polya_temp_dir, "polya_signal_part1.rds")
+  saveRDS(all_polya_signals, signal_file)
+
+  # Use the DRS signal processing function
+  tryCatch({
+    ninetails::process_dorado_signal_files(
+      polya_signal_files = signal_file,  # Note: parameter name is polya_signal_files in the function
+      nonA_temp_dir = nonA_temp_dir,
+      polya_chunks_dir = polya_chunks_dir,
+      num_cores = num_cores,
+      cli_log = cli_log
+    )
+  }, error = function(e) {
+    cli_log(sprintf("Error in polyA signal processing: %s", e$message), "ERROR")
+    stop(e$message, call. = FALSE)
+  })
+
+  # Step 3: Create outputs using cDNA-compatible function
+  cli_log("Creating final polyA outputs...", "INFO", bullet = TRUE)
+
+  outputs <- tryCatch({
+    result <- ninetails::create_outputs_dorado_cdna(
+      dorado_summary_dir = dorado_summary_dir,
+      nonA_temp_dir = nonA_temp_dir,
+      polya_chunks_dir = polya_chunks_dir,
+      num_cores = num_cores,
+      qc = qc
+    )
+    result
+  }, error = function(e) {
+    cli_log(sprintf("Error in polyA output creation: %s", e$message), "ERROR")
+    stop(e$message, call. = FALSE)
+  })
+
+  # Cleanup signal file
+  if (file.exists(signal_file)) {
+    file.remove(signal_file)
   }
+
+  cli_log("PolyA processing completed using cDNA-compatible pipeline", "SUCCESS")
+
+  cli_log("PolyA output creation completed", "SUCCESS")
 
   ################################################################################
   # COMPILE FINAL RESULTS
@@ -1392,11 +1241,11 @@ process_polya_reads_cdna <- function(polya_files,
 
   # Calculate processing statistics
   processing_stats <- list(
-    total_reads_processed = nrow(all_read_classes),
-    decorated_reads = sum(all_read_classes$class == "decorated", na.rm = TRUE),
-    blank_reads = sum(all_read_classes$class == "blank", na.rm = TRUE),
-    unclassified_reads = sum(all_read_classes$class == "unclassified", na.rm = TRUE),
-    total_modifications = nrow(all_nonadenosine),
+    total_reads_processed = if (!is.null(outputs$read_classes)) nrow(outputs$read_classes) else 0,
+    decorated_reads = if (!is.null(outputs$read_classes)) sum(outputs$read_classes$class == "decorated", na.rm = TRUE) else 0,
+    blank_reads = if (!is.null(outputs$read_classes)) sum(outputs$read_classes$class == "blank", na.rm = TRUE) else 0,
+    unclassified_reads = if (!is.null(outputs$read_classes)) sum(outputs$read_classes$class == "unclassified", na.rm = TRUE) else 0,
+    total_modifications = if (!is.null(outputs$nonadenosine_residues)) nrow(outputs$nonadenosine_residues) else 0,
     tail_type = "polyA"
   )
 
@@ -1409,10 +1258,10 @@ process_polya_reads_cdna <- function(polya_files,
 
   cli_log("PolyA reads processing completed successfully", "SUCCESS")
 
-  # Return combined results
+  # Return combined results with tail_type
   return(list(
-    read_classes = all_read_classes,
-    nonadenosine_residues = all_nonadenosine,
+    read_classes = outputs$read_classes,
+    nonadenosine_residues = outputs$nonadenosine_residues,
     processing_stats = processing_stats,
     tail_type = "polyA"
   ))
@@ -1421,20 +1270,20 @@ process_polya_reads_cdna <- function(polya_files,
 
 
 ################################################################################
-# POLYT READS PROCESSING FUNCTION FOR cDNA
+# POLYT READS PROCESSING FUNCTION FOR cDNA (UPDATED)
 ################################################################################
 
 #' Process polyT reads using ninetails pipeline
 #'
 #' This function processes reads that have been classified as polyT-containing
-#' through the cDNA classification pipeline. It applies the ninetails analysis
-#' pipeline including feature extraction, signal segmentation, GAF creation,
-#' and neural network prediction to identify non-thymidine residues within
-#' polyT tails. Currently uses the same model as polyA processing until a
-#' polyT-specific model is trained.
+#' through the cDNA classification pipeline. Updated to work with tibble input
+#' instead of separate files. It applies the ninetails analysis pipeline to
+#' identify non-thymidine residues within polyT tails. Currently uses the same
+#' model as polyA processing until a polyT-specific model is trained.
 #'
-#' @param polyt_files Character vector. Paths to polyT-classified sequence files.
-#' @param polyt_signal_files Character vector. Paths to signal files containing
+#' @param polyt_sequences Data frame/tibble. PolyT-classified sequences with
+#' read_id and tail_type columns.
+#' @param signal_files Character vector. Paths to signal files containing
 #' poly(A) tail signals extracted from POD5 files (will be filtered for polyT reads).
 #' @param num_cores Integer. Number of CPU cores to use for parallel processing.
 #' @param qc Logical. Whether to apply quality control filtering.
@@ -1444,8 +1293,8 @@ process_polya_reads_cdna <- function(polya_files,
 #'
 #' @return List containing polyT processing results:
 #'   \describe{
-#'     \item{read_classes}{Data frame with read classification results}
-#'     \item{nonadenosine_residues}{Data frame with predicted modifications (renamed for polyT context)}
+#'     \item{read_classes}{Data frame with read classification results (with tail_type preserved)}
+#'     \item{nonadenosine_residues}{Data frame with predicted modifications (with tail_type preserved)}
 #'     \item{processing_stats}{Summary statistics for polyT processing}
 #'     \item{tail_type}{Character indicating this is "polyT" data}
 #'   }
@@ -1454,8 +1303,8 @@ process_polya_reads_cdna <- function(polya_files,
 #' @examples
 #' \dontrun{
 #' polyt_results <- process_polyt_reads_cdna(
-#'   polyt_files = c("polyt_sequences_part1.tsv"),
-#'   polyt_signal_files = c("polya_signal_part1.rds"),
+#'   polyt_sequences = polyt_tibble,
+#'   signal_files = c("polya_signal_part1.rds"),
 #'   num_cores = 4,
 #'   qc = TRUE,
 #'   save_dir = "path/to/output/",
@@ -1463,8 +1312,8 @@ process_polya_reads_cdna <- function(polya_files,
 #'   cli_log = message
 #' )
 #' }
-process_polyt_reads_cdna <- function(polyt_files,
-                                     polyt_signal_files,
+process_polyt_reads_cdna <- function(polyt_sequences,
+                                     signal_files,
                                      num_cores = 1,
                                      qc = TRUE,
                                      save_dir,
@@ -1472,13 +1321,13 @@ process_polyt_reads_cdna <- function(polyt_files,
                                      cli_log = message) {
 
   # Input validation
-  if (missing(polyt_files)) {
-    stop("PolyT files are missing. Please provide valid polyt_files argument.",
+  if (missing(polyt_sequences)) {
+    stop("PolyT sequences are missing. Please provide valid polyt_sequences argument.",
          call. = FALSE)
   }
 
-  if (missing(polyt_signal_files)) {
-    stop("PolyT signal files are missing. Please provide valid polyt_signal_files argument.",
+  if (missing(signal_files)) {
+    stop("Signal files are missing. Please provide valid signal_files argument.",
          call. = FALSE)
   }
 
@@ -1487,16 +1336,14 @@ process_polyt_reads_cdna <- function(polyt_files,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.character(polyt_files),
-                          msg = "polyt_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(polyt_files)),
-                          msg = "All polyT files must exist")
-  assertthat::assert_that(is.character(polyt_signal_files),
-                          msg = "polyt_signal_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(polyt_signal_files)),
-                          msg = "All polyT signal files must exist")
-  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                          msg = "Number of cores must be a positive numeric value")
+  assertthat::assert_that(is.data.frame(polyt_sequences),
+                          msg = "polyt_sequences must be a data frame")
+  assertthat::assert_that("read_id" %in% colnames(polyt_sequences),
+                          msg = "polyt_sequences must contain a 'read_id' column")
+  assertthat::assert_that(is.character(signal_files),
+                          msg = "signal_files must be a character vector of file paths")
+  assertthat::assert_that(all(file.exists(signal_files)),
+                          msg = "All signal files must exist")
 
   cli_log("Starting polyT reads processing", "INFO", "PolyT Processing")
 
@@ -1506,9 +1353,8 @@ process_polyt_reads_cdna <- function(polyt_files,
   # Create output directories for polyT processing
   polyt_processing_dir <- file.path(save_dir, "polyt_processing_dir")
   polyt_temp_dir <- file.path(polyt_processing_dir, "polyt_temp_dir")
-  polyt_chunks_dir <- file.path(polyt_processing_dir, "polyt_chunks_dir")
 
-  for (dir in c(polyt_processing_dir, polyt_temp_dir, polyt_chunks_dir)) {
+  for (dir in c(polyt_processing_dir, polyt_temp_dir)) {
     if (!dir.exists(dir)) {
       dir.create(dir, recursive = TRUE)
     }
@@ -1520,30 +1366,17 @@ process_polyt_reads_cdna <- function(polyt_files,
 
   cli_log("Filtering signals for polyT reads...", "INFO", bullet = TRUE)
 
-  # Collect all polyT read IDs from classified sequences
-  polyt_read_ids <- character(0)
+  # Get polyT read IDs
+  polyt_read_ids <- polyt_sequences$read_id
+  cli_log(sprintf("Found %d polyT read IDs for processing", length(polyt_read_ids)), "INFO")
 
-  for (polyt_file in polyt_files) {
-    tryCatch({
-      polyt_data <- vroom::vroom(polyt_file, show_col_types = FALSE)
-      if ("read_id" %in% colnames(polyt_data)) {
-        polyt_read_ids <- c(polyt_read_ids, polyt_data$read_id)
-      }
-    }, error = function(e) {
-      cli_log(sprintf("Error reading polyT file %s: %s", basename(polyt_file), e$message), "WARNING")
-    })
-  }
+  # Load and filter signal files to keep only polyT reads
+  all_polyt_signals <- list()
 
-  polyt_read_ids <- unique(polyt_read_ids)
-  cli_log(sprintf("Found %d unique polyT read IDs for processing", length(polyt_read_ids)), "INFO")
-
-  # Filter signal files to keep only polyT reads
-  filtered_signal_files <- character(length(polyt_signal_files))
-
-  for (i in seq_along(polyt_signal_files)) {
-    signal_file <- polyt_signal_files[i]
+  for (i in seq_along(signal_files)) {
+    signal_file <- signal_files[i]
     cli_log(sprintf("Filtering signal file %d/%d: %s",
-                    i, length(polyt_signal_files), basename(signal_file)), "INFO")
+                    i, length(signal_files), basename(signal_file)), "INFO")
 
     tryCatch({
       # Load signal data
@@ -1552,20 +1385,10 @@ process_polyt_reads_cdna <- function(polyt_files,
       # Filter to keep only polyT reads
       polyt_signals <- signal_list[names(signal_list) %in% polyt_read_ids]
 
-      cli_log(sprintf("Filtered signals: %d polyT reads from %d total reads",
-                      length(polyt_signals), length(signal_list)), "INFO")
-
-      # Save filtered signals
       if (length(polyt_signals) > 0) {
-        output_file <- file.path(polyt_processing_dir,
-                                 sprintf("%spolyt_filtered_signals_part%d.rds",
-                                         ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                         i))
-        saveRDS(polyt_signals, output_file)
-        filtered_signal_files[i] <- output_file
-        cli_log(sprintf("Saved filtered signals to %s", basename(output_file)), "INFO")
-      } else {
-        cli_log(sprintf("No polyT signals found in part %d", i), "WARNING")
+        all_polyt_signals <- c(all_polyt_signals, polyt_signals)
+        cli_log(sprintf("Added %d polyT signals from %s",
+                        length(polyt_signals), basename(signal_file)), "INFO")
       }
 
     }, error = function(e) {
@@ -1573,203 +1396,101 @@ process_polyt_reads_cdna <- function(polyt_files,
     })
   }
 
-  # Remove empty entries
-  filtered_signal_files <- filtered_signal_files[file.exists(filtered_signal_files)]
-
-  if (length(filtered_signal_files) == 0) {
-    stop("No polyT signals were found for processing")
+  if (length(all_polyt_signals) == 0) {
+    cli_log("No polyT signals were found for processing", "WARNING")
+    return(list(
+      read_classes = data.frame(),
+      nonadenosine_residues = data.frame(),
+      processing_stats = list(total_reads_processed = 0),
+      tail_type = "polyT"
+    ))
   }
 
-  ################################################################################
-  # NINETAILS PROCESSING PIPELINE FOR POLYT
-  ################################################################################
-
-  # Process each filtered signal file through the ninetails pipeline
-  all_outputs <- list()
-
-  for (i in seq_along(filtered_signal_files)) {
-    signal_file <- filtered_signal_files[i]
-
-    cli_log(sprintf("Processing polyT signals %d/%d through ninetails pipeline",
-                    i, length(filtered_signal_files)), "INFO")
-
-    tryCatch({
-      # Load signal data
-      signal_list <- readRDS(signal_file)
-
-      if (length(signal_list) == 0) {
-        cli_log(sprintf("Skipping empty signal file: %s", basename(signal_file)), "WARNING")
-        next
-      }
-
-      #####################################################
-      # CREATE TAIL FEATURES LIST
-      #####################################################
-      cli_log("Creating tail features list for polyT...", "INFO", bullet = TRUE)
-
-      tail_feature_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_tail_features_list_dorado(
-            signal_list = signal_list,
-            num_cores = num_cores
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in polyT feature extraction: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Created features for %d polyT reads", length(tail_feature_list)), "INFO")
-
-      #####################################################
-      # CREATE TAIL CHUNK LIST
-      #####################################################
-      cli_log("Creating tail segmentation data for polyT...", "INFO", bullet = TRUE)
-
-      tail_chunk_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_tail_chunk_list_dorado(
-            tail_feature_list = tail_feature_list,
-            num_cores = num_cores
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in polyT chunk creation: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Created chunks for %d polyT reads", length(tail_chunk_list)), "INFO")
-
-      #####################################################
-      # CREATE GAF LIST
-      #####################################################
-      cli_log("Computing gramian angular fields for polyT...", "INFO", bullet = TRUE)
-
-      gaf_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_gaf_list(
-            tail_chunk_list = tail_chunk_list,
-            num_cores = num_cores
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in polyT GAF computation: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Created GAFs for %d polyT chunks", length(gaf_list)), "INFO")
-
-      #####################################################
-      # PREDICT CLASSES (TEMPORARY: USING POLYA MODEL)
-      #####################################################
-      cli_log("Running predictions with polyA model (temporary for polyT)...", "INFO", bullet = TRUE)
-
-      # TODO: Replace with polyT-specific model when available
-      # predicted_list <- ninetails::predict_gaf_classes_polyt(gaf_list)
-      predicted_list <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::predict_gaf_classes(gaf_list),  # Using polyA model temporarily
-          type = "message"  # Captures message output from TensorFlow
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in polyT prediction: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log(sprintf("Completed predictions for %d polyT GAFs", length(predicted_list$chunkname)), "INFO")
-
-      #####################################################
-      # CREATE OUTPUTS FOR THIS PART
-      #####################################################
-      cli_log("Creating outputs for polyT...", "INFO", bullet = TRUE)
-
-      # Create a temporary summary for this subset of polyT reads
-      temp_summary <- data.frame(
-        readname = names(signal_list),
-        polya_length = sapply(signal_list, length),  # Note: still called polya_length in output format
-        qc_tag = "PASS"  # Assume all classified polyT reads pass QC
-      )
-
-      part_outputs <- tryCatch({
-        invisible(utils::capture.output(
-          result <- ninetails::create_outputs(
-            tail_feature_list = tail_feature_list,
-            tail_chunk_list = tail_chunk_list,
-            nanopolish = temp_summary,  # Use temp summary
-            predicted_list = predicted_list,
-            num_cores = num_cores,
-            pass_only = FALSE,  # We've already filtered
-            qc = qc
-          )
-        ))
-        result
-      }, error = function(e) {
-        cli_log(sprintf("Error in polyT output creation: %s", e$message), "ERROR")
-        stop(e$message, call. = FALSE)
-      })
-
-      cli_log("PolyT output creation completed", "SUCCESS")
-
-      # Store this part's outputs
-      all_outputs[[i]] <- part_outputs
-
-      # Save intermediate results
-      output_basename <- sprintf("%spolyt_results_part%d.rds",
-                                 ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
-                                 i)
-      output_file <- file.path(polyt_temp_dir, output_basename)
-      saveRDS(part_outputs, output_file)
-
-      cli_log(sprintf("Saved intermediate polyT results to %s", basename(output_file)), "INFO")
-
-    }, error = function(e) {
-      cli_log(sprintf("Error processing polyT signal file %d: %s", i, e$message), "ERROR")
-    })
-
-    # Explicit garbage collection
-    gc()
-  }
+  cli_log(sprintf("Total polyT signals loaded: %d", length(all_polyt_signals)), "SUCCESS")
 
   ################################################################################
-  # MERGE ALL POLYT RESULTS
+  # NINETAILS PROCESSING PIPELINE FOR POLYT (DRS-STYLE)
   ################################################################################
 
-  cli_log("Merging polyT processing results...", "INFO", "Merging PolyT Results")
+  # Create intermediate directories following DRS pattern
+  nonA_temp_dir <- file.path(polyt_processing_dir, "nonA_temp_dir")
+  polyt_chunks_dir <- file.path(polyt_processing_dir, "polyt_chunks_dir")
+  dorado_summary_dir <- file.path(polyt_processing_dir, "dorado_summary_dir")
 
-  if (length(all_outputs) == 0) {
-    stop("No polyT results were generated")
-  }
-
-  # Combine read classes from all parts
-  all_read_classes <- do.call(rbind, lapply(all_outputs, function(x) {
-    if (!is.null(x$read_classes)) {
-      return(x$read_classes)
-    } else {
-      return(data.frame())
+  for (dir in c(nonA_temp_dir, polyt_chunks_dir, dorado_summary_dir)) {
+    if (!dir.exists(dir)) {
+      dir.create(dir, recursive = TRUE)
     }
-  }))
-
-  # Combine nonadenosine residues from all parts
-  all_nonthymidine <- do.call(rbind, lapply(all_outputs, function(x) {
-    if (!is.null(x$nonadenosine_residues)) {
-      return(x$nonadenosine_residues)
-    } else {
-      return(data.frame())
-    }
-  }))
-
-  # Add tail type information to results
-  if (nrow(all_read_classes) > 0) {
-    all_read_classes$tail_type <- "polyT"
   }
 
-  if (nrow(all_nonthymidine) > 0) {
-    all_nonthymidine$tail_type <- "polyT"
+  # Step 1: Create and save summary file (following DRS pattern)
+  cli_log("Creating summary file for polyT reads...", "INFO", bullet = TRUE)
+
+  temp_summary_data <- data.frame(
+    read_id = names(all_polyt_signals),
+    readname = names(all_polyt_signals),
+    contig = "polyt_tail",
+    poly_tail_length = sapply(all_polyt_signals, length),
+    poly_tail_start = 1,  # Dummy values for compatibility
+    poly_tail_end = sapply(all_polyt_signals, length),
+    alignment_genome = "polyt_tail",
+    alignment_mapq = 60,  # Good quality score
+    stringsAsFactors = FALSE
+  )
+
+  # Save summary file to directory
+  summary_file <- file.path(dorado_summary_dir, "polyt_summary_part1.txt")
+  vroom::vroom_write(temp_summary_data, summary_file, delim = "\t")
+
+  cli_log(sprintf("Created summary file with %d polyT reads", nrow(temp_summary_data)), "INFO")
+
+  # Step 2: Process signals using DRS-style approach
+  cli_log("Processing polyT signals through ninetails pipeline...", "INFO", bullet = TRUE)
+  cli_log("NOTE: Using polyA model for polyT reads (temporary)", "INFO", bullet = TRUE)
+
+  # Save signals to RDS file for processing
+  signal_file <- file.path(polyt_temp_dir, "polyt_signal_part1.rds")
+  saveRDS(all_polyt_signals, signal_file)
+
+  # Use the DRS signal processing function (temporarily with polyA model)
+  tryCatch({
+    ninetails::process_dorado_signal_files(
+      polya_signal_files = signal_file,  # Note: parameter name is polya_signal_files in the function
+      nonA_temp_dir = nonA_temp_dir,
+      polya_chunks_dir = polyt_chunks_dir,
+      num_cores = num_cores,
+      cli_log = cli_log
+    )
+  }, error = function(e) {
+    cli_log(sprintf("Error in polyT signal processing: %s", e$message), "ERROR")
+    stop(e$message, call. = FALSE)
+  })
+
+  # Step 3: Create outputs using cDNA-compatible function
+  cli_log("Creating final polyT outputs...", "INFO", bullet = TRUE)
+
+  outputs <- tryCatch({
+    result <- ninetails::create_outputs_dorado_cdna(
+      dorado_summary_dir = dorado_summary_dir,
+      nonA_temp_dir = nonA_temp_dir,
+      polya_chunks_dir = polyt_chunks_dir,
+      num_cores = num_cores,
+      qc = qc
+    )
+    result
+  }, error = function(e) {
+    cli_log(sprintf("Error in polyT output creation: %s", e$message), "ERROR")
+    stop(e$message, call. = FALSE)
+  })
+
+  # Cleanup signal file
+  if (file.exists(signal_file)) {
+    file.remove(signal_file)
   }
+
+  cli_log("PolyT processing completed using cDNA-compatible pipeline", "SUCCESS")
+
+  cli_log("PolyT output creation completed", "SUCCESS")
 
   ################################################################################
   # COMPILE FINAL RESULTS
@@ -1777,11 +1498,11 @@ process_polyt_reads_cdna <- function(polyt_files,
 
   # Calculate processing statistics
   processing_stats <- list(
-    total_reads_processed = nrow(all_read_classes),
-    decorated_reads = sum(all_read_classes$class == "decorated", na.rm = TRUE),
-    blank_reads = sum(all_read_classes$class == "blank", na.rm = TRUE),
-    unclassified_reads = sum(all_read_classes$class == "unclassified", na.rm = TRUE),
-    total_modifications = nrow(all_nonthymidine),
+    total_reads_processed = if (!is.null(outputs$read_classes)) nrow(outputs$read_classes) else 0,
+    decorated_reads = if (!is.null(outputs$read_classes)) sum(outputs$read_classes$class == "decorated", na.rm = TRUE) else 0,
+    blank_reads = if (!is.null(outputs$read_classes)) sum(outputs$read_classes$class == "blank", na.rm = TRUE) else 0,
+    unclassified_reads = if (!is.null(outputs$read_classes)) sum(outputs$read_classes$class == "unclassified", na.rm = TRUE) else 0,
+    total_modifications = if (!is.null(outputs$nonadenosine_residues)) nrow(outputs$nonadenosine_residues) else 0,
     tail_type = "polyT"
   )
 
@@ -1795,10 +1516,11 @@ process_polyt_reads_cdna <- function(polyt_files,
 
   cli_log("PolyT reads processing completed successfully", "SUCCESS")
 
-  # Return combined results
+  # Return combined results with tail_type
+  # Note: Using 'nonadenosine_residues' name for consistency, but these represent non-T residues in polyT context
   return(list(
-    read_classes = all_read_classes,
-    nonadenosine_residues = all_nonthymidine,  # Non-thymidine residues in polyT tails
+    read_classes = outputs$read_classes,
+    nonadenosine_residues = outputs$nonadenosine_residues,  # Non-thymidine residues in polyT tails
     processing_stats = processing_stats,
     tail_type = "polyT"
   ))
@@ -1806,32 +1528,298 @@ process_polyt_reads_cdna <- function(polyt_files,
 
 
 ################################################################################
-# RESULTS MERGING FUNCTION FOR cDNA
+# cDNA-SPECIFIC OUTPUT CREATION FUNCTION
+################################################################################
+
+#' Create Ninetails output tables for Dorado cDNA pipeline
+#'
+#' This function extends create_outputs_dorado to handle cDNA data with additional
+#' tail_type information. It produces the same output structure as the DRS pipeline
+#' but preserves the tail_type column for read orientation information.
+#'
+#' @param dorado_summary_dir Character string. Path to a directory containing Dorado
+#' summary files (.txt, .tsv, or .csv) with per-read poly(A) tail information and tail_type.
+#'
+#' @param nonA_temp_dir Character string. Path to a directory containing non-adenosine
+#' prediction RDS files, generated from temporary models.
+#'
+#' @param polya_chunks_dir Character string. Path to a directory containing poly(A) chunk
+#' RDS files used for position inference of predictions.
+#'
+#' @param num_cores Integer. Number of cores to use for parallelized file loading
+#' and processing. Must be a positive integer. Default is 1.
+#'
+#' @param qc Logical. Whether to apply quality control filtering of terminal
+#' predictions (removing predictions near the ends of poly(A) tails). Default is TRUE.
+#'
+#' @return A named list with two data frames (identical to DRS output + tail_type):
+#' \describe{
+#' \item{read_classes}{Data frame with per-read classification results, including
+#' columns for read name, contig, poly(A) length, QC tag, class, comments, and tail_type.}
+#' \item{nonadenosine_residues}{Data frame with per-chunk predictions of
+#' non-adenosine residues, including read name, contig, predicted base,
+#' estimated position within the poly(A) tail, poly(A) length, QC tag, and tail_type.}
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' results <- create_outputs_dorado_cdna(
+#' dorado_summary_dir = "data/dorado_summaries",
+#' nonA_temp_dir = "data/nonA_predictions",
+#' polya_chunks_dir = "data/polya_chunks",
+#' num_cores = 4,
+#' qc = TRUE
+#' )
+#'
+#' # Access read classifications with tail_type
+#' head(results$read_classes)
+#'
+#' # Access non-adenosine residues with tail_type
+#' head(results$nonadenosine_residues)
+#' }
+create_outputs_dorado_cdna <- function(dorado_summary_dir,
+                                       nonA_temp_dir,
+                                       polya_chunks_dir,
+                                       num_cores = 1,
+                                       qc = TRUE) {
+
+  # Variable binding for R CMD check
+  read_id <- alignment_genome <- alignment_mapq <- poly_tail_length <- NULL
+  poly_tail_start <- poly_tail_end <- chunkname <- prediction <- NULL
+  centr_signal_pos <- signal_length <- est_nonA_pos <- class <- comments <- tail_type <- NULL
+
+  # Assertions
+  if (missing(dorado_summary_dir)) stop("Dorado summary directory is missing.", call. = FALSE)
+  if (missing(nonA_temp_dir)) stop("Non-A predictions directory is missing.", call. = FALSE)
+  if (missing(polya_chunks_dir)) stop("Poly(A) chunks directory is missing.", call. = FALSE)
+
+  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
+                          msg = "Number of cores must be a positive integer")
+  assertthat::assert_that(is.logical(qc),
+                          msg = "QC must be a logical value")
+  assertthat::assert_that(dir.exists(dorado_summary_dir),
+                          msg = "Dorado summary directory must exist")
+  assertthat::assert_that(dir.exists(nonA_temp_dir),
+                          msg = "Non-A predictions directory must exist")
+  assertthat::assert_that(dir.exists(polya_chunks_dir),
+                          msg = "Poly(A) chunks directory must exist")
+
+  ################################################################################
+  # LOAD DATA FILES
+  ################################################################################
+
+  # Load Dorado summary data with tail_type support
+  dorado_summary_files <- list.files(dorado_summary_dir, pattern = "\\.(txt|tsv|csv)$", full.names = TRUE)
+
+  if (length(dorado_summary_files) == 0) {
+    stop("No summary files found in dorado_summary_dir", call. = FALSE)
+  }
+
+  # Load and combine all summary files
+  dorado_summary_list <- parallel::mclapply(dorado_summary_files, function(file) {
+    vroom::vroom(file, show_col_types = FALSE)
+  }, mc.cores = num_cores)
+
+  dorado_summary <- do.call(rbind, dorado_summary_list)
+
+  # Verify required columns exist
+  required_cols <- c("read_id", "alignment_genome", "alignment_mapq", "poly_tail_length",
+                     "poly_tail_start", "poly_tail_end")
+  missing_cols <- setdiff(required_cols, colnames(dorado_summary))
+
+  if (length(missing_cols) > 0) {
+    stop(sprintf("Missing required columns in summary data: %s", paste(missing_cols, collapse = ", ")),
+         call. = FALSE)
+  }
+
+  # Check if tail_type column exists (should be present in cDNA data)
+  has_tail_type <- "tail_type" %in% colnames(dorado_summary)
+  if (!has_tail_type) {
+    warning("tail_type column not found in summary data - adding default 'unknown' values")
+    dorado_summary$tail_type <- "unknown"
+  }
+
+  # Load non-A predictions
+  nonA_files <- list.files(nonA_temp_dir, pattern = "\\.rds$", full.names = TRUE)
+  chunks_files <- list.files(polya_chunks_dir, pattern = "\\.rds$", full.names = TRUE)
+
+  ################################################################################
+  # PROCESS PREDICTIONS (SAME LOGIC AS DRS BUT PRESERVE tail_type)
+  ################################################################################
+
+  moved_chunks_table <- data.frame()
+  moved_blank_readnames <- character(0)
+
+  if (length(nonA_files) > 0 && length(chunks_files) > 0) {
+    # Load all prediction and chunk files
+    all_predictions <- parallel::mclapply(nonA_files, readRDS, mc.cores = num_cores)
+    all_chunks <- parallel::mclapply(chunks_files, readRDS, mc.cores = num_cores)
+
+    # Combine predictions and chunks
+    combined_predictions <- do.call(rbind, all_predictions)
+    combined_chunks <- do.call(c, all_chunks)
+
+    if (nrow(combined_predictions) > 0 && length(combined_chunks) > 0) {
+      # Convert chunks to data frame
+      chunks_df <- do.call(rbind, lapply(names(combined_chunks), function(read_id) {
+        chunks <- combined_chunks[[read_id]]
+        if (length(chunks) > 0) {
+          data.frame(
+            read_id = read_id,
+            chunkname = names(chunks),
+            centr_signal_pos = sapply(chunks, function(x) x$centr_signal_pos),
+            stringsAsFactors = FALSE
+          )
+        }
+      }))
+
+      # Merge with predictions
+      moved_chunks_table <- merge(combined_predictions, chunks_df, by = c("read_id", "chunkname"), all.x = TRUE)
+      moved_chunks_table <- moved_chunks_table[!is.na(moved_chunks_table$centr_signal_pos), ]
+
+      if (nrow(moved_chunks_table) > 0) {
+        # Clean chunkname
+        moved_chunks_table$chunkname <- gsub("chunk_\\d+\\*", "", moved_chunks_table$chunkname)
+
+        # Create position list and merge with summary
+        non_a_position_list <- moved_chunks_table[, c("read_id", "chunkname")]
+        non_a_position_list <- merge(non_a_position_list,
+                                     dorado_summary[, c("read_id", "poly_tail_length", "poly_tail_start",
+                                                        "poly_tail_end", "tail_type")],
+                                     by = "read_id")
+        non_a_position_list$signal_length <- 0.2 * (non_a_position_list$poly_tail_end - non_a_position_list$poly_tail_start)
+
+        # Final merge with tail_type preservation
+        moved_chunks_table <- merge(moved_chunks_table, non_a_position_list, by = c("read_id", "chunkname"))
+
+        # Calculate position
+        moved_chunks_table$est_nonA_pos <- round(
+          moved_chunks_table$poly_tail_length - ((moved_chunks_table$poly_tail_length * moved_chunks_table$centr_signal_pos) / moved_chunks_table$signal_length),
+          2
+        )
+
+        # Merge with full summary data to get additional columns including tail_type
+        moved_chunks_table <- merge(moved_chunks_table,
+                                    dorado_summary[, c("read_id", "alignment_genome", "alignment_mapq", "tail_type")],
+                                    by = "read_id")
+
+        # Select final columns (including tail_type)
+        moved_chunks_table <- moved_chunks_table[, c("read_id", "alignment_genome", "prediction", "est_nonA_pos",
+                                                     "poly_tail_length", "signal_length", "alignment_mapq", "tail_type")]
+      }
+    }
+  }
+
+  # Get all read IDs
+  all_read_ids <- unique(dorado_summary$read_id)
+
+  # Quality control & sanity check - same as DRS
+  if (qc == TRUE && nrow(moved_chunks_table) > 0) {
+    terminal_mask <- (moved_chunks_table$est_nonA_pos < 2) |
+      (moved_chunks_table$est_nonA_pos > moved_chunks_table$poly_tail_length - 2)
+
+    moved_chunks_table_discarded_ids <- unique(moved_chunks_table$read_id[terminal_mask])
+    moved_chunks_table <- moved_chunks_table[!terminal_mask, ]
+
+    moved_blank_readnames <- unique(c(moved_blank_readnames, moved_chunks_table_discarded_ids))
+  }
+
+  decorated_read_ids <- unique(moved_chunks_table$read_id)
+  blank_read_ids <- setdiff(all_read_ids, c(decorated_read_ids, moved_blank_readnames))
+
+  # Vectorized read classification (same logic as DRS)
+  dorado_summary$class <- "blank"  # Default
+  dorado_summary$comments <- "MAU"  # Default
+
+  # Update classifications
+  dorado_summary$class[dorado_summary$read_id %in% decorated_read_ids] <- "decorated"
+  dorado_summary$comments[dorado_summary$read_id %in% decorated_read_ids] <- "YAY"
+
+  dorado_summary$class[dorado_summary$read_id %in% moved_blank_readnames] <- "blank"
+  dorado_summary$comments[dorado_summary$read_id %in% moved_blank_readnames] <- "MPU"
+
+  dorado_summary$class[dorado_summary$poly_tail_length < 10] <- "unclassified"
+  dorado_summary$comments[dorado_summary$poly_tail_length < 10] <- "IRL"
+
+  read_classes <- dorado_summary
+  read_classes <- read_classes[!duplicated(read_classes$read_id), ]
+
+  # Format read_classes (same as DRS + tail_type)
+  names(read_classes)[names(read_classes) == "read_id"] <- "readname"
+  names(read_classes)[names(read_classes) == "alignment_genome"] <- "contig"
+  names(read_classes)[names(read_classes) == "poly_tail_length"] <- "polya_length"
+  names(read_classes)[names(read_classes) == "alignment_mapq"] <- "qc_tag"
+
+  # Select columns in same order as DRS but include tail_type
+  read_classes <- read_classes[, c("readname", "contig", "polya_length", "qc_tag", "class", "comments", "tail_type")]
+
+  # Format moved_chunks_table (same as DRS + tail_type)
+  if (nrow(moved_chunks_table) > 0) {
+    names(moved_chunks_table)[names(moved_chunks_table) == "read_id"] <- "readname"
+    names(moved_chunks_table)[names(moved_chunks_table) == "alignment_genome"] <- "contig"
+    names(moved_chunks_table)[names(moved_chunks_table) == "poly_tail_length"] <- "polya_length"
+    names(moved_chunks_table)[names(moved_chunks_table) == "alignment_mapq"] <- "qc_tag"
+
+    # Select columns in same order as DRS but include tail_type
+    moved_chunks_table <- moved_chunks_table[, c("readname", "contig", "prediction", "est_nonA_pos", "polya_length", "qc_tag", "tail_type")]
+  } else {
+    moved_chunks_table <- data.frame(
+      readname = character(), contig = character(), prediction = character(),
+      est_nonA_pos = numeric(), polya_length = numeric(), qc_tag = character(), tail_type = character(),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  # Final output (identical structure to DRS + tail_type)
+  ninetails_output <- list(
+    read_classes = read_classes,
+    nonadenosine_residues = moved_chunks_table
+  )
+
+  # Summary statistics
+  cat("cDNA Processing complete!\n")
+  cat("Decorated reads:", sum(read_classes$class == "decorated", na.rm = TRUE), "\n")
+  cat("Blank reads:", sum(read_classes$class == "blank", na.rm = TRUE), "\n")
+  cat("Unclassified reads:", sum(read_classes$class == "unclassified", na.rm = TRUE), "\n")
+  cat("Total nonadenosine residues:", nrow(moved_chunks_table), "\n")
+
+  if (has_tail_type) {
+    cat("PolyA reads:", sum(read_classes$tail_type == "polyA", na.rm = TRUE), "\n")
+    cat("PolyT reads:", sum(read_classes$tail_type == "polyT", na.rm = TRUE), "\n")
+    cat("Unidentified reads:", sum(read_classes$tail_type == "unidentified", na.rm = TRUE), "\n")
+  }
+
+  return(ninetails_output)
+}
+
+
+
+################################################################################
+# RESULTS MERGING FUNCTION FOR cDNA (UPDATED FOR SIMPLIFIED APPROACH)
 ################################################################################
 
 #' Merge polyA and polyT processing results for cDNA analysis
 #'
 #' This function combines the results from separate polyA and polyT processing
-#' paths into a unified output. It merges read classifications, modification
-#' predictions, and processing statistics while preserving tail type information.
-#' It also handles unidentified reads that could not be classified.
+#' paths into a unified output in standard ninetails format. Updated to work
+#' with the simplified approach using tibbles instead of files.
 #'
 #' @param polya_results List. Results from polyA processing (from process_polya_reads_cdna).
 #' Can be NULL if no polyA reads were found.
 #' @param polyt_results List. Results from polyT processing (from process_polyt_reads_cdna).
 #' Can be NULL if no polyT reads were found.
-#' @param unidentified_files Character vector. Paths to files containing reads
-#' that could not be classified as polyA or polyT.
+#' @param unidentified_reads Data frame/tibble. Reads that could not be classified
+#' as polyA or polyT (with tail_type = "unidentified").
 #' @param save_dir Character. Directory where merged results will be saved.
 #' @param prefix Character. Optional prefix for output file names.
 #' @param cli_log Function for logging messages and progress.
 #'
-#' @return List containing merged cDNA results:
+#' @return List containing merged cDNA results in standard ninetails format:
 #'   \describe{
 #'     \item{read_classes}{Data frame with all read classifications including tail_type}
 #'     \item{nonadenosine_residues}{Data frame with all predicted modifications including tail_type}
-#'     \item{processing_stats}{Combined summary statistics from both processing paths}
-#'     \item{unidentified_stats}{Statistics for unidentified reads}
 #'   }
 #' @export
 #'
@@ -1840,7 +1828,7 @@ process_polyt_reads_cdna <- function(polyt_files,
 #' merged_results <- merge_cdna_results(
 #'   polya_results = polya_output,
 #'   polyt_results = polyt_output,
-#'   unidentified_files = c("unidentified_part1.tsv"),
+#'   unidentified_reads = unidentified_tibble,
 #'   save_dir = "path/to/output/",
 #'   prefix = "experiment1",
 #'   cli_log = message
@@ -1848,7 +1836,7 @@ process_polyt_reads_cdna <- function(polyt_files,
 #' }
 merge_cdna_results <- function(polya_results = NULL,
                                polyt_results = NULL,
-                               unidentified_files = character(0),
+                               unidentified_reads = NULL,
                                save_dir,
                                prefix = "",
                                cli_log = message) {
@@ -1867,12 +1855,6 @@ merge_cdna_results <- function(polya_results = NULL,
   # Check if we have any results to merge
   if (is.null(polya_results) && is.null(polyt_results)) {
     cli_log("WARNING: No polyA or polyT results provided for merging", "WARNING")
-  }
-
-  # Create output directory for merged results
-  merged_dir <- file.path(save_dir, "merged_results_dir")
-  if (!dir.exists(merged_dir)) {
-    dir.create(merged_dir, recursive = TRUE)
   }
 
   ################################################################################
@@ -1954,160 +1936,44 @@ merge_cdna_results <- function(polya_results = NULL,
   }
 
   ################################################################################
-  # PROCESS UNIDENTIFIED READS
+  # FINAL SUMMARY
   ################################################################################
 
-  cli_log("Processing unidentified reads...", "INFO", bullet = TRUE)
-
-  # Process unidentified reads for statistics
-  total_unidentified <- 0
-  unidentified_read_ids <- character(0)
-
-  if (length(unidentified_files) > 0) {
-    # Validate unidentified files exist
-    existing_files <- unidentified_files[file.exists(unidentified_files)]
-
-    if (length(existing_files) < length(unidentified_files)) {
-      missing_files <- unidentified_files[!file.exists(unidentified_files)]
-      cli_log(sprintf("WARNING: %d unidentified files not found: %s",
-                      length(missing_files), paste(basename(missing_files), collapse=", ")), "WARNING")
-    }
-
-    for (unidentified_file in existing_files) {
-      tryCatch({
-        unidentified_data <- vroom::vroom(unidentified_file, show_col_types = FALSE)
-        if ("read_id" %in% colnames(unidentified_data)) {
-          file_count <- nrow(unidentified_data)
-          total_unidentified <- total_unidentified + file_count
-          unidentified_read_ids <- c(unidentified_read_ids, unidentified_data$read_id)
-          cli_log(sprintf("Processed %d unidentified reads from %s",
-                          file_count, basename(unidentified_file)), "INFO")
-        }
-      }, error = function(e) {
-        cli_log(sprintf("Error reading unidentified file %s: %s",
-                        basename(unidentified_file), e$message), "WARNING")
-      })
-    }
-
-    # Remove duplicates
-    unidentified_read_ids <- unique(unidentified_read_ids)
-    cli_log(sprintf("Total unique unidentified reads: %d", length(unidentified_read_ids)), "INFO")
-  } else {
-    cli_log("No unidentified read files to process", "INFO")
-  }
-
-  ################################################################################
-  # CREATE COMBINED STATISTICS
-  ################################################################################
-
-  cli_log("Calculating combined statistics...", "INFO", bullet = TRUE)
-
-  # Extract individual statistics
-  polya_stats <- if (!is.null(polya_results$processing_stats)) polya_results$processing_stats else list()
-  polyt_stats <- if (!is.null(polyt_results$processing_stats)) polyt_results$processing_stats else list()
-
-  # Calculate combined statistics
-  combined_stats <- list(
-    # Overall totals
-    total_reads_processed = nrow(merged_read_classes),
-    total_modifications = nrow(merged_modifications),
-
-    # PolyA statistics
-    polya_reads_processed = if (!is.null(polya_stats$total_reads_processed)) polya_stats$total_reads_processed else 0,
-    polya_decorated = if (!is.null(polya_stats$decorated_reads)) polya_stats$decorated_reads else 0,
-    polya_blank = if (!is.null(polya_stats$blank_reads)) polya_stats$blank_reads else 0,
-    polya_unclassified = if (!is.null(polya_stats$unclassified_reads)) polya_stats$unclassified_reads else 0,
-    polya_modifications = if (!is.null(polya_stats$total_modifications)) polya_stats$total_modifications else 0,
-
-    # PolyT statistics
-    polyt_reads_processed = if (!is.null(polyt_stats$total_reads_processed)) polyt_stats$total_reads_processed else 0,
-    polyt_decorated = if (!is.null(polyt_stats$decorated_reads)) polyt_stats$decorated_reads else 0,
-    polyt_blank = if (!is.null(polyt_stats$blank_reads)) polyt_stats$blank_reads else 0,
-    polyt_unclassified = if (!is.null(polyt_stats$unclassified_reads)) polyt_stats$unclassified_reads else 0,
-    polyt_modifications = if (!is.null(polyt_stats$total_modifications)) polyt_stats$total_modifications else 0,
-
-    # Unidentified statistics
-    unidentified_reads = length(unidentified_read_ids),
-
-    # Calculate percentages
-    polya_percentage = 0,
-    polyt_percentage = 0,
-    unidentified_percentage = 0
-  )
-
-  # Calculate percentages of total reads
-  grand_total <- combined_stats$polya_reads_processed + combined_stats$polyt_reads_processed + combined_stats$unidentified_reads
-
-  if (grand_total > 0) {
-    combined_stats$polya_percentage <- round(combined_stats$polya_reads_processed / grand_total * 100, 2)
-    combined_stats$polyt_percentage <- round(combined_stats$polyt_reads_processed / grand_total * 100, 2)
-    combined_stats$unidentified_percentage <- round(combined_stats$unidentified_reads / grand_total * 100, 2)
-  }
-
-  # Create unidentified statistics
-  unidentified_stats <- list(
-    total_unidentified = combined_stats$unidentified_reads,
-    unidentified_files = unidentified_files,
-    unidentified_percentage = combined_stats$unidentified_percentage
-  )
-
-  ################################################################################
-  # SAVE INTERMEDIATE MERGED RESULTS
-  ################################################################################
-
-  cli_log("Saving intermediate merged results...", "INFO", bullet = TRUE)
-
-  # Save merged read classes
-  if (nrow(merged_read_classes) > 0) {
-    read_classes_file <- file.path(merged_dir,
-                                   sprintf("%smerged_read_classes.tsv",
-                                           ifelse(nchar(prefix) > 0, paste0(prefix, "_"), "")))
-    vroom::vroom_write(merged_read_classes, read_classes_file, delim = "\t")
-    cli_log(sprintf("Saved merged read classes to %s", basename(read_classes_file)), "INFO")
-  }
-
-  # Save merged modifications
-  if (nrow(merged_modifications) > 0) {
-    modifications_file <- file.path(merged_dir,
-                                    sprintf("%smerged_modifications.tsv",
-                                            ifelse(nchar(prefix) > 0, paste0(prefix, "_"), "")))
-    vroom::vroom_write(merged_modifications, modifications_file, delim = "\t")
-    cli_log(sprintf("Saved merged modifications to %s", basename(modifications_file)), "INFO")
-  }
-
-
-  ################################################################################
-  # FINAL LOGGING AND SUMMARY
-  ################################################################################
+  # Calculate totals for summary
+  polya_count <- if (!is.null(polya_results))
+    ifelse(!is.null(polya_results$processing_stats), polya_results$processing_stats$total_reads_processed, 0) else 0
+  polyt_count <- if (!is.null(polyt_results))
+    ifelse(!is.null(polyt_results$processing_stats), polyt_results$processing_stats$total_reads_processed, 0) else 0
+  unidentified_count <- if (!is.null(unidentified_reads) && is.data.frame(unidentified_reads)) nrow(unidentified_reads) else 0
+  total_modifications <- nrow(merged_modifications)
+  total_reads <- nrow(merged_read_classes)
+  grand_total <- polya_count + polyt_count + unidentified_count
 
   cli_log("Merging Summary", "INFO", "Merging Summary")
-  cli_log(sprintf("Total reads processed: %d", grand_total), bullet = TRUE)
-  cli_log(sprintf("- PolyA reads: %d (%.2f%%)",
-                  combined_stats$polya_reads_processed, combined_stats$polya_percentage), bullet = TRUE)
-  cli_log(sprintf("- PolyT reads: %d (%.2f%%)",
-                  combined_stats$polyt_reads_processed, combined_stats$polyt_percentage), bullet = TRUE)
+  cli_log(sprintf("Total reads in dataset: %d", grand_total), bullet = TRUE)
+  cli_log(sprintf("- PolyA reads processed: %d (%.2f%%)",
+                  polya_count, if (grand_total > 0) polya_count / grand_total * 100 else 0), bullet = TRUE)
+  cli_log(sprintf("- PolyT reads processed: %d (%.2f%%)",
+                  polyt_count, if (grand_total > 0) polyt_count / grand_total * 100 else 0), bullet = TRUE)
   cli_log(sprintf("- Unidentified reads: %d (%.2f%%)",
-                  combined_stats$unidentified_reads, combined_stats$unidentified_percentage), bullet = TRUE)
+                  unidentified_count, if (grand_total > 0) unidentified_count / grand_total * 100 else 0), bullet = TRUE)
 
-  cli_log(sprintf("Total modifications detected: %d", combined_stats$total_modifications), bullet = TRUE)
-  cli_log(sprintf("- PolyA modifications: %d", combined_stats$polya_modifications), bullet = TRUE)
-  cli_log(sprintf("- PolyT modifications: %d", combined_stats$polyt_modifications), bullet = TRUE)
+  cli_log(sprintf("Total modifications detected: %d", total_modifications), bullet = TRUE)
 
-  if (combined_stats$polyt_modifications > 0) {
+  if (polyt_count > 0) {
     cli_log("NOTE: PolyT modifications detected using temporary polyA model", "INFO", bullet = TRUE)
   }
 
   cli_log("cDNA results merging completed successfully", "SUCCESS")
 
   ################################################################################
-  # RETURN MERGED RESULTS
+  # RETURN STANDARD NINETAILS FORMAT
   ################################################################################
 
+  # Return in standard ninetails format (same as DRS pipeline)
   return(list(
     read_classes = merged_read_classes,
-    nonadenosine_residues = merged_modifications,
-    processing_stats = combined_stats,
-    unidentified_stats = unidentified_stats
+    nonadenosine_residues = merged_modifications
   ))
 }
 

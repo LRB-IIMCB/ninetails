@@ -7,7 +7,7 @@
 merge_cdna_results(
   polya_results = NULL,
   polyt_results = NULL,
-  unidentified_files = character(0),
+  unidentified_reads = NULL,
   save_dir,
   prefix = "",
   cli_log = message
@@ -20,8 +20,8 @@ Can be NULL if no polyA reads were found.}
 \item{polyt_results}{List. Results from polyT processing (from process_polyt_reads_cdna).
 Can be NULL if no polyT reads were found.}
 
-\item{unidentified_files}{Character vector. Paths to files containing reads
-that could not be classified as polyA or polyT.}
+\item{unidentified_reads}{Data frame/tibble. Reads that could not be classified
+as polyA or polyT (with tail_type = "unidentified").}
 
 \item{save_dir}{Character. Directory where merged results will be saved.}
 
@@ -30,26 +30,23 @@ that could not be classified as polyA or polyT.}
 \item{cli_log}{Function for logging messages and progress.}
 }
 \value{
-List containing merged cDNA results:
+List containing merged cDNA results in standard ninetails format:
   \describe{
     \item{read_classes}{Data frame with all read classifications including tail_type}
     \item{nonadenosine_residues}{Data frame with all predicted modifications including tail_type}
-    \item{processing_stats}{Combined summary statistics from both processing paths}
-    \item{unidentified_stats}{Statistics for unidentified reads}
   }
 }
 \description{
 This function combines the results from separate polyA and polyT processing
-paths into a unified output. It merges read classifications, modification
-predictions, and processing statistics while preserving tail type information.
-It also handles unidentified reads that could not be classified.
+paths into a unified output in standard ninetails format. Updated to work
+with the simplified approach using tibbles instead of files.
 }
 \examples{
 \dontrun{
 merged_results <- merge_cdna_results(
   polya_results = polya_output,
   polyt_results = polyt_output,
-  unidentified_files = c("unidentified_part1.tsv"),
+  unidentified_reads = unidentified_tibble,
   save_dir = "path/to/output/",
   prefix = "experiment1",
   cli_log = message

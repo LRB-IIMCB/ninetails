@@ -2,8 +2,6 @@
 "_PACKAGE"
 
 ## usethis namespace: start
-#' @importFrom Biostrings DNAString
-#' @importFrom pwalign nucleotideSubstitutionMatrix
-#' @importFrom pwalign pairwiseAlignment
+#' @importFrom utils adist
 ## usethis namespace: end
 NULL

@@ -3,6 +3,10 @@
 Simple POD5 signal extraction script for ninetails package.
 This script extracts only the raw signals from POD5 files.
 Pseudomove computation is handled on the R side.
+
+In this script, only the polyA tail signal is extracted
+based on coordinates provided in corresponding 
+Dorado summary file.
 """
 
 import argparse
@@ -20,6 +24,7 @@ def winsorize_signal(signal):
         return signal
     
     # Match R implementation: use 0.5% and 99.5% percentiles
+    # see ?ninetails::winsorize_signal() in R
     lower = np.percentile(signal, 0.5)  # 0.005 * 100
     upper = np.percentile(signal, 99.5)  # 0.995 * 100
     

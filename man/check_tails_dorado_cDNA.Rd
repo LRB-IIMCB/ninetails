@@ -52,32 +52,27 @@ pipeline completion. When FALSE, all intermediate files are preserved for inspec
 A named list containing the final analysis results:
 \describe{
   \item{read_classes}{Data frame with per-read classification results including
-    tail type (polyA/polyT), decoration status, and metadata}
+    readname, contig, poly(A) length, QC tag, class, comments, and tail_type}
   \item{nonadenosine_residues}{Data frame with predicted non-adenosine positions
-    within tails, including tail type information}
-  \item{processing_stats}{Summary statistics of the analysis including counts
-    of polyA vs polyT reads processed}
+    within poly(A)/poly(T) tails including readname, contig, prediction,
+    estimated position, poly(A) length, QC tag, and tail_type}
 }
 }
 \description{
-This comprehensive wrapper function orchestrates the complete analysis of Oxford Nanopore
-cDNA sequencing data processed with Dorado basecaller (>=1.0.0) using POD5 and BAM
-file formats. The pipeline identifies and characterizes non-adenosine nucleotides within
-poly(A) and poly(T) tails through advanced signal processing, sequence classification,
-machine learning-based prediction, and statistical analysis.
+This function extends the check_tails_dorado_DRS pipeline to handle cDNA sequencing data
+by adding BAM file processing for sequence extraction and Dorado-style read orientation
+classification. The pipeline identifies and characterizes non-adenosine nucleotides within
+poly(A) and poly(T) tails using the same signal processing and machine learning approach
+as the DRS pipeline, but with automatic classification of read orientations.
 }
 \section{Pipeline Overview}{
 
-The analysis pipeline consists of several integrated stages:
+The cDNA pipeline follows the same analysis flow as check_tails_dorado_DRS with these additions:
 \enumerate{
-  \item \strong{Input Validation}: Validates Dorado summary files, BAM files, and POD5 directories
-  \item \strong{BAM Processing}: Splits large BAM files and extracts basecalled sequences
-  \item \strong{Sequence Classification}: Classifies reads as polyA, polyT, or unidentified based on primer alignment
-  \item \strong{Signal Extraction}: Extracts poly(A)/poly(T) tail signals from POD5 files
-  \item \strong{Dual Processing}: Separately processes polyA and polyT reads with appropriate models
-  \item \strong{Results Merging}: Combines results and adds tail type information
-  \item \strong{Output Creation}: Produces comprehensive results with tail type classification
-  \item \strong{Cleanup}: Optionally removes intermediate files to save disk space
+  \item \strong{BAM Processing}: Extracts basecalled sequences from BAM file (required for cDNA data)
+  \item \strong{Dorado-Style Read Classification}: Classifies reads as polyA, polyT, or unidentified using edit distance matching
+  \item \strong{Standard Processing}: Processes reads using the same signal processing and analysis as DRS pipeline
+  \item \strong{Output with Tail Types}: Produces standard read_classes and nonadenosine_residues with tail_type information
 }
 }
 
@@ -94,10 +89,8 @@ This pipeline requires specific input formats:
 \section{Key Differences from DRS Pipeline}{
 
 \itemize{
-  \item \strong{BAM Input}: Additional BAM file input for sequence extraction
-  \item \strong{Orientation Classification}: Automatic polyA/polyT classification
-  \item \strong{Dual Model Processing}: Separate processing paths for polyA and polyT
-  \item \strong{Enhanced Output}: Results include tail type information
+  \item \strong{BAM Input}: Additional BAM file input for sequence extraction since cDNA data requires basecalled sequences
+  \item \strong{Dorado-Style Read Orientation Classification}: Uses edit distance matching of SSP/VNP primers to classify reads as polyA, polyT, or unidentified before processing
 }
 }
 

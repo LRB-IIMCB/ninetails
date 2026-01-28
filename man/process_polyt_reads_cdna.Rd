@@ -5,8 +5,8 @@
 \title{Process polyT reads using ninetails pipeline}
 \usage{
 process_polyt_reads_cdna(
-  polyt_files,
-  polyt_signal_files,
+  polyt_sequences,
+  signal_files,
   num_cores = 1,
   qc = TRUE,
   save_dir,
@@ -15,9 +15,10 @@ process_polyt_reads_cdna(
 )
 }
 \arguments{
-\item{polyt_files}{Character vector. Paths to polyT-classified sequence files.}
+\item{polyt_sequences}{Data frame/tibble. PolyT-classified sequences with
+read_id and tail_type columns.}
 
-\item{polyt_signal_files}{Character vector. Paths to signal files containing
+\item{signal_files}{Character vector. Paths to signal files containing
 poly(A) tail signals extracted from POD5 files (will be filtered for polyT reads).}
 
 \item{num_cores}{Integer. Number of CPU cores to use for parallel processing.}
@@ -33,25 +34,24 @@ poly(A) tail signals extracted from POD5 files (will be filtered for polyT reads
 \value{
 List containing polyT processing results:
   \describe{
-    \item{read_classes}{Data frame with read classification results}
-    \item{nonadenosine_residues}{Data frame with predicted modifications (renamed for polyT context)}
+    \item{read_classes}{Data frame with read classification results (with tail_type preserved)}
+    \item{nonadenosine_residues}{Data frame with predicted modifications (with tail_type preserved)}
     \item{processing_stats}{Summary statistics for polyT processing}
     \item{tail_type}{Character indicating this is "polyT" data}
   }
 }
 \description{
 This function processes reads that have been classified as polyT-containing
-through the cDNA classification pipeline. It applies the ninetails analysis
-pipeline including feature extraction, signal segmentation, GAF creation,
-and neural network prediction to identify non-thymidine residues within
-polyT tails. Currently uses the same model as polyA processing until a
-polyT-specific model is trained.
+through the cDNA classification pipeline. Updated to work with tibble input
+instead of separate files. It applies the ninetails analysis pipeline to
+identify non-thymidine residues within polyT tails. Currently uses the same
+model as polyA processing until a polyT-specific model is trained.
 }
 \examples{
 \dontrun{
 polyt_results <- process_polyt_reads_cdna(
-  polyt_files = c("polyt_sequences_part1.tsv"),
-  polyt_signal_files = c("polya_signal_part1.rds"),
+  polyt_sequences = polyt_tibble,
+  signal_files = c("polya_signal_part1.rds"),
   num_cores = 4,
   qc = TRUE,
   save_dir = "path/to/output/",

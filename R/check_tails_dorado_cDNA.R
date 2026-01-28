@@ -3,23 +3,19 @@
 ################################################################################
 #' Complete Oxford Nanopore poly(A)/poly(T) tail analysis pipeline for Dorado cDNA data.
 #'
-#' This comprehensive wrapper function orchestrates the complete analysis of Oxford Nanopore
-#' cDNA sequencing data processed with Dorado basecaller (>=1.0.0) using POD5 and BAM
-#' file formats. The pipeline identifies and characterizes non-adenosine nucleotides within
-#' poly(A) and poly(T) tails through advanced signal processing, sequence classification,
-#' machine learning-based prediction, and statistical analysis.
+#' This function extends the check_tails_dorado_DRS pipeline to handle cDNA sequencing data
+#' by adding BAM file processing for sequence extraction and Dorado-style read orientation
+#' classification. The pipeline identifies and characterizes non-adenosine nucleotides within
+#' poly(A) and poly(T) tails using the same signal processing and machine learning approach
+#' as the DRS pipeline, but with automatic classification of read orientations.
 #'
 #' @section Pipeline Overview:
-#' The analysis pipeline consists of several integrated stages:
+#' The cDNA pipeline follows the same analysis flow as check_tails_dorado_DRS with these additions:
 #' \enumerate{
-#'   \item \strong{Input Validation}: Validates Dorado summary files, BAM files, and POD5 directories
-#'   \item \strong{BAM Processing}: Splits large BAM files and extracts basecalled sequences
-#'   \item \strong{Sequence Classification}: Classifies reads as polyA, polyT, or unidentified based on primer alignment
-#'   \item \strong{Signal Extraction}: Extracts poly(A)/poly(T) tail signals from POD5 files
-#'   \item \strong{Dual Processing}: Separately processes polyA and polyT reads with appropriate models
-#'   \item \strong{Results Merging}: Combines results and adds tail type information
-#'   \item \strong{Output Creation}: Produces comprehensive results with tail type classification
-#'   \item \strong{Cleanup}: Optionally removes intermediate files to save disk space
+#'   \item \strong{BAM Processing}: Extracts basecalled sequences from BAM file (required for cDNA data)
+#'   \item \strong{Dorado-Style Read Classification}: Classifies reads as polyA, polyT, or unidentified using edit distance matching
+#'   \item \strong{Standard Processing}: Processes reads using the same signal processing and analysis as DRS pipeline
+#'   \item \strong{Output with Tail Types}: Produces standard read_classes and nonadenosine_residues with tail_type information
 #' }
 #'
 #' @section Input Requirements:
@@ -32,10 +28,8 @@
 #'
 #' @section Key Differences from DRS Pipeline:
 #' \itemize{
-#'   \item \strong{BAM Input}: Additional BAM file input for sequence extraction
-#'   \item \strong{Orientation Classification}: Automatic polyA/polyT classification
-#'   \item \strong{Dual Model Processing}: Separate processing paths for polyA and polyT
-#'   \item \strong{Enhanced Output}: Results include tail type information
+#'   \item \strong{BAM Input}: Additional BAM file input for sequence extraction since cDNA data requires basecalled sequences
+#'   \item \strong{Dorado-Style Read Orientation Classification}: Uses edit distance matching of SSP/VNP primers to classify reads as polyA, polyT, or unidentified before processing
 #' }
 #'
 #' @param bam_file Character string. Path to the BAM file containing aligned cDNA reads
@@ -72,11 +66,10 @@
 #' @return A named list containing the final analysis results:
 #' \describe{
 #'   \item{read_classes}{Data frame with per-read classification results including
-#'     tail type (polyA/polyT), decoration status, and metadata}
+#'     readname, contig, poly(A) length, QC tag, class, comments, and tail_type}
 #'   \item{nonadenosine_residues}{Data frame with predicted non-adenosine positions
-#'     within tails, including tail type information}
-#'   \item{processing_stats}{Summary statistics of the analysis including counts
-#'     of polyA vs polyT reads processed}
+#'     within poly(A)/poly(T) tails including readname, contig, prediction,
+#'     estimated position, poly(A) length, QC tag, and tail_type}
 #' }
 #'
 #' @export
@@ -250,28 +243,42 @@ check_tails_dorado_cDNA <- function(bam_file,
     # SEQUENCE CLASSIFICATION (polyA/polyT/unidentified)
     ################################################################################
 
-    # Classify read orientations based on primer alignment
-    classification_results <- ninetails::classify_read_orientations(
+    cli_log("Starting Dorado-style poly tail classification...", "INFO", "Sequence Classification")
+    cli_log("Using SSP/VNP primer edit distance matching with score and separation validation", "INFO")
+
+    # Classify read orientations and add tail_type column
+    classified_sequences <- ninetails::detect_orientation_multiple(
       sequence_files = processed_files$sequence_files,
-      save_dir = save_dir,
-      prefix = prefix,
       num_cores = num_cores,
       cli_log = cli_log
     )
 
-    cli_log("Classification completed", "SUCCESS")
+    cli_log(sprintf("Classification completed: %d total sequences with tail_type column",
+                    nrow(classified_sequences)), "SUCCESS")
 
     ################################################################################
-    # DUAL PROCESSING: POLYA AND POLYT
+    # DUAL PROCESSING: POLYA AND POLYT (SEPARATE FUNCTIONS)
     ################################################################################
+
+    # Filter reads by tail type from classified sequences
+    polya_reads <- classified_sequences[classified_sequences$tail_type == "polyA", ]
+    polyt_reads <- classified_sequences[classified_sequences$tail_type == "polyT", ]
+    unidentified_reads <- classified_sequences[classified_sequences$tail_type == "unidentified", ]
+
+    cli_log(sprintf("Read distribution: %d polyA, %d polyT, %d unidentified",
+                    nrow(polya_reads), nrow(polyt_reads), nrow(unidentified_reads)), "INFO")
+
+    # Note: Both processing functions use the same signal files since signal extraction
+    # happens before classification. The processing functions filter signals internally
+    # based on the read IDs in their input sequence tibbles.
 
     # Process polyA reads with standard ninetails model
     polya_results <- NULL
-    if (length(classification_results$polya_files) > 0) {
+    if (nrow(polya_reads) > 0) {
       cli_log("Processing polyA reads...", "INFO", "PolyA Processing", bullet = TRUE)
       polya_results <- ninetails::process_polya_reads_cdna(
-        polya_files = classification_results$polya_files,
-        polya_signal_files = processed_files$polya_signal_files,
+        polya_sequences = polya_reads,
+        signal_files = processed_files$polya_signal_files,  # All signal files (filtering happens in processing function)
         num_cores = num_cores,
         qc = qc,
         save_dir = save_dir,
@@ -282,11 +289,11 @@ check_tails_dorado_cDNA <- function(bam_file,
 
     # Process polyT reads with polyT-specific model (temporarily same model)
     polyt_results <- NULL
-    if (length(classification_results$polyt_files) > 0) {
+    if (nrow(polyt_reads) > 0) {
       cli_log("Processing polyT reads...", "INFO", "PolyT Processing", bullet = TRUE)
       polyt_results <- ninetails::process_polyt_reads_cdna(
-        polyt_files = classification_results$polyt_files,
-        polyt_signal_files = processed_files$polya_signal_files,
+        polyt_sequences = polyt_reads,
+        signal_files = processed_files$polya_signal_files,  # All signal files (filtering happens in processing function)
         num_cores = num_cores,
         qc = qc,
         save_dir = save_dir,
@@ -299,126 +306,134 @@ check_tails_dorado_cDNA <- function(bam_file,
     # MERGE RESULTS AND CREATE FINAL OUTPUT
     ################################################################################
 
-    # Merge polyA and polyT results
+    # Merge polyA and polyT results into standard format (same as DRS pipeline)
     cli_log("Merging results and creating final output...", "INFO", "Creating Final Output", bullet = TRUE)
-    merged_outputs <- ninetails::merge_cdna_results(
+    outputs <- ninetails::merge_cdna_results(
       polya_results = polya_results,
       polyt_results = polyt_results,
-      unidentified_files = classification_results$unidentified_files,
+      unidentified_reads = unidentified_reads,
       save_dir = save_dir,
       prefix = prefix,
       cli_log = cli_log
     )
 
-    # Create final outputs in standard format
-    outputs <- ninetails::save_cdna_outputs(
-      outputs = merged_outputs,
-      save_dir = save_dir,
-      prefix = prefix
-    )
+    # Validate output format - should be a list with read_classes and nonadenosine_residues (same as DRS)
+    if (!is.list(outputs)) {
+      stop("merge_cdna_results must return a list", call. = FALSE)
+    }
+
+    # Check for expected components
+    expected_names <- c("read_classes", "nonadenosine_residues")
+    if (!all(expected_names %in% names(outputs))) {
+      cli_log("Warning: Output does not contain expected components. Found components:", "WARNING")
+      cli_log(paste(names(outputs), collapse = ", "), "WARNING")
+    }
+
+    # Save final outputs using standard function (same as DRS pipeline)
+    cli_log("Saving final outputs...", "INFO", "Saving Results", bullet = TRUE)
+    ninetails::save_outputs(outputs, save_dir, prefix)
 
     ################################################################################
-    # CLEANUP AND STATISTICS
+    # CLEANUP AND FINALIZATION
     ################################################################################
 
     # Cleanup intermediate files if requested
     if (cleanup) {
       cli_log("Cleaning up intermediate files...", "INFO", "Cleanup", bullet = TRUE)
 
-      # List of intermediate directories to clean
-      intermediate_dirs <- c("bam_parts_dir", "sequence_files_dir", "polya_signal_dir",
-                             "polyt_signal_dir", "classification_dir", "polya_temp_dir",
-                             "polyt_temp_dir", "polya_chunks_dir", "polyt_chunks_dir")
+      # List of intermediate directories to remove (same pattern as DRS)
+      intermediate_dirs <- c(
+        file.path(save_dir, "bam_parts_dir"),
+        file.path(save_dir, "sequence_files_dir"),
+        file.path(save_dir, "polya_signal_dir"),
+        file.path(save_dir, "polya_temp_dir"),
+        file.path(save_dir, "polyt_temp_dir"),
+        file.path(save_dir, "polya_chunks_dir"),
+        file.path(save_dir, "polyt_chunks_dir")
+      )
 
-      successful_removals <- 0
-      total_removed <- 0
+      cleanup_summary <- data.frame(
+        directory = character(0),
+        status = character(0),
+        files_removed = integer(0),
+        stringsAsFactors = FALSE
+      )
 
-      for (dir_name in intermediate_dirs) {
-        dir_path <- file.path(save_dir, dir_name)
+      for (dir_path in intermediate_dirs) {
         if (dir.exists(dir_path)) {
           tryCatch({
-            file_count <- length(list.files(dir_path, recursive = TRUE))
-            unlink(dir_path, recursive = TRUE, force = TRUE)
-            successful_removals <- successful_removals + 1
-            total_removed <- total_removed + file_count
-            cli_log(sprintf("Removed %s (%d files)", dir_name, file_count), "INFO")
+            files_count <- length(list.files(dir_path, recursive = TRUE))
+            unlink(dir_path, recursive = TRUE)
+
+            if (!dir.exists(dir_path)) {
+              cli_log(sprintf("Removed: %s (%d files)", basename(dir_path), files_count), "SUCCESS")
+              cleanup_summary <- rbind(cleanup_summary,
+                                       data.frame(directory = basename(dir_path),
+                                                  status = "removed",
+                                                  files_removed = files_count,
+                                                  stringsAsFactors = FALSE))
+            }
           }, error = function(e) {
-            cli_log(sprintf("Failed to remove %s: %s", dir_name, e$message), "WARNING")
+            cli_log(sprintf("Failed to remove %s: %s", basename(dir_path), e$message), "WARNING")
+            cleanup_summary <- rbind(cleanup_summary,
+                                     data.frame(directory = basename(dir_path),
+                                                status = "failed",
+                                                files_removed = 0,
+                                                stringsAsFactors = FALSE))
           })
         }
       }
 
-      if (successful_removals > 0) {
-        cli_log(sprintf("Successfully removed %d directories, %d files deleted",
+      if (nrow(cleanup_summary) > 0) {
+        total_removed <- sum(cleanup_summary$files_removed)
+        successful_removals <- sum(cleanup_summary$status == "removed")
+        cli_log(sprintf("Cleanup completed: %d directories processed, %d files removed",
                         successful_removals, total_removed), "SUCCESS")
-      } else {
-        cli_log("No intermediate directories were removed", "INFO")
       }
 
     } else {
-      cli_log("Cleanup disabled - all intermediate files preserved", "INFO", "Cleanup", bullet = TRUE)
-      cli_log("Intermediate directories available for inspection:", "INFO")
-
-      # List preserved directories
-      intermediate_dirs <- c("bam_parts_dir", "sequence_files_dir", "polya_signal_dir",
-                             "polyt_signal_dir", "classification_dir")
-      for (dir_name in intermediate_dirs) {
-        dir_path <- file.path(save_dir, dir_name)
-        if (dir.exists(dir_path)) {
-          file_count <- length(list.files(dir_path, recursive = TRUE))
-          cli_log(sprintf("- %s (%d files)", dir_name, file_count), "INFO")
-        }
-      }
+      cli_log("Cleanup disabled - intermediate files preserved for inspection", "INFO", bullet = TRUE)
     }
 
-    # Pipeline statistics
-    #####################################################
+    # Pipeline completion
     log_end_time <- Sys.time()
     runtime <- difftime(log_end_time, log_start_time, units = "mins")
 
     cli_log("Pipeline Statistics", "INFO")
     cli_log(sprintf("Total runtime: %.2f minutes", runtime), bullet = TRUE)
 
-    # Add cDNA-specific statistics
-    if (!is.null(outputs)) {
-      total_reads <- 0
-      polya_reads <- 0
-      polyt_reads <- 0
-      total_modifications <- 0
-
-      if (!is.null(outputs$read_classes) && nrow(outputs$read_classes) > 0) {
-        total_reads <- nrow(outputs$read_classes)
-        polya_reads <- sum(outputs$read_classes$tail_type == "polyA", na.rm = TRUE)
-        polyt_reads <- sum(outputs$read_classes$tail_type == "polyT", na.rm = TRUE)
-      }
-
-      if (!is.null(outputs$nonadenosine_residues) && nrow(outputs$nonadenosine_residues) > 0) {
-        total_modifications <- nrow(outputs$nonadenosine_residues)
-      }
-
+    if (!is.null(outputs$read_classes) && nrow(outputs$read_classes) > 0) {
+      total_reads <- nrow(outputs$read_classes)
       cli_log(sprintf("Total reads processed: %d", total_reads), bullet = TRUE)
-      cli_log(sprintf("PolyA reads processed: %d", polya_reads), bullet = TRUE)
-      cli_log(sprintf("PolyT reads processed: %d", polyt_reads), bullet = TRUE)
-      cli_log(sprintf("Total modifications detected: %d", total_modifications), bullet = TRUE)
+
+      if ("tail_type" %in% colnames(outputs$read_classes)) {
+        polya_count <- sum(outputs$read_classes$tail_type == "polyA", na.rm = TRUE)
+        polyt_count <- sum(outputs$read_classes$tail_type == "polyT", na.rm = TRUE)
+        cli_log(sprintf("PolyA reads: %d, PolyT reads: %d", polya_count, polyt_count), bullet = TRUE)
+      }
+    }
+
+    if (!is.null(outputs$nonadenosine_residues) && nrow(outputs$nonadenosine_residues) > 0) {
+      total_modifications <- nrow(outputs$nonadenosine_residues)
+      cli_log(sprintf("Non-adenosine modifications detected: %d", total_modifications), bullet = TRUE)
     }
 
     cli_log("Pipeline completed", "SUCCESS")
     cli_log(sprintf("Log file saved at: %s", log_filepath), "INFO", bullet = TRUE)
 
-    # Final status messages
+    # Final status messages (same as DRS pipeline)
     cli::cli_rule()
-    cli_log("cDNA Pipeline completed successfully", "SUCCESS")
-    cli_log(sprintf("Output files saved in: %s", save_dir), "INFO", bullet = TRUE)
-
     if (warn_message) {
       cli::cli_alert_warning(paste(
-        "Ninetails cDNA pipeline exited with WARNING.\n\n",
-        "Check your input files and processing logs for any issues with sequence classification."
+        "Ninetails cDNA pipeline completed with warnings.",
+        "Please check the log file for details."
       ))
+    } else {
+      cli_log("cDNA Pipeline completed successfully", "SUCCESS")
     }
 
     cli::cli_text()
-    cli::cli_text(cli::col_grey("Thank you for using Ninetails cDNA Pipeline."))
+    cli::cli_text(cli::col_grey("Thank you for using Ninetails."))
 
     return(outputs)
 

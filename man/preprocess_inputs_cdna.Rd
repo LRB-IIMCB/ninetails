@@ -49,7 +49,7 @@ List containing paths to processed files:
 This function prepares inputs for the cDNA pipeline by processing BAM files,
 Dorado summary files, and extracting both basecalled sequences and poly(A)
 signals from POD5 files. Unlike the DRS pipeline, this function additionally
-extracts basecalled sequences from BAM files for orientation classification.
+extracts basecalled sequences from BAM files for read orientation classification.
 }
 \examples{
 \dontrun{
