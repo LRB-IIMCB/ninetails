@@ -79,9 +79,9 @@ convert_tailfindr_output <- function(tailfindr_output){
   read_id <- tail_start <- tail_end <- tail_length <- polya_length <- NULL
 
   # Accept either path to file or in-memory file
-  if (checkmate::test_string(tailfindr_output)) {
+  if (is_string(tailfindr_output)) {
     # if string provided as an argument, read from file
-    checkmate::assert_file_exists(tailfindr_output)
+    assert_file_exists(tailfindr_output, "tailfindr_output")
     tailfindr_out <- vroom::vroom(tailfindr_output,
                                   col_select=c(read_id, tail_start, tail_end, tail_length),
                                   show_col_types = FALSE)
@@ -159,8 +159,8 @@ check_polya_length_filetype <- function(input) {
   )
 
   # Accept either path to file or in-memory file
-  if (checkmate::test_string(input)) {
-    checkmate::assert_file_exists(input)
+  if (is_string(input)) {
+    assert_file_exists(input, "Input")
     input_data <- vroom::vroom(input, show_col_types = FALSE)
   } else {
     if (!is.data.frame(input) || nrow(input) == 0) {

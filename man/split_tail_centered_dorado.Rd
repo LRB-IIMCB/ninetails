@@ -37,14 +37,14 @@ In the Dorado pipeline, moves are not used:
   * retrieving them from BAM files is computationally expensive
   * processing is non-intuitive
 
-Instead, only pseudomoves are considered. As a safeguard against Dorado’s
+Instead, only pseudomoves are considered. As a safeguard against Doradoâ€™s
 tendency to extend poly(A) boundaries into the transcript body, the last
 3 pseudomove values are forced to 0. This prevents misclassification of
 transcript nucleotides as part of the tail.
 
 Candidate modification regions are detected by:
   * run-length encoding (RLE) of the pseudomove vector
-  * filtering runs of pseudomoves with length ≥ 5
+  * filtering runs of pseudomoves with length â‰¥ 5
 
 Extracted fragments are padded/imputed if they extend beyond signal boundaries:
   * upstream/downstream missing values (NAs) are replaced

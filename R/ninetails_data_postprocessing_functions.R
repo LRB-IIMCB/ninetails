@@ -30,12 +30,12 @@ read_class_single <- function(class_path, sample_name = NA) {
          call. = FALSE)
   }
 
-  assertthat::assert_that(!is.na(class_path) && nchar(class_path) > 0,
-                          msg = paste("File path ",class_path," is missing or invalid",sep=""))
+  assert_condition(!is.na(class_path) && nchar(class_path) > 0,
+                   paste("File path ", class_path, " is missing or invalid", sep = ""))
 
   #missing empty file
-  assertthat::assert_that(file.exists(class_path) && file.info(class_path)$size > 0,
-                          msg = paste("File ",class_path," is empty or does not exist",sep=""))
+  assert_condition(file.exists(class_path) && file.info(class_path)$size > 0,
+                   paste("File ", class_path, " is empty or does not exist", sep = ""))
 
   # load class data
   message(paste0("Loading data from ",class_path))
@@ -55,7 +55,7 @@ read_class_single <- function(class_path, sample_name = NA) {
 
   ## correct annotation <- if gencode format: create new columns with ensembl IDs
   # else created columns could be easily dropped
-  # this code chunk was originally written by Paweł Krawczyk (smaegol) & incorporated in NanoTail package
+  # this code chunk was originally written by PaweÅ‚ Krawczyk (smaegol) & incorporated in NanoTail package
   transcript_names <- gsub(".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*", "\\1", class_data$contig)
   class_data$transcript <- transcript_names
   ensembl_transcript_ids <- gsub("^(.*?)\\|.*\\|.*", "\\1", class_data$contig)
@@ -118,10 +118,10 @@ read_class_multiple <- function(samples_table,...) {
   if (!is.data.frame(samples_table) || nrow(samples_table) == 0) {
     stop("Empty data frame provided as an input (samples_table). Please provide samples_table describing data to load")}
 
-  assertthat::assert_that("class_path" %in% colnames(samples_table),
-                          msg = "The samples_table should contain at least class_path and sample_name columns")
-  assertthat::assert_that("sample_name" %in% colnames(samples_table),
-                          msg = "The samples_table should contain at least class_path and sample_name columns")
+  assert_condition("class_path" %in% colnames(samples_table),
+                   "The samples_table should contain at least class_path and sample_name columns")
+  assert_condition("sample_name" %in% colnames(samples_table),
+                   "The samples_table should contain at least class_path and sample_name columns")
 
   samples_data <- samples_table %>%
     tibble::as_tibble() %>%
@@ -176,8 +176,8 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 
   if (detailed==TRUE){
     if(!is.na(grouping_factor)) {
-      assertthat::assert_that(grouping_factor %in% colnames(class_data),
-                              msg=paste0(grouping_factor," is not a column of input dataset"))
+      assert_condition(grouping_factor %in% colnames(class_data),
+                       paste0(grouping_factor," is not a column of input dataset"))
       class_counts <- class_data %>%
         dplyr::mutate(comments=forcats::fct_relevel(comments,"YAY", after = Inf)) %>%
         dplyr::group_by(!!rlang::sym(grouping_factor),comments) %>%
@@ -191,8 +191,8 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 
   } else {
     if(!is.na(grouping_factor)) {
-      assertthat::assert_that(grouping_factor %in% colnames(class_data),
-                              msg=paste0(grouping_factor," is not a column of input dataset"))
+      assert_condition(grouping_factor %in% colnames(class_data),
+                       paste0(grouping_factor," is not a column of input dataset"))
       class_counts <- class_data %>%
         dplyr::mutate(class=forcats::fct_relevel(class,"decorated", after = Inf)) %>%
         dplyr::group_by(!!rlang::sym(grouping_factor),class) %>%
@@ -236,12 +236,12 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 read_residue_single <- function(residue_path, sample_name = NA) {
 
   #assertions
-  assertthat::assert_that(!is.na(residue_path) && nchar(residue_path) > 0,
-                          msg = "Input is either missing or an empty string. Please provide a residue_path as a string")
+  assert_condition(!is.na(residue_path) && nchar(residue_path) > 0,
+                   "Input is either missing or an empty string. Please provide a residue_path as a string")
 
 
-  assertthat::assert_that(file.exists(residue_path) && file.info(residue_path)$size > 0,
-                          msg = paste0("Input is either missing or an empty file: ", residue_path))
+  assert_condition(file.exists(residue_path) && file.info(residue_path)$size > 0,
+                   paste0("Input is either missing or an empty file: ", residue_path))
 
   # load the data
   message(paste0("Loading non-A residue data from ", residue_path))
@@ -258,7 +258,7 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 
   ## correct annotation <- if gencode format: create new columns with ensembl IDs
   # else created columns could be easily dropped
-  # this code chunk was originally written by Paweł Krawczyk (smaegol) & incorporated in NanoTail package
+  # this code chunk was originally written by PaweÅ‚ Krawczyk (smaegol) & incorporated in NanoTail package
 
   transcript_names <- gsub(".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*", "\\1", residue_data$contig)
   residue_data$transcript <- transcript_names
@@ -327,10 +327,10 @@ read_residue_multiple <- function(samples_table,...) {
   if (!is.data.frame(samples_table) || nrow(samples_table) == 0) {
     stop("Empty data frame provided as an input (samples_table). Please provide valid input")}
 
-  assertthat::assert_that("residue_path" %in% colnames(samples_table),
-                          msg = "The samples_table should contain at least residue_path and sample_name columns.")
-  assertthat::assert_that("sample_name" %in% colnames(samples_table),
-                          msg = "The samples_table should contain at least residue_path and sample_name columns.")
+  assert_condition("residue_path" %in% colnames(samples_table),
+                   "The samples_table should contain at least residue_path and sample_name columns.")
+  assert_condition("sample_name" %in% colnames(samples_table),
+                   "The samples_table should contain at least residue_path and sample_name columns.")
 
   samples_data <- samples_table %>%
     tibble::as_tibble() %>%
@@ -377,8 +377,8 @@ count_residues <- function(residue_data, grouping_factor=NA) {
     stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
   if(!is.na(grouping_factor)) {
-    assertthat::assert_that(grouping_factor %in% colnames(residue_data),
-                            msg=paste0(grouping_factor," is not a column of input dataset"))
+    assert_condition(grouping_factor %in% colnames(residue_data),
+                     paste0(grouping_factor," is not a column of input dataset"))
 
     residue_counts <- residue_data %>%
       dplyr::mutate(prediction=forcats::fct_relevel(prediction,"U", after = Inf)) %>%
@@ -516,8 +516,8 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
     stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
-  assertthat::assert_that(is.logical(pass_only),
-                          msg="Please provide TRUE/FALSE values for pass_only parameter")
+  assert_condition(is.logical(pass_only),
+                   "Please provide TRUE/FALSE values for pass_only parameter")
 
 
   #drop all unclassified reads
@@ -597,10 +597,10 @@ summarize_nonA <- function(merged_nonA_tables,
     stop("Empty data frame provided as an input (merged_nonA_tables). Please provide valid input")
   }
 
-  assertthat::assert_that(is.character(summary_factors),
-                          msg = "Non-character argument is not alowed for `summary_factors`. Please provide either string or vector of strings")
-  assertthat::assert_that(all(summary_factors %in% colnames(merged_nonA_tables)),
-                          msg="Non-existent column name provided as the argument (summary_factors)")
+  assert_condition(is.character(summary_factors),
+                   "Non-character argument is not alowed for `summary_factors`. Please provide either string or vector of strings")
+  assert_condition(all(summary_factors %in% colnames(merged_nonA_tables)),
+                   "Non-existent column name provided as the argument (summary_factors)")
 
 
   # this function is slow; TODO: rethink the syntax
@@ -685,8 +685,8 @@ nanopolish_qc <- function(class_data,
   }
 
   if(!is.na(grouping_factor)) {
-    assertthat::assert_that(grouping_factor %in% colnames(class_data),
-                            msg=paste0(grouping_factor," is not a column of input dataset"))
+    assert_condition(grouping_factor %in% colnames(class_data),
+                     paste0(grouping_factor," is not a column of input dataset"))
     processing_info <- class_data %>%
       dplyr::mutate(qc_tag=forcats::fct_relevel(qc_tag,"PASS", after = Inf)) %>%
       dplyr::group_by(!!rlang::sym(grouping_factor),qc_tag) %>%
@@ -954,12 +954,12 @@ correct_class_data <- function(residue_data_edited, class_data){
 
   basic_colnames = c("mode_pos","seg_err_quart", "qc_pos")
 
-  assertthat::assert_that(basic_colnames[1] %in% colnames(residue_data_edited),
-                          msg="mode_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
-  assertthat::assert_that(basic_colnames[2] %in% colnames(residue_data_edited),
-                          msg="seg_err_quart column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
-  assertthat::assert_that(basic_colnames[3] %in% colnames(residue_data_edited),
-                          msg="qc_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+  assert_condition(basic_colnames[1] %in% colnames(residue_data_edited),
+                   "mode_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+  assert_condition(basic_colnames[2] %in% colnames(residue_data_edited),
+                   "seg_err_quart column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+  assert_condition(basic_colnames[3] %in% colnames(residue_data_edited),
+                   "qc_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
 
   #prevent bugs
   class_data <- unique(class_data)
@@ -1161,8 +1161,8 @@ count_nonA_abundance <- function(residue_data,
     stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
   if(!is.na(grouping_factor)) {
-    assertthat::assert_that(grouping_factor %in% colnames(residue_data),
-                            msg=paste0(grouping_factor," is not a column of input dataset"))}
+    assert_condition(grouping_factor %in% colnames(residue_data),
+                     paste0(grouping_factor," is not a column of input dataset"))}
 
 
   nonA_counts <- residue_data %>% dplyr::select(!!rlang::sym(grouping_factor),
@@ -1177,5 +1177,3 @@ count_nonA_abundance <- function(residue_data,
   return(nonA_counts)
 
 }
-
-

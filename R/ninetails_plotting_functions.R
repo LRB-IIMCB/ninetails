@@ -101,10 +101,10 @@ plot_squiggle <- function(readname,
   }
 
 
-  if (checkmate::test_string(nanopolish)) {
+  if (is_string(nanopolish)) {
     # if string provided as an argument, read from file
     # handle nanopolish
-    checkmate::assert_file_exists(nanopolish)
+    assert_file_exists(nanopolish)
     nanopolish <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, adapter_start, leader_start), show_col_types = FALSE)
     colnames(nanopolish)[1] <- "read_id" #because there was conflict with the same vars
   }
@@ -123,9 +123,9 @@ plot_squiggle <- function(readname,
   polya_end_position <- transcript_start_position -1
 
 
-  if (checkmate::test_string(sequencing_summary)) {
+  if (is_string(sequencing_summary)) {
     #handle sequencing summary
-    checkmate::assert_file_exists(sequencing_summary)
+    assert_file_exists(sequencing_summary)
     sequencing_summary <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   }
 
@@ -341,10 +341,10 @@ plot_tail_range <- function(readname,
 
 
 
-  if (checkmate::test_string(nanopolish)) {
+  if (is_string(nanopolish)) {
     # if string provided as an argument, read from file
     # handle nanopolish
-    checkmate::assert_file_exists(nanopolish)
+    assert_file_exists(nanopolish)
     nanopolish <- vroom::vroom(nanopolish, col_select=c(readname, polya_start, transcript_start, adapter_start, leader_start), show_col_types = FALSE)
     colnames(nanopolish)[1] <- "read_id" #because there was conflict with the same vars
   }
@@ -365,10 +365,10 @@ plot_tail_range <- function(readname,
 
 
 
- #### TU WSTAWIC
-  if (checkmate::test_string(sequencing_summary)) {
+  #### TU WSTAWIC
+  if (is_string(sequencing_summary)) {
     #handle sequencing summary
-    checkmate::assert_file_exists(sequencing_summary)
+    assert_file_exists(sequencing_summary)
     sequencing_summary <- vroom::vroom(sequencing_summary, col_select = c(filename, read_id), show_col_types = FALSE)
   }
 
@@ -537,8 +537,8 @@ plot_tail_chunk <- function(chunk_name,
     stop("Chunk_name is missing. Please provide a valid chunk_name argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.list(tail_chunk_list),
-                          msg=paste("Given tail_chunk_list object is not a list. Please provide a valid argument."))
+  assert_condition(is.list(tail_chunk_list),
+                   paste("Given tail_chunk_list object is not a list. Please provide a valid argument."))
 
   #TODO
   #add assertion checking whether given chunk is present in the tail chunk list or not
@@ -629,10 +629,10 @@ plot_gaf <- function(gaf_name,
     stop("List of GAFs is missing. Please provide a valid gaf_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.list(gaf_list),
-                          msg=paste("Given gaf_list object is not a list. Please provide a valid argument."))
-  assertthat::assert_that(gaf_name %in% names(gaf_list),
-                          msg = "Given gaf_list does not contain provided gaf_name. Please provide a valid gaf_name argument.")
+  assert_condition(is.list(gaf_list),
+                   paste("Given gaf_list object is not a list. Please provide a valid argument."))
+  assert_condition(gaf_name %in% names(gaf_list),
+                   "Given gaf_list does not contain provided gaf_name. Please provide a valid gaf_name argument.")
 
   #extract gaf of interest
   gaf <- gaf_list[[gaf_name]]
@@ -709,10 +709,10 @@ plot_multiple_gaf <- function(gaf_list,
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.list(gaf_list),
-                          msg=paste("Given gaf_list object is not a list. Please provide a valid argument."))
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assert_condition(is.list(gaf_list),
+                   paste("Given gaf_list object is not a list. Please provide a valid argument."))
+  assert_condition(is.numeric(num_cores),
+                   paste0("Declared core number must be numeric. Please provide a valid argument."))
 
 
   # creating cluster for parallel computing
@@ -821,19 +821,19 @@ plot_class_counts <- function(class_data,
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
     stop("Empty data frame provided as an input (class_data). Please provide valid input")}
 
-  assertthat::assert_that(is.logical(frequency),
-                          msg="Non-boolean value provided for option frequency")
-  assertthat::assert_that(is.character(type),
-                          msg = "Non-character argument is not alowed for `type`. Please provide valid type (choose from: 'R', 'N', 'A')")
+  assert_condition(is.logical(frequency),
+                   "Non-boolean value provided for option frequency")
+  assert_condition(is.character(type),
+                   "Non-character argument is not alowed for `type`. Please provide valid type (choose from: 'R', 'N', 'A')")
 
   if (type=="R"){
     class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=TRUE)
 
     basic_colnames = c("comments","n")
-    assertthat::assert_that(basic_colnames[1] %in% colnames(class_counts),
-                            msg="comments column is missing in the input. Invalid output of count_class().")
-    assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
-                            msg="n column is missing in the input. Invalid output of count_class().")
+    assert_condition(basic_colnames[1] %in% colnames(class_counts),
+                     "comments column is missing in the input. Invalid output of count_class().")
+    assert_condition(basic_colnames[2] %in% colnames(class_counts),
+                     "n column is missing in the input. Invalid output of count_class().")
 
     class_counts$comments <- factor(class_counts$comments, levels=c("NIN",
                                                                     "IRL",
@@ -877,10 +877,10 @@ plot_class_counts <- function(class_data,
     class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=FALSE)
 
     basic_colnames = c("class","n")
-    assertthat::assert_that(basic_colnames[1] %in% colnames(class_counts),
-                            msg="class column is missing in the input. Invalid output of count_class().")
-    assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
-                            msg="n column is missing in the input. Invalid output of count_class().")
+    assert_condition(basic_colnames[1] %in% colnames(class_counts),
+                     "class column is missing in the input. Invalid output of count_class().")
+    assert_condition(basic_colnames[2] %in% colnames(class_counts),
+                     "n column is missing in the input. Invalid output of count_class().")
 
     class_counts$class <- factor(class_counts$class, levels=c("unclassified", "blank", "decorated"))
 
@@ -912,10 +912,10 @@ plot_class_counts <- function(class_data,
     class_counts <- ninetails::count_class(class_data=class_data, grouping_factor=grouping_factor, detailed=FALSE)
 
     basic_colnames = c("class","n")
-    assertthat::assert_that(basic_colnames[1] %in% colnames(class_counts),
-                            msg="class column is missing in the input. Invalid output of count_class().")
-    assertthat::assert_that(basic_colnames[2] %in% colnames(class_counts),
-                            msg="n column is missing in the input. Invalid output of count_class().")
+    assert_condition(basic_colnames[1] %in% colnames(class_counts),
+                     "class column is missing in the input. Invalid output of count_class().")
+    assert_condition(basic_colnames[2] %in% colnames(class_counts),
+                     "n column is missing in the input. Invalid output of count_class().")
 
     class_counts$class <- factor(class_counts$class, levels=c("unclassified", "blank", "decorated"))
 
@@ -1039,15 +1039,15 @@ plot_residue_counts <- function(residue_data,
 
 
   basic_colnames = c("prediction","n")
-  assertthat::assert_that(basic_colnames[1] %in% colnames(residue_counts),
-                          msg="prediction column is missing in the input. Invalid output of count_residues().")
-  assertthat::assert_that(basic_colnames[2] %in% colnames(residue_counts),
-                          msg="n column is missing in the input. Invalid output of count_residues().")
+  assert_condition(basic_colnames[1] %in% colnames(residue_counts),
+                   "prediction column is missing in the input. Invalid output of count_residues().")
+  assert_condition(basic_colnames[2] %in% colnames(residue_counts),
+                   "n column is missing in the input. Invalid output of count_residues().")
 
-  assertthat::assert_that(is.logical(by_read),
-                          msg="Non-boolean value provided for option by_read")
-  assertthat::assert_that(is.logical(frequency),
-                          msg="Non-boolean value provided for option frequency")
+  assert_condition(is.logical(by_read),
+                   "Non-boolean value provided for option by_read")
+  assert_condition(is.logical(frequency),
+                   "Non-boolean value provided for option frequency")
 
 
   # if there were multiple samples compared
@@ -1137,12 +1137,12 @@ plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
     stop("Empty data frame provided as an input (processing_info). Please provide valid input")}
 
   basic_colnames = c("qc_tag","n")
-  assertthat::assert_that(basic_colnames[1] %in% colnames(processing_info),
-                          msg="qc_tag column is missing in the input. Is that valid output of nanopolish_qc()?")
-  assertthat::assert_that(basic_colnames[2] %in% colnames(processing_info),
-                          msg="n column is missing in the input. Is that valid output of nanopolish_qc()?")
-  assertthat::assert_that(is.logical(frequency),
-                          msg="Non-boolean value provided for option frequency")
+  assert_condition(basic_colnames[1] %in% colnames(processing_info),
+                   "qc_tag column is missing in the input. Is that valid output of nanopolish_qc()?")
+  assert_condition(basic_colnames[2] %in% colnames(processing_info),
+                   "n column is missing in the input. Is that valid output of nanopolish_qc()?")
+  assert_condition(is.logical(frequency),
+                   "Non-boolean value provided for option frequency")
 
 
 
@@ -1289,8 +1289,8 @@ plot_tail_distribution <- function(input_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.character(variable_to_plot),
-                          msg=paste0("Variable_to_plot must be a string. Please provide a valid argument."))
+  assert_condition(is.character(variable_to_plot),
+                   paste0("Variable_to_plot must be a string. Please provide a valid argument."))
 
   if (variable_to_plot=="polya_length"){
     x_caption <- ggplot2::xlab("poly(A) length")
@@ -1305,8 +1305,8 @@ plot_tail_distribution <- function(input_data,
 
   if (!is.na(grouping_factor)) {
 
-    assertthat::assert_that(grouping_factor %in% colnames(input_data),
-                            msg=paste0(grouping_factor," is not a column of input dataset"))
+    assert_condition(grouping_factor %in% colnames(input_data),
+                     paste0(grouping_factor," is not a column of input dataset"))
 
     plot_tails <- ggplot2::ggplot(input_data,ggplot2::aes(x=!!rlang::sym(variable_to_plot),color=!!rlang::sym(grouping_factor)))+
       x_caption
@@ -1319,8 +1319,8 @@ plot_tail_distribution <- function(input_data,
 
   if (!is.na(max_length)) {
 
-    assertthat::assert_that(is.numeric(max_length),
-                            msg="Please provide numeric value for max_length")
+    assert_condition(is.numeric(max_length),
+                     "Please provide numeric value for max_length")
     plot_tails <- plot_tails + ggplot2::scale_x_continuous(limits=c(0,max_length))
   }
 
@@ -1454,15 +1454,15 @@ plot_panel_characteristics <- function(input_residue_data,
   ##############################################################################
 
   if (!is.na(max_length)) {
-    assertthat::assert_that(is.numeric(max_length),
-                            msg="Please provide numeric value for max_length")
+    assert_condition(is.numeric(max_length),
+                     "Please provide numeric value for max_length")
   }
 
   if (!is.data.frame(input_residue_data) || nrow(input_residue_data) == 0) {
     stop("Empty data frame provided as an input (input_residue_data). Please provide valid input")}
 
-  assertthat::assert_that(is.character(type),
-                          msg=paste0("Type must be a string (either 'default' or 'moderna'). Please provide a valid argument."))
+  assert_condition(is.character(type),
+                   "Type must be a string (either 'default' or 'moderna'). Please provide a valid argument.")
 
   if (is.null(input_class_data) && is.null(input_merged_nonA_tables_data)) stop("At least one dataframe should be provided - either input_class_data or input_merged_nonA_tables_data")
   if (!is.null(input_class_data) && !is.null(input_merged_nonA_tables_data)) stop("Only one dataframe should be provided - either input_class_data or input_merged_nonA_tables_data")
@@ -1834,7 +1834,7 @@ plot_rug_density <- function(residue_data, base, max_length){
   xdens <- cowplot::axis_canvas(pmain, axis = "x")+
     ggplot2::geom_density(data = data,
                           ggplot2::aes(x = polya_length,
-                              fill = prediction),
+                                       fill = prediction),
                           alpha = 0.5, size = 0.2,
                           show.legend=FALSE) +
     colorscale + colorfill
@@ -1843,7 +1843,7 @@ plot_rug_density <- function(residue_data, base, max_length){
   ydens <- cowplot::axis_canvas(pmain, axis = "y", coord_flip = TRUE)+
     ggplot2::geom_density(data = data,
                           ggplot2::aes(x = polya_length-est_nonA_pos,
-                              fill = prediction),
+                                       fill = prediction),
                           alpha = 0.5, size = 0.2,
                           show.legend=FALSE) +
     ggplot2::coord_flip() +
@@ -1894,12 +1894,12 @@ plot_nonA_abundance <- function(residue_data,
     stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
 
   if(!is.na(grouping_factor)) {
-    assertthat::assert_that(grouping_factor %in% colnames(residue_data),
-                            msg=paste0(grouping_factor," is not a column of input dataset"))}
+    assert_condition(grouping_factor %in% colnames(residue_data),
+                     paste0(grouping_factor," is not a column of input dataset"))}
 
 
   nonA_counts <- ninetails::count_nonA_abundance(residue_data=residue_data,
-                                      grouping_factor=grouping_factor)
+                                                 grouping_factor=grouping_factor)
 
 
   nonA_counts <- nonA_counts %>% tidyr::pivot_wider(names_from = instances,
@@ -1932,4 +1932,3 @@ plot_nonA_abundance <- function(residue_data,
   return(tp)
 
 }
-

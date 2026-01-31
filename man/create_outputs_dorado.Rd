@@ -127,7 +127,7 @@ This function is not intended to be used outside the pipeline wrapper
   \itemize{
     \item \code{centr_signal_pos}: Mean of chunk start and end positions
       in signal space
-    \item \code{signal_length}: 0.2 × (poly_tail_end - poly_tail_start)
+    \item \code{signal_length}: 0.2 Ã— (poly_tail_end - poly_tail_start)
       converts signal coordinates to nucleotide space
     \item \code{poly_tail_length}: Total poly(A) tail length from Dorado
   }

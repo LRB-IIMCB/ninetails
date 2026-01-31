@@ -1,4 +1,3 @@
-
 ################################################################################
 # BAM SPLITTING FUNCTION FOR cDNA PIPELINE
 ################################################################################
@@ -70,12 +69,9 @@ split_bam_file_cdna <- function(bam_file,
          call. = FALSE)
   }
 
-  assertthat::assert_that(file.exists(bam_file),
-                          msg = "BAM file does not exist")
-  assertthat::assert_that(file.exists(dorado_summary),
-                          msg = "Summary file does not exist")
-  assertthat::assert_that(dir.exists(save_dir),
-                          msg = "Output directory does not exist")
+  assert_file_exists(bam_file, "BAM")
+  assert_file_exists(dorado_summary, "Summary")
+  assert_dir_exists(save_dir, "Output")
 
   input_basename <- base::basename(bam_file)
   input_noext <- base::sub("\\.bam$", "", input_basename)
@@ -527,39 +523,38 @@ preprocess_inputs_cdna <- function(bam_file,
 
   # Assertions
   ###################################################
-  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                          msg = "Number of cores must be a positive numeric value")
+  assert_condition(is.numeric(num_cores) && num_cores > 0,
+                   "Number of cores must be a positive numeric value")
 
-  assertthat::assert_that(is.character(pod5_dir), dir.exists(pod5_dir),
-                          msg = "Pod5 files directory does not exist or path is invalid")
+  assert_condition(is.character(pod5_dir),
+                   "Pod5 directory path must be a character string")
+  assert_dir_exists(pod5_dir, "Pod5 files")
 
-  assertthat::assert_that(is.character(save_dir),
-                          msg = "Output directory path must be a character string")
+  assert_condition(is.character(save_dir),
+                   "Output directory path must be a character string")
 
-  assertthat::assert_that(is.logical(qc),
-                          msg = "qc must be logical [TRUE/FALSE]")
+  assert_condition(is.logical(qc),
+                   "qc must be logical [TRUE/FALSE]")
 
   # Validate prefix (if provided)
   if (nchar(prefix) > 0) {
-    assertthat::assert_that(is.character(prefix),
-                            msg = "File name prefix must be a character string")
+    assert_condition(is.character(prefix),
+                     "File name prefix must be a character string")
   }
 
   # Validate BAM input
-  if (checkmate::test_string(bam_file)) {
-    assertthat::assert_that(file.exists(bam_file),
-                            msg = "BAM file does not exist")
+  if (is_string(bam_file)) {
+    assert_file_exists(bam_file, "BAM")
   } else {
-    stop("BAM file must be provided as a character string path")
+    stop("BAM file must be provided as a character string path", call. = FALSE)
   }
 
   # Validate sequencing summary input
-  if (checkmate::test_string(dorado_summary)) {
-    assertthat::assert_that(file.exists(dorado_summary),
-                            msg = "Dorado summary file does not exist")
+  if (is_string(dorado_summary)) {
+    assert_file_exists(dorado_summary, "Dorado summary")
   } else {
-    assertthat::assert_that(is.data.frame(dorado_summary) && nrow(dorado_summary) > 0,
-                            msg = "Dorado summary must be a non-empty data frame or valid file path")
+    assert_condition(is.data.frame(dorado_summary) && nrow(dorado_summary) > 0,
+                     "Dorado summary must be a non-empty data frame or valid file path")
   }
 
   cli_log("Provided input files/paths are in correct format", "SUCCESS")
@@ -898,12 +893,12 @@ detect_orientation_multiple <- function(sequence_files,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.character(sequence_files),
-                          msg = "sequence_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(sequence_files)),
-                          msg = "All sequence files must exist")
-  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                          msg = "Number of cores must be a positive numeric value")
+  assert_condition(is.character(sequence_files),
+                   "sequence_files must be a character vector of file paths")
+  assert_condition(all(file.exists(sequence_files)),
+                   "All sequence files must exist")
+  assert_condition(is.numeric(num_cores) && num_cores > 0,
+                   "Number of cores must be a positive numeric value")
 
   cli_log("Starting read orientation classification", "INFO", "Sequence Classification")
 
@@ -1083,14 +1078,14 @@ process_polya_reads_cdna <- function(polya_sequences,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.data.frame(polya_sequences),
-                          msg = "polya_sequences must be a data frame")
-  assertthat::assert_that("read_id" %in% colnames(polya_sequences),
-                          msg = "polya_sequences must contain a 'read_id' column")
-  assertthat::assert_that(is.character(signal_files),
-                          msg = "signal_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(signal_files)),
-                          msg = "All signal files must exist")
+  assert_condition(is.data.frame(polya_sequences),
+                   "polya_sequences must be a data frame")
+  assert_condition("read_id" %in% colnames(polya_sequences),
+                   "polya_sequences must contain a 'read_id' column")
+  assert_condition(is.character(signal_files),
+                   "signal_files must be a character vector of file paths")
+  assert_condition(all(file.exists(signal_files)),
+                   "All signal files must exist")
 
   cli_log("Starting polyA reads processing", "INFO", "PolyA Processing")
 
@@ -1336,14 +1331,14 @@ process_polyt_reads_cdna <- function(polyt_sequences,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.data.frame(polyt_sequences),
-                          msg = "polyt_sequences must be a data frame")
-  assertthat::assert_that("read_id" %in% colnames(polyt_sequences),
-                          msg = "polyt_sequences must contain a 'read_id' column")
-  assertthat::assert_that(is.character(signal_files),
-                          msg = "signal_files must be a character vector of file paths")
-  assertthat::assert_that(all(file.exists(signal_files)),
-                          msg = "All signal files must exist")
+  assert_condition(is.data.frame(polyt_sequences),
+                   "polyt_sequences must be a data frame")
+  assert_condition("read_id" %in% colnames(polyt_sequences),
+                   "polyt_sequences must contain a 'read_id' column")
+  assert_condition(is.character(signal_files),
+                   "signal_files must be a character vector of file paths")
+  assert_condition(all(file.exists(signal_files)),
+                   "All signal files must exist")
 
   cli_log("Starting polyT reads processing", "INFO", "PolyT Processing")
 
@@ -1595,16 +1590,13 @@ create_outputs_dorado_cdna <- function(dorado_summary_dir,
   if (missing(nonA_temp_dir)) stop("Non-A predictions directory is missing.", call. = FALSE)
   if (missing(polya_chunks_dir)) stop("Poly(A) chunks directory is missing.", call. = FALSE)
 
-  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                          msg = "Number of cores must be a positive integer")
-  assertthat::assert_that(is.logical(qc),
-                          msg = "QC must be a logical value")
-  assertthat::assert_that(dir.exists(dorado_summary_dir),
-                          msg = "Dorado summary directory must exist")
-  assertthat::assert_that(dir.exists(nonA_temp_dir),
-                          msg = "Non-A predictions directory must exist")
-  assertthat::assert_that(dir.exists(polya_chunks_dir),
-                          msg = "Poly(A) chunks directory must exist")
+  assert_condition(is.numeric(num_cores) && num_cores > 0,
+                   "Number of cores must be a positive integer")
+  assert_condition(is.logical(qc),
+                   "QC must be a logical value")
+  assert_dir_exists(dorado_summary_dir, "Dorado summary")
+  assert_dir_exists(nonA_temp_dir, "Non-A predictions")
+  assert_dir_exists(polya_chunks_dir, "Poly(A) chunks")
 
   ################################################################################
   # LOAD DATA FILES
@@ -1847,8 +1839,8 @@ merge_cdna_results <- function(polya_results = NULL,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.character(save_dir),
-                          msg = "save_dir must be a character string")
+  assert_condition(is.character(save_dir),
+                   "save_dir must be a character string")
 
   cli_log("Starting cDNA results merging", "INFO", "Merging cDNA Results")
 
@@ -2019,8 +2011,8 @@ save_cdna_outputs <- function(outputs, save_dir, prefix = "") {
     stop("Output directory is missing. Please provide a valid save_dir argument.", call. = FALSE)
   }
 
-  assertthat::assert_that(is.list(outputs),
-                          msg = "outputs must be a list from merge_cdna_results()")
+  assert_condition(is.list(outputs),
+                   "outputs must be a list from merge_cdna_results()")
 
   # Extract the two standard ninetails tables
   read_classes <- if (!is.null(outputs$read_classes)) {
@@ -2041,20 +2033,3 @@ save_cdna_outputs <- function(outputs, save_dir, prefix = "") {
     nonadenosine_residues = nonadenosine_residues
   ))
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

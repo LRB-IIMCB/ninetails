@@ -50,8 +50,8 @@ The function performs the following operations:
   \item \strong{Input validation}: Checks for required columns and valid data
   \item \strong{Read filtering}: Excludes reads with:
     \itemize{
-      \item poly_tail_length ≤ 10 (if column exists)
-      \item poly_tail_start ≤ 0 (invalid coordinates)
+      \item poly_tail_length â‰¤ 10 (if column exists)
+      \item poly_tail_start â‰¤ 0 (invalid coordinates)
     }
   \item \strong{Python subprocess execution}: Delegates extraction to an optimized
         Python script that:

@@ -77,10 +77,10 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, trans
     stop("Empty data frame provided as an input (ninetails_data). Please provide valid input")
   }
 
-  assertthat::assert_that(is.numeric(min_reads),
-                          msg = "Non-numeric parameter provided (min_reads)")
-  assertthat::assert_that(grouping_factor %in% colnames(ninetails_data),
-                          msg=paste0(grouping_factor," is not a column of input dataset"))
+  assert_condition(is.numeric(min_reads),
+                   "Non-numeric parameter provided (min_reads)")
+  assert_condition(grouping_factor %in% colnames(ninetails_data),
+                   paste0(grouping_factor, " is not a column of input dataset"))
 
 
   # if grouping factor has more than two levels
@@ -90,12 +90,12 @@ nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, trans
       stop(paste0("grouping_factor ",grouping_factor," has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"))
     } else {
       # filter input data leaving only specified conditions, dropping other factor levels
-      assertthat::assert_that(condition1 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition1," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition2," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 != condition1,
-                              msg="condition2 should be different than condition1")
+      assert_condition(condition1 %in% levels(ninetails_data[[grouping_factor]]),
+                       paste0(condition1, " is not a level of ", grouping_factor, " (grouping_factor)"))
+      assert_condition(condition2 %in% levels(ninetails_data[[grouping_factor]]),
+                       paste0(condition2, " is not a level of ", grouping_factor, " (grouping_factor)"))
+      assert_condition(condition2 != condition1,
+                       "condition2 should be different than condition1")
       ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(grouping_factor) %in% c(condition1,condition2)) %>% droplevels()
     }
   } else if (length(levels(ninetails_data[[grouping_factor]]))==1) {
@@ -290,12 +290,12 @@ calculate_fisher <- function(ninetails_data,
          call. = FALSE)
   }
 
-  assertthat::assert_that(is.numeric(min_reads),
-                          msg=paste0("Min_reads must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.numeric(min_nonA_reads),
-                          msg=paste0("Min_nonA_reads must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.numeric(alpha),
-                          msg=paste0("Alpha must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(min_reads),
+                   "Min_reads must be numeric. Please provide a valid argument.")
+  assert_condition(is.numeric(min_nonA_reads),
+                   "Min_nonA_reads must be numeric. Please provide a valid argument.")
+  assert_condition(is.numeric(alpha),
+                   "Alpha must be numeric. Please provide a valid argument.")
 
   if (!is.data.frame(ninetails_data) || nrow(ninetails_data) == 0) {
     stop("Empty data frame provided as an input (ninetails_data). Please provide valid input")
@@ -310,11 +310,12 @@ calculate_fisher <- function(ninetails_data,
     }
     else {
       # filter input data leaving only specified conditions, dropping other factor levels
-      assertthat::assert_that(condition1 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition1," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 %in% levels(ninetails_data[[grouping_factor]]),
-                              msg=paste0(condition2," is not a level of ",grouping_factor," (grouping_factor)"))
-      assertthat::assert_that(condition2 != condition1,msg="condition2 should be different than condition1")
+      assert_condition(condition1 %in% levels(ninetails_data[[grouping_factor]]),
+                       paste0(condition1, " is not a level of ", grouping_factor, " (grouping_factor)"))
+      assert_condition(condition2 %in% levels(ninetails_data[[grouping_factor]]),
+                       paste0(condition2, " is not a level of ", grouping_factor, " (grouping_factor)"))
+      assert_condition(condition2 != condition1,
+                       "condition2 should be different than condition1")
 
       ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(grouping_factor) %in% c(condition1,condition2)) %>%
         dplyr::mutate() %>%

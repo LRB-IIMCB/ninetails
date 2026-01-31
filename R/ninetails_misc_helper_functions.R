@@ -1,3 +1,97 @@
+################################################################################
+# ASSERTION HELPERS (base R replacements for checkmate/assertthat)
+################################################################################
+#' Assert condition is TRUE, stop with message if FALSE
+#'
+#' Base R replacement for assertthat::assert_that
+#'
+#' @param cond Logical condition to check
+#' @param msg Error message if condition is FALSE
+#'
+#' @return Invisible TRUE if assertion passes
+#' @keywords internal
+#'
+assert_condition <- function(cond, msg = "Assertion failed") {
+  if (!isTRUE(cond)) {
+    stop(msg, call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+#' Test if x is a single non-empty character string
+#'
+#' Base R replacement for checkmate::test_string
+#'
+#' @param x Object to test
+#' @param min.chars Minimum number of characters (default 1)
+#' @param null.ok Allow NULL? (default FALSE)
+#'
+#' @return TRUE if x is a valid string, FALSE otherwise
+#' @keywords internal
+#'
+is_string <- function(x, min.chars = 1, null.ok = FALSE) {
+  if (is.null(x)) return(null.ok)
+  is.character(x) && length(x) == 1 && !is.na(x) && nchar(x) >= min.chars
+}
+
+#' Assert file exists with informative error
+#'
+#' Base R replacement for checkmate::assert_file_exists
+#'
+#' @param x File path to check
+#' @param arg_name Optional argument name for clearer error message
+#'
+#' @return Invisible TRUE if file exists
+#' @keywords internal
+#'
+assert_file_exists <- function(x, arg_name = NULL) {
+  if (!file.exists(x)) {
+    if (is.null(arg_name)) {
+      stop("File does not exist: ", x, call. = FALSE)
+    } else {
+      stop(arg_name, " file does not exist: ", x, call. = FALSE)
+    }
+  }
+  invisible(TRUE)
+}
+
+#' Assert directory exists with informative error
+#'
+#' @param x Directory path to check
+#' @param arg_name Optional argument name for clearer error message
+#'
+#' @return Invisible TRUE if directory exists
+#' @keywords internal
+#'
+assert_dir_exists <- function(x, arg_name = NULL) {
+  if (!dir.exists(x)) {
+    if (is.null(arg_name)) {
+      stop("Directory does not exist: ", x, call. = FALSE)
+    } else {
+      stop(arg_name, " directory does not exist: ", x, call. = FALSE)
+    }
+  }
+  invisible(TRUE)
+}
+
+
+#' Check for no NA values
+#'
+#' Base R replacement for assertthat::noNA
+#'
+#' @param x Vector to check
+#'
+#' @return TRUE if no NA values present, FALSE otherwise
+#' @keywords internal
+#'
+no_na <- function(x) {
+  !anyNA(x)
+}
+
+
+################################################################################
+# SIGNAL PROCESSING HELPERS
+################################################################################
 #' Winsorizes nanopore signal.
 #'
 #' Removes high cliffs (extending above & below
@@ -27,14 +121,12 @@ winsorize_signal <- function(signal){
     stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
   }
 
-  assertthat::assert_that(is.numeric(signal),
-                          msg=paste0("Signal vector must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.atomic(signal),
-                          msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
-  assertthat::assert_that(is.atomic(signal),
-                          msg=paste0("Signal vector must be atomic. Please provide a valid argument."))
-  assertthat::assert_that(assertthat::noNA(signal),
-                          msg="Signal vector must not contain missing values. Please provide a valid argument.")
+  assert_condition(is.numeric(signal),
+                   "Signal vector must be numeric. Please provide a valid argument.")
+  assert_condition(is.atomic(signal),
+                   "Signal vector must be atomic. Please provide a valid argument.")
+  assert_condition(no_na(signal),
+                   "Signal vector must not contain missing values. Please provide a valid argument.")
 
   signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
   minimal_val <- signal_q[1L]
@@ -72,6 +164,70 @@ load_keras_model <- function(keras_model_path){
   } else {
     keras_model <- keras::load_model_hdf5(keras_model_path)
   }
+}
+
+#' Check if fast5 file is multi-read format
+#'
+#' Checks whether the provided fast5 file structure corresponds to a multi-read
+#' fast5 file format. Multi-read fast5 files contain multiple reads stored
+#' in groups named with "read_" prefix.
+#'
+#' @param fast5_file_structure A data frame returned by rhdf5::h5ls() containing
+#'   the HDF5 structure of a fast5 file. Must contain a 'name' column.
+#'
+#' @return Logical. TRUE if the file is multi-read fast5 format, FALSE otherwise.
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' # Check if a fast5 file is multi-read format
+#' fast5_path <- "path/to/file.fast5"
+#' file_structure <- rhdf5::h5ls(fast5_path, recursive = FALSE)
+#' is_multifast5(file_structure)
+#' }
+#'
+is_multifast5 <- function(fast5_file_structure) {
+
+  assert_condition(is.data.frame(fast5_file_structure),
+                   "fast5_file_structure must be a data frame (output of rhdf5::h5ls())")
+  assert_condition("name" %in% colnames(fast5_file_structure),
+                   "fast5_file_structure must contain 'name' column")
+
+  sum(grepl('read_', fast5_file_structure$name)) > 0
+}
+
+
+#' Check if fast5 file contains RNA reads
+#'
+#' Checks whether the provided fast5 file contains RNA sequencing reads
+#' by examining the experiment_type attribute in the context_tags group.
+#'
+#' @param fast5_file Character string. Path to the fast5 file.
+#' @param read_id Character string. The read identifier within the fast5 file
+#'   (e.g., "read_abc123"). Can be obtained from rhdf5::h5ls() output.
+#'
+#' @return Logical. TRUE if the file contains RNA reads, FALSE otherwise.
+#' @keywords internal
+#'
+#' @examples
+#' \dontrun{
+#' # Check if a fast5 file contains RNA reads
+#' fast5_path <- "path/to/file.fast5"
+#' file_structure <- rhdf5::h5ls(fast5_path, recursive = FALSE)
+#' read_id <- file_structure$name[1]
+#' is_RNA(fast5_path, read_id)
+#' }
+#'
+is_RNA <- function(fast5_file, read_id) {
+
+  assert_condition(is_string(fast5_file),
+                   "fast5_file must be a character string path")
+  assert_file_exists(fast5_file, "fast5_file")
+  assert_condition(is_string(read_id),
+                   "read_id must be a character string")
+
+  read_context_tags <- rhdf5::h5readAttributes(fast5_file, paste0(read_id, "/context_tags"))
+  read_context_tags$experiment_type == "rna"
 }
 
 
@@ -116,8 +272,8 @@ check_fast5_filetype <- function(workspace,
     stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.character(workspace),
-                          msg = paste0("Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."))
+  assert_condition(is.character(workspace),
+                   "Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files.")
 
 
   #list fast5 files in given dir
@@ -138,30 +294,18 @@ check_fast5_filetype <- function(workspace,
 
 
   # checking whether fast5 file is single or multi
-  is_multifast5 <- function(selected_fast5_file_structure){
-    sum(grepl('read_', selected_fast5_file_structure$name)) > 0
+  if (!is_multifast5(selected_fast5_file_structure)) {
+    stop("The provided fast5 is single fast5 file. Please provide multifast5 file(s).", call. = FALSE)
   }
-
-  assertthat::on_failure(is_multifast5) <- function(call, env) {
-    paste0("The provided fast5 is single fast5 file. Please provide multifast5 file(s).")
-  }
-
-  assertthat::assert_that(is_multifast5(selected_fast5_file_structure))
 
   # check whether file is basecalled or not
   tryCatch(selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group)), error = function(e) { cat("The previewed fast5 file does not contain defined basecall_group. Check basecall_group - is it valid? Ninetails requires fast5 files basecalled by Guppy.") })
 
   if (exists('selected_basecall_group')) {
     # checking whether the fast5 file contains RNA ONT reads
-    is_RNA <- function(selected_fast5_file, selected_fast5_read){
-      read_context_tags <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/context_tags"))
-      read_context_tags$experiment_type == "rna"
+    if (!is_RNA(selected_fast5_file, selected_fast5_read)) {
+      stop("The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.", call. = FALSE)
     }
-
-    assertthat::on_failure(is_RNA) <- function(call, env) {
-      paste0("The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.")
-    }
-    assertthat::assert_that(is_RNA(selected_fast5_file, selected_fast5_read))
 
 
     # retrieve basecaller & basecalling model (read attributes)
@@ -190,6 +334,8 @@ check_fast5_filetype <- function(workspace,
   }
 
 }
+
+
 
 
 #' Substitutes 0s surrounded by adjacent nonzeros in pseudomove vector
@@ -223,6 +369,9 @@ substitute_gaps <- function(pseudomoves){
   return(adjusted_pseudomoves)
 }
 
+################################################################################
+# ADDITIONAL DATA PROCESSING HELPERS
+################################################################################
 #' Calculates statistical mode of given vector.
 #'
 #' This function operates in 2 flavours. Either of them can be defined
@@ -271,8 +420,8 @@ substitute_gaps <- function(pseudomoves){
 get_mode <- function(x, method ="density", na.rm = FALSE) {
 
   # assertions
-  assertthat::assert_that(is.numeric(x),
-                          msg=paste0("Provided vector must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(x),
+                   "Provided vector must be numeric. Please provide a valid argument.")
 
   x <- unlist(x)
   if (na.rm) {
@@ -329,8 +478,8 @@ get_mode <- function(x, method ="density", na.rm = FALSE) {
 #'
 correct_labels <- function(df) {
 
-  assertthat::assert_that(is.data.frame(df),
-                          msg=paste0("Provided input must be dataframe. Please provide a valid argument."))
+  assert_condition(is.data.frame(df),
+                   "Provided input must be dataframe. Please provide a valid argument.")
 
   if("class" %in% colnames(df)) {
     df$class <- ifelse(df$class %in% c("unmodified", "unclassified"),
@@ -573,6 +722,13 @@ check_output_directory <- function(save_dir, log_message) {
 #' count_trailing_chars("ACGT", "A")      # Returns 0
 #' }
 count_trailing_chars <- function(string, char) {
+
+  # assertions
+  assert_condition(is_string(string),
+                   "string must be a character string")
+  assert_condition(is_string(char) && nchar(char) == 1,
+                   "char must be a single character")
+
   count <- 0
   len <- nchar(string)
   for (i in len:1) {
@@ -601,6 +757,12 @@ count_trailing_chars <- function(string, char) {
 #' reverse_complement("AAATTT")  # Returns "AAATTT"
 #' }
 reverse_complement <- function(sequence) {
+
+  # assertions
+  assert_condition(is_string(sequence),
+                   "sequence must be a character string")
+
+
   complement_map <- c(A="T", T="A", G="C", C="G", N="N")
   chars <- strsplit(sequence, "")[[1]]
   comp <- sapply(chars, function(c) complement_map[c], USE.NAMES = FALSE)
@@ -626,6 +788,13 @@ reverse_complement <- function(sequence) {
 #' edit_distance_hw("ATCG", "ATTT")      # Returns minimum distance
 #' }
 edit_distance_hw <- function(query, target) {
+
+  # assertions
+  assert_condition(is_string(query),
+                   "query must be a character string")
+  assert_condition(is_string(target),
+                   "target must be a character string")
+
   query_len <- nchar(query)
   target_len <- nchar(target)
 

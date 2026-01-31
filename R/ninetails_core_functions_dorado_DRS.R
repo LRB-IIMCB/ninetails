@@ -35,8 +35,8 @@ process_dorado_summary <- function(dorado_summary,
     stop("Number of reads per file part (part_size) is missing. Please provide a valid part_size argument.", call. = FALSE)
   }
 
-  assertthat::assert_that(is.numeric(part_size), part_size > 0,
-                          msg = paste0("Reads per part must be numeric and positive. Please provide a valid argument."))
+  assert_condition(is.numeric(part_size) && part_size > 0,
+                   "Reads per part must be numeric and positive. Please provide a valid argument.")
 
   # Handle input data and get prefix
   if (is.character(dorado_summary)) {
@@ -165,8 +165,8 @@ process_dorado_summary <- function(dorado_summary,
 #'   \item \strong{Input validation}: Checks for required columns and valid data
 #'   \item \strong{Read filtering}: Excludes reads with:
 #'     \itemize{
-#'       \item poly_tail_length ≤ 10 (if column exists)
-#'       \item poly_tail_start ≤ 0 (invalid coordinates)
+#'       \item poly_tail_length â‰¤ 10 (if column exists)
+#'       \item poly_tail_start â‰¤ 0 (invalid coordinates)
 #'     }
 #'   \item \strong{Python subprocess execution}: Delegates extraction to an optimized
 #'         Python script that:
@@ -390,12 +390,13 @@ preprocess_inputs <- function(dorado_summary,
 
   # Input validation and configuration
   cli_log("Validating input parameters", "INFO", "Validating Inputs")
-  assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                          msg = "Number of cores must be a positive numeric value")
-  assertthat::assert_that(is.character(pod5_dir), dir.exists(pod5_dir),
-                          msg = "POD5 directory must exist")
-  assertthat::assert_that(is.numeric(part_size), part_size >= 1,
-                          msg = "Part size must be at least 1")
+  assert_condition(is.numeric(num_cores) && num_cores > 0,
+                   "Number of cores must be a positive numeric value")
+  assert_condition(is.character(pod5_dir),
+                   "POD5 directory path must be a character string")
+  assert_dir_exists(pod5_dir, "POD5")
+  assert_condition(is.numeric(part_size) && part_size >= 1,
+                   "Part size must be at least 1")
 
   ################################################################################
   # SUMMARY FILE PROCESSING
@@ -787,12 +788,12 @@ create_tail_features_list_dorado <- function(signal_list,
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. = FALSE)
   }
 
-  assertthat::assert_that(is.list(signal_list),
-                          msg = "Provided signal_list is not a list. Please provide a valid list of raw signal vectors.")
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg = "Declared num_cores must be numeric. Please provide a valid value.")
-  assertthat::assert_that(all(sapply(signal_list, is.numeric)),
-                          msg = "All elements of signal_list must be numeric vectors (raw tail signal traces).")
+  assert_condition(is.list(signal_list),
+                   "Provided signal_list is not a list. Please provide a valid list of raw signal vectors.")
+  assert_condition(is.numeric(num_cores),
+                   "Declared num_cores must be numeric. Please provide a valid value.")
+  assert_condition(all(sapply(signal_list, is.numeric)),
+                   "All elements of signal_list must be numeric vectors (raw tail signal traces).")
 
 
   # creating cluster for parallel computing
@@ -860,14 +861,14 @@ create_tail_features_list_dorado <- function(signal_list,
 #'   * retrieving them from BAM files is computationally expensive
 #'   * processing is non-intuitive
 #'
-#' Instead, only pseudomoves are considered. As a safeguard against Dorado’s
+#' Instead, only pseudomoves are considered. As a safeguard against Doradoâ€™s
 #' tendency to extend poly(A) boundaries into the transcript body, the last
 #' 3 pseudomove values are forced to 0. This prevents misclassification of
 #' transcript nucleotides as part of the tail.
 #'
 #' Candidate modification regions are detected by:
 #'   * run-length encoding (RLE) of the pseudomove vector
-#'   * filtering runs of pseudomoves with length ≥ 5
+#'   * filtering runs of pseudomoves with length â‰¥ 5
 #'
 #' Extracted fragments are padded/imputed if they extend beyond signal boundaries:
 #'   * upstream/downstream missing values (NAs) are replaced
@@ -919,10 +920,10 @@ split_tail_centered_dorado <- function(readname, tail_feature_list) {
     stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.character(readname),
-                          msg = paste0("Given readname is not a character string. Please provide a valid readname."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.character(readname),
+                   "Given readname is not a character string. Please provide a valid readname.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   # Extract required data
   # In the Dorado pipeline, moves are not used:
@@ -957,7 +958,7 @@ split_tail_centered_dorado <- function(readname, tail_feature_list) {
   # For each valid run:
   # - Compute its starting position
   # - Compute chunk boundaries centered on the middle of the run
-  # - Each chunk has a fixed window size of 100 bases (±50 around center)
+  # - Each chunk has a fixed window size of 100 bases (Â±50 around center)
   first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths, -1)))[condition]
   # length of pseudomoves satisfying condition
   filtered_length <- mod_rle$lengths[condition]
@@ -1052,10 +1053,10 @@ create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -1213,7 +1214,7 @@ create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
 #'   \itemize{
 #'     \item \code{centr_signal_pos}: Mean of chunk start and end positions
 #'       in signal space
-#'     \item \code{signal_length}: 0.2 × (poly_tail_end - poly_tail_start)
+#'     \item \code{signal_length}: 0.2 Ã— (poly_tail_end - poly_tail_start)
 #'       converts signal coordinates to nucleotide space
 #'     \item \code{poly_tail_length}: Total poly(A) tail length from Dorado
 #'   }
@@ -1325,7 +1326,7 @@ create_outputs_dorado <- function(dorado_summary_dir,
   # Load filtered dorado summary parts and reuse it
   ################################################################################
   # these contain only reads that fulfill classification criteria by Ninetails
-  # (I) they are mapped to the reference (the alignment has a direction, either + or –, not a placeholder *),
+  # (I) they are mapped to the reference (the alignment has a direction, either + or â€“, not a placeholder *),
   # (II) the mapping quality is greater than 0,
   # (III) poly(A) tail coordinates are correctly indicated (the poly(A) start cannot be 0 in the signal
   # because, in DRS, the adapter region passes through the pore first),
@@ -1584,5 +1585,3 @@ create_outputs_dorado <- function(dorado_summary_dir,
   return(list(read_classes = read_classes, nonadenosine_residues = moved_chunks_table))
 
 }
-
-

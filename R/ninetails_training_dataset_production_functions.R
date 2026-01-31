@@ -60,13 +60,13 @@ extract_tail_data_trainingset <- function(readname,
     stop("Empty data frame provided as an input (polya_summary). Please provide valid input")
   }
 
-  assertthat::assert_that(!is.na(workspace) && nchar(workspace) > 0,
-                          msg = "Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
+  assert_condition(!is.na(workspace) && nchar(workspace) > 0,
+                   "Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
 
-  assertthat::assert_that(is.character(workspace),
-                          msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
-  assertthat::assert_that(is.character(readname),
-                          msg = paste0("Given readname is not a character string. Please provide a valid readname argument."))
+  assert_condition(is.character(workspace),
+                   "Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files.")
+  assert_condition(is.character(readname),
+                   "Given readname is not a character string. Please provide a valid readname argument.")
 
   # Extract data from fast5 file
   fast5_filenames <- polya_summary$filename
@@ -198,8 +198,8 @@ create_tail_feature_list_trainingset <- function(nanopolish,
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
 
   # Extracting and processing polya & sequencing summary data
   polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
@@ -398,10 +398,10 @@ split_tail_centered_trainingset <- function(readname,
     stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.character(readname),
-                          msg = paste0("Given readname is not a character string. Please provide a valid readname."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.character(readname),
+                   "Given readname is not a character string. Please provide a valid readname.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   #extract required data
   signal <- tail_feature_list[[1]][[readname]][[2]]
@@ -489,10 +489,10 @@ create_tail_chunk_list_trainingset <- function(tail_feature_list,
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -655,8 +655,8 @@ create_tail_feature_list_A <- function(nanopolish,
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
 
   # Extracting and processing polya & sequencing summary data
   polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
@@ -764,10 +764,10 @@ create_tail_chunk_list_A <- function(tail_feature_list,
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg = paste("Declared core number must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   #create empty list for extracted data
   tail_chunk_list = list()
@@ -853,8 +853,8 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
     stop("List of tail chunks is missing. Please provide a valid chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste("Declared core number must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
 
   #create empty list for extracted data
   gaf_list = list()
@@ -882,10 +882,10 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
 
 
   gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list),
-                                .combine = c,
-                                .inorder = TRUE,
-                                .errorhandling = 'pass',
-                                .options.snow = opts,
+                               .combine = c,
+                               .inorder = TRUE,
+                               .errorhandling = 'pass',
+                               .options.snow = opts,
                                .options.multicore = mc_options) %dopar% {lapply(tail_chunk_list[[i]], function(x) ninetails::combine_gafs(x))}
 
 
@@ -990,14 +990,14 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list,
     stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.list(tail_chunk_list),
-                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid file format."))
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.numeric(value),
-                          msg=paste0("Provided value must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(value %in% c(-1,1),
-                          msg=paste0("Provided value must be either 1 or -1. Please provide a valid argument."))
+  assert_condition(is.list(tail_chunk_list),
+                   "Given tail_chunk_list is not a list (class). Please provide valid file format.")
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(is.numeric(value),
+                   "Provided value must be numeric. Please provide a valid argument.")
+  assert_condition(value %in% c(-1,1),
+                   "Provided value must be either 1 or -1. Please provide a valid argument.")
 
   #empty list for output
   filtered_input <- list()
@@ -1029,9 +1029,9 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list,
                                      .errorhandling = 'pass',
                                      .options.snow = opts,
                                      .options.multicore = mc_options) %dopar% {
-    filtered_output <-  Filter(function(x) any(with(rle(x$pseudomoves), lengths[values==value]>=4)) & x$chunk_start_pos>=0, tail_chunk_list[[i]])
-    lapply(filtered_output, function(x) x)
-  }
+                                       filtered_output <-  Filter(function(x) any(with(rle(x$pseudomoves), lengths[values==value]>=4)) & x$chunk_start_pos>=0, tail_chunk_list[[i]])
+                                       lapply(filtered_output, function(x) x)
+                                     }
 
   #close(pb)
 

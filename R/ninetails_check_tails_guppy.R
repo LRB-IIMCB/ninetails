@@ -1,4 +1,3 @@
-
 ################################################################################
 # WRAPPER FUNCTION FOR GUPPY/NANOPOLISH(TAILFINDR) OUTPUTS
 ################################################################################
@@ -236,46 +235,45 @@ check_tails_guppy <- function(polya_data,
     cli_log("Validating input parameters", "INFO", "Validating Inputs")
     # Assertions
     ###################################################
-    assertthat::assert_that(is.numeric(num_cores), num_cores > 0,
-                            msg = "Number of cores must be a positive numeric value")
+    assert_condition(is.numeric(num_cores) && num_cores > 0,
+                     "Number of cores must be a positive numeric value")
 
-    assertthat::assert_that(is.character(workspace), dir.exists(workspace),
-                            msg = "Fast5 files directory does not exist or path is invalid")
+    assert_condition(is.character(workspace),
+                     "Fast5 files directory path must be a character string")
+    assert_dir_exists(workspace, "Fast5 files")
 
-    assertthat::assert_that(checkmate::test_string(basecall_group, min.chars = 1),
-                            msg = "Basecall group must be a non-empty character string")
+    assert_condition(is_string(basecall_group, min.chars = 1),
+                     "Basecall group must be a non-empty character string")
 
-    assertthat::assert_that(is.character(save_dir),
-                            msg = "Output directory path must be a character string")
+    assert_condition(is.character(save_dir),
+                     "Output directory path must be a character string")
 
-    assertthat::assert_that(is.logical(pass_only),
-                            msg = "pass_only must be logical [TRUE/FALSE]")
+    assert_condition(is.logical(pass_only),
+                     "pass_only must be logical [TRUE/FALSE]")
 
-    assertthat::assert_that(is.logical(qc),
-                            msg = "qc must be logical [TRUE/FALSE]")
+    assert_condition(is.logical(qc),
+                     "qc must be logical [TRUE/FALSE]")
 
     # Validate prefix (if provided)
     if (nchar(prefix) > 0) {
-      assertthat::assert_that(is.character(prefix),
-                              msg = "File name prefix must be a character string")
+      assert_condition(is.character(prefix),
+                       "File name prefix must be a character string")
     }
 
     # Validate nanopolish input
-    if (checkmate::test_string(polya_data)) {
-      assertthat::assert_that(file.exists(polya_data),
-                              msg = "Poly(A) data file does not exist")
+    if (is_string(polya_data)) {
+      assert_file_exists(polya_data, "Poly(A) data")
     } else {
-      assertthat::assert_that(is.data.frame(polya_data) && nrow(polya_data) > 0,
-                              msg = "Poly(A) data input must be a non-empty data frame or valid file path")
+      assert_condition(is.data.frame(polya_data) && nrow(polya_data) > 0,
+                       "Poly(A) data input must be a non-empty data frame or valid file path")
     }
 
     # Validate sequencing summary input
-    if (checkmate::test_string(sequencing_summary)) {
-      assertthat::assert_that(file.exists(sequencing_summary),
-                              msg = "Sequencing summary file does not exist")
+    if (is_string(sequencing_summary)) {
+      assert_file_exists(sequencing_summary, "Sequencing summary")
     } else {
-      assertthat::assert_that(is.data.frame(sequencing_summary) && nrow(sequencing_summary) > 0,
-                              msg = "Sequencing summary must be a non-empty data frame or valid file path")
+      assert_condition(is.data.frame(sequencing_summary) && nrow(sequencing_summary) > 0,
+                       "Sequencing summary must be a non-empty data frame or valid file path")
     }
     cli_log("Provided input files/paths are in correct format", "SUCCESS")
 
@@ -877,4 +875,3 @@ process_polya_parts <- function(part_files,
 
   return(merged_output)
 }
-

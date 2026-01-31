@@ -71,8 +71,8 @@ annotate_with_biomart <- function(input_data,
     stop("Empty data frame provided as an input (input_data). Please provide valid input")}
 
 
-  assertthat::assert_that(length(attributes)>0,
-                          msg="please provide attributes to get from biomart")
+  assert_condition(length(attributes) > 0,
+                   "please provide attributes to get from biomart")
 
   # Assert that at least one of organism or mart_to_use is provided
   if (!is.null(organism) && !is.null(mart_to_use)) {

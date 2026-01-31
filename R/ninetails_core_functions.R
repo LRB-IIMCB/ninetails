@@ -50,13 +50,13 @@ extract_polya_data <- function(nanopolish,
     stop("Sequencing summary file is missing. Please provide a valid sequencing_summary argument.", .call = FALSE)
   }
 
-  assertthat::assert_that(is.logical(pass_only),
-                          msg="Please provide TRUE/FALSE values for pass_only parameter")
+  assert_condition(is.logical(pass_only),
+                   "Please provide TRUE/FALSE values for pass_only parameter")
 
   # Accept either path to file or in-memory file - PK's GH issue
-  if (checkmate::test_string(nanopolish)) {
+  if (is_string(nanopolish)) {
     # if string provided as an argument, read from file
-    checkmate::assert_file_exists(nanopolish)
+    assert_file_exists(nanopolish, "Nanopolish")
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
                                            show_col_types = FALSE)
@@ -70,9 +70,9 @@ extract_polya_data <- function(nanopolish,
   }
 
   # Accept either path to file or in-memory file - PK's GH issue
-  if (checkmate::test_string(sequencing_summary)) {
+  if (is_string(sequencing_summary)) {
     # if string provided as an argument, read from file
-    checkmate::assert_file_exists(sequencing_summary)
+    assert_file_exists(sequencing_summary, "Sequencing summary")
     sequencing_summary_table <- vroom::vroom(sequencing_summary,
                                              col_select = c(filename, read_id),
                                              show_col_types = FALSE)
@@ -173,12 +173,12 @@ extract_tail_data <- function(readname,
   }
 
 
-  assertthat::assert_that(is.character(workspace),
-                          msg = paste0("Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."))
-  assertthat::assert_that(checkmate::test_string(workspace, null.ok=F, min.chars=1),
-                          msg="Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
-  assertthat::assert_that(is.character(readname),
-                          msg = paste0("Given readname is not a character string. Please provide a valid readname argument."))
+  assert_condition(is.character(workspace),
+                   "Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files.")
+  assert_condition(is_string(workspace, null.ok = FALSE, min.chars = 1),
+                   "Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
+  assert_condition(is.character(readname),
+                   "Given readname is not a character string. Please provide a valid readname argument.")
 
   # Extract data from fast5 file
   fast5_filenames <- polya_summary$filename
@@ -328,8 +328,8 @@ create_tail_feature_list <- function(nanopolish,
     stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
 
   # Extracting and processing polya & sequencing summary data
   polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
@@ -453,8 +453,8 @@ filter_signal_by_threshold <- function(signal) {
     stop("Signal is missing. Please provide a valid signal argument [numeric vec].", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(signal),
-                          msg=paste0("Signal must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(signal),
+                   "Signal must be numeric. Please provide a valid argument.")
 
   # reproducibility
   set.seed(123)
@@ -570,10 +570,10 @@ split_tail_centered <- function(readname,
     stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.character(readname),
-                          msg = paste0("Given readname is not a character string. Please provide a valid readname."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.character(readname),
+                   "Given readname is not a character string. Please provide a valid readname.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   #extract required data
   signal <- tail_feature_list[[1]][[readname]][[2]]
@@ -672,10 +672,10 @@ create_tail_chunk_list <- function(tail_feature_list,
     stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg = paste0("Declared core number must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid file format."))
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -775,12 +775,12 @@ create_gaf <- function(tail_chunk, method="s"){
   if (missing(method)) {
     stop("Transformation method is missing. Please provide a valid method argument.", call. =FALSE)
   }
-  assertthat::assert_that(is.numeric(tail_chunk),
-                          msg=paste0("Provided tail_chunk must be numeric. Please provide a valid argument."))
-  assertthat::assert_that(is.character(method),
-                          msg=paste0("Provided method must be character string. Please provide a valid argument."))
-  assertthat::assert_that(length(tail_chunk) == 100,
-                          msg=paste0("Provided chunks of wrong length. The chunk length should be equal to 100. Please provide a valid tail_chunk."))
+  assert_condition(is.numeric(tail_chunk),
+                   "Provided tail_chunk must be numeric. Please provide a valid argument.")
+  assert_condition(is.character(method),
+                   "Provided method must be character string. Please provide a valid argument.")
+  assert_condition(length(tail_chunk) == 100,
+                   "Provided chunks of wrong length. The chunk length should be equal to 100. Please provide a valid tail_chunk.")
 
 
   # rescale values so that all of them fall in the interval [-1, 1]:
@@ -849,8 +849,8 @@ combine_gafs <- function(tail_chunk){
     stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.numeric(tail_chunk),
-                          msg=paste0("Provided tail_chunk must be numeric. Please provide a valid argument."))
+  assert_condition(is.numeric(tail_chunk),
+                   "Provided tail_chunk must be numeric. Please provide a valid argument.")
 
   #create gasf & gaf
   GASF <- ninetails::create_gaf(tail_chunk=tail_chunk, method="s")
@@ -904,10 +904,10 @@ create_gaf_list <- function(tail_chunk_list,
     stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.list(tail_chunk_list),
-                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid file format."))
-  assertthat::assert_that(is.numeric(num_cores),
-                          msg=paste0("Declared core number must be numeric. Please provide a valid argument."))
+  assert_condition(is.list(tail_chunk_list),
+                   "Given tail_chunk_list is not a list (class). Please provide valid file format.")
+  assert_condition(is.numeric(num_cores),
+                   "Declared core number must be numeric. Please provide a valid argument.")
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -1112,16 +1112,16 @@ create_outputs <- function(tail_feature_list,
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
   }
 
-  assertthat::assert_that(is.list(tail_feature_list),
-                          msg = paste0("Given tail_feature_list is not a list (class). Please provide valid object."))
-  assertthat::assert_that(is.list(tail_chunk_list),
-                          msg = paste0("Given tail_chunk_list is not a list (class). Please provide valid object."))
-  assertthat::assert_that(is.list(predicted_list),
-                          msg = paste0("Given predicted_list is not a list (class). Please provide valid object."))
+  assert_condition(is.list(tail_feature_list),
+                   "Given tail_feature_list is not a list (class). Please provide valid object.")
+  assert_condition(is.list(tail_chunk_list),
+                   "Given tail_chunk_list is not a list (class). Please provide valid object.")
+  assert_condition(is.list(predicted_list),
+                   "Given predicted_list is not a list (class). Please provide valid object.")
 
-  if (checkmate::test_string(nanopolish)) {
+  if (is_string(nanopolish)) {
     # if string provided as an argument, read from file
-    checkmate::assert_file_exists(nanopolish)
+    assert_file_exists(nanopolish, "Nanopolish")
     nanopolish_polya_table <- vroom::vroom(nanopolish,
                                            col_select=c(readname, contig, polya_length, qc_tag),
                                            show_col_types = FALSE)
@@ -1359,6 +1359,3 @@ create_outputs <- function(tail_feature_list,
   return(ninetails_output)
 
 }
-
-
-
