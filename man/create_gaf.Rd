@@ -2,35 +2,57 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_gaf}
 \alias{create_gaf}
-\title{Converts ONT signal to Gramian Angular Field.}
+\title{Convert ONT signal to Gramian Angular Field}
 \usage{
 create_gaf(tail_chunk, method = "s")
 }
 \arguments{
-\item{tail_chunk}{numeric. A numeric vector representing signal chunk
-within the analyzed dataset.}
+\item{tail_chunk}{Numeric vector. A 100-element signal chunk representing
+a fragment of the poly(A) tail within the analyzed dataset.}
 
-\item{method}{character string specifying the type of Gramian Angular Field:
-"s" can be used to produce summation field (GASF) and "d" to produce
-difference field (GADF). Defaults to summation ["s"].}
+\item{method}{Character string specifying the type of Gramian Angular Field.
+\code{"s"} (default) produces a summation field (GASF), \code{"d"}
+produces a difference field (GADF).}
 }
 \value{
-an array (100,100,1) with values (coordinates) representing ONT signal.
+An array of dimensions (100, 100, 1) with values representing
+  the Gramian Angular Field transformation of the input signal chunk.
+  Values are in the range [0, 1].
 }
 \description{
-This function represents time series data (ont squiggle) in a polar coordinate
-system instead of the typical Cartesian coordinates. This is a Pythonic
-pyts.image equivalent written in R language.
+Represents time series data (ONT squiggle) in a polar coordinate system
+instead of the typical Cartesian coordinates. This is a pure-R equivalent
+of the Python pyts.image implementation.
 }
 \details{
-Two methods of such transformation are available: Gramian angular summation
-field (GASF) and Gramian angular difference field (GADF).
+Two methods of transformation are available: Gramian Angular Summation
+Field (GASF) and Gramian Angular Difference Field (GADF).
+
+
+The transformation proceeds as follows:
+\enumerate{
+  \item Rescale signal values to the interval [-1, 1]
+  \item Compute the inverse trigonometric function (\code{acos} for GASF,
+        \code{asin} for GADF) of each value
+  \item Form a pairwise matrix by summing (GASF) or differencing (GADF)
+        the angle vectors
+  \item Apply the corresponding trigonometric function (\code{cos} or
+        \code{sin}) to the matrix
+  \item Reshape to a 100x100x1 array
+  \item Rescale result to the interval [0, 1]
+}
 }
 \examples{
 \dontrun{
 
-ninetails::create_gaf(tail_chunk = tail_chunk,
-                      method="s")
+ninetails::create_gaf(
+  tail_chunk = tail_chunk,
+  method = "s"
+)
 
 }
+}
+\seealso{
+\code{\link{combine_gafs}} for combining GASF and GADF into a single
+array, \code{\link{create_gaf_list}} for batch GAF computation
 }

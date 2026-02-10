@@ -2,8 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_tail_feature_list}
 \alias{create_tail_feature_list}
-\title{Extracts features of polyA tails of ONT RNA reads required for finding
-non-A nucleotides within the given tails.}
+\title{Create list of poly(A) tail features from multi-Fast5 files}
 \usage{
 create_tail_feature_list(
   nanopolish,
@@ -15,57 +14,81 @@ create_tail_feature_list(
 )
 }
 \arguments{
-\item{nanopolish}{character string. Full path of the .tsv file produced
-by nanopolish polya function.}
+\item{nanopolish}{Character string or data frame. Full path of the
+\code{.tsv} file produced by nanopolish polya function, or an in-memory
+data frame.}
 
-\item{sequencing_summary}{character string. Full path of the .txt file
-with sequencing summary.}
+\item{sequencing_summary}{Character string or data frame. Full path of the
+\code{.txt} file with sequencing summary, or an in-memory data frame.}
 
-\item{workspace}{character string. Full path of the directory to search the
-basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory containing
+the basecalled multi-Fast5 files.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric. Number of physical cores to use in processing.
+Do not exceed 1 less than the number of cores at your disposal.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the Fast5 file hierarchy from which the data should be extracted.}
+\item{basecall_group}{Character string. Name of the level in the Fast5
+file hierarchy from which data should be extracted (e.g.,
+\code{"Basecall_1D_000"}).}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical. If \code{TRUE} (default), only reads tagged by
+nanopolish as \code{"PASS"} are taken into consideration. If \code{FALSE},
+reads tagged as \code{"PASS"} and \code{"SUFFCLIP"} are both included.}
 }
 \value{
-A list containing read information organized by the read ID
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list with three elements:
+  \describe{
+    \item{tail_feature_list}{Named list of per-read tail features. Each
+      element contains \code{fast5_filename}, \code{tail_signal},
+      \code{tail_moves}, and \code{tail_pseudomoves} (see
+      \code{\link{extract_tail_data}}).}
+    \item{zeromoved_readnames}{Character vector. Read IDs discarded because
+      all basecaller moves in their tail region were zero.}
+    \item{nonpseudomoved_readnames}{Character vector. Read IDs discarded
+      because their pseudomove chain was too short (< 5 consecutive
+      positions) to indicate a potential modification.}
+  }
+  Always assign the returned list to a variable. Printing the full output
+  to the console may crash your R session.
 }
 \description{
-This function extracts tail features of RNA reads from multi-fast5 files
-basecalled by guppy and polyA tail characteristics (coordinates) created
-by nanopolish polya function. Filenames are taken from the sequencing
-summary file.
+Extracts tail features of RNA reads from multi-Fast5 files basecalled by
+Guppy and poly(A) tail characteristics (coordinates) produced by nanopolish
+polya function. Processing is parallelized across reads using
+\pkg{foreach} and \pkg{doSNOW}. A progress bar is displayed during
+extraction.
+}
+\details{
+After extraction, reads with zero-moved tails and reads that do not satisfy
+the pseudomove condition (minimum run length of 5) are filtered out and
+their identifiers are stored separately for downstream classification.
 }
 \examples{
 \dontrun{
 
 tfl <- ninetails::create_tail_feature_list(
- nanopolish = system.file('extdata',
+  nanopolish = system.file('extdata',
+                           'test_data',
+                           'nanopolish_output.tsv',
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata',
+                                   'test_data',
+                                   'sequencing_summary.txt',
+                                   package = 'ninetails'),
+  workspace = system.file('extdata',
                           'test_data',
-                          'nanopolish_output.tsv',
+                          'basecalled_fast5',
                           package = 'ninetails'),
- sequencing_summary = system.file('extdata',
-                                  'test_data',
-                                  'sequencing_summary.txt',
-                                  package = 'ninetails'),
- workspace = system.file('extdata',
-                         'test_data',
-                         'basecalled_fast5',
-                         package = 'ninetails'),
- num_cores = 2,
- basecall_group = 'Basecall_1D_000',
- pass_only=TRUE)
+  num_cores = 2,
+  basecall_group = 'Basecall_1D_000',
+  pass_only = TRUE
+)
 
 }
 
+}
+\seealso{
+\code{\link{extract_polya_data}} for reading nanopolish and sequencing
+summary data, \code{\link{extract_tail_data}} for single-read extraction,
+\code{\link{create_tail_chunk_list}} for downstream chunk segmentation
 }

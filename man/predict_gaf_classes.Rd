@@ -2,21 +2,34 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{predict_gaf_classes}
 \alias{predict_gaf_classes}
-\title{Performs classification of matrices produced from read chunks with CNN.}
+\title{Classify Gramian Angular Field matrices with a pretrained CNN}
 \usage{
 predict_gaf_classes(gaf_list)
 }
 \arguments{
-\item{gaf_list}{[list] A list of gaf matrices organized by the read ID_index.}
+\item{gaf_list}{List of GAF arrays (100, 100, 2), as produced by
+\code{\link{create_gaf_list}}.}
 }
 \value{
-a list of gafs predictions based on used model.
+A named list with two elements:
+  \describe{
+    \item{chunkname}{Character vector. Names of the classified signal
+      chunks (format: \code{<readname>_<index>})}
+    \item{prediction}{Integer vector. Predicted nucleotide class for
+      each chunk (0 = A, 1 = C, 2 = G, 3 = U)}
+  }
 }
 \description{
-This function allows to assign gafs corresponding to the given signals
-into one of 4 categories (A, C, G, U, respectively). This function in its
-current implementation allows to load the pretrained CNN model. It uses
-tensorflow backend to produce the classification output.
+Assigns GAF representations of signal chunks to one of four nucleotide
+categories (A, C, G, U) using a pretrained convolutional neural network.
+The model is loaded via \code{\link{load_keras_model}} and inference is
+performed through the TensorFlow/Keras backend.
+}
+\details{
+The function reshapes the input GAF list into a 4-D tensor
+(n_chunks x 100 x 100 x 2) and applies the pretrained CNN to predict
+the nucleotide class for each chunk. Predictions are returned as integer
+codes: 0 = A, 1 = C, 2 = G, 3 = U.
 }
 \examples{
 \dontrun{
@@ -24,4 +37,9 @@ tensorflow backend to produce the classification output.
 pl <- ninetails::predict_gaf_classes(gl)
 
 }
+}
+\seealso{
+\code{\link{create_gaf_list}} for preparing the input,
+\code{\link{load_keras_model}} for model loading,
+\code{\link{create_outputs}} for integrating predictions into final output
 }

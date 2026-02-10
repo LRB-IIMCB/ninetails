@@ -2,32 +2,43 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_gaf_list}
 \alias{create_gaf_list}
-\title{Creates list of gramian angular matrices produced based on
-list of splitted tails (tail chunks).}
+\title{Create list of Gramian Angular Field matrices from tail chunks}
 \usage{
 create_gaf_list(tail_chunk_list, num_cores)
 }
 \arguments{
-\item{tail_chunk_list}{character string. The list object produced
-by create_chunk_list function.}
+\item{tail_chunk_list}{List object produced by
+\code{\link{create_tail_chunk_list}}.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric. Number of physical cores to use in processing.
+Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
-A list of gaf matrices organized by the read ID_index
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list of GAF arrays (100, 100, 2) organized by read
+  \code{ID_index}. Always assign the returned list to a variable.
+  Printing the full output to the console may crash your R session.
 }
 \description{
-Creates list of gramian angular matrices produced based on
-list of splitted tails (tail chunks).
+Computes Gramian Angular Field (GAF) representations for all signal chunks
+in a tail chunk list. Each chunk is transformed into a combined GASF + GADF
+array via \code{\link{combine_gafs}}.
+}
+\details{
+Parallelization is handled with \pkg{foreach} and \pkg{doSNOW}, and a
+progress bar is displayed during processing.
 }
 \examples{
 \dontrun{
 
-gl <- ninetails::create_gaf_list(tail_chunk_list = tcl,
-                                 num_cores = 2)
+gl <- ninetails::create_gaf_list(
+  tail_chunk_list = tcl,
+  num_cores = 2
+)
 
 }
+}
+\seealso{
+\code{\link{create_tail_chunk_list}} for preparing the input,
+\code{\link{combine_gafs}} for the per-chunk GAF transformation,
+\code{\link{predict_gaf_classes}} for downstream CNN classification
 }

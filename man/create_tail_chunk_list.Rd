@@ -2,31 +2,51 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_tail_chunk_list}
 \alias{create_tail_chunk_list}
-\title{Creates list of polyA tail chunks centered on significant signal deviations.}
+\title{Create list of poly(A) tail chunks centered on significant signal deviations}
 \usage{
 create_tail_chunk_list(tail_feature_list, num_cores)
 }
 \arguments{
-\item{tail_feature_list}{list object produced by \code{\link{create_tail_feature_list}}
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list}}.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric. Number of physical cores to use in processing.
+Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
-a list object (nested) containing the segmented tail data (chunks,
-coordinates) organized by the read IDs.
+A nested list containing the segmented tail data (chunks and
+  coordinates) organized by read IDs. Each read entry contains one or more
+  fragments, where each fragment is a list with:
+  \describe{
+    \item{chunk_sequence}{Numeric vector. Raw signal values (length 100)}
+    \item{chunk_start_pos}{Integer. Starting index of the chunk in the
+      original signal}
+    \item{chunk_end_pos}{Integer. Ending index of the chunk in the
+      original signal}
+  }
 }
 \description{
-Extracts fragments of polyA tails of ONT RNA reads potentially containing
-non-A nucleotides along their coordinates & appends the data to the nested
-list organized by read IDs.
+Extracts fragments of poly(A) tails of ONT RNA reads potentially containing
+non-A nucleotides, along with their coordinates, and appends the data to a
+nested list organized by read IDs.
+}
+\details{
+Parallelization is handled with \pkg{foreach} and \pkg{doSNOW}. A progress
+bar is displayed during processing. After extraction, empty list elements
+are pruned and chunk moves are dropped to minimize memory footprint.
 }
 \examples{
 \dontrun{
 
-tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl,
-                                         num_cores = 3)
+tcl <- ninetails::create_tail_chunk_list(
+  tail_feature_list = tfl,
+  num_cores = 3
+)
 
 }
+}
+\seealso{
+\code{\link{create_tail_feature_list}} for preparing the input,
+\code{\link{split_tail_centered}} for the per-read segmentation logic,
+\code{\link{create_gaf_list}} for downstream GAF transformation
 }

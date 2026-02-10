@@ -2,47 +2,76 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{filter_signal_by_threshold}
 \alias{filter_signal_by_threshold}
-\title{Detection of outliers (peaks & valleys) in ONT signal using z-scores.}
+\title{Detect outliers (peaks and valleys) in ONT signal using z-scores}
 \usage{
 filter_signal_by_threshold(signal)
 }
 \arguments{
-\item{signal}{numeric vector. An ONT read fragment corresponding to the tail
-region of the read of interest as delimited by nanopolish polya function (the
-fragments are stored in tail_feature_list[[1]] produced by the
-\code{\link{create_tail_feature_list}} function.}
+\item{signal}{Numeric vector. An ONT read fragment corresponding to the
+poly(A) tail region of the read of interest, as delimited by nanopolish
+polya function. Fragments are stored in
+\code{tail_feature_list[[1]][[readname]][[2]]} produced by
+\code{\link{create_tail_feature_list}}.}
 }
 \value{
-numeric vector of "pseudomoves" corresponding to the analyzed tail
-region; containing values ranging from -1 to 1.
+Numeric vector of pseudomoves corresponding to the analyzed tail
+  region, with the same length as the input signal. Values are integers
+  in the range \{-1, 0, 1\}:
+  \describe{
+    \item{-1}{Signal valleys (potential C/U nucleotides)}
+    \item{0}{Normal signal (likely A nucleotides)}
+    \item{1}{Signal peaks (potential G nucleotides)}
+  }
 }
 \description{
-The function enables detection in the signal corresponding to the poly(A)
-tail of areas in which the signal value significantly deviates from the
-values typical of an adenosine homopolymer.
+Detects areas in the poly(A) tail signal where values significantly deviate
+from those typical of an adenosine homopolymer. The function produces a
+vector of pseudomoves with values in the range \{-1, 0, 1\}, where -1
+corresponds to signals significantly below the local mean (potential C/U),
+1 corresponds to signals significantly above the local mean (potential G),
+and 0 corresponds to typical adenosine homopolymer values.
 }
 \details{
-The function results in a vector of "pseudomoves" with values in the range
--1:1, where -1 corresponds to signals that are significantly less than the
-mean and standard deviation of the typical A-homopolymer, 1 corresponds to
-signals that are significantly higher than the mean and standard deviation
-of the typical A-homopolymer, and 0 corresponds to the typical values
-for the A-homopolymer.
-
-The "pseudomoves" vector allows more accurate calibration of the nucleotide
+The pseudomoves vector allows more accurate calibration of nucleotide
 positions of potential non-adenosine residues than the moves produced
-by the guppy basecaller.
+by the Guppy basecaller.
 
-The function created based on the following source:
-Brakel, J.P.G. van (2014). "Robust peak detection algorithm using z-scores".
-Stack Overflow. Available at:
-https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362
+
+The algorithm implements a sliding-window approach based on adaptive z-scores:
+\enumerate{
+  \item A calibration phase (100 synthetic data points drawn from the most
+    frequent signal values) establishes baseline signal characteristics
+  \item Rolling mean and standard deviation are computed over a 100-point
+    adaptive window
+  \item Outliers are detected when signal deviates > 3.5 standard deviations
+    from the local mean
+  \item Direction of deviation determines the pseudomove value
+}
+
+Terminal positions (first 5) are masked to prevent false positives at the
+adapter-tail boundary. This is a temporary safeguard until the
+resegmentation model is refined.
+}
+\section{References}{
+
+Based on: Brakel, J.P.G. van (2014). "Robust peak detection algorithm
+using z-scores". Stack Overflow. Available at:
+\url{https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362}
 (version: 2020-11-08).
 }
+
 \examples{
 \dontrun{
 
-ninetails::filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+ninetails::filter_signal_by_threshold(
+  signal = tail_feature_list[[1]][["readname"]][[4]]
+)
 
 }
+}
+\seealso{
+\code{\link{filter_signal_by_threshold_vectorized}} for the optimized
+Dorado version, \code{\link{substitute_gaps}} for gap handling,
+\code{\link{create_tail_feature_list}} for the complete feature extraction
+pipeline
 }

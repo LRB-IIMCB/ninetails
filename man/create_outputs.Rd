@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{create_outputs}
 \alias{create_outputs}
-\title{Creates the list object containing tabular outputs of ninetails pipeline.}
+\title{Create ninetails output tables (Guppy legacy pipeline)}
 \usage{
 create_outputs(
   tail_feature_list,
@@ -15,78 +15,111 @@ create_outputs(
 )
 }
 \arguments{
-\item{tail_feature_list}{list object produced by \code{\link{create_tail_feature_list}}
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list}}.}
 
-\item{tail_chunk_list}{list object produced by \code{\link{create_tail_chunk_list}}
-function.}
+\item{tail_chunk_list}{List object produced by
+\code{\link{create_tail_chunk_list}}.}
 
-\item{nanopolish}{character string. Full path of the .tsv file produced
-by nanopolish polya function or name of in-memory file (environment object).}
+\item{nanopolish}{Character string or data frame. Full path of the
+\code{.tsv} file produced by nanopolish polya function, or an in-memory
+data frame.}
 
-\item{predicted_list}{a list object produced by \code{\link{predict_classes}} function.}
+\item{predicted_list}{List object produced by
+\code{\link{predict_gaf_classes}}.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric. Number of physical cores to use in processing.
+Do not exceed 1 less than the number of cores at your disposal.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical. If \code{TRUE} (default), only reads tagged by
+nanopolish as \code{"PASS"} are taken into consideration. If \code{FALSE},
+reads tagged as \code{"PASS"} and \code{"SUFFCLIP"} are both included.}
 
-\item{qc}{logical [TRUE/FALSE]. If TRUE, the quality control of the output
-predictions would be performed. This means that the reads/non-A residue
-positions in terminal nucleotides, which are most likely artifacts, are
-labeled accordingly as "-WARN" (residues recognized as non-A due to
-nanopolish segmentation error which is inherited from nanopolish,
-as ninetails uses nanopolish segmentation). It is then up to user, whether
-they would like to include or discard such reads from their pipeline. However,
-it is advised to treat them with caution. By default, the qc option is enabled
-(this parameter is set to TRUE).}
+\item{qc}{Logical. If \code{TRUE} (default), quality control of the output
+predictions is performed. Reads with non-A residue positions in terminal
+nucleotides (< 2 nt from either end of the tail) are labeled with
+\code{"-WARN"} suffixes, as these are most likely artifacts inherited
+from nanopolish segmentation. It is then up to the user whether to
+include or discard such reads from downstream analysis.}
 }
 \value{
-This function returns a list object containing two dataframes:
-"read_classes" and "nonadenosine_residues" with the final output.
-First dataframe contains initial indications, whether the given read was
-classified or omitted (with reason) and if classified, whether read was
-recognized as decorated (containing non-adenosine residue) or not.
-The second dataframe contains detailed info on type and estimated positions
-of non-adenosine residues detected.
+A named list with two data frames:
+  \describe{
+    \item{read_classes}{Data frame with per-read classification results.
+      Columns: \code{readname}, \code{contig}, \code{polya_length},
+      \code{qc_tag}, \code{class}, and \code{comments}.}
+    \item{nonadenosine_residues}{Data frame with per-chunk predictions of
+      non-adenosine residues for decorated reads only. Columns:
+      \code{readname}, \code{contig}, \code{prediction}, \code{est_nonA_pos},
+      \code{polya_length}, \code{qc_tag}. When \code{qc = TRUE}, prediction
+      values may carry a \code{"-WARN"} suffix for terminal positions.}
+  }
 }
 \description{
-The read_classes dataframe contains results of read classification.
-The sequencing reads are assigned to classes based on whether the initial
-conditions are met or not (e.g. sufficient read quality, sufficient length
-(>=10 nt), move transition presence, local signal anomaly detected etc.).
-According to this, reads are assigned into 3 main categories: decorated,
-blank, unclassified (class column).
+Integrates nanopolish poly(A) tail data, CNN predictions, and positional
+information to generate two main outputs: per-read classifications and
+non-adenosine residue predictions with estimated positions along the
+poly(A) tail.
 }
 \details{
-The more detailed info regarding read classification is stored within
-'comments' column. To make the output more compact, it contains codes
-as follows:\itemize{
-\item IRL - insufficient read length
-\item QCF - nanopolish qc failed
-\item MAU - move transition absent, nonA residue undetected
-\item MPU - move transition present, nonA residue undetected
-\item NIN - not included in the analysis (pass only = T)
-\item YAY - move transition present, nonA residue detected
+The function implements a complete read accounting system that classifies
+all reads from the nanopolish output into biologically meaningful categories
+based on both quality control metrics and modification detection results.
+}
+\section{Read Classification System}{
+
+  Reads are assigned into three main categories with specific comment codes:
+
+  \strong{decorated} - Reads with detected non-adenosine modifications
+  \itemize{
+    \item YAY: Move transition present, nonA residue detected
+  }
+
+  \strong{blank} - Reads without detected modifications
+  \itemize{
+    \item MAU: Move transition absent, nonA residue undetected
+    \item MPU: Move transition present, nonA residue undetected
+  }
+
+  \strong{unclassified} - Reads that failed quality control
+  \itemize{
+    \item IRL: Insufficient read length (poly(A) < 10 nt)
+    \item QCF: Nanopolish QC failed
+    \item NIN: Not included in the analysis (\code{pass_only = TRUE})
+  }
 }
 
-The nonadenosine_residues contains detailed positional info regarding all
-potential nonadenosine residues detected.
+\section{Position Estimation}{
+
+  Non-adenosine residue positions are estimated using the formula:
+
+  \code{est_nonA_pos = polya_length - ((polya_length * centr_signal_pos) /
+  signal_length)}
+
+  Positions are reported as distance from the 3' end of the tail
+  (position 1 = most 3' nucleotide).
 }
+
 \examples{
 \dontrun{
 
-create_outputs(tail_feature_list = tail_feature_list,
-               tail_chunk_list = tail_chunk_list,
-               nanopolish = '/path/to/nanopolish_output.tsv',
-               predicted_list = predicted_list,
-               num_cores = 2,
-               pass_only=TRUE,
-               qc=TRUE)
+create_outputs(
+  tail_feature_list = tail_feature_list,
+  tail_chunk_list = tail_chunk_list,
+  nanopolish = '/path/to/nanopolish_output.tsv',
+  predicted_list = predicted_list,
+  num_cores = 2,
+  pass_only = TRUE,
+  qc = TRUE
+)
+
 }
 
 
+}
+\seealso{
+\code{\link{create_tail_feature_list}} for feature extraction,
+\code{\link{create_tail_chunk_list}} for chunk segmentation,
+\code{\link{predict_gaf_classes}} for CNN classification,
+\code{\link{check_tails_guppy}} for the complete pipeline wrapper
 }

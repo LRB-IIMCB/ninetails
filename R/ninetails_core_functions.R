@@ -1,40 +1,69 @@
-#' Extracts features of multiple RNA reads from nanopolish output
-#' & sequencing summary file.
+################################################################################
+# CORE NINETAILS FUNCTIONS SHARED ACROSS THE PIPELINES
+################################################################################
+#' Extract poly(A) data from nanopolish output and sequencing summary
 #'
-#' This function extracts features of poly(A) tails of selected RNA reads
-#' from the output table provided by nanopolish polya function and sequencing
-#' summary provided by the sequencer. Filenames are taken from the sequencing
-#' summary file. Only reads with tail lengths estimated as >= 10nt by nanopolish
-#' polya function are taken into account.
+#' Extracts features of poly(A) tails of selected RNA reads from the output
+#' table provided by nanopolish polya function and the sequencing summary
+#' provided by the sequencer. Filenames are taken from the sequencing summary
+#' file. Only reads with tail lengths estimated as >= 10 nt by nanopolish polya
+#' function are taken into account.
 #'
-#' @param nanopolish character string. Either full path of the .tsv file produced
-#' by nanopolish polya function or an environment object containing nanopolish
-#' data.
+#' @param nanopolish Character string or data frame. Either the full path of
+#'   the \code{.tsv} file produced by nanopolish polya function or an in-memory
+#'   data frame containing nanopolish data.
 #'
-#' @param sequencing_summary character string. Either full path of the .txt file
-#' with sequencing summary or an environment object containing sequencing
-#' summary data.
+#' @param sequencing_summary Character string or data frame. Either the full
+#'   path of the \code{.txt} file with sequencing summary or an in-memory data
+#'   frame containing sequencing summary data.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
+#' @param pass_only Logical. If \code{TRUE} (default), only reads tagged by
+#'   nanopolish as \code{"PASS"} are taken into consideration. If \code{FALSE},
+#'   reads tagged as \code{"PASS"} and \code{"SUFFCLIP"} are both included in
+#'   the analysis.
 #'
-#' @return A tibble/df containing read information organized by the read ID
-#' is returned. Always assign this returned tibble to a variable. Otherwise
-#' the long tibble will be printed to the console, which may crash your
-#' R session.
+#' @details
+#' The function performs the following operations:
+#' \enumerate{
+#'   \item Reads and validates nanopolish and sequencing summary inputs
+#'         (accepts both file paths and in-memory data frames)
+#'   \item Filters reads by QC tag (\code{pass_only} parameter)
+#'   \item Joins nanopolish poly(A) data with sequencing summary by read name
+#'   \item Filters reads with poly(A) tail length >= 10 nt
+#'   \item Removes duplicate entries from secondary alignments
+#' }
+#'
+#' @return A data frame containing read information organized by the read ID.
+#'   Columns include:
+#'   \describe{
+#'     \item{readname}{Character. Read identifier}
+#'     \item{polya_start}{Integer. Start position of the poly(A) tail in the
+#'       raw signal}
+#'     \item{transcript_start}{Integer. Start position of the transcript in the
+#'       raw signal}
+#'     \item{polya_length}{Numeric. Estimated poly(A) tail length in nucleotides}
+#'     \item{qc_tag}{Character. Nanopolish quality control tag}
+#'     \item{filename}{Character. Name of the source Fast5 file}
+#'   }
+#'   Always assign the returned data frame to a variable. Printing the full
+#'   output to the console may crash your R session.
+#'
+#' @seealso
+#' \code{\link{extract_tail_data}} for extracting tail features from individual
+#' reads, \code{\link{create_tail_feature_list}} for batch feature extraction
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' ninetails::extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
-#'                    sequencing_summary = '/path/to/sequencing_summary.txt',
-#'                    pass_only = TRUE)
+#' ninetails::extract_polya_data(
+#'   nanopolish = '/path/to/nanopolish/polya/output.tsv',
+#'   sequencing_summary = '/path/to/sequencing_summary.txt',
+#'   pass_only = TRUE
+#' )
 #'
-#'}
+#' }
 extract_polya_data <- function(nanopolish,
                                sequencing_summary,
                                pass_only = TRUE){
@@ -108,42 +137,75 @@ extract_polya_data <- function(nanopolish,
 }
 
 
-#' Extracts tail features of single RNA read from respective basecalled
-#' multi-fast5 file.
+#' Extract tail features of a single RNA read from a multi-Fast5 file
 #'
-#' This function extracts metadata of RNA read from multi-fast5 file basecalled
-#' by guppy. Filenames are taken from the sequencing
-#' summary file. Tail signal (as delimited by nanopolish polya function) is
-#' extracted (before the extraction step, the entire signal is winsorized
-#' so the cliffs are removed), and downsampled (to facilitate further analysis).
+#' Extracts metadata and signal features of a single RNA read from a
+#' multi-Fast5 file basecalled by Guppy. The tail signal, as delimited by
+#' nanopolish polya function, is extracted, winsorized (to remove signal
+#' cliffs), and downsampled to 20\% of its original length to facilitate
+#' further analysis. Pseudomoves are computed from the processed signal
+#' using \code{\link{filter_signal_by_threshold}}.
 #'
-#' @param readname character string. Name of the given read within the
-#' analyzed dataset.
+#' @param readname Character string. Name of the given read (UUID) within
+#'   the analyzed dataset.
 #'
-#' @param polya_summary character string. The table containing data extracted
-#' from nanopolish & sequencing summary (using \code{\link{extract_polya_data}} function.
+#' @param polya_summary Data frame. The table containing data extracted from
+#'   nanopolish and sequencing summary, as produced by
+#'   \code{\link{extract_polya_data}}.
 #'
-#' @param workspace character string. Full path of the directory to search
-#' the basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @param workspace Character string. Full path of the directory containing
+#'   the basecalled multi-Fast5 files.
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the fast5 file hierarchy from which the data should be extracted.
+#' @param basecall_group Character string. Name of the level in the Fast5
+#'   file hierarchy from which data should be extracted (e.g.,
+#'   \code{"Basecall_1D_000"}).
 #'
-#' @return A list containing read information organized by the read ID
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @details
+#' The function performs the following operations:
+#' \enumerate{
+#'   \item Reads raw signal from the multi-Fast5 file via \pkg{rhdf5}
+#'   \item Retrieves basecaller moves and stride information
+#'   \item Extracts the poly(A) tail region of the signal based on nanopolish
+#'         coordinates
+#'   \item Applies winsorization to the tail signal
+#'         (\code{\link{winsorize_signal}})
+#'   \item Downsamples both signal and moves to 20\% of original length via
+#'         linear interpolation
+#'   \item Computes pseudomoves using
+#'         \code{\link{filter_signal_by_threshold}}
+#' }
+#'
+#' @return A named list containing per-read tail features:
+#'   \describe{
+#'     \item{fast5_filename}{Character. Name of the source Fast5 file}
+#'     \item{tail_signal}{Numeric vector. Winsorized and downsampled poly(A)
+#'       tail signal}
+#'     \item{tail_moves}{Numeric vector. Downsampled basecaller moves for
+#'       the tail region}
+#'     \item{tail_pseudomoves}{Numeric vector. Pseudomove states computed
+#'       from the tail signal (\{-1, 0, 1\})}
+#'   }
+#'   Always assign the returned list to a variable. Printing the full output
+#'   to the console may crash your R session.
+#'
+#' @seealso
+#' \code{\link{extract_polya_data}} for preparing the \code{polya_summary}
+#' input, \code{\link{create_tail_feature_list}} for batch extraction,
+#' \code{\link{filter_signal_by_threshold}} for pseudomove computation
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' ninetails::extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
-#'                              polya_summary = polya_summary_table,
-#'                              workspace = '/path/to/folder/containing/multifast5s',
-#'                              basecall_group = 'Basecall_1D_000')
+#' ninetails::extract_tail_data(
+#'   readname = 'abc123de-fg45-6789-0987-6543hijk2109',
+#'   polya_summary = polya_summary_table,
+#'   workspace = '/path/to/folder/containing/multifast5s',
+#'   basecall_group = 'Basecall_1D_000'
+#' )
 #'
-#'}
+#' }
 extract_tail_data <- function(readname,
                               polya_summary,
                               workspace,
@@ -239,63 +301,85 @@ extract_tail_data <- function(readname,
 }
 
 
-#' Extracts features of polyA tails of ONT RNA reads required for finding
-#' non-A nucleotides within the given tails.
+#' Create list of poly(A) tail features from multi-Fast5 files
 #'
-#' This function extracts tail features of RNA reads from multi-fast5 files
-#' basecalled by guppy and polyA tail characteristics (coordinates) created
-#' by nanopolish polya function. Filenames are taken from the sequencing
-#' summary file.
+#' Extracts tail features of RNA reads from multi-Fast5 files basecalled by
+#' Guppy and poly(A) tail characteristics (coordinates) produced by nanopolish
+#' polya function. Processing is parallelized across reads using
+#' \pkg{foreach} and \pkg{doSNOW}. A progress bar is displayed during
+#' extraction.
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' After extraction, reads with zero-moved tails and reads that do not satisfy
+#' the pseudomove condition (minimum run length of 5) are filtered out and
+#' their identifiers are stored separately for downstream classification.
 #'
-#' @param sequencing_summary character string. Full path of the .txt file
-#' with sequencing summary.
+#' @param nanopolish Character string or data frame. Full path of the
+#'   \code{.tsv} file produced by nanopolish polya function, or an in-memory
+#'   data frame.
 #'
-#' @param workspace character string. Full path of the directory to search the
-#' basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @param sequencing_summary Character string or data frame. Full path of the
+#'   \code{.txt} file with sequencing summary, or an in-memory data frame.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param workspace Character string. Full path of the directory containing
+#'   the basecalled multi-Fast5 files.
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the Fast5 file hierarchy from which the data should be extracted.
+#' @param num_cores Numeric. Number of physical cores to use in processing.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
+#' @param basecall_group Character string. Name of the level in the Fast5
+#'   file hierarchy from which data should be extracted (e.g.,
+#'   \code{"Basecall_1D_000"}).
 #'
-#' @return A list containing read information organized by the read ID
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @param pass_only Logical. If \code{TRUE} (default), only reads tagged by
+#'   nanopolish as \code{"PASS"} are taken into consideration. If \code{FALSE},
+#'   reads tagged as \code{"PASS"} and \code{"SUFFCLIP"} are both included.
+#'
+#' @return A named list with three elements:
+#'   \describe{
+#'     \item{tail_feature_list}{Named list of per-read tail features. Each
+#'       element contains \code{fast5_filename}, \code{tail_signal},
+#'       \code{tail_moves}, and \code{tail_pseudomoves} (see
+#'       \code{\link{extract_tail_data}}).}
+#'     \item{zeromoved_readnames}{Character vector. Read IDs discarded because
+#'       all basecaller moves in their tail region were zero.}
+#'     \item{nonpseudomoved_readnames}{Character vector. Read IDs discarded
+#'       because their pseudomove chain was too short (< 5 consecutive
+#'       positions) to indicate a potential modification.}
+#'   }
+#'   Always assign the returned list to a variable. Printing the full output
+#'   to the console may crash your R session.
+#'
+#' @seealso
+#' \code{\link{extract_polya_data}} for reading nanopolish and sequencing
+#' summary data, \code{\link{extract_tail_data}} for single-read extraction,
+#' \code{\link{create_tail_chunk_list}} for downstream chunk segmentation
 #'
 #' @importFrom foreach %dopar%
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#'tfl <- ninetails::create_tail_feature_list(
-#'  nanopolish = system.file('extdata',
+#' tfl <- ninetails::create_tail_feature_list(
+#'   nanopolish = system.file('extdata',
+#'                            'test_data',
+#'                            'nanopolish_output.tsv',
+#'                            package = 'ninetails'),
+#'   sequencing_summary = system.file('extdata',
+#'                                    'test_data',
+#'                                    'sequencing_summary.txt',
+#'                                    package = 'ninetails'),
+#'   workspace = system.file('extdata',
 #'                           'test_data',
-#'                           'nanopolish_output.tsv',
+#'                           'basecalled_fast5',
 #'                           package = 'ninetails'),
-#'  sequencing_summary = system.file('extdata',
-#'                                   'test_data',
-#'                                   'sequencing_summary.txt',
-#'                                   package = 'ninetails'),
-#'  workspace = system.file('extdata',
-#'                          'test_data',
-#'                          'basecalled_fast5',
-#'                          package = 'ninetails'),
-#'  num_cores = 2,
-#'  basecall_group = 'Basecall_1D_000',
-#'  pass_only=TRUE)
+#'   num_cores = 2,
+#'   basecall_group = 'Basecall_1D_000',
+#'   pass_only = TRUE
+#' )
 #'
-#'}
+#' }
 #'
 create_tail_feature_list <- function(nanopolish,
                                      sequencing_summary,
@@ -303,9 +387,6 @@ create_tail_feature_list <- function(nanopolish,
                                      num_cores,
                                      basecall_group,
                                      pass_only=TRUE){
-
-  # variable binding (suppressing R CMD check from throwing an error)
-  #i <- NULL
 
   # Assertions
   if (missing(num_cores)) {
@@ -365,10 +446,6 @@ create_tail_feature_list <- function(nanopolish,
   squiggle_names <- as.vector(sapply(tail_features_list, function(x) attributes(x[[1]])$names))
   tail_features_list <- stats::setNames(tail_features_list, squiggle_names)
 
-  #former solution:
-  #squiggle_names <- polya_summary$readname
-  #names(tail_features_list) <- squiggle_names
-
   # remove reads with only zero moved tails
   tail_features_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_features_list)
   zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
@@ -394,46 +471,72 @@ create_tail_feature_list <- function(nanopolish,
 }
 
 
-#' Detection of outliers (peaks & valleys) in ONT signal using z-scores.
+#' Detect outliers (peaks and valleys) in ONT signal using z-scores
 #'
-#' The function enables detection in the signal corresponding to the poly(A)
-#' tail of areas in which the signal value significantly deviates from the
-#' values typical of an adenosine homopolymer.
+#' Detects areas in the poly(A) tail signal where values significantly deviate
+#' from those typical of an adenosine homopolymer. The function produces a
+#' vector of pseudomoves with values in the range \{-1, 0, 1\}, where -1
+#' corresponds to signals significantly below the local mean (potential C/U),
+#' 1 corresponds to signals significantly above the local mean (potential G),
+#' and 0 corresponds to typical adenosine homopolymer values.
 #'
-#' The function results in a vector of "pseudomoves" with values in the range
-#' -1:1, where -1 corresponds to signals that are significantly less than the
-#' mean and standard deviation of the typical A-homopolymer, 1 corresponds to
-#' signals that are significantly higher than the mean and standard deviation
-#' of the typical A-homopolymer, and 0 corresponds to the typical values
-#' for the A-homopolymer.
-#'
-#' The "pseudomoves" vector allows more accurate calibration of the nucleotide
+#' The pseudomoves vector allows more accurate calibration of nucleotide
 #' positions of potential non-adenosine residues than the moves produced
-#' by the guppy basecaller.
+#' by the Guppy basecaller.
 #'
-#' The function created based on the following source:
-#' Brakel, J.P.G. van (2014). "Robust peak detection algorithm using z-scores".
-#' Stack Overflow. Available at:
-#' https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362
+#' @param signal Numeric vector. An ONT read fragment corresponding to the
+#'   poly(A) tail region of the read of interest, as delimited by nanopolish
+#'   polya function. Fragments are stored in
+#'   \code{tail_feature_list[[1]][[readname]][[2]]} produced by
+#'   \code{\link{create_tail_feature_list}}.
+#'
+#' @details
+#' The algorithm implements a sliding-window approach based on adaptive z-scores:
+#' \enumerate{
+#'   \item A calibration phase (100 synthetic data points drawn from the most
+#'     frequent signal values) establishes baseline signal characteristics
+#'   \item Rolling mean and standard deviation are computed over a 100-point
+#'     adaptive window
+#'   \item Outliers are detected when signal deviates > 3.5 standard deviations
+#'     from the local mean
+#'   \item Direction of deviation determines the pseudomove value
+#' }
+#'
+#' Terminal positions (first 5) are masked to prevent false positives at the
+#' adapter-tail boundary. This is a temporary safeguard until the
+#' resegmentation model is refined.
+#'
+#' @section References:
+#' Based on: Brakel, J.P.G. van (2014). "Robust peak detection algorithm
+#' using z-scores". Stack Overflow. Available at:
+#' \url{https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362}
 #' (version: 2020-11-08).
 #'
+#' @return Numeric vector of pseudomoves corresponding to the analyzed tail
+#'   region, with the same length as the input signal. Values are integers
+#'   in the range \{-1, 0, 1\}:
+#'   \describe{
+#'     \item{-1}{Signal valleys (potential C/U nucleotides)}
+#'     \item{0}{Normal signal (likely A nucleotides)}
+#'     \item{1}{Signal peaks (potential G nucleotides)}
+#'   }
 #'
-#' @param signal numeric vector. An ONT read fragment corresponding to the tail
-#' region of the read of interest as delimited by nanopolish polya function (the
-#' fragments are stored in tail_feature_list[[1]] produced by the
-#' \code{\link{create_tail_feature_list}} function.
-#'
-#' @return numeric vector of "pseudomoves" corresponding to the analyzed tail
-#' region; containing values ranging from -1 to 1.
+#' @seealso
+#' \code{\link{filter_signal_by_threshold_vectorized}} for the optimized
+#' Dorado version, \code{\link{substitute_gaps}} for gap handling,
+#' \code{\link{create_tail_feature_list}} for the complete feature extraction
+#' pipeline
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' ninetails::filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+#' ninetails::filter_signal_by_threshold(
+#'   signal = tail_feature_list[[1]][["readname"]][[4]]
+#' )
 #'
-#'}
+#' }
 filter_signal_by_threshold <- function(signal) {
 
   # variable binding/ Initialize vectors for incremental subset assignment
@@ -497,54 +600,76 @@ filter_signal_by_threshold <- function(signal) {
   return(adjusted_pseudomoves)
 }
 
-#' Extracts fragments of poly(A) tail signal containing potential modifications
-#' along with its delimitation (positional indices; coordinates) within the tail.
+#' Extract modification-centered signal fragments from a poly(A) tail
 #'
-#' This function finds areas in the poly(A) tail signal containing potential
-#' non-A residues. Extracts strings spanning 100 data points (extrapolated)
-#' where the potential modification is always at the center of a given
-#' extracted fragment.
+#' Finds areas in the poly(A) tail signal containing potential non-adenosine
+#' residues and extracts 100-point signal fragments where the potential
+#' modification is always at the center of a given extracted fragment.
 #'
-#' It extracts the region of interest based on 2 assumptions (conditions):
-#' the presence of significant raw signal distortion (above the given threshold)
-#' recorded by the thresholding algo as "pseudomove" and the transition of state
-#' (move==1) recorded by Guppy. If move==0 are present exclusively within the given
-#' signal chunk, then this chunk is dropped from the analysis (as the distortion
-#' is most likely caused by sequencing artifact, not the non-A residue itself
-#' - this is introduced in order to minimize alse positives)
+#' Candidate modification regions are identified based on two assumptions:
+#' the presence of significant raw signal distortion (recorded as a
+#' pseudomove by the thresholding algorithm) and the transition of state
+#' (\code{move == 1}) recorded by Guppy. If only \code{move == 0} values
+#' are present within a given signal chunk, then that chunk is dropped
+#' from the analysis (the distortion is most likely caused by a sequencing
+#' artifact, not a non-A residue itself).
 #'
-#' If the data indicating the presence of modifications are in the regions
-#' of the ends of the signal (3' or 5'), then the missing upstream or downstream
-#' data are imputed based on the most frequent values in the entire signal.
+#' If the data indicating the presence of modifications are near the signal
+#' ends (3' or 5'), missing upstream or downstream data are imputed based on
+#' the most frequent values in the entire signal.
 #'
-#' The function returns a list object (nested) which consists of the individual
-#' fragments of the input signal (chunk_sequence) and the coordinates
-#' of the given fragment in the input signal: start position (chunk_start_pos)
-#' and end position (chunk_end_pos).
+#' @param readname Character string. Name of the given read (UUID) within
+#'   the analyzed dataset.
 #'
-#' @param readname character string. Name of the given read within the
-#' analyzed dataset.
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list}}. Must contain per-read entries
+#'   with \code{tail_signal}, \code{tail_moves}, and
+#'   \code{tail_pseudomoves}.
 #'
-#' @param tail_feature_list list object produced by \code{\link{create_tail_feature_list}}
-#' function.
+#' @details
+#' The extraction procedure is as follows:
+#' \enumerate{
+#'   \item Run-length encoding (RLE) of the pseudomove vector
+#'   \item Filtering runs of pseudomoves with length >= 5
+#'   \item Centering a 100-point window on the midpoint of each qualifying run
+#'   \item Imputing NAs at boundaries with draws from the 5 most frequent
+#'         signal values
+#'   \item Removing chunks where basecaller moves are all zero (likely
+#'         artifacts)
+#' }
 #'
-#' @return a list object (nested) containing 3 categories: resulting fragments
-#' (chunk_sequence), start coordinate of given fragment (chunk_start_pos)
-#' its' end coordinate (chunk_end_pos) arranged by the signal ID and positional
-#' indices (WARNING! from 3' end!).
+#' @return A nested list where each element represents one candidate
+#'   modification region. Each element is itself a list with:
+#'   \describe{
+#'     \item{chunk_sequence}{Numeric vector of raw signal values (length 100)}
+#'     \item{chunk_start_pos}{Integer. Start index of the chunk in the
+#'       original signal}
+#'     \item{chunk_end_pos}{Integer. End index of the chunk in the
+#'       original signal}
+#'     \item{chunk_moves}{Numeric vector. Basecaller moves for the chunk
+#'       region}
+#'   }
+#'   Element names follow the pattern \code{<readname>_<chunk_index>}.
+#'   Positions are indexed from the 3' end.
+#'
+#' @seealso
+#' \code{\link{create_tail_feature_list}} for preparing the input,
+#' \code{\link{create_tail_chunk_list}} for batch segmentation,
+#' \code{\link{split_tail_centered_dorado}} for the Dorado-specific version
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' ninetails::split_tail_centered(readname= "1234-anexample-r3adn4m3",
-#'                     tail_feature_list = tail_feature_list)
+#' ninetails::split_tail_centered(
+#'   readname = "1234-anexample-r3adn4m3",
+#'   tail_feature_list = tail_feature_list
+#' )
 #'
-#'}
+#' }
 split_tail_centered <- function(readname,
                                 tail_feature_list) {
-
 
   #assertions
   if (missing(readname)) {
@@ -620,28 +745,49 @@ split_tail_centered <- function(readname,
 }
 
 
-#' Creates list of polyA tail chunks centered on significant signal deviations.
+#' Create list of poly(A) tail chunks centered on significant signal deviations
 #'
-#' Extracts fragments of polyA tails of ONT RNA reads potentially containing
-#' non-A nucleotides along their coordinates & appends the data to the nested
-#' list organized by read IDs.
+#' Extracts fragments of poly(A) tails of ONT RNA reads potentially containing
+#' non-A nucleotides, along with their coordinates, and appends the data to a
+#' nested list organized by read IDs.
 #'
-#' @param tail_feature_list list object produced by \code{\link{create_tail_feature_list}}
-#' function.
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' Parallelization is handled with \pkg{foreach} and \pkg{doSNOW}. A progress
+#' bar is displayed during processing. After extraction, empty list elements
+#' are pruned and chunk moves are dropped to minimize memory footprint.
 #'
-#' @return a list object (nested) containing the segmented tail data (chunks,
-#' coordinates) organized by the read IDs.
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list}}.
+#'
+#' @param num_cores Numeric. Number of physical cores to use in processing.
+#'   Do not exceed 1 less than the number of cores at your disposal.
+#'
+#' @return A nested list containing the segmented tail data (chunks and
+#'   coordinates) organized by read IDs. Each read entry contains one or more
+#'   fragments, where each fragment is a list with:
+#'   \describe{
+#'     \item{chunk_sequence}{Numeric vector. Raw signal values (length 100)}
+#'     \item{chunk_start_pos}{Integer. Starting index of the chunk in the
+#'       original signal}
+#'     \item{chunk_end_pos}{Integer. Ending index of the chunk in the
+#'       original signal}
+#'   }
+#'
+#' @seealso
+#' \code{\link{create_tail_feature_list}} for preparing the input,
+#' \code{\link{split_tail_centered}} for the per-read segmentation logic,
+#' \code{\link{create_gaf_list}} for downstream GAF transformation
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl,
-#'                                          num_cores = 3)
+#' tcl <- ninetails::create_tail_chunk_list(
+#'   tail_feature_list = tfl,
+#'   num_cores = 3
+#' )
 #'
-#'}
+#' }
 create_tail_chunk_list <- function(tail_feature_list,
                                    num_cores){
 
@@ -721,33 +867,55 @@ create_tail_chunk_list <- function(tail_feature_list,
 }
 
 
-#' Converts ONT signal to Gramian Angular Field.
+#' Convert ONT signal to Gramian Angular Field
 #'
-#' This function represents time series data (ont squiggle) in a polar coordinate
-#' system instead of the typical Cartesian coordinates. This is a Pythonic
-#' pyts.image equivalent written in R language.
+#' Represents time series data (ONT squiggle) in a polar coordinate system
+#' instead of the typical Cartesian coordinates. This is a pure-R equivalent
+#' of the Python pyts.image implementation.
 #'
-#' Two methods of such transformation are available: Gramian angular summation
-#' field (GASF) and Gramian angular difference field (GADF).
+#' Two methods of transformation are available: Gramian Angular Summation
+#' Field (GASF) and Gramian Angular Difference Field (GADF).
 #'
-#' @param tail_chunk numeric. A numeric vector representing signal chunk
-#' within the analyzed dataset.
+#' @param tail_chunk Numeric vector. A 100-element signal chunk representing
+#'   a fragment of the poly(A) tail within the analyzed dataset.
 #'
-#' @param method character string specifying the type of Gramian Angular Field:
-#' "s" can be used to produce summation field (GASF) and "d" to produce
-#' difference field (GADF). Defaults to summation ["s"].
+#' @param method Character string specifying the type of Gramian Angular Field.
+#'   \code{"s"} (default) produces a summation field (GASF), \code{"d"}
+#'   produces a difference field (GADF).
 #'
-#' @return an array (100,100,1) with values (coordinates) representing ONT signal.
+#' @details
+#' The transformation proceeds as follows:
+#' \enumerate{
+#'   \item Rescale signal values to the interval [-1, 1]
+#'   \item Compute the inverse trigonometric function (\code{acos} for GASF,
+#'         \code{asin} for GADF) of each value
+#'   \item Form a pairwise matrix by summing (GASF) or differencing (GADF)
+#'         the angle vectors
+#'   \item Apply the corresponding trigonometric function (\code{cos} or
+#'         \code{sin}) to the matrix
+#'   \item Reshape to a 100x100x1 array
+#'   \item Rescale result to the interval [0, 1]
+#' }
+#'
+#' @return An array of dimensions (100, 100, 1) with values representing
+#'   the Gramian Angular Field transformation of the input signal chunk.
+#'   Values are in the range [0, 1].
+#'
+#' @seealso
+#' \code{\link{combine_gafs}} for combining GASF and GADF into a single
+#' array, \code{\link{create_gaf_list}} for batch GAF computation
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' ninetails::create_gaf(tail_chunk = tail_chunk,
-#'                       method="s")
+#' ninetails::create_gaf(
+#'   tail_chunk = tail_chunk,
+#'   method = "s"
+#' )
 #'
-#'}
-
+#' }
 create_gaf <- function(tail_chunk,
                        method="s"){
 
@@ -800,23 +968,26 @@ create_gaf <- function(tail_chunk,
   return(tail_chunk)
 }
 
-#' Creates a two-dimensional array containing GASF and GADF resulting from
-#' the transformation of a given ONT tail chunk.
+#' Combine GASF and GADF into a two-channel array
 #'
-#' This function allows for the classification of signal fragments based
-#' on angular coordinates generated by two methods (summation & difference)
-#' simultaneously.
+#' Creates a two-dimensional array containing both the Gramian Angular
+#' Summation Field (GASF) and the Gramian Angular Difference Field (GADF)
+#' produced from a single ONT tail chunk. Using both representations
+#' increases the sensitivity of the CNN classification by overcoming the
+#' limitations of each method individually.
 #'
-#' Using this approach increases the sensitivity of the classification.
-#' It overcomes the limitations of each method.
+#' @param tail_chunk Numeric vector. A 100-element signal chunk representing
+#'   a fragment of the poly(A) tail.
 #'
-#' @param tail_chunk numeric. A numeric vector representing signal chunk
-#' within the analyzed dataset.
+#' @return An array of dimensions (100, 100, 2) where the first channel
+#'   contains the GASF and the second channel contains the GADF, both
+#'   produced by \code{\link{create_gaf}}.
 #'
-#' @return an array (100,100,2) with values (coordinates) representing GASF
-#' (first dimension) and GADF (second dimension) produced by the
-#' \code{\link{create_gaf}} function applied to given fragment (tail chunk)
-#' of analyzed ONT signal.
+#' @seealso
+#' \code{\link{create_gaf}} for individual GAF computation,
+#' \code{\link{create_gaf_list}} for batch processing,
+#' \code{\link{predict_gaf_classes}} for downstream CNN classification
+#'
 #' @export
 #'
 #' @examples
@@ -824,7 +995,7 @@ create_gaf <- function(tail_chunk,
 #'
 #' ninetails::combine_gafs(tail_chunk = tail_chunk)
 #'
-#'}
+#' }
 combine_gafs <- function(tail_chunk){
 
   #assertions
@@ -846,19 +1017,29 @@ combine_gafs <- function(tail_chunk){
 }
 
 
-
-#' Creates list of gramian angular matrices produced based on
-#' list of splitted tails (tail chunks).
+#' Create list of Gramian Angular Field matrices from tail chunks
 #'
-#' @param tail_chunk_list character string. The list object produced
-#' by create_chunk_list function.
+#' Computes Gramian Angular Field (GAF) representations for all signal chunks
+#' in a tail chunk list. Each chunk is transformed into a combined GASF + GADF
+#' array via \code{\link{combine_gafs}}.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' Parallelization is handled with \pkg{foreach} and \pkg{doSNOW}, and a
+#' progress bar is displayed during processing.
 #'
-#' @return A list of gaf matrices organized by the read ID_index
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @param tail_chunk_list List object produced by
+#'   \code{\link{create_tail_chunk_list}}.
+#'
+#' @param num_cores Numeric. Number of physical cores to use in processing.
+#'   Do not exceed 1 less than the number of cores at your disposal.
+#'
+#' @return A named list of GAF arrays (100, 100, 2) organized by read
+#'   \code{ID_index}. Always assign the returned list to a variable.
+#'   Printing the full output to the console may crash your R session.
+#'
+#' @seealso
+#' \code{\link{create_tail_chunk_list}} for preparing the input,
+#' \code{\link{combine_gafs}} for the per-chunk GAF transformation,
+#' \code{\link{predict_gaf_classes}} for downstream CNN classification
 #'
 #' @importFrom foreach %dopar%
 #' @importFrom utils head
@@ -866,12 +1047,14 @@ combine_gafs <- function(tail_chunk){
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' gl <- ninetails::create_gaf_list(tail_chunk_list = tcl,
-#'                                  num_cores = 2)
+#' gl <- ninetails::create_gaf_list(
+#'   tail_chunk_list = tcl,
+#'   num_cores = 2
+#' )
 #'
-#'}
+#' }
 create_gaf_list <- function(tail_chunk_list,
                             num_cores){
 
@@ -923,7 +1106,6 @@ create_gaf_list <- function(tail_chunk_list,
                                  lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
                                }
 
-  #close(pb)
 
   # Done comm
   cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
@@ -931,25 +1113,43 @@ create_gaf_list <- function(tail_chunk_list,
   return(gaf_list)
 }
 
-#' Performs classification of matrices produced from read chunks with CNN.
+#' Classify Gramian Angular Field matrices with a pretrained CNN
 #'
-#' This function allows to assign gafs corresponding to the given signals
-#' into one of 4 categories (A, C, G, U, respectively). This function in its
-#' current implementation allows to load the pretrained CNN model. It uses
-#' tensorflow backend to produce the classification output.
+#' Assigns GAF representations of signal chunks to one of four nucleotide
+#' categories (A, C, G, U) using a pretrained convolutional neural network.
+#' The model is loaded via \code{\link{load_keras_model}} and inference is
+#' performed through the TensorFlow/Keras backend.
 #'
-#' @param gaf_list [list] A list of gaf matrices organized by the read ID_index.
+#' @param gaf_list List of GAF arrays (100, 100, 2), as produced by
+#'   \code{\link{create_gaf_list}}.
 #'
-#' @return a list of gafs predictions based on used model.
+#' @details
+#' The function reshapes the input GAF list into a 4-D tensor
+#' (n_chunks x 100 x 100 x 2) and applies the pretrained CNN to predict
+#' the nucleotide class for each chunk. Predictions are returned as integer
+#' codes: 0 = A, 1 = C, 2 = G, 3 = U.
+#'
+#' @return A named list with two elements:
+#'   \describe{
+#'     \item{chunkname}{Character vector. Names of the classified signal
+#'       chunks (format: \code{<readname>_<index>})}
+#'     \item{prediction}{Integer vector. Predicted nucleotide class for
+#'       each chunk (0 = A, 1 = C, 2 = G, 3 = U)}
+#'   }
+#'
+#' @seealso
+#' \code{\link{create_gaf_list}} for preparing the input,
+#' \code{\link{load_keras_model}} for model loading,
+#' \code{\link{create_outputs}} for integrating predictions into final output
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
 #' pl <- ninetails::predict_gaf_classes(gl)
 #'
-#'}
+#' }
 predict_gaf_classes <- function(gaf_list){
 
   #assertions
@@ -984,79 +1184,108 @@ predict_gaf_classes <- function(gaf_list){
 }
 
 
-#' Creates the list object containing tabular outputs of ninetails pipeline.
+#' Create ninetails output tables (Guppy legacy pipeline)
 #'
-#' The read_classes dataframe contains results of read classification.
-#' The sequencing reads are assigned to classes based on whether the initial
-#' conditions are met or not (e.g. sufficient read quality, sufficient length
-#' (>=10 nt), move transition presence, local signal anomaly detected etc.).
-#' According to this, reads are assigned into 3 main categories: decorated,
-#' blank, unclassified (class column).
+#' Integrates nanopolish poly(A) tail data, CNN predictions, and positional
+#' information to generate two main outputs: per-read classifications and
+#' non-adenosine residue predictions with estimated positions along the
+#' poly(A) tail.
 #'
-#' The more detailed info regarding read classification is stored within
-#' 'comments' column. To make the output more compact, it contains codes
-#' as follows:\itemize{
-#' \item IRL - insufficient read length
-#' \item QCF - nanopolish qc failed
-#' \item MAU - move transition absent, nonA residue undetected
-#' \item MPU - move transition present, nonA residue undetected
-#' \item NIN - not included in the analysis (pass only = T)
-#' \item YAY - move transition present, nonA residue detected
-#' }
+#' The function implements a complete read accounting system that classifies
+#' all reads from the nanopolish output into biologically meaningful categories
+#' based on both quality control metrics and modification detection results.
 #'
-#' The nonadenosine_residues contains detailed positional info regarding all
-#' potential nonadenosine residues detected.
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list}}.
 #'
-#' @param tail_feature_list list object produced by \code{\link{create_tail_feature_list}}
-#' function.
+#' @param tail_chunk_list List object produced by
+#'   \code{\link{create_tail_chunk_list}}.
 #'
-#' @param tail_chunk_list list object produced by \code{\link{create_tail_chunk_list}}
-#' function.
+#' @param nanopolish Character string or data frame. Full path of the
+#'   \code{.tsv} file produced by nanopolish polya function, or an in-memory
+#'   data frame.
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function or name of in-memory file (environment object).
+#' @param predicted_list List object produced by
+#'   \code{\link{predict_gaf_classes}}.
 #'
-#' @param predicted_list a list object produced by \code{\link{predict_classes}} function.
+#' @param num_cores Numeric. Number of physical cores to use in processing.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param pass_only Logical. If \code{TRUE} (default), only reads tagged by
+#'   nanopolish as \code{"PASS"} are taken into consideration. If \code{FALSE},
+#'   reads tagged as \code{"PASS"} and \code{"SUFFCLIP"} are both included.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
+#' @param qc Logical. If \code{TRUE} (default), quality control of the output
+#'   predictions is performed. Reads with non-A residue positions in terminal
+#'   nucleotides (< 2 nt from either end of the tail) are labeled with
+#'   \code{"-WARN"} suffixes, as these are most likely artifacts inherited
+#'   from nanopolish segmentation. It is then up to the user whether to
+#'   include or discard such reads from downstream analysis.
 #'
-#' @param qc logical [TRUE/FALSE]. If TRUE, the quality control of the output
-#' predictions would be performed. This means that the reads/non-A residue
-#' positions in terminal nucleotides, which are most likely artifacts, are
-#' labeled accordingly as "-WARN" (residues recognized as non-A due to
-#' nanopolish segmentation error which is inherited from nanopolish,
-#' as ninetails uses nanopolish segmentation). It is then up to user, whether
-#' they would like to include or discard such reads from their pipeline. However,
-#' it is advised to treat them with caution. By default, the qc option is enabled
-#' (this parameter is set to TRUE).
+#' @section Read Classification System:
+#'   Reads are assigned into three main categories with specific comment codes:
 #'
-#' @return This function returns a list object containing two dataframes:
-#' "read_classes" and "nonadenosine_residues" with the final output.
-#' First dataframe contains initial indications, whether the given read was
-#' classified or omitted (with reason) and if classified, whether read was
-#' recognized as decorated (containing non-adenosine residue) or not.
-#' The second dataframe contains detailed info on type and estimated positions
-#' of non-adenosine residues detected.
+#'   \strong{decorated} - Reads with detected non-adenosine modifications
+#'   \itemize{
+#'     \item YAY: Move transition present, nonA residue detected
+#'   }
+#'
+#'   \strong{blank} - Reads without detected modifications
+#'   \itemize{
+#'     \item MAU: Move transition absent, nonA residue undetected
+#'     \item MPU: Move transition present, nonA residue undetected
+#'   }
+#'
+#'   \strong{unclassified} - Reads that failed quality control
+#'   \itemize{
+#'     \item IRL: Insufficient read length (poly(A) < 10 nt)
+#'     \item QCF: Nanopolish QC failed
+#'     \item NIN: Not included in the analysis (\code{pass_only = TRUE})
+#'   }
+#'
+#' @section Position Estimation:
+#'   Non-adenosine residue positions are estimated using the formula:
+#'
+#'   \code{est_nonA_pos = polya_length - ((polya_length * centr_signal_pos) /
+#'   signal_length)}
+#'
+#'   Positions are reported as distance from the 3' end of the tail
+#'   (position 1 = most 3' nucleotide).
+#'
+#' @return A named list with two data frames:
+#'   \describe{
+#'     \item{read_classes}{Data frame with per-read classification results.
+#'       Columns: \code{readname}, \code{contig}, \code{polya_length},
+#'       \code{qc_tag}, \code{class}, and \code{comments}.}
+#'     \item{nonadenosine_residues}{Data frame with per-chunk predictions of
+#'       non-adenosine residues for decorated reads only. Columns:
+#'       \code{readname}, \code{contig}, \code{prediction}, \code{est_nonA_pos},
+#'       \code{polya_length}, \code{qc_tag}. When \code{qc = TRUE}, prediction
+#'       values may carry a \code{"-WARN"} suffix for terminal positions.}
+#'   }
+#'
+#' @seealso
+#' \code{\link{create_tail_feature_list}} for feature extraction,
+#' \code{\link{create_tail_chunk_list}} for chunk segmentation,
+#' \code{\link{predict_gaf_classes}} for CNN classification,
+#' \code{\link{check_tails_guppy}} for the complete pipeline wrapper
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' create_outputs(tail_feature_list = tail_feature_list,
-#'                tail_chunk_list = tail_chunk_list,
-#'                nanopolish = '/path/to/nanopolish_output.tsv',
-#'                predicted_list = predicted_list,
-#'                num_cores = 2,
-#'                pass_only=TRUE,
-#'                qc=TRUE)
-#'}
+#' create_outputs(
+#'   tail_feature_list = tail_feature_list,
+#'   tail_chunk_list = tail_chunk_list,
+#'   nanopolish = '/path/to/nanopolish_output.tsv',
+#'   predicted_list = predicted_list,
+#'   num_cores = 2,
+#'   pass_only = TRUE,
+#'   qc = TRUE
+#' )
+#'
+#' }
 #'
 #'
 create_outputs <- function(tail_feature_list,

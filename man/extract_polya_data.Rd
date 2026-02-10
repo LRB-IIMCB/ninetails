@@ -2,44 +2,70 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{extract_polya_data}
 \alias{extract_polya_data}
-\title{Extracts features of multiple RNA reads from nanopolish output
-& sequencing summary file.}
+\title{Extract poly(A) data from nanopolish output and sequencing summary}
 \usage{
 extract_polya_data(nanopolish, sequencing_summary, pass_only = TRUE)
 }
 \arguments{
-\item{nanopolish}{character string. Either full path of the .tsv file produced
-by nanopolish polya function or an environment object containing nanopolish
-data.}
+\item{nanopolish}{Character string or data frame. Either the full path of
+the \code{.tsv} file produced by nanopolish polya function or an in-memory
+data frame containing nanopolish data.}
 
-\item{sequencing_summary}{character string. Either full path of the .txt file
-with sequencing summary or an environment object containing sequencing
-summary data.}
+\item{sequencing_summary}{Character string or data frame. Either the full
+path of the \code{.txt} file with sequencing summary or an in-memory data
+frame containing sequencing summary data.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical. If \code{TRUE} (default), only reads tagged by
+nanopolish as \code{"PASS"} are taken into consideration. If \code{FALSE},
+reads tagged as \code{"PASS"} and \code{"SUFFCLIP"} are both included in
+the analysis.}
 }
 \value{
-A tibble/df containing read information organized by the read ID
-is returned. Always assign this returned tibble to a variable. Otherwise
-the long tibble will be printed to the console, which may crash your
-R session.
+A data frame containing read information organized by the read ID.
+  Columns include:
+  \describe{
+    \item{readname}{Character. Read identifier}
+    \item{polya_start}{Integer. Start position of the poly(A) tail in the
+      raw signal}
+    \item{transcript_start}{Integer. Start position of the transcript in the
+      raw signal}
+    \item{polya_length}{Numeric. Estimated poly(A) tail length in nucleotides}
+    \item{qc_tag}{Character. Nanopolish quality control tag}
+    \item{filename}{Character. Name of the source Fast5 file}
+  }
+  Always assign the returned data frame to a variable. Printing the full
+  output to the console may crash your R session.
 }
 \description{
-This function extracts features of poly(A) tails of selected RNA reads
-from the output table provided by nanopolish polya function and sequencing
-summary provided by the sequencer. Filenames are taken from the sequencing
-summary file. Only reads with tail lengths estimated as >= 10nt by nanopolish
-polya function are taken into account.
+Extracts features of poly(A) tails of selected RNA reads from the output
+table provided by nanopolish polya function and the sequencing summary
+provided by the sequencer. Filenames are taken from the sequencing summary
+file. Only reads with tail lengths estimated as >= 10 nt by nanopolish polya
+function are taken into account.
+}
+\details{
+The function performs the following operations:
+\enumerate{
+  \item Reads and validates nanopolish and sequencing summary inputs
+        (accepts both file paths and in-memory data frames)
+  \item Filters reads by QC tag (\code{pass_only} parameter)
+  \item Joins nanopolish poly(A) data with sequencing summary by read name
+  \item Filters reads with poly(A) tail length >= 10 nt
+  \item Removes duplicate entries from secondary alignments
+}
 }
 \examples{
 \dontrun{
 
-ninetails::extract_polya_data(nanopolish = '/path/to/nanopolish/polya/output.tsv',
-                   sequencing_summary = '/path/to/sequencing_summary.txt',
-                   pass_only = TRUE)
+ninetails::extract_polya_data(
+  nanopolish = '/path/to/nanopolish/polya/output.tsv',
+  sequencing_summary = '/path/to/sequencing_summary.txt',
+  pass_only = TRUE
+)
 
 }
+}
+\seealso{
+\code{\link{extract_tail_data}} for extracting tail features from individual
+reads, \code{\link{create_tail_feature_list}} for batch feature extraction
 }

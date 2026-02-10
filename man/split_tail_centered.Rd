@@ -2,53 +2,76 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{split_tail_centered}
 \alias{split_tail_centered}
-\title{Extracts fragments of poly(A) tail signal containing potential modifications
-along with its delimitation (positional indices; coordinates) within the tail.}
+\title{Extract modification-centered signal fragments from a poly(A) tail}
 \usage{
 split_tail_centered(readname, tail_feature_list)
 }
 \arguments{
-\item{readname}{character string. Name of the given read within the
-analyzed dataset.}
+\item{readname}{Character string. Name of the given read (UUID) within
+the analyzed dataset.}
 
-\item{tail_feature_list}{list object produced by \code{\link{create_tail_feature_list}}
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list}}. Must contain per-read entries
+with \code{tail_signal}, \code{tail_moves}, and
+\code{tail_pseudomoves}.}
 }
 \value{
-a list object (nested) containing 3 categories: resulting fragments
-(chunk_sequence), start coordinate of given fragment (chunk_start_pos)
-its' end coordinate (chunk_end_pos) arranged by the signal ID and positional
-indices (WARNING! from 3' end!).
+A nested list where each element represents one candidate
+  modification region. Each element is itself a list with:
+  \describe{
+    \item{chunk_sequence}{Numeric vector of raw signal values (length 100)}
+    \item{chunk_start_pos}{Integer. Start index of the chunk in the
+      original signal}
+    \item{chunk_end_pos}{Integer. End index of the chunk in the
+      original signal}
+    \item{chunk_moves}{Numeric vector. Basecaller moves for the chunk
+      region}
+  }
+  Element names follow the pattern \code{<readname>_<chunk_index>}.
+  Positions are indexed from the 3' end.
 }
 \description{
-This function finds areas in the poly(A) tail signal containing potential
-non-A residues. Extracts strings spanning 100 data points (extrapolated)
-where the potential modification is always at the center of a given
-extracted fragment.
+Finds areas in the poly(A) tail signal containing potential non-adenosine
+residues and extracts 100-point signal fragments where the potential
+modification is always at the center of a given extracted fragment.
 }
 \details{
-It extracts the region of interest based on 2 assumptions (conditions):
-the presence of significant raw signal distortion (above the given threshold)
-recorded by the thresholding algo as "pseudomove" and the transition of state
-(move==1) recorded by Guppy. If move==0 are present exclusively within the given
-signal chunk, then this chunk is dropped from the analysis (as the distortion
-is most likely caused by sequencing artifact, not the non-A residue itself
-- this is introduced in order to minimize alse positives)
+Candidate modification regions are identified based on two assumptions:
+the presence of significant raw signal distortion (recorded as a
+pseudomove by the thresholding algorithm) and the transition of state
+(\code{move == 1}) recorded by Guppy. If only \code{move == 0} values
+are present within a given signal chunk, then that chunk is dropped
+from the analysis (the distortion is most likely caused by a sequencing
+artifact, not a non-A residue itself).
 
-If the data indicating the presence of modifications are in the regions
-of the ends of the signal (3' or 5'), then the missing upstream or downstream
-data are imputed based on the most frequent values in the entire signal.
+If the data indicating the presence of modifications are near the signal
+ends (3' or 5'), missing upstream or downstream data are imputed based on
+the most frequent values in the entire signal.
 
-The function returns a list object (nested) which consists of the individual
-fragments of the input signal (chunk_sequence) and the coordinates
-of the given fragment in the input signal: start position (chunk_start_pos)
-and end position (chunk_end_pos).
+
+The extraction procedure is as follows:
+\enumerate{
+  \item Run-length encoding (RLE) of the pseudomove vector
+  \item Filtering runs of pseudomoves with length >= 5
+  \item Centering a 100-point window on the midpoint of each qualifying run
+  \item Imputing NAs at boundaries with draws from the 5 most frequent
+        signal values
+  \item Removing chunks where basecaller moves are all zero (likely
+        artifacts)
+}
 }
 \examples{
 \dontrun{
 
-ninetails::split_tail_centered(readname= "1234-anexample-r3adn4m3",
-                    tail_feature_list = tail_feature_list)
+ninetails::split_tail_centered(
+  readname = "1234-anexample-r3adn4m3",
+  tail_feature_list = tail_feature_list
+)
 
 }
+}
+\seealso{
+\code{\link{create_tail_feature_list}} for preparing the input,
+\code{\link{create_tail_chunk_list}} for batch segmentation,
+\code{\link{split_tail_centered_dorado}} for the Dorado-specific version
 }

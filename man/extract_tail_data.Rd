@@ -2,43 +2,76 @@
 % Please edit documentation in R/ninetails_core_functions.R
 \name{extract_tail_data}
 \alias{extract_tail_data}
-\title{Extracts tail features of single RNA read from respective basecalled
-multi-fast5 file.}
+\title{Extract tail features of a single RNA read from a multi-Fast5 file}
 \usage{
 extract_tail_data(readname, polya_summary, workspace, basecall_group)
 }
 \arguments{
-\item{readname}{character string. Name of the given read within the
-analyzed dataset.}
+\item{readname}{Character string. Name of the given read (UUID) within
+the analyzed dataset.}
 
-\item{polya_summary}{character string. The table containing data extracted
-from nanopolish & sequencing summary (using \code{\link{extract_polya_data}} function.}
+\item{polya_summary}{Data frame. The table containing data extracted from
+nanopolish and sequencing summary, as produced by
+\code{\link{extract_polya_data}}.}
 
-\item{workspace}{character string. Full path of the directory to search
-the basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory containing
+the basecalled multi-Fast5 files.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the fast5 file hierarchy from which the data should be extracted.}
+\item{basecall_group}{Character string. Name of the level in the Fast5
+file hierarchy from which data should be extracted (e.g.,
+\code{"Basecall_1D_000"}).}
 }
 \value{
-A list containing read information organized by the read ID
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list containing per-read tail features:
+  \describe{
+    \item{fast5_filename}{Character. Name of the source Fast5 file}
+    \item{tail_signal}{Numeric vector. Winsorized and downsampled poly(A)
+      tail signal}
+    \item{tail_moves}{Numeric vector. Downsampled basecaller moves for
+      the tail region}
+    \item{tail_pseudomoves}{Numeric vector. Pseudomove states computed
+      from the tail signal (\{-1, 0, 1\})}
+  }
+  Always assign the returned list to a variable. Printing the full output
+  to the console may crash your R session.
 }
 \description{
-This function extracts metadata of RNA read from multi-fast5 file basecalled
-by guppy. Filenames are taken from the sequencing
-summary file. Tail signal (as delimited by nanopolish polya function) is
-extracted (before the extraction step, the entire signal is winsorized
-so the cliffs are removed), and downsampled (to facilitate further analysis).
+Extracts metadata and signal features of a single RNA read from a
+multi-Fast5 file basecalled by Guppy. The tail signal, as delimited by
+nanopolish polya function, is extracted, winsorized (to remove signal
+cliffs), and downsampled to 20\% of its original length to facilitate
+further analysis. Pseudomoves are computed from the processed signal
+using \code{\link{filter_signal_by_threshold}}.
+}
+\details{
+The function performs the following operations:
+\enumerate{
+  \item Reads raw signal from the multi-Fast5 file via \pkg{rhdf5}
+  \item Retrieves basecaller moves and stride information
+  \item Extracts the poly(A) tail region of the signal based on nanopolish
+        coordinates
+  \item Applies winsorization to the tail signal
+        (\code{\link{winsorize_signal}})
+  \item Downsamples both signal and moves to 20\% of original length via
+        linear interpolation
+  \item Computes pseudomoves using
+        \code{\link{filter_signal_by_threshold}}
+}
 }
 \examples{
 \dontrun{
 
-ninetails::extract_tail_data(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
-                             polya_summary = polya_summary_table,
-                             workspace = '/path/to/folder/containing/multifast5s',
-                             basecall_group = 'Basecall_1D_000')
+ninetails::extract_tail_data(
+  readname = 'abc123de-fg45-6789-0987-6543hijk2109',
+  polya_summary = polya_summary_table,
+  workspace = '/path/to/folder/containing/multifast5s',
+  basecall_group = 'Basecall_1D_000'
+)
 
 }
+}
+\seealso{
+\code{\link{extract_polya_data}} for preparing the \code{polya_summary}
+input, \code{\link{create_tail_feature_list}} for batch extraction,
+\code{\link{filter_signal_by_threshold}} for pseudomove computation
 }
