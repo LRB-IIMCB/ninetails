@@ -23,31 +23,39 @@
 #'class_data <- ninetails::read_class_single(class_path)
 #'}
 read_class_single <- function(class_path, sample_name = NA) {
-
   # assertions
   if (missing(class_path)) {
-    stop("The path to class predictions (argument class_path) is missing",
-         call. = FALSE)
+    stop(
+      "The path to class predictions (argument class_path) is missing",
+      call. = FALSE
+    )
   }
 
-  assert_condition(!is.na(class_path) && nchar(class_path) > 0,
-                   paste("File path ", class_path, " is missing or invalid", sep = ""))
+  assert_condition(
+    !is.na(class_path) && nchar(class_path) > 0,
+    paste("File path ", class_path, " is missing or invalid", sep = "")
+  )
 
   #missing empty file
-  assert_condition(file.exists(class_path) && file.info(class_path)$size > 0,
-                   paste("File ", class_path, " is empty or does not exist", sep = ""))
+  assert_condition(
+    file.exists(class_path) && file.info(class_path)$size > 0,
+    paste("File ", class_path, " is empty or does not exist", sep = "")
+  )
 
   # load class data
-  message(paste0("Loading data from ",class_path))
-  class_data <- vroom::vroom(class_path, show_col_types = FALSE) %>% dplyr::as_tibble()
+  message(paste0("Loading data from ", class_path))
+  class_data <- vroom::vroom(class_path, show_col_types = FALSE) %>%
+    dplyr::as_tibble()
 
   # resolve backcompatibility issues (from v.0.9)
   class_data <- ninetails::correct_labels(class_data)
 
-  if(!is.na(sample_name)) {
+  if (!is.na(sample_name)) {
     # set sample_name (if was set)
-    if (! "sample_name" %in% colnames(class_data)) {
-      warning("The sample_name was provided in the input file. Overwriting with the provided one")
+    if (!"sample_name" %in% colnames(class_data)) {
+      warning(
+        "The sample_name was provided in the input file. Overwriting with the provided one"
+      )
     }
     class_data$sample_name = sample_name
     class_data$sample_name <- as.factor(class_data$sample_name)
@@ -56,17 +64,23 @@ read_class_single <- function(class_path, sample_name = NA) {
   ## correct annotation <- if gencode format: create new columns with ensembl IDs
   # else created columns could be easily dropped
   # this code chunk was originally written by PaweÅ‚ Krawczyk (smaegol) & incorporated in NanoTail package
-  transcript_names <- gsub(".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*", "\\1", class_data$contig)
+  transcript_names <- gsub(
+    ".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*",
+    "\\1",
+    class_data$contig
+  )
   class_data$transcript <- transcript_names
   ensembl_transcript_ids <- gsub("^(.*?)\\|.*\\|.*", "\\1", class_data$contig)
-  ensembl_transcript_ids_short <- gsub("(.*)\\..*", "\\1", ensembl_transcript_ids) # without version number
+  ensembl_transcript_ids_short <- gsub(
+    "(.*)\\..*",
+    "\\1",
+    ensembl_transcript_ids
+  ) # without version number
   class_data$ensembl_transcript_id_full <- ensembl_transcript_ids
   class_data$ensembl_transcript_id_short <- ensembl_transcript_ids_short
 
-
   return(class_data)
 }
-
 
 
 #' Reads multiple ninetails read_classes outputs at once.
@@ -104,29 +118,36 @@ read_class_single <- function(class_path, sample_name = NA) {
 #'
 #' classes_data <- ninetails::read_class_multiple(samples_table)
 #'}
-read_class_multiple <- function(samples_table,...) {
-
-
-
+read_class_multiple <- function(samples_table, ...) {
   if (missing(samples_table)) {
-    stop("Samples table argument is missing",
-         call. = FALSE)
+    stop("Samples table argument is missing", call. = FALSE)
   }
 
-
   if (!is.data.frame(samples_table) || nrow(samples_table) == 0) {
-    stop("Empty data frame provided as an input (samples_table). Please provide samples_table describing data to load")}
+    stop(
+      "Empty data frame provided as an input (samples_table). Please provide samples_table describing data to load"
+    )
+  }
 
-  assert_condition("class_path" %in% colnames(samples_table),
-                   "The samples_table should contain at least class_path and sample_name columns")
-  assert_condition("sample_name" %in% colnames(samples_table),
-                   "The samples_table should contain at least class_path and sample_name columns")
+  assert_condition(
+    "class_path" %in% colnames(samples_table),
+    "The samples_table should contain at least class_path and sample_name columns"
+  )
+  assert_condition(
+    "sample_name" %in% colnames(samples_table),
+    "The samples_table should contain at least class_path and sample_name columns"
+  )
 
   samples_data <- samples_table %>%
     tibble::as_tibble() %>%
-    dplyr::mutate_if(is.character,as.factor) %>%
+    dplyr::mutate_if(is.character, as.factor) %>%
     dplyr::mutate(class_path = as.character(class_path)) %>%
-    dplyr::group_by(sample_name) %>% dplyr::mutate(class_contents=purrr::map(class_path, function(x) ninetails::read_class_single(x))) %>%
+    dplyr::group_by(sample_name) %>%
+    dplyr::mutate(
+      class_contents = purrr::map(class_path, function(x) {
+        ninetails::read_class_single(x)
+      })
+    ) %>%
     dplyr::ungroup() %>%
     dplyr::select(-class_path)
 
@@ -165,45 +186,57 @@ read_class_multiple <- function(samples_table,...) {
 #'                                         grouping_factor=NA,
 #'                                         detailed=TRUE)
 #'}
-count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
-
-
+count_class <- function(class_data, grouping_factor = NA, detailed = TRUE) {
   #assertions
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
-    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (class_data). Please provide valid input"
+    )
+  }
 
-  if (detailed==TRUE){
-    if(!is.na(grouping_factor)) {
-      assert_condition(grouping_factor %in% colnames(class_data),
-                       paste0(grouping_factor," is not a column of input dataset"))
+  if (detailed == TRUE) {
+    if (!is.na(grouping_factor)) {
+      assert_condition(
+        grouping_factor %in% colnames(class_data),
+        paste0(grouping_factor, " is not a column of input dataset")
+      )
       class_counts <- class_data %>%
-        dplyr::mutate(comments=forcats::fct_relevel(comments,"YAY", after = Inf)) %>%
-        dplyr::group_by(!!rlang::sym(grouping_factor),comments) %>%
+        dplyr::mutate(
+          comments = forcats::fct_relevel(comments, "YAY", after = Inf)
+        ) %>%
+        dplyr::group_by(!!rlang::sym(grouping_factor), comments) %>%
         dplyr::count()
     } else {
       class_counts <- class_data %>%
-        dplyr::mutate(comments=forcats::fct_relevel(comments,"YAY", after = Inf)) %>%
+        dplyr::mutate(
+          comments = forcats::fct_relevel(comments, "YAY", after = Inf)
+        ) %>%
         dplyr::group_by(comments) %>%
         dplyr::count()
     }
-
   } else {
-    if(!is.na(grouping_factor)) {
-      assert_condition(grouping_factor %in% colnames(class_data),
-                       paste0(grouping_factor," is not a column of input dataset"))
+    if (!is.na(grouping_factor)) {
+      assert_condition(
+        grouping_factor %in% colnames(class_data),
+        paste0(grouping_factor, " is not a column of input dataset")
+      )
       class_counts <- class_data %>%
-        dplyr::mutate(class=forcats::fct_relevel(class,"decorated", after = Inf)) %>%
-        dplyr::group_by(!!rlang::sym(grouping_factor),class) %>%
+        dplyr::mutate(
+          class = forcats::fct_relevel(class, "decorated", after = Inf)
+        ) %>%
+        dplyr::group_by(!!rlang::sym(grouping_factor), class) %>%
         dplyr::count()
     } else {
       class_counts <- class_data %>%
-        dplyr::mutate(class=forcats::fct_relevel(class,"decorated", after = Inf)) %>%
+        dplyr::mutate(
+          class = forcats::fct_relevel(class, "decorated", after = Inf)
+        ) %>%
         dplyr::group_by(class) %>%
         dplyr::count()
     }
   }
 
-  return (class_counts)
+  return(class_counts)
 }
 
 
@@ -232,23 +265,28 @@ count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
 #' residue_data <- ninetails::read_residue_single(residue_path)
 #'}
 read_residue_single <- function(residue_path, sample_name = NA) {
-
   #assertions
-  assert_condition(!is.na(residue_path) && nchar(residue_path) > 0,
-                   "Input is either missing or an empty string. Please provide a residue_path as a string")
+  assert_condition(
+    !is.na(residue_path) && nchar(residue_path) > 0,
+    "Input is either missing or an empty string. Please provide a residue_path as a string"
+  )
 
-
-  assert_condition(file.exists(residue_path) && file.info(residue_path)$size > 0,
-                   paste0("Input is either missing or an empty file: ", residue_path))
+  assert_condition(
+    file.exists(residue_path) && file.info(residue_path)$size > 0,
+    paste0("Input is either missing or an empty file: ", residue_path)
+  )
 
   # load the data
   message(paste0("Loading non-A residue data from ", residue_path))
-  residue_data <- vroom::vroom(residue_path, show_col_types = FALSE) %>% dplyr::as_tibble()
+  residue_data <- vroom::vroom(residue_path, show_col_types = FALSE) %>%
+    dplyr::as_tibble()
 
-  if(!is.na(sample_name)) {
+  if (!is.na(sample_name)) {
     # set sample_name (if was set)
-    if (! "sample_name" %in% colnames(residue_data)) {
-      warning("sample_name was provided in the input file. Overwriting with the provided one")
+    if (!"sample_name" %in% colnames(residue_data)) {
+      warning(
+        "sample_name was provided in the input file. Overwriting with the provided one"
+      )
     }
     residue_data$sample_name = sample_name
     residue_data$sample_name <- as.factor(residue_data$sample_name)
@@ -258,14 +296,20 @@ read_residue_single <- function(residue_path, sample_name = NA) {
   # else created columns could be easily dropped
   # this code chunk was originally written by PaweÅ‚ Krawczyk (smaegol) & incorporated in NanoTail package
 
-  transcript_names <- gsub(".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*", "\\1", residue_data$contig)
+  transcript_names <- gsub(
+    ".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*",
+    "\\1",
+    residue_data$contig
+  )
   residue_data$transcript <- transcript_names
   ensembl_transcript_ids <- gsub("^(.*?)\\|.*\\|.*", "\\1", residue_data$contig)
-  ensembl_transcript_ids_short <- gsub("(.*)\\..*", "\\1", ensembl_transcript_ids) # without version number
+  ensembl_transcript_ids_short <- gsub(
+    "(.*)\\..*",
+    "\\1",
+    ensembl_transcript_ids
+  ) # without version number
   residue_data$ensembl_transcript_id_full <- ensembl_transcript_ids
   residue_data$ensembl_transcript_id_short <- ensembl_transcript_ids_short
-
-
 
   return(residue_data)
 }
@@ -310,33 +354,40 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 #' residues_data <- ninetails::read_residue_multiple(samples_table)
 #'
 #'}
-read_residue_multiple <- function(samples_table,...) {
-
-
+read_residue_multiple <- function(samples_table, ...) {
   #assertions
   if (missing(samples_table)) {
-    stop("The samples_table argument is missing",
-         call. = FALSE)
+    stop("The samples_table argument is missing", call. = FALSE)
   }
 
-
   if (!is.data.frame(samples_table) || nrow(samples_table) == 0) {
-    stop("Empty data frame provided as an input (samples_table). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (samples_table). Please provide valid input"
+    )
+  }
 
-  assert_condition("residue_path" %in% colnames(samples_table),
-                   "The samples_table should contain at least residue_path and sample_name columns.")
-  assert_condition("sample_name" %in% colnames(samples_table),
-                   "The samples_table should contain at least residue_path and sample_name columns.")
+  assert_condition(
+    "residue_path" %in% colnames(samples_table),
+    "The samples_table should contain at least residue_path and sample_name columns."
+  )
+  assert_condition(
+    "sample_name" %in% colnames(samples_table),
+    "The samples_table should contain at least residue_path and sample_name columns."
+  )
 
   samples_data <- samples_table %>%
     tibble::as_tibble() %>%
-    dplyr::mutate_if(is.character,as.factor) %>%
+    dplyr::mutate_if(is.character, as.factor) %>%
     dplyr::mutate(residue_path = as.character(residue_path)) %>%
     dplyr::group_by(sample_name) %>%
-    dplyr::mutate(residue_contents=purrr::map(residue_path, function(x) ninetails::read_residue_single(x))) %>%
+    dplyr::mutate(
+      residue_contents = purrr::map(residue_path, function(x) {
+        ninetails::read_residue_single(x)
+      })
+    ) %>%
     dplyr::ungroup() %>%
     dplyr::select(-residue_path)
-  residue_data <- tidyr::unnest(samples_data,cols = c(residue_contents))
+  residue_data <- tidyr::unnest(samples_data, cols = c(residue_contents))
 
   return(residue_data)
 }
@@ -364,26 +415,31 @@ read_residue_multiple <- function(samples_table,...) {
 #'                                              grouping_factor=NA)
 #'}
 #'
-count_residues <- function(residue_data,
-                           grouping_factor=NA) {
-
-
+count_residues <- function(residue_data, grouping_factor = NA) {
   # assertions
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
-    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
-
-  if(!is.na(grouping_factor)) {
-    assert_condition(grouping_factor %in% colnames(residue_data),
-                     paste0(grouping_factor," is not a column of input dataset"))
-
-    residue_counts <- residue_data %>%
-      dplyr::mutate(prediction=forcats::fct_relevel(prediction,"U", after = Inf)) %>%
-      dplyr::group_by(!!rlang::sym(grouping_factor),prediction) %>%
-      dplyr::count()
+    stop(
+      "Empty data frame provided as an input (residue_data). Please provide valid input"
+    )
   }
-  else {
+
+  if (!is.na(grouping_factor)) {
+    assert_condition(
+      grouping_factor %in% colnames(residue_data),
+      paste0(grouping_factor, " is not a column of input dataset")
+    )
+
     residue_counts <- residue_data %>%
-      dplyr::mutate(prediction=forcats::fct_relevel(prediction,"U", after = Inf)) %>%
+      dplyr::mutate(
+        prediction = forcats::fct_relevel(prediction, "U", after = Inf)
+      ) %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor), prediction) %>%
+      dplyr::count()
+  } else {
+    residue_counts <- residue_data %>%
+      dplyr::mutate(
+        prediction = forcats::fct_relevel(prediction, "U", after = Inf)
+      ) %>%
       dplyr::group_by(prediction) %>%
       dplyr::count()
   }
@@ -415,38 +471,45 @@ count_residues <- function(residue_data,
 #' spread_table <- ninetails::spread_nonA_residues(residue_data=residue_data)
 #'
 #'}
-spread_nonA_residues <- function(residue_data){
-
-
-
+spread_nonA_residues <- function(residue_data) {
   #Assertions
   if (missing(residue_data)) {
-    stop("A datafraeme with non-A residue data is missing. Please provide a valid residue_data argument",
-         call. = FALSE)
+    stop(
+      "A datafraeme with non-A residue data is missing. Please provide a valid residue_data argument",
+      call. = FALSE
+    )
   }
 
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
-    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
-
+    stop(
+      "Empty data frame provided as an input (residue_data). Please provide valid input"
+    )
+  }
 
   #create column for non-A residue summary (cigar-like string)
-  cigar <- residue_data %>% dplyr::group_by(group, readname) %>%
+  cigar <- residue_data %>%
+    dplyr::group_by(group, readname) %>%
     dplyr::arrange(est_nonA_pos, .by_group = TRUE) %>%
-    dplyr::summarise(nonA_residues = paste0(prediction, est_nonA_pos, collapse = ':'), .groups = 'drop')
+    dplyr::summarise(
+      nonA_residues = paste0(prediction, est_nonA_pos, collapse = ':'),
+      .groups = 'drop'
+    )
 
   # create contingency table with C, G, U counts per read
   contingency <- residue_data %>%
     dplyr::select(-est_nonA_pos) %>%
-    tidyr::pivot_wider(names_from = prediction,
-                       names_sort = TRUE,
-                       names_prefix = 'prediction_',
-                       values_from = prediction,
-                       values_fn = length,
-                       values_fill = 0)
+    tidyr::pivot_wider(
+      names_from = prediction,
+      names_sort = TRUE,
+      names_prefix = 'prediction_',
+      values_from = prediction,
+      values_fn = length,
+      values_fill = 0
+    )
 
   #merge both tables
-  spread_table <- contingency %>% dplyr::left_join(cigar, by=c("readname", "group"))
-
+  spread_table <- contingency %>%
+    dplyr::left_join(cigar, by = c("readname", "group"))
 
   return(spread_table)
 }
@@ -491,36 +554,43 @@ spread_nonA_residues <- function(residue_data){
 #'                                               pass_only=TRUE)
 #'
 #'}
-merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
-
-
+merge_nonA_tables <- function(class_data, residue_data, pass_only = TRUE) {
   #Assertions
   if (missing(class_data)) {
-    stop("A datafraeme with class data is missing. Please provide a valid class_data argument",
-         call. = FALSE)
+    stop(
+      "A datafraeme with class data is missing. Please provide a valid class_data argument",
+      call. = FALSE
+    )
   }
   if (missing(residue_data)) {
-    stop("A datafraeme with non-A residue data is missing. Please provide a valid residue_data argument",
-         call. = FALSE)
+    stop(
+      "A datafraeme with non-A residue data is missing. Please provide a valid residue_data argument",
+      call. = FALSE
+    )
   }
 
-
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
-    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (class_data). Please provide valid input"
+    )
+  }
 
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
-    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (residue_data). Please provide valid input"
+    )
+  }
 
-  assert_condition(is.logical(pass_only),
-                   "Please provide TRUE/FALSE values for pass_only parameter")
-
+  assert_condition(
+    is.logical(pass_only),
+    "Please provide TRUE/FALSE values for pass_only parameter"
+  )
 
   #drop all unclassified reads
-  class_data <- class_data[!(class_data$class=="unclassified"),]
-
+  class_data <- class_data[!(class_data$class == "unclassified"), ]
 
   # filter class_data according to predefined condition
-  if(pass_only==TRUE){
+  if (pass_only == TRUE) {
     class2 <- class_data[class_data$qc_tag == "PASS", ]
   } else {
     class2 <- class_data[class_data$qc_tag %in% c("PASS", "SUFFCLIP"), ]
@@ -536,10 +606,12 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
   # tidyselect::where() issue solved as in
   # https://stackoverflow.com/questions/62459736/how-do-i-use-tidyselect-where-in-a-custom-package
   merged_nonA_tables <- merged_tables %>%
-    dplyr::mutate(dplyr::across(tidyselect::vars_select_helpers$where(is.numeric), ~ ifelse(is.na(.), 0, .)))
+    dplyr::mutate(dplyr::across(
+      tidyselect::vars_select_helpers$where(is.numeric),
+      ~ ifelse(is.na(.), 0, .)
+    ))
 
   return(merged_nonA_tables)
-
 }
 
 #' Produces summary table of nonA occurrences within analyzed dataset.
@@ -576,26 +648,33 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 #'                                         transcript_id_column="ensembl_transcript_id_short")
 #'
 #'}
-summarize_nonA <- function(merged_nonA_tables,
-                           summary_factors = c("group"),
-                           transcript_id_column = c("ensembl_transcript_id_short")) {
-
-
+summarize_nonA <- function(
+  merged_nonA_tables,
+  summary_factors = c("group"),
+  transcript_id_column = c("ensembl_transcript_id_short")
+) {
   #Assertions
   if (missing(merged_nonA_tables)) {
-    stop("Ninetails' merged_nonA_tables output is missing. Please provide a valid merged_nonA_tables argument",
-         call. = FALSE)
+    stop(
+      "Ninetails' merged_nonA_tables output is missing. Please provide a valid merged_nonA_tables argument",
+      call. = FALSE
+    )
   }
 
   if (!is.data.frame(merged_nonA_tables) || nrow(merged_nonA_tables) == 0) {
-    stop("Empty data frame provided as an input (merged_nonA_tables). Please provide valid input")
+    stop(
+      "Empty data frame provided as an input (merged_nonA_tables). Please provide valid input"
+    )
   }
 
-  assert_condition(is.character(summary_factors),
-                   "Non-character argument is not alowed for `summary_factors`. Please provide either string or vector of strings")
-  assert_condition(all(summary_factors %in% colnames(merged_nonA_tables)),
-                   "Non-existent column name provided as the argument (summary_factors)")
-
+  assert_condition(
+    is.character(summary_factors),
+    "Non-character argument is not alowed for `summary_factors`. Please provide either string or vector of strings"
+  )
+  assert_condition(
+    all(summary_factors %in% colnames(merged_nonA_tables)),
+    "Non-existent column name provided as the argument (summary_factors)"
+  )
 
   # this function is slow; TODO: rethink the syntax
   # this syntax is slightly faster than without creating new variable according to microbenchmark
@@ -603,9 +682,13 @@ summarize_nonA <- function(merged_nonA_tables,
     # drop all previous grouping vars
     dplyr::ungroup() %>%
     # count all nonA reads
-    dplyr::mutate(sum_nonA = rowSums(dplyr::across(dplyr::starts_with('prediction_')))) %>%
+    dplyr::mutate(
+      sum_nonA = rowSums(dplyr::across(dplyr::starts_with('prediction_')))
+    ) %>%
     # group by provided vars
-    dplyr::group_by(!!!rlang::syms(c(transcript_id_column,summary_factors))) %>%
+    dplyr::group_by(
+      !!!rlang::syms(c(transcript_id_column, summary_factors))
+    ) %>%
     #provide summaries
     dplyr::summarise(
       polya_median = stats::median(polya_length), #add median polya length
@@ -613,21 +696,39 @@ summarize_nonA <- function(merged_nonA_tables,
       counts_total = dplyr::n(), # add transcript count
       #summarize counts (number of reads with given non-A residues)
       #and hits (occurences of given residues)
-      dplyr::across(c(sum_nonA, prediction_C, prediction_G, prediction_U),
-                    list(counts = ~ sum(.x != 0), hits = ~ sum(.x))), .groups= 'drop') %>%
+      dplyr::across(
+        c(sum_nonA, prediction_C, prediction_G, prediction_U),
+        list(counts = ~ sum(.x != 0), hits = ~ sum(.x))
+      ),
+      .groups = 'drop'
+    ) %>%
     # rename columns according to desired convention
-    dplyr::rename_with(~stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'), 4:dplyr::last_col())
+    dplyr::rename_with(
+      ~ stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'),
+      4:dplyr::last_col()
+    )
 
   # add counts of blank reads - it has to be assigned to new var, because otherwise throws an error
   zeromod_summarized <- merged_nonA_tables %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(!!!rlang::syms(c(transcript_id_column,summary_factors))) %>%
-    dplyr::summarise(counts_blank = sum(dplyr::if_all(tidyselect::starts_with('prediction_'), ~ .x == 0)), .groups = 'drop')
+    dplyr::group_by(
+      !!!rlang::syms(c(transcript_id_column, summary_factors))
+    ) %>%
+    dplyr::summarise(
+      counts_blank = sum(dplyr::if_all(
+        tidyselect::starts_with('prediction_'),
+        ~ .x == 0
+      )),
+      .groups = 'drop'
+    )
 
-  nonA_data_summarized <- nonA_data_summarized%>%
+  nonA_data_summarized <- nonA_data_summarized %>%
     # add counts of blank reads - this syntax is because otherwise it throws an error
     # also: avoiding assigning new variable to temporary table
-    dplyr::left_join(zeromod_summarized, by=c(transcript_id_column,summary_factors)) %>%
+    dplyr::left_join(
+      zeromod_summarized,
+      by = c(transcript_id_column, summary_factors)
+    ) %>%
     # move blank reads count near total counts - for table clarity
     dplyr::relocate(counts_blank, .after = counts_total)
 
@@ -667,32 +768,36 @@ summarize_nonA <- function(merged_nonA_tables,
 #' @return A tibble with counts for each qc_tag present in the run
 #' @export
 #'
-nanopolish_qc <- function(class_data,
-                          grouping_factor=NA) {
-
-
+nanopolish_qc <- function(class_data, grouping_factor = NA) {
   #assertions
 
-  if (!is.data.frame(class_data) || nrow(class_data) == 0){
-    stop("Empty data frame provided as an input (class_data). Please provide valid input")
+  if (!is.data.frame(class_data) || nrow(class_data) == 0) {
+    stop(
+      "Empty data frame provided as an input (class_data). Please provide valid input"
+    )
   }
 
-  if(!is.na(grouping_factor)) {
-    assert_condition(grouping_factor %in% colnames(class_data),
-                     paste0(grouping_factor," is not a column of input dataset"))
+  if (!is.na(grouping_factor)) {
+    assert_condition(
+      grouping_factor %in% colnames(class_data),
+      paste0(grouping_factor, " is not a column of input dataset")
+    )
     processing_info <- class_data %>%
-      dplyr::mutate(qc_tag=forcats::fct_relevel(qc_tag,"PASS", after = Inf)) %>%
-      dplyr::group_by(!!rlang::sym(grouping_factor),qc_tag) %>%
+      dplyr::mutate(
+        qc_tag = forcats::fct_relevel(qc_tag, "PASS", after = Inf)
+      ) %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor), qc_tag) %>%
       dplyr::count()
-  }
-  else {
+  } else {
     processing_info <- class_data %>%
-      dplyr::mutate(qc_tag=forcats::fct_relevel(qc_tag,"PASS", after = Inf)) %>%
+      dplyr::mutate(
+        qc_tag = forcats::fct_relevel(qc_tag, "PASS", after = Inf)
+      ) %>%
       dplyr::group_by(qc_tag) %>%
       dplyr::count()
   }
 
-  return (processing_info)
+  return(processing_info)
 }
 
 
@@ -754,112 +859,156 @@ nanopolish_qc <- function(class_data,
 #'                                                        transcript_column="contig")
 #' }
 #'
-correct_residue_data <- function(class_data,
-                                 residue_data,
-                                 grouping_factor=NULL,
-                                 transcript_column,
-                                 ref=NULL){
-
+correct_residue_data <- function(
+  class_data,
+  residue_data,
+  grouping_factor = NULL,
+  transcript_column,
+  ref = NULL
+) {
   # assertions
   if (missing(class_data)) {
-    stop("The class_data argument is missing. Please provide the valid class prediction dataframe.",
-         call. = FALSE)
+    stop(
+      "The class_data argument is missing. Please provide the valid class prediction dataframe.",
+      call. = FALSE
+    )
   }
 
   if (missing(residue_data)) {
-    stop("The residue_data argument is missing. Please provide the valid residue prediction dataframe.",
-         call. = FALSE)
+    stop(
+      "The residue_data argument is missing. Please provide the valid residue prediction dataframe.",
+      call. = FALSE
+    )
   }
 
   if (missing(transcript_column)) {
-    stop("The transcript_column argument is missing. Please provide the name of the column that stores the transcript IDs.",
-         call. = FALSE)
+    stop(
+      "The transcript_column argument is missing. Please provide the name of the column that stores the transcript IDs.",
+      call. = FALSE
+    )
   }
 
-
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
-    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (class_data). Please provide valid input"
+    )
+  }
 
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
-    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
-
+    stop(
+      "Empty data frame provided as an input (residue_data). Please provide valid input"
+    )
+  }
 
   #prevent bugs
   class_data <- unique(class_data)
   residue_data <- unique(residue_data)
 
-  if (is.null(grouping_factor)){
-
+  if (is.null(grouping_factor)) {
     # mark positions located in first quantile of length (i.e. in close proximity to the transcript body;
     # those are ambiguous as they can arise as the segmentation artifacts inherited from nanopolish)
     class_data_filtered <- class_data %>%
       dplyr::group_by(!!rlang::sym(transcript_column)) %>%
-      dplyr::mutate(seg_err_quart = stats::quantile(polya_length, probs=0.05),
-                    mode_len = which.max(tabulate(polya_length)),
-                    count = dplyr::n()) %>% dplyr::ungroup()
+      dplyr::mutate(
+        seg_err_quart = stats::quantile(polya_length, probs = 0.05),
+        mode_len = which.max(tabulate(polya_length)),
+        count = dplyr::n()
+      ) %>%
+      dplyr::ungroup()
 
     # mark most frequent position of nonA residue; the mode will be then used to filter out positions
     # which are most likely artifacts
     residue_data_filtered <- residue_data %>%
       dplyr::group_by(!!rlang::sym(transcript_column), prediction) %>%
-      dplyr::mutate(mode_pos = which.max(tabulate(est_nonA_pos)),
-                    pos_err_quart = stats::quantile(est_nonA_pos, probs=0.05),
-                    count_nonA = dplyr::n()) %>% dplyr::ungroup()
-
-  } else{
-
+      dplyr::mutate(
+        mode_pos = which.max(tabulate(est_nonA_pos)),
+        pos_err_quart = stats::quantile(est_nonA_pos, probs = 0.05),
+        count_nonA = dplyr::n()
+      ) %>%
+      dplyr::ungroup()
+  } else {
     # add new columns to class data
     class_data_filtered <- class_data %>%
-      dplyr::group_by(!!rlang::sym(grouping_factor), !!rlang::sym(transcript_column)) %>%
-      dplyr::mutate(seg_err_quart = stats::quantile(polya_length, probs=0.05),
-                    mode_len = which.max(tabulate(polya_length)),
-                    count = dplyr::n()) %>% dplyr::ungroup()
+      dplyr::group_by(
+        !!rlang::sym(grouping_factor),
+        !!rlang::sym(transcript_column)
+      ) %>%
+      dplyr::mutate(
+        seg_err_quart = stats::quantile(polya_length, probs = 0.05),
+        mode_len = which.max(tabulate(polya_length)),
+        count = dplyr::n()
+      ) %>%
+      dplyr::ungroup()
 
     # add new columns to residue data
     residue_data_filtered <- residue_data %>%
-      dplyr::group_by(!!rlang::sym(grouping_factor), !!rlang::sym(transcript_column), prediction) %>%
-      dplyr::mutate(mode_pos = which.max(tabulate(est_nonA_pos)),
-                    pos_err_quart = stats::quantile(est_nonA_pos, probs=0.05),
-                    count_nonA = dplyr::n()) %>% dplyr::ungroup()
+      dplyr::group_by(
+        !!rlang::sym(grouping_factor),
+        !!rlang::sym(transcript_column),
+        prediction
+      ) %>%
+      dplyr::mutate(
+        mode_pos = which.max(tabulate(est_nonA_pos)),
+        pos_err_quart = stats::quantile(est_nonA_pos, probs = 0.05),
+        count_nonA = dplyr::n()
+      ) %>%
+      dplyr::ungroup()
   }
 
   # load whitelists
-  path_to_builtin_whitelists <- system.file("extdata", "whitelists", "whitelist.RData", package="ninetails")
+  path_to_builtin_whitelists <- system.file(
+    "extdata",
+    "whitelists",
+    "whitelist.RData",
+    package = "ninetails"
+  )
   load(path_to_builtin_whitelists)
 
   #whitelists
-  if (ref=="mmusculus") {
-    whitelist=mouse_whitelist
-  } else if (ref=="hsapiens") {
-    whitelist=human_whitelist
-  } else if (ref=="scerevisiae") {
-    whitelist=saccer_whitelist
-  } else if (ref=="celegans") {
-    whitelist=celegans_whitelist
-  } else if (ref=="athaliana") {
-    whitelist=arabidopsis_whitelist
-  } else if (ref=="tbrucei") {
-    whitelist=trypa_whitelist
+  if (ref == "mmusculus") {
+    whitelist = mouse_whitelist
+  } else if (ref == "hsapiens") {
+    whitelist = human_whitelist
+  } else if (ref == "scerevisiae") {
+    whitelist = saccer_whitelist
+  } else if (ref == "celegans") {
+    whitelist = celegans_whitelist
+  } else if (ref == "athaliana") {
+    whitelist = arabidopsis_whitelist
+  } else if (ref == "tbrucei") {
+    whitelist = trypa_whitelist
   } else {
-    whitelist=ref
+    whitelist = ref
   }
 
   # merge the filtered data
-  residue_data_edited <- residue_data_filtered %>% dplyr::left_join(class_data_filtered)
+  residue_data_edited <- residue_data_filtered %>%
+    dplyr::left_join(class_data_filtered)
   # mark ambiguous positions
   residue_data_edited <- residue_data_edited %>%
     dplyr::mutate(
-      qc_pos=dplyr::case_when(!!rlang::sym(transcript_column) %in% whitelist ~ "Y",
-                              count_nonA > 10 & (est_nonA_pos > mode_pos & mode_pos<pos_err_quart)  ~ "Y",
-                              count_nonA > 10 & (est_nonA_pos > mode_pos & mode_pos>pos_err_quart) & est_nonA_pos - pos_err_quart>4 ~ "Y",
-                              count_nonA > 10 & mode_pos > seg_err_quart  ~ "Y",
-                              count_nonA > 10 & est_nonA_pos > pos_err_quart & est_nonA_pos > seg_err_quart ~ "Y",
-                              count_nonA < 10 & est_nonA_pos > seg_err_quart~ "Y",
-                              count_nonA > 10 & polya_length<50 &(est_nonA_pos/polya_length)*100<mode_len & est_nonA_pos>pos_err_quart & pos_err_quart>10 ~ "Y",
-                              count < 10 & count_nonA < 10 ~ "Y",
-                              count_nonA < 10 ~ "Y",
-                              TRUE ~ "N"))
-
+      qc_pos = dplyr::case_when(
+        !!rlang::sym(transcript_column) %in% whitelist ~ "Y",
+        count_nonA > 10 &
+          (est_nonA_pos > mode_pos & mode_pos < pos_err_quart) ~ "Y",
+        count_nonA > 10 &
+          (est_nonA_pos > mode_pos & mode_pos > pos_err_quart) &
+          est_nonA_pos - pos_err_quart > 4 ~ "Y",
+        count_nonA > 10 & mode_pos > seg_err_quart ~ "Y",
+        count_nonA > 10 &
+          est_nonA_pos > pos_err_quart &
+          est_nonA_pos > seg_err_quart ~ "Y",
+        count_nonA < 10 & est_nonA_pos > seg_err_quart ~ "Y",
+        count_nonA > 10 &
+          polya_length < 50 &
+          (est_nonA_pos / polya_length) * 100 < mode_len &
+          est_nonA_pos > pos_err_quart &
+          pos_err_quart > 10 ~ "Y",
+        count < 10 & count_nonA < 10 ~ "Y",
+        count_nonA < 10 ~ "Y",
+        TRUE ~ "N"
+      )
+    )
 
   return(residue_data_edited)
 }
@@ -917,36 +1066,48 @@ correct_residue_data <- function(class_data,
 #'                                                       class_data=results[[1]])
 #' }
 #'
-correct_class_data <- function(residue_data_edited, class_data){
-
-
+correct_class_data <- function(residue_data_edited, class_data) {
   # assertions
   if (missing(residue_data_edited)) {
-    stop("The residue_data_edited argument is missing. Please provide the output of correct_residue_data function.",
-         call. = FALSE)
+    stop(
+      "The residue_data_edited argument is missing. Please provide the output of correct_residue_data function.",
+      call. = FALSE
+    )
   }
 
   if (missing(class_data)) {
-    stop("The class_data argument is missing. Please provide the valid class prediction dataframe.",
-         call. = FALSE)
+    stop(
+      "The class_data argument is missing. Please provide the valid class prediction dataframe.",
+      call. = FALSE
+    )
   }
 
-
   if (!is.data.frame(residue_data_edited) || nrow(residue_data_edited) == 0) {
-    stop("Empty data frame provided as an input (residue_data_edited). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (residue_data_edited). Please provide valid input"
+    )
+  }
 
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
-    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (class_data). Please provide valid input"
+    )
+  }
 
+  basic_colnames = c("mode_pos", "seg_err_quart", "qc_pos")
 
-  basic_colnames = c("mode_pos","seg_err_quart", "qc_pos")
-
-  assert_condition(basic_colnames[1] %in% colnames(residue_data_edited),
-                   "mode_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
-  assert_condition(basic_colnames[2] %in% colnames(residue_data_edited),
-                   "seg_err_quart column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
-  assert_condition(basic_colnames[3] %in% colnames(residue_data_edited),
-                   "qc_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?")
+  assert_condition(
+    basic_colnames[1] %in% colnames(residue_data_edited),
+    "mode_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?"
+  )
+  assert_condition(
+    basic_colnames[2] %in% colnames(residue_data_edited),
+    "seg_err_quart column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?"
+  )
+  assert_condition(
+    basic_colnames[3] %in% colnames(residue_data_edited),
+    "qc_pos column is missing in the input residue_data_edited. Is that valid output of correct_residue_data()?"
+  )
 
   #prevent bugs
   class_data <- unique(class_data)
@@ -955,18 +1116,23 @@ correct_class_data <- function(residue_data_edited, class_data){
   # prepare residue summary
   residue_data_summarized <- residue_data_edited %>%
     dplyr::group_by(readname) %>%
-    dplyr::summarize(n_resid=dplyr::n(),
-                     no_qc_pos_N = sum(qc_pos=="N"))
+    dplyr::summarize(n_resid = dplyr::n(), no_qc_pos_N = sum(qc_pos == "N"))
 
   # deal with class data
-  class_data <- class_data %>% dplyr::left_join(residue_data_summarized, by = "readname") %>%
-    dplyr::mutate(corr_class = dplyr::case_when(n_resid == no_qc_pos_N ~ "blank",
-                                                n_resid > no_qc_pos_N ~ "decorated",
-                                                TRUE ~ class),
-                  corr_comments = dplyr::case_when(class==corr_class ~ comments,
-                                                   TRUE ~ "MPU")) %>%
+  class_data <- class_data %>%
+    dplyr::left_join(residue_data_summarized, by = "readname") %>%
+    dplyr::mutate(
+      corr_class = dplyr::case_when(
+        n_resid == no_qc_pos_N ~ "blank",
+        n_resid > no_qc_pos_N ~ "decorated",
+        TRUE ~ class
+      ),
+      corr_comments = dplyr::case_when(
+        class == corr_class ~ comments,
+        TRUE ~ "MPU"
+      )
+    ) %>%
     dplyr::select(-c(n_resid, no_qc_pos_N))
-
 
   return(class_data)
 }
@@ -1047,60 +1213,91 @@ correct_class_data <- function(residue_data_edited, class_data){
 #'                                                     transcript_column = "contig")
 #'  }
 #'
-reclassify_ninetails_data <- function(residue_data,
-                                      class_data,
-                                      grouping_factor=NULL,
-                                      transcript_column,
-                                      ref=NULL){
-
-
+reclassify_ninetails_data <- function(
+  residue_data,
+  class_data,
+  grouping_factor = NULL,
+  transcript_column,
+  ref = NULL
+) {
   # assertions
   if (missing(residue_data)) {
-    stop("The residue_data argument is missing. Please provide the valid residue_data (output of core ninetails pipeline).",
-         call. = FALSE)
+    stop(
+      "The residue_data argument is missing. Please provide the valid residue_data (output of core ninetails pipeline).",
+      call. = FALSE
+    )
   }
 
   if (missing(class_data)) {
-    stop("The class_data argument is missing. Please provide the valid class_data (output of core ninetails pipeline).",
-         call. = FALSE)
+    stop(
+      "The class_data argument is missing. Please provide the valid class_data (output of core ninetails pipeline).",
+      call. = FALSE
+    )
   }
 
   if (missing(transcript_column)) {
-    stop("The transcript_column argument is missing. Please provide the name of the column that stores the transcript IDs.",
-         call. = FALSE)
+    stop(
+      "The transcript_column argument is missing. Please provide the name of the column that stores the transcript IDs.",
+      call. = FALSE
+    )
   }
 
-
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
-    stop("Empty data frame provided as an input (class_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (class_data). Please provide valid input"
+    )
+  }
 
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
-    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (residue_data). Please provide valid input"
+    )
+  }
 
   #prevent bugs
   class_data <- unique(class_data)
   residue_data <- unique(residue_data)
 
   # load whitelists
-  path_to_builtin_whitelists <- system.file("extdata", "whitelists", "whitelist.RData", package="ninetails")
+  path_to_builtin_whitelists <- system.file(
+    "extdata",
+    "whitelists",
+    "whitelist.RData",
+    package = "ninetails"
+  )
   load(path_to_builtin_whitelists)
 
   # deal with ambiguous positions
-  residue_data_edited <- ninetails::correct_residue_data(class_data=class_data,
-                                                         residue_data=residue_data,
-                                                         grouping_factor=grouping_factor,
-                                                         transcript_column = transcript_column,
-                                                         ref=ref)
+  residue_data_edited <- ninetails::correct_residue_data(
+    class_data = class_data,
+    residue_data = residue_data,
+    grouping_factor = grouping_factor,
+    transcript_column = transcript_column,
+    ref = ref
+  )
 
   # deal with classification
-  class_data <- ninetails::correct_class_data(residue_data_edited=residue_data_edited,
-                                              class_data=class_data) %>%
+  class_data <- ninetails::correct_class_data(
+    residue_data_edited = residue_data_edited,
+    class_data = class_data
+  ) %>%
     dplyr::select(-c(class, comments)) %>%
     dplyr::rename(class = corr_class, comments = corr_comments)
 
   # filter residue data - drop ambiguous positions
-  residue_data_edited <- residue_data_edited %>% dplyr::filter(qc_pos=="Y") %>%
-    dplyr::select(-c(mode_pos, seg_err_quart, qc_pos, pos_err_quart, count_nonA, mode_len, count))
+  residue_data_edited <- residue_data_edited %>%
+    dplyr::filter(qc_pos == "Y") %>%
+    dplyr::select(
+      -c(
+        mode_pos,
+        seg_err_quart,
+        qc_pos,
+        pos_err_quart,
+        count_nonA,
+        mode_len,
+        count
+      )
+    )
 
   #reassure that tibbles are coerced to df
   class_data <- as.data.frame(class_data)
@@ -1111,9 +1308,7 @@ reclassify_ninetails_data <- function(residue_data,
   output[["class_data"]] <- class_data
   output[["residue_data"]] <- residue_data_edited
 
-
   return(output)
-
 }
 
 #' Counts reads with certain amount of nonA occurrences (instances)
@@ -1134,27 +1329,37 @@ reclassify_ninetails_data <- function(residue_data,
 #' nonA_abundance <- ninetails::count_nonA_abundance(residue_data=residue_data,
 #'                                                   grouping_factor="sample_name")
 #' }
-count_nonA_abundance <- function(residue_data,
-                                 grouping_factor=NA){
-
+count_nonA_abundance <- function(residue_data, grouping_factor = NA) {
   # assertions
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
-    stop("Empty data frame provided as an input (residue_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (residue_data). Please provide valid input"
+    )
+  }
 
-  if(!is.na(grouping_factor)) {
-    assert_condition(grouping_factor %in% colnames(residue_data),
-                     paste0(grouping_factor," is not a column of input dataset"))}
+  if (!is.na(grouping_factor)) {
+    assert_condition(
+      grouping_factor %in% colnames(residue_data),
+      paste0(grouping_factor, " is not a column of input dataset")
+    )
+  }
 
-
-  nonA_counts <- residue_data %>% dplyr::select(!!rlang::sym(grouping_factor),
-                                                readname) %>%
+  nonA_counts <- residue_data %>%
+    dplyr::select(!!rlang::sym(grouping_factor), readname) %>%
     dplyr::group_by(!!rlang::sym(grouping_factor), readname) %>%
-    dplyr::mutate(instances = ifelse(dplyr::n() == 1, "single",
-                                     ifelse(dplyr::n() == 2, "two", "more"))) %>%
-    dplyr::ungroup() %>% dplyr::group_by(!!rlang::sym(grouping_factor), instances) %>%
-    dplyr::mutate(count=dplyr::n()) %>% dplyr::select(-readname) %>% dplyr::distinct() %>%
+    dplyr::mutate(
+      instances = ifelse(
+        dplyr::n() == 1,
+        "single",
+        ifelse(dplyr::n() == 2, "two", "more")
+      )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(!!rlang::sym(grouping_factor), instances) %>%
+    dplyr::mutate(count = dplyr::n()) %>%
+    dplyr::select(-readname) %>%
+    dplyr::distinct() %>%
     dplyr::ungroup()
 
   return(nonA_counts)
-
 }

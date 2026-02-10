@@ -64,68 +64,104 @@
 #' )
 #'
 #' }
-extract_polya_data <- function(nanopolish,
-                               sequencing_summary,
-                               pass_only = TRUE){
-
+extract_polya_data <- function(
+  nanopolish,
+  sequencing_summary,
+  pass_only = TRUE) {
   if (missing(nanopolish)) {
-    stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
+    stop(
+      "Nanopolish polya output is missing. Please provide a valid nanopolish argument.",
+      .call = FALSE
+    )
   }
 
   if (missing(sequencing_summary)) {
-    stop("Sequencing summary file is missing. Please provide a valid sequencing_summary argument.", .call = FALSE)
+    stop(
+      "Sequencing summary file is missing. Please provide a valid sequencing_summary argument.",
+      .call = FALSE
+    )
   }
 
-  assert_condition(is.logical(pass_only),
-                   "Please provide TRUE/FALSE values for pass_only parameter")
+  assert_condition(
+    is.logical(pass_only),
+    "Please provide TRUE/FALSE values for pass_only parameter"
+  )
 
   # Accept either path to file or in-memory file - PK's GH issue
   if (is_string(nanopolish)) {
     # if string provided as an argument, read from file
     assert_file_exists(nanopolish, "Nanopolish")
-    nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                           col_select=c(readname, polya_start, transcript_start, polya_length, qc_tag),
-                                           show_col_types = FALSE)
+    nanopolish_polya_table <- vroom::vroom(
+      nanopolish,
+      col_select = c(
+        readname,
+        polya_start,
+        transcript_start,
+        polya_length,
+        qc_tag
+      ),
+      show_col_types = FALSE
+    )
   } else {
     # make sure that nanopolish is an object with rows
     if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
-      stop("Empty data frame provided as an input (nanopolish). Please provide valid input")
+      stop(
+        "Empty data frame provided as an input (nanopolish). Please provide valid input"
+      )
     }
 
-    nanopolish_polya_table <- nanopolish[,c("readname","polya_start","transcript_start","polya_length","qc_tag")]
+    nanopolish_polya_table <- nanopolish[, c(
+      "readname",
+      "polya_start",
+      "transcript_start",
+      "polya_length",
+      "qc_tag"
+    )]
   }
 
   # Accept either path to file or in-memory file - PK's GH issue
   if (is_string(sequencing_summary)) {
     # if string provided as an argument, read from file
     assert_file_exists(sequencing_summary, "Sequencing summary")
-    sequencing_summary_table <- vroom::vroom(sequencing_summary,
-                                             col_select = c(filename, read_id),
-                                             show_col_types = FALSE)
+    sequencing_summary_table <- vroom::vroom(
+      sequencing_summary,
+      col_select = c(filename, read_id),
+      show_col_types = FALSE
+    )
   } else {
     if (!is.data.frame(sequencing_summary) || nrow(sequencing_summary) == 0) {
-      stop("Empty data frame provided as an input (sequencing_summary). Please provide valid input")
+      stop(
+        "Empty data frame provided as an input (sequencing_summary). Please provide valid input"
+      )
     }
 
     sequencing_summary_table <- sequencing_summary
   }
 
   #rename read id column
-  names(sequencing_summary_table)[names(sequencing_summary_table) == "read_id"] <- "readname"
+  names(sequencing_summary_table)[
+    names(sequencing_summary_table) == "read_id"
+  ] <- "readname"
 
   # Add filtering criterion: select only pass or pass $ suffclip
-  if(pass_only == TRUE){
-    polya_summary <- dplyr::left_join(nanopolish_polya_table[which(nanopolish_polya_table$qc_tag=="PASS"),],
-                                      sequencing_summary_table,
-                                      by="readname")
+  if (pass_only == TRUE) {
+    polya_summary <- dplyr::left_join(
+      nanopolish_polya_table[which(nanopolish_polya_table$qc_tag == "PASS"), ],
+      sequencing_summary_table,
+      by = "readname"
+    )
   } else {
-    polya_summary <- dplyr::left_join(nanopolish_polya_table[which(nanopolish_polya_table$qc_tag %in% c("PASS", "SUFFCLIP")),],
-                                      sequencing_summary_table,
-                                      by="readname")
+    polya_summary <- dplyr::left_join(
+      nanopolish_polya_table[
+        which(nanopolish_polya_table$qc_tag %in% c("PASS", "SUFFCLIP")),
+      ],
+      sequencing_summary_table,
+      by = "readname"
+    )
   }
 
   # Add filtering criterion: tail length >= 10 nt
-  polya_summary <- dplyr::filter(polya_summary, polya_length >=10)
+  polya_summary <- dplyr::filter(polya_summary, polya_length >= 10)
 
   # Prevent bugs from custom models used for mapping (secondary alignments)
   polya_summary <- unique(polya_summary)
@@ -206,59 +242,98 @@ extract_polya_data <- function(nanopolish,
 #' )
 #'
 #' }
-extract_tail_data <- function(readname,
-                              polya_summary,
-                              workspace,
-                              basecall_group){
+extract_tail_data <- function(
+  readname,
+  polya_summary,
+  workspace,
+  basecall_group) {
+
   #Assertions
   if (missing(readname)) {
-    stop("Readname is missing. Please provide a valid readname argument.", call. =FALSE)
+    stop(
+      "Readname is missing. Please provide a valid readname argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(workspace)) {
-    stop("Directory with basecalled fast5s is missing. Please provide a valid workspace argument.", call. =FALSE)
+    stop(
+      "Directory with basecalled fast5s is missing. Please provide a valid workspace argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(basecall_group)) {
-    stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
+    stop(
+      "Basecall group is missing. Please provide a valid basecall_group argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(polya_summary)) {
-    stop("Polya_summary is missing. Please provide a valid polya_summary argument.", call. =FALSE)
+    stop(
+      "Polya_summary is missing. Please provide a valid polya_summary argument.",
+      call. = FALSE
+    )
   }
 
-  if (!is.data.frame(polya_summary) || nrow(polya_summary) == 0){
-    stop("Empty data frame provided as an input (polya_summary). Please provide a valid input table.",call. =FALSE )
+  if (!is.data.frame(polya_summary) || nrow(polya_summary) == 0) {
+    stop(
+      "Empty data frame provided as an input (polya_summary). Please provide a valid input table.",
+      call. = FALSE
+    )
   }
 
-
-  assert_condition(is.character(workspace),
-                   "Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files.")
-  assert_condition(is_string(workspace, null.ok = FALSE, min.chars = 1),
-                   "Empty string provided as an input. Please provide a valid path to basecalled fast5 files.")
-  assert_condition(is.character(readname),
-                   "Given readname is not a character string. Please provide a valid readname argument.")
+  assert_condition(
+    is.character(workspace),
+    "Path to basecalled fast5 files is not a character string. Please provide a valid path to basecalled fast5 files."
+  )
+  assert_condition(
+    is_string(workspace, null.ok = FALSE, min.chars = 1),
+    "Empty string provided as an input. Please provide a valid path to basecalled fast5 files."
+  )
+  assert_condition(
+    is.character(readname),
+    "Given readname is not a character string. Please provide a valid readname argument."
+  )
 
   # Extract data from fast5 file
   fast5_filenames <- polya_summary$filename
-  fast5_readname <- paste0("read_",readname) # suffix "read_"
+  fast5_readname <- paste0("read_", readname) # suffix "read_"
   fast5_file <- fast5_filenames[readname] # particular file name (eg. FAO12345.fast5)
-  fast5_file_path <-file.path(workspace, fast5_file) #path to browsed fast5 file
+  fast5_file_path <- file.path(workspace, fast5_file) #path to browsed fast5 file
 
-  signal <- rhdf5::h5read(file.path(fast5_file_path),paste0(fast5_readname,"/Raw/Signal"))
+  signal <- rhdf5::h5read(
+    file.path(fast5_file_path),
+    paste0(fast5_readname, "/Raw/Signal")
+  )
   signal <- as.vector(signal) #vectorized sig (natively: array)
 
   # retrieving moves
-  BaseCalled_template <- rhdf5::h5read(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group, "/BaseCalled_template"))
+  BaseCalled_template <- rhdf5::h5read(
+    fast5_file_path,
+    paste0(fast5_readname, "/Analyses/", basecall_group, "/BaseCalled_template")
+  )
   move <- BaseCalled_template$Move #how the basecaller "moves" through the called sequence, and allows for a mapping from basecall to raw data
   move <- as.numeric(move) # change data type as moves are originally stored as raw
 
   #read parameter stored in channel_id group
-  channel_id <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/channel_id")) # parent dir for attributes (within fast5 file)
+  channel_id <- rhdf5::h5readAttributes(
+    fast5_file_path,
+    paste0(fast5_readname, "/channel_id")
+  ) # parent dir for attributes (within fast5 file)
   sampling_rate <- channel_id$sampling_rate # number of data points collected per second
 
   #read parameters (attrs) stored in basecall_1d_template
-  basecall_1d_template <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group,"/Summary/basecall_1d_template")) # parent dir for attributes (within fast5); fixed hardcoding bug
+  basecall_1d_template <- rhdf5::h5readAttributes(
+    fast5_file_path,
+    paste0(
+      fast5_readname,
+      "/Analyses/",
+      basecall_group,
+      "/Summary/basecall_1d_template"
+    )
+  ) # parent dir for attributes (within fast5); fixed hardcoding bug
   stride <- basecall_1d_template$block_stride #  this parameter allows to sample data elements along a dimension
   called_events <- basecall_1d_template$called_events # number of events (nanopore translocations) recorded by device for given read
   number_of_events <- called_events * stride # number of events expanded for whole signal vec (this is estimation of signal length, however keep in mind that decimal values are ignored)
@@ -271,27 +346,50 @@ extract_tail_data <- function(readname,
   polya_start_position <- polya_summary$polya_start[read_idx]
   transcript_start_position <- polya_summary$transcript_start[read_idx]
   #define polya end position
-  polya_end_position <- transcript_start_position -1
+  polya_end_position <- transcript_start_position - 1
 
   # handle move data
   #this is to expand moves along raw signal
-  moves_sample_wise_vector <- c(rep(move, each=stride), rep(NA, length(signal) - number_of_events))
-  moves_tail_range <- moves_sample_wise_vector[polya_start_position:polya_end_position]
+  moves_sample_wise_vector <- c(
+    rep(move, each = stride),
+    rep(NA, length(signal) - number_of_events)
+  )
+  moves_tail_range <- moves_sample_wise_vector[
+    polya_start_position:polya_end_position
+  ]
 
   # extract polya tail region of the signal
   # signal is winsorized here!
-  signal <- ninetails::winsorize_signal(signal[polya_start_position:polya_end_position])
+  signal <- ninetails::winsorize_signal(signal[
+    polya_start_position:polya_end_position
+  ])
 
   # downsample (interpolate signal and moves) so the computation would be faster/easier to handle.
-  signal <- round(stats::approx(signal, method = "linear", n=ceiling(0.2 * length(signal)))[[2]], digits=0)
-  moves_tail_range <- round(stats::approx(moves_tail_range, method = "linear", n=ceiling(0.2 * length(moves_tail_range)))[[2]], digits=0)
+  signal <- round(
+    stats::approx(
+      signal,
+      method = "linear",
+      n = ceiling(0.2 * length(signal))
+    )[[2]],
+    digits = 0
+  )
+  moves_tail_range <- round(
+    stats::approx(
+      moves_tail_range,
+      method = "linear",
+      n = ceiling(0.2 * length(moves_tail_range))
+    )[[2]],
+    digits = 0
+  )
 
   # filter signal to find local minima & maxima corresponding to potential C, G, U modifications
   pseudomoves <- ninetails::filter_signal_by_threshold(signal)
 
   extracted_data_single_list = list() # creating empty list for the extracted fast5 data
 
-  extracted_data_single_list[["fast5_filename"]] <- polya_summary$filename[read_idx]
+  extracted_data_single_list[["fast5_filename"]] <- polya_summary$filename[
+    read_idx
+  ]
   extracted_data_single_list[["tail_signal"]] <- signal
   extracted_data_single_list[["tail_moves"]] <- moves_tail_range
   #added for robustness
@@ -381,31 +479,47 @@ extract_tail_data <- function(readname,
 #'
 #' }
 #'
-create_tail_feature_list <- function(nanopolish,
-                                     sequencing_summary,
-                                     workspace,
-                                     num_cores,
-                                     basecall_group,
-                                     pass_only=TRUE){
+create_tail_feature_list <- function(
+  nanopolish,
+  sequencing_summary,
+  workspace,
+  num_cores,
+  basecall_group,
+  pass_only = TRUE) {
 
   # Assertions
   if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+    stop(
+      "Number of declared cores is missing. Please provide a valid num_cores argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(basecall_group)) {
-    stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
+    stop(
+      "Basecall group is missing. Please provide a valid basecall_group argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(workspace)) {
-    stop("Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.", call. =FALSE)
+    stop(
+      "Directory with basecalled fast5s (guppy workspace) is missing. Please provide a valid workspace argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(num_cores),
-                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(num_cores),
+    "Declared core number must be numeric. Please provide a valid argument."
+  )
 
   # Extracting and processing polya & sequencing summary data
-  polya_summary <- ninetails::extract_polya_data(nanopolish, sequencing_summary, pass_only)
+  polya_summary <- ninetails::extract_polya_data(
+    nanopolish,
+    sequencing_summary,
+    pass_only
+  )
 
   #create empty list for extracted fast5 data
   tail_features_list = list()
@@ -419,43 +533,74 @@ create_tail_feature_list <- function(nanopolish,
   mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Extracting features of provided reads...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Extracting features of provided reads...',
+    '\n',
+    sep = ''
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(polya_summary$filename),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(polya_summary$filename),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-
   # parallel extraction
-  tail_features_list <- foreach::foreach(i = seq_along(polya_summary$readname),
-                                         .combine = c,
-                                         .inorder = TRUE,
-                                         .errorhandling = 'pass',
-                                         .options.snow = opts,
-                                         .options.multicore = mc_options) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
-
+  tail_features_list <- foreach::foreach(
+    i = seq_along(polya_summary$readname),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      lapply(polya_summary$readname[i], function(x) {
+        ninetails::extract_tail_data(
+          x,
+          polya_summary,
+          workspace,
+          basecall_group
+        )
+      })
+    }
 
   #label each signal according to corresponding read name to avoid confusion
   # this deals with issue#5 (nanopolish records do not exactly match seqsummary file)
-  squiggle_names <- as.vector(sapply(tail_features_list, function(x) attributes(x[[1]])$names))
+  squiggle_names <- as.vector(sapply(tail_features_list, function(x) {
+    attributes(x[[1]])$names
+  }))
   tail_features_list <- stats::setNames(tail_features_list, squiggle_names)
 
   # remove reads with only zero moved tails
-  tail_features_list <- Filter(function(x) sum(x$tail_moves) !=0, tail_features_list)
-  zeromoved_readnames <- squiggle_names[!(squiggle_names %in% names(tail_features_list))]
+  tail_features_list <- Filter(
+    function(x) sum(x$tail_moves) != 0,
+    tail_features_list
+  )
+  zeromoved_readnames <- squiggle_names[
+    !(squiggle_names %in% names(tail_features_list))
+  ]
 
   # prevent from running on reads which do not fulfill the pseudomove condition
-  tail_features_list <- Filter(function(x)any(with(rle(x$tail_pseudomoves), lengths[values!=0]>=5)), tail_features_list)
+  tail_features_list <- Filter(
+    function(x) any(with(rle(x$tail_pseudomoves), lengths[values != 0] >= 5)),
+    tail_features_list
+  )
 
   # reads discarded because of unmet pseudomove condition
   #in this reads reported pseudomove chain is too short to be considered as potential modification
-  nonpseudomoved_readnames <- squiggle_names[!(squiggle_names %in% c(zeromoved_readnames, names(tail_features_list)))]
+  nonpseudomoved_readnames <- squiggle_names[
+    !(squiggle_names %in% c(zeromoved_readnames, names(tail_features_list)))
+  ]
 
   #create final output
   tail_feature_list <- list()
@@ -465,7 +610,7 @@ create_tail_feature_list <- function(nanopolish,
   tail_feature_list[["nonpseudomoved_readnames"]] <- nonpseudomoved_readnames
 
   # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n', sep = ''))
 
   return(tail_feature_list)
 }
@@ -538,50 +683,74 @@ create_tail_feature_list <- function(nanopolish,
 #'
 #' }
 filter_signal_by_threshold <- function(signal) {
-
   # variable binding/ Initialize vectors for incremental subset assignment
   baseline <- std_cutoff <- NULL # x <- sd <- baseline <- std_cutoff <- NULL
 
   #assertions
   if (missing(signal)) {
-    stop("Signal is missing. Please provide a valid signal argument [numeric vec].", call. =FALSE)
+    stop(
+      "Signal is missing. Please provide a valid signal argument [numeric vec].",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(signal),
-                   "Signal must be numeric. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(signal),
+    "Signal must be numeric. Please provide a valid argument."
+  )
 
   # reproducibility
   set.seed(123)
 
   # calibrate the algo on the sampled vals
   start_vals <- signal[1:10]
-  most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:20]))
-  adjusted_signal <- c(sample(c(most_freq_vals, start_vals), 100, replace=TRUE), signal)
+  most_freq_vals <- as.numeric(names(sort(table(signal), decreasing = TRUE)[
+    1:20
+  ]))
+  adjusted_signal <- c(
+    sample(c(most_freq_vals, start_vals), 100, replace = TRUE),
+    signal
+  )
 
   # Empyrical parameters:
   adaptive_sampling_window <- 100 # datapoints window for adjusting algo
   SD_threshold <- 3.5 # how many SD tresholds from avg signal pseudomove should be reported
 
-  pseudomoves <- rep(0,length(adjusted_signal))
+  pseudomoves <- rep(0, length(adjusted_signal))
   filtered_signal <- adjusted_signal
 
-  baseline[adaptive_sampling_window] <- mean(adjusted_signal[1:adaptive_sampling_window], na.rm=TRUE)
-  std_cutoff[adaptive_sampling_window] <- stats::sd(adjusted_signal[1:adaptive_sampling_window], na.rm=TRUE)
-  for (i in (adaptive_sampling_window+1):length(adjusted_signal)){
-    if (abs(adjusted_signal[i] - baseline[i-1]) > SD_threshold*std_cutoff[i-1]) {
-      if (adjusted_signal[i] > baseline[i-1]) {
+  baseline[adaptive_sampling_window] <- mean(
+    adjusted_signal[1:adaptive_sampling_window],
+    na.rm = TRUE
+  )
+  std_cutoff[adaptive_sampling_window] <- stats::sd(
+    adjusted_signal[1:adaptive_sampling_window],
+    na.rm = TRUE
+  )
+  for (i in (adaptive_sampling_window + 1):length(adjusted_signal)) {
+    if (
+      abs(adjusted_signal[i] - baseline[i - 1]) >
+        SD_threshold * std_cutoff[i - 1]
+    ) {
+      if (adjusted_signal[i] > baseline[i - 1]) {
         pseudomoves[i] <- 1 #if they go up
       } else {
         pseudomoves[i] <- -1 # if they go down
       }
-      filtered_signal[i] <- filtered_signal[i-1] #update
+      filtered_signal[i] <- filtered_signal[i - 1] #update
     } else {
       pseudomoves[i] <- 0 # uniform distr
       filtered_signal[i] <- adjusted_signal[i] #update
     }
 
-    baseline[i] <- mean(filtered_signal[(i-adaptive_sampling_window):i], na.rm=TRUE)
-    std_cutoff[i] <- stats::sd(filtered_signal[(i-adaptive_sampling_window):i], na.rm=TRUE)
+    baseline[i] <- mean(
+      filtered_signal[(i - adaptive_sampling_window):i],
+      na.rm = TRUE
+    )
+    std_cutoff[i] <- stats::sd(
+      filtered_signal[(i - adaptive_sampling_window):i],
+      na.rm = TRUE
+    )
   }
 
   # trim pseudomoves so they fit actual signal/moves
@@ -668,28 +837,35 @@ filter_signal_by_threshold <- function(signal) {
 #' )
 #'
 #' }
-split_tail_centered <- function(readname,
-                                tail_feature_list) {
-
+split_tail_centered <- function(readname, tail_feature_list) {
   #assertions
   if (missing(readname)) {
-    stop("Readname is missing. Please provide a valid readname argument.", call. =FALSE)
+    stop(
+      "Readname is missing. Please provide a valid readname argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(tail_feature_list)) {
-    stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+    stop(
+      "List of tail features is missing. Please provide a valid tail_feature_list argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.character(readname),
-                   "Given readname is not a character string. Please provide a valid readname.")
-  assert_condition(is.list(tail_feature_list),
-                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
+  assert_condition(
+    is.character(readname),
+    "Given readname is not a character string. Please provide a valid readname."
+  )
+  assert_condition(
+    is.list(tail_feature_list),
+    "Given tail_feature_list is not a list (class). Please provide valid file format."
+  )
 
   #extract required data
   signal <- tail_feature_list[[1]][[readname]][[2]]
   moves <- tail_feature_list[[1]][[readname]][[3]]
   pseudomoves <- tail_feature_list[[1]][[readname]][[4]]
-
 
   # mod-centered chunk extraction
   # recompute rle
@@ -697,26 +873,41 @@ split_tail_centered <- function(readname,
   # pseudomoves filtered by condition (potentially decorated - empyrical!)
   condition <- mod_rle$lengths >= 5 & mod_rle$values
   # beginning positions of filtered pseudomoves which satisfy conditions
-  first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths,-1)))[condition]
+  first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths, -1)))[
+    condition
+  ]
   # length of pseudomoves satisfying condition
   filtered_length <- mod_rle$lengths[condition]
   # extracted coordinates (indices)
-  start_positions <-  first_filtered_positions + floor(filtered_length/2) - 50
+  start_positions <- first_filtered_positions + floor(filtered_length / 2) - 50
   end_positions <- start_positions + 99
 
   # extract signal chunks centered on potential modification
-  list_1 <- lapply(1:length(start_positions), function(i) if(start_positions[i] >0) signal[start_positions[i]:end_positions[i]]
-                   else c(rep(NA, abs(start_positions[i]-1)), signal[1:end_positions[i]]))
+  list_1 <- lapply(1:length(start_positions), function(i) {
+    if (start_positions[i] > 0) {
+      signal[start_positions[i]:end_positions[i]]
+    } else {
+      c(rep(NA, abs(start_positions[i] - 1)), signal[1:end_positions[i]])
+    }
+  })
 
   # replace NAs with 5 most freq values (impute the data for gafs)
-  most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:5]))
-  list_1 <- lapply(list_1, function(n) replace(n, is.na(n), sample(most_freq_vals,sum(is.na(n)),TRUE)))
+  most_freq_vals <- as.numeric(names(sort(table(signal), decreasing = TRUE)[
+    1:5
+  ]))
+  list_1 <- lapply(list_1, function(n) {
+    replace(n, is.na(n), sample(most_freq_vals, sum(is.na(n)), TRUE))
+  })
 
   #add indices
   chunks_indices <- c(1:length(start_positions))
 
   # naming chunks based on names & indices
-  chunk_names <- paste0(rep(readname, length(list_1)), '_', unlist(chunks_indices))
+  chunk_names <- paste0(
+    rep(readname, length(list_1)),
+    '_',
+    unlist(chunks_indices)
+  )
   names(list_1) <- chunk_names
 
   # retrieve coordinates as list_2 and list_3:
@@ -726,20 +917,29 @@ split_tail_centered <- function(readname,
   #names(list_3) <- chunk_names
 
   # retrieve move vector fragments based on the same positional info:
-  list_4 <- lapply(1:length(start_positions), function(i) if(start_positions[i] >0) moves[start_positions[i]:end_positions[i]]
-                   else c(rep(NA, abs(start_positions[i]-1)), moves[1:end_positions[i]]))
+  list_4 <- lapply(1:length(start_positions), function(i) {
+    if (start_positions[i] > 0) {
+      moves[start_positions[i]:end_positions[i]]
+    } else {
+      c(rep(NA, abs(start_positions[i] - 1)), moves[1:end_positions[i]])
+    }
+  })
 
   out <- mget(ls(pattern = '^list.*\\d$')) %>%
     split(sub("_\\d+$", '', names(.))) %>%
-    purrr::map(~purrr::transpose(purrr::set_names(.,c('chunk_sequence', 'chunk_start_pos', 'chunk_end_pos', 'chunk_moves')))) %>%
+    purrr::map(
+      ~ purrr::transpose(purrr::set_names(
+        .,
+        c('chunk_sequence', 'chunk_start_pos', 'chunk_end_pos', 'chunk_moves')
+      ))
+    ) %>%
     purrr::flatten(.)
-
 
   # remove chunks with discordance between moves & pseudomoves reported
   # if pseudomoves registered while moves not - remove chunk
   # this usually causes the loss of terminal positions, but this is to avoid
   # inheritance of nanopolish error as well as the warn labeling
-  out <- Filter(function(x) sum(x$chunk_moves) !=0, out)
+  out <- Filter(function(x) sum(x$chunk_moves) != 0, out)
 
   return(out)
 }
@@ -788,22 +988,30 @@ split_tail_centered <- function(readname,
 #' )
 #'
 #' }
-create_tail_chunk_list <- function(tail_feature_list,
-                                   num_cores){
-
+create_tail_chunk_list <- function(tail_feature_list, num_cores) {
   # initial assertions
   if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+    stop(
+      "Number of declared cores is missing. Please provide a valid num_cores argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(tail_feature_list)) {
-    stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+    stop(
+      "List of features is missing. Please provide a valid tail_feature_list argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(num_cores),
-                   "Declared core number must be numeric. Please provide a valid argument.")
-  assert_condition(is.list(tail_feature_list),
-                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
+  assert_condition(
+    is.numeric(num_cores),
+    "Declared core number must be numeric. Please provide a valid argument."
+  )
+  assert_condition(
+    is.list(tail_feature_list),
+    "Given tail_feature_list is not a list (class). Please provide valid file format."
+  )
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -814,15 +1022,24 @@ create_tail_chunk_list <- function(tail_feature_list,
   mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Creating tail segmentation data...',
+    '\n',
+    sep = ''
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_feature_list[[1]]),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(tail_feature_list[[1]]),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
@@ -830,38 +1047,50 @@ create_tail_chunk_list <- function(tail_feature_list,
   tail_chunk_list <- list()
 
   #parallel extraction
-  tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                      .combine = c,
-                                      .inorder = TRUE,
-                                      .errorhandling = 'pass',
-                                      .options.snow = opts,
-                                      .options.multicore = mc_options) %dopar% {
-                                        lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
-                                      }
-
-
+  tail_chunk_list <- foreach::foreach(
+    i = seq_along(tail_feature_list[[1]]),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      lapply(names(tail_feature_list[[1]][i]), function(x) {
+        ninetails::split_tail_centered(x, tail_feature_list)
+      })
+    }
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
 
-
   #drop moves variable - recursive fn for prunning moves vector from the output
   # this is to save the memory space and minimize the size of vars
-  .prune_moves <- function(i)
-    lapply(i, function(x)
+  .prune_moves <- function(i) {
+    lapply(i, function(x) {
       if (is.list(x)) {
-        if(!is.null(names(x))) .prune_moves(x[names(x)!="chunk_moves"]) else .prune_moves(x)
-      } else x
-    )
+        if (!is.null(names(x))) {
+          .prune_moves(x[names(x) != "chunk_moves"])
+        } else {
+          .prune_moves(x)
+        }
+      } else {
+        x
+      }
+    })
+  }
 
   tail_chunk_list <- .prune_moves(tail_chunk_list)
 
   #remove empty elements from the list (clean the output)
-  tail_chunk_list <-rrapply::rrapply(tail_chunk_list, condition = Negate(is.null), how = "prune")
-
+  tail_chunk_list <- rrapply::rrapply(
+    tail_chunk_list,
+    condition = Negate(is.null),
+    how = "prune"
+  )
 
   # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n', sep = ''))
 
   return(tail_chunk_list)
 }
@@ -916,28 +1145,40 @@ create_tail_chunk_list <- function(tail_feature_list,
 #' )
 #'
 #' }
-create_gaf <- function(tail_chunk,
-                       method="s"){
-
+create_gaf <- function(tail_chunk, method = "s") {
   #assertions
   if (missing(tail_chunk)) {
-    stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
+    stop(
+      "Tail_chunk is missing. Please provide a valid tail_chunk argument.",
+      call. = FALSE
+    )
   }
   if (missing(method)) {
-    stop("Transformation method is missing. Please provide a valid method argument.", call. =FALSE)
+    stop(
+      "Transformation method is missing. Please provide a valid method argument.",
+      call. = FALSE
+    )
   }
-  assert_condition(is.numeric(tail_chunk),
-                   "Provided tail_chunk must be numeric. Please provide a valid argument.")
-  assert_condition(is.character(method),
-                   "Provided method must be character string. Please provide a valid argument.")
-  assert_condition(length(tail_chunk) == 100,
-                   "Provided chunks of wrong length. The chunk length should be equal to 100. Please provide a valid tail_chunk.")
-
+  assert_condition(
+    is.numeric(tail_chunk),
+    "Provided tail_chunk must be numeric. Please provide a valid argument."
+  )
+  assert_condition(
+    is.character(method),
+    "Provided method must be character string. Please provide a valid argument."
+  )
+  assert_condition(
+    length(tail_chunk) == 100,
+    "Provided chunks of wrong length. The chunk length should be equal to 100. Please provide a valid tail_chunk."
+  )
 
   # rescale values so that all of them fall in the interval [-1, 1]:
-  tail_chunk <- (tail_chunk-max(tail_chunk)+(tail_chunk-min(tail_chunk)))/(max(tail_chunk)-min(tail_chunk))
+  tail_chunk <- (tail_chunk -
+    max(tail_chunk) +
+    (tail_chunk - min(tail_chunk))) /
+    (max(tail_chunk) - min(tail_chunk))
 
-  if (method=="s") {
+  if (method == "s") {
     # calculate phi coefficient for interpolation to polar coordinates
     # first by computing arc cosine
     # then by converting the data to matrix by replicating the vec
@@ -948,22 +1189,26 @@ create_gaf <- function(tail_chunk,
     tail_chunk <- cbind(replicate(length(tail_chunk), tail_chunk))
     tail_chunk <- tail_chunk + t(tail_chunk)
     tail_chunk <- cos(tail_chunk)
-    tail_chunk <- array(t(tail_chunk), c(100,100,1))
-
-  } else if (method=="d") {
+    tail_chunk <- array(t(tail_chunk), c(100, 100, 1))
+  } else if (method == "d") {
     # computing arc sine instead of arc cosine
     # calculating sine instead of cosine
     tail_chunk <- asin(tail_chunk)
     tail_chunk <- cbind(replicate(length(tail_chunk), tail_chunk))
     tail_chunk <- tail_chunk + t(tail_chunk)
     tail_chunk <- sin(tail_chunk)
-    tail_chunk <- array(t(tail_chunk), c(100,100,1))
+    tail_chunk <- array(t(tail_chunk), c(100, 100, 1))
   } else {
-    stop("Wrong GAF method definition. Please provide 's' for summation or 'd' for difference GAF.")
+    stop(
+      "Wrong GAF method definition. Please provide 's' for summation or 'd' for difference GAF."
+    )
   }
 
   # rescale values so that all of them fall in the interval [0, 1]:
-  tail_chunk <- round((tail_chunk-min(tail_chunk))/(max(tail_chunk)-min(tail_chunk)), 4)
+  tail_chunk <- round(
+    (tail_chunk - min(tail_chunk)) / (max(tail_chunk) - min(tail_chunk)),
+    4
+  )
 
   return(tail_chunk)
 }
@@ -996,19 +1241,23 @@ create_gaf <- function(tail_chunk,
 #' ninetails::combine_gafs(tail_chunk = tail_chunk)
 #'
 #' }
-combine_gafs <- function(tail_chunk){
-
+combine_gafs <- function(tail_chunk) {
   #assertions
   if (missing(tail_chunk)) {
-    stop("Tail_chunk is missing. Please provide a valid tail_chunk argument.", call. =FALSE)
+    stop(
+      "Tail_chunk is missing. Please provide a valid tail_chunk argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(tail_chunk),
-                   "Provided tail_chunk must be numeric. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(tail_chunk),
+    "Provided tail_chunk must be numeric. Please provide a valid argument."
+  )
 
   #create gasf & gaf
-  GASF <- ninetails::create_gaf(tail_chunk=tail_chunk, method="s")
-  GADF <- ninetails::create_gaf(tail_chunk=tail_chunk, method="d")
+  GASF <- ninetails::create_gaf(tail_chunk = tail_chunk, method = "s")
+  GADF <- ninetails::create_gaf(tail_chunk = tail_chunk, method = "d")
 
   #create array of gafs
   combined_gafs <- array(c(GASF, GADF), dim = c(100, 100, 2))
@@ -1055,22 +1304,30 @@ combine_gafs <- function(tail_chunk){
 #' )
 #'
 #' }
-create_gaf_list <- function(tail_chunk_list,
-                            num_cores){
-
+create_gaf_list <- function(tail_chunk_list, num_cores) {
   # Assertions
   if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+    stop(
+      "Number of declared cores is missing. Please provide a valid num_cores argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(tail_chunk_list)) {
-    stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
+    stop(
+      "List of tail chunks is missing. Please provide a valid tail_chunk_list argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.list(tail_chunk_list),
-                   "Given tail_chunk_list is not a list (class). Please provide valid file format.")
-  assert_condition(is.numeric(num_cores),
-                   "Declared core number must be numeric. Please provide a valid argument.")
+  assert_condition(
+    is.list(tail_chunk_list),
+    "Given tail_chunk_list is not a list (class). Please provide valid file format."
+  )
+  assert_condition(
+    is.numeric(num_cores),
+    "Declared core number must be numeric. Please provide a valid argument."
+  )
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -1084,31 +1341,43 @@ create_gaf_list <- function(tail_chunk_list,
   gaf_list = list()
 
   #progressbar header
-  cat(paste0('[', as.character(Sys.time()), '] ','Computing gramian angular fields...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Computing gramian angular fields...',
+    '\n',
+    sep = ''
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_chunk_list),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(tail_chunk_list),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-
-  gaf_list <- foreach::foreach(i = seq_along(tail_chunk_list),
-                               .combine = c,
-                               .inorder = TRUE,
-                               .errorhandling = 'pass',
-                               .options.snow = opts,
-                               .options.multicore = mc_options) %dopar% {
-                                 lapply(tail_chunk_list[[i]], function(x_ij) ninetails::combine_gafs(x_ij[['chunk_sequence']]))
-                               }
-
+  gaf_list <- foreach::foreach(
+    i = seq_along(tail_chunk_list),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      lapply(tail_chunk_list[[i]], function(x_ij) {
+        ninetails::combine_gafs(x_ij[['chunk_sequence']])
+      })
+    }
 
   # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n', sep = ''))
 
   return(gaf_list)
 }
@@ -1150,26 +1419,37 @@ create_gaf_list <- function(tail_chunk_list,
 #' pl <- ninetails::predict_gaf_classes(gl)
 #'
 #' }
-predict_gaf_classes <- function(gaf_list){
-
+predict_gaf_classes <- function(gaf_list) {
   #assertions
   if (missing(gaf_list)) {
-    stop("List of transformed signal chunks is missing. Please provide a valid gaf_list argument.", call. =FALSE)
+    stop(
+      "List of transformed signal chunks is missing. Please provide a valid gaf_list argument.",
+      call. = FALSE
+    )
   }
 
   chunknames <- names(gaf_list)
-  names(gaf_list)  <- NULL
+  names(gaf_list) <- NULL
 
   gaf_list <- simplify2array(gaf_list)
-  gaf_list <- aperm(gaf_list, c(4,1,2,3))
+  gaf_list <- aperm(gaf_list, c(4, 1, 2, 3))
 
   # Output info
-  cat(paste0('[', as.character(Sys.time()), '] ','Classifying gramian angular fields...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Classifying gramian angular fields...',
+    '\n',
+    sep = ''
+  ))
 
   keras_model <- ninetails::load_keras_model()
 
   #predict chunk class
-  predicted_gaf_classes <- keras_model %>% stats::predict(gaf_list) %>% keras::k_argmax()
+  predicted_gaf_classes <- keras_model %>%
+    stats::predict(gaf_list) %>%
+    keras::k_argmax()
   predicted_gaf_classes <- as.numeric(predicted_gaf_classes)
 
   predicted_list = list() # creating empty list for the extracted  data
@@ -1178,7 +1458,7 @@ predict_gaf_classes <- function(gaf_list){
   predicted_list[["prediction"]] <- predicted_gaf_classes
 
   # Output info
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n', sep = ''))
 
   return(predicted_list)
 }
@@ -1288,57 +1568,87 @@ predict_gaf_classes <- function(gaf_list){
 #' }
 #'
 #'
-create_outputs <- function(tail_feature_list,
-                           tail_chunk_list,
-                           nanopolish,
-                           predicted_list,
-                           num_cores,
-                           pass_only=TRUE,
-                           qc=TRUE){
+create_outputs <- function(
+  tail_feature_list,
+  tail_chunk_list,
+  nanopolish,
+  predicted_list,
+  num_cores,
+  pass_only = TRUE,
+  qc = TRUE) {
 
   #assertions
   if (missing(tail_feature_list)) {
-    stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+    stop(
+      "List of tail features is missing. Please provide a valid tail_feature_list argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(tail_chunk_list)) {
-    stop("List of tail chunks is missing. Please provide a valid tail_chunk_list argument.", call. =FALSE)
+    stop(
+      "List of tail chunks is missing. Please provide a valid tail_chunk_list argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(nanopolish)) {
-    stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
+    stop(
+      "Nanopolish polya output is missing. Please provide a valid nanopolish argument.",
+      .call = FALSE
+    )
   }
 
   if (missing(predicted_list)) {
-    stop("List of predictions is missing. Please provide a valid predicted_list argument.", call. =FALSE)
+    stop(
+      "List of predictions is missing. Please provide a valid predicted_list argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+    stop(
+      "Number of declared cores is missing. Please provide a valid num_cores argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.list(tail_feature_list),
-                   "Given tail_feature_list is not a list (class). Please provide valid object.")
-  assert_condition(is.list(tail_chunk_list),
-                   "Given tail_chunk_list is not a list (class). Please provide valid object.")
-  assert_condition(is.list(predicted_list),
-                   "Given predicted_list is not a list (class). Please provide valid object.")
+  assert_condition(
+    is.list(tail_feature_list),
+    "Given tail_feature_list is not a list (class). Please provide valid object."
+  )
+  assert_condition(
+    is.list(tail_chunk_list),
+    "Given tail_chunk_list is not a list (class). Please provide valid object."
+  )
+  assert_condition(
+    is.list(predicted_list),
+    "Given predicted_list is not a list (class). Please provide valid object."
+  )
 
   if (is_string(nanopolish)) {
     # if string provided as an argument, read from file
     assert_file_exists(nanopolish, "Nanopolish")
-    nanopolish_polya_table <- vroom::vroom(nanopolish,
-                                           col_select=c(readname, contig, polya_length, qc_tag),
-                                           show_col_types = FALSE)
+    nanopolish_polya_table <- vroom::vroom(
+      nanopolish,
+      col_select = c(readname, contig, polya_length, qc_tag),
+      show_col_types = FALSE
+    )
   } else {
     # make sure that nanopolish is an object with rows
     if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
-      stop("Empty data frame provided as an input (nanopolish). Please provide valid input")
+      stop(
+        "Empty data frame provided as an input (nanopolish). Please provide valid input"
+      )
     }
 
-    nanopolish_polya_table <- nanopolish[,c("readname", "contig","polya_length","qc_tag")]
+    nanopolish_polya_table <- nanopolish[, c(
+      "readname",
+      "contig",
+      "polya_length",
+      "qc_tag"
+    )]
   }
-
 
   # HANDLE LENGTH/POSITION CALIBRATING DATA
   # creating cluster for parallel computing
@@ -1354,26 +1664,40 @@ create_outputs <- function(tail_feature_list,
   tail_length_list = list()
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving estimated length data...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Retrieving estimated length data...',
+    '\n',
+    sep = ''
+  ))
 
   #set progressbar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(names(tail_feature_list[[1]])),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(names(tail_feature_list[[1]])),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-  tail_length_list <- foreach::foreach(i = seq_along(tail_feature_list[[1]]),
-                                       .combine = c, .inorder = TRUE,
-                                       .errorhandling = 'pass',
-                                       .options.snow = opts,
-                                       .options.multicore = mc_options) %dopar% {
-                                         lapply(names(tail_feature_list[[1]][i]), function(x) length(tail_feature_list[[1]][[x]][[2]]))
-                                       }
-
+  tail_length_list <- foreach::foreach(
+    i = seq_along(tail_feature_list[[1]]),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      lapply(names(tail_feature_list[[1]][i]), function(x) {
+        length(tail_feature_list[[1]][[x]][[2]])
+      })
+    }
 
   #coerce to df, add names
   tail_length_list <- do.call("rbind.data.frame", tail_length_list)
@@ -1381,110 +1705,164 @@ create_outputs <- function(tail_feature_list,
   colnames(tail_length_list) <- c("signal_length", "readname")
 
   #merge data from feature list with nanopolish estimations
-  tails_tail_feature_list <- dplyr::left_join(tail_length_list, nanopolish_polya_table, by="readname")
-
+  tails_tail_feature_list <- dplyr::left_join(
+    tail_length_list,
+    nanopolish_polya_table,
+    by = "readname"
+  )
 
   ### Chunk positional data
   #create empty list for extracted data
   non_a_position_list <- list()
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Retrieving position calibrating data...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Retrieving position calibrating data...',
+    '\n',
+    sep = ''
+  ))
 
   #set progressbar
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_chunk_list),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(tail_chunk_list),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-
-  non_a_position_list <- foreach::foreach(i = seq_along(tail_chunk_list),
-                                          .combine = c, .inorder = TRUE,
-                                          .errorhandling = 'pass',
-                                          .options.snow = opts,
-                                          .options.multicore = mc_options) %dopar% {
-                                            lapply(tail_chunk_list[[i]], function(x) x[['chunk_start_pos']]+50)
-                                          }
+  non_a_position_list <- foreach::foreach(
+    i = seq_along(tail_chunk_list),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      lapply(tail_chunk_list[[i]], function(x) x[['chunk_start_pos']] + 50)
+    }
   #close(pb)
 
   # coerce to df, add names
   non_a_position_list <- do.call("rbind.data.frame", non_a_position_list)
-  chunknames <-  purrr::map_depth(tail_chunk_list, 1, names) %>% unlist(use.names = F)
+  chunknames <- purrr::map_depth(tail_chunk_list, 1, names) %>%
+    unlist(use.names = F)
   non_a_position_list$chunkname <- chunknames
-  non_a_position_list<- non_a_position_list %>% dplyr::mutate(readname = gsub('_.*','',chunkname))
+  non_a_position_list <- non_a_position_list %>%
+    dplyr::mutate(readname = gsub('_.*', '', chunkname))
   colnames(non_a_position_list)[1] <- c("centr_signal_pos")
 
   #merge data from feature list with nanopolish estimations
-  non_a_position_list <- dplyr::left_join(non_a_position_list, tails_tail_feature_list, by="readname")
+  non_a_position_list <- dplyr::left_join(
+    non_a_position_list,
+    tails_tail_feature_list,
+    by = "readname"
+  )
 
   # HANDLE PREDICTIONS
   moved_chunks_table <- data.frame(t(Reduce(rbind, predicted_list)))
   # rename cols
-  colnames(moved_chunks_table) <- c("chunkname","prediction")
+  colnames(moved_chunks_table) <- c("chunkname", "prediction")
   # extract readnames
   moved_chunks_table$readname <- sub('\\_.*', '', moved_chunks_table$chunkname)
 
-
   # vectorized substitution of predictions with letter code
   prediction_dict <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")
-  moved_chunks_table$prediction <- prediction_dict[as.character(moved_chunks_table$prediction)]
+  moved_chunks_table$prediction <- prediction_dict[as.character(
+    moved_chunks_table$prediction
+  )]
 
   #extract reads with move==1 and modification absent (not detected)
-  moved_blank_readnames <- names(which(with(moved_chunks_table, tapply(prediction, readname, unique) == 'A')))
+  moved_blank_readnames <- names(which(with(
+    moved_chunks_table,
+    tapply(prediction, readname, unique) == 'A'
+  )))
 
   # cleaned chunks_table
-  moved_chunks_table <- subset(moved_chunks_table, !(readname %in% moved_blank_readnames))
+  moved_chunks_table <- subset(
+    moved_chunks_table,
+    !(readname %in% moved_blank_readnames)
+  )
   # delete A-containing rows
-  moved_chunks_table <- moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
+  moved_chunks_table <- moved_chunks_table[
+    !(moved_chunks_table$prediction == "A"),
+  ]
   #merge data from feats & predictions
-  moved_chunks_table <- dplyr::left_join(moved_chunks_table, non_a_position_list, by=c("readname", "chunkname"))
+  moved_chunks_table <- dplyr::left_join(
+    moved_chunks_table,
+    non_a_position_list,
+    by = c("readname", "chunkname")
+  )
 
   #estimate non-A nucleotide position
-  moved_chunks_table$est_nonA_pos <- round(moved_chunks_table$polya_length-((moved_chunks_table$polya_length*moved_chunks_table$centr_signal_pos)/moved_chunks_table$signal_length), digits=2)
+  moved_chunks_table$est_nonA_pos <- round(
+    moved_chunks_table$polya_length -
+      ((moved_chunks_table$polya_length * moved_chunks_table$centr_signal_pos) /
+        moved_chunks_table$signal_length),
+    digits = 2
+  )
 
   #clean up the output nonA table:
-  moved_chunks_table <- moved_chunks_table[,c(3,6,2,9,7,8)]
+  moved_chunks_table <- moved_chunks_table[, c(3, 6, 2, 9, 7, 8)]
 
   # Handle other (discarded) reads:
-  discarded_reads <- nanopolish_polya_table[!nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
+  discarded_reads <- nanopolish_polya_table[
+    !nanopolish_polya_table$readname %in% moved_chunks_table$readname,
+  ]
 
   # Add filtering criterion: select only pass or pass $ suffclip
-  if(pass_only == TRUE){
+  if (pass_only == TRUE) {
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "IRL",
-                                                qc_tag == "SUFFCLIP" ~ "NIN",
-                                                qc_tag == "ADAPTER" ~ "QCF",
-                                                qc_tag == "NOREGION" ~ "QCF",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "QCF",
-                                                readname %in% moved_blank_readnames ~ "MPU",
-                                                TRUE ~ "MAU"),
-                    class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_blank_readnames ~ "blank",
-                                             comments == "MAU" ~ "blank",
-                                             TRUE ~ "unclassified"))
+      dplyr::mutate(
+        comments = dplyr::case_when(
+          polya_length < 10 ~ "IRL",
+          qc_tag == "SUFFCLIP" ~ "NIN",
+          qc_tag == "ADAPTER" ~ "QCF",
+          qc_tag == "NOREGION" ~ "QCF",
+          qc_tag == "READ_FAILED_LOAD" ~ "QCF",
+          readname %in% moved_blank_readnames ~ "MPU",
+          TRUE ~ "MAU"
+        ),
+        class = dplyr::case_when(
+          polya_length < 10 ~ "unclassified",
+          readname %in% moved_blank_readnames ~ "blank",
+          comments == "MAU" ~ "blank",
+          TRUE ~ "unclassified"
+        )
+      )
   } else {
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
-      dplyr::mutate(comments = dplyr::case_when(polya_length < 10 ~ "IRL",
-                                                qc_tag == "ADAPTER" ~ "QCF",
-                                                qc_tag == "NOREGION" ~ "QCF",
-                                                qc_tag == "READ_FAILED_LOAD" ~ "QCF",
-                                                readname %in% moved_blank_readnames ~ "MPU",
-                                                TRUE ~ "MAU"),
-                    class = dplyr::case_when(polya_length < 10 ~ "unclassified",
-                                             readname %in% moved_blank_readnames ~ "blank",
-                                             comments == "MAU" ~ "blank",
-                                             TRUE ~ "unclassified"))
+      dplyr::mutate(
+        comments = dplyr::case_when(
+          polya_length < 10 ~ "IRL",
+          qc_tag == "ADAPTER" ~ "QCF",
+          qc_tag == "NOREGION" ~ "QCF",
+          qc_tag == "READ_FAILED_LOAD" ~ "QCF",
+          readname %in% moved_blank_readnames ~ "MPU",
+          TRUE ~ "MAU"
+        ),
+        class = dplyr::case_when(
+          polya_length < 10 ~ "unclassified",
+          readname %in% moved_blank_readnames ~ "blank",
+          comments == "MAU" ~ "blank",
+          TRUE ~ "unclassified"
+        )
+      )
   }
 
-
-  decorated_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
+  decorated_reads <- nanopolish_polya_table[
+    nanopolish_polya_table$readname %in% moved_chunks_table$readname,
+  ]
 
   decorated_reads$class <- "decorated"
   decorated_reads$comments <- "YAY"
@@ -1493,7 +1871,6 @@ create_outputs <- function(tail_feature_list,
   nanopolish_polya_table <- rbind(decorated_reads, discarded_reads)
   #corece tibble to df
   nanopolish_polya_table <- data.frame(nanopolish_polya_table)
-
 
   #create empty list for the output
   ninetails_output <- list()
@@ -1510,29 +1887,39 @@ create_outputs <- function(tail_feature_list,
   # not; additional info would be provided as "WARN" comment to treat those reads
   # with caution.
 
-
-  if(qc == TRUE){
+  if (qc == TRUE) {
     # filter the outermost positions (termini!) from position data:
     # empirically tested constraints! report without terminal data
-    moved_chunks_table_trimmed <- moved_chunks_table %>% dplyr::filter(!(est_nonA_pos < 2) & !(est_nonA_pos > polya_length-2))
-    moved_chunks_table_discarded <- subset(moved_chunks_table,!(readname %in% moved_chunks_table_trimmed$readname))
-
+    moved_chunks_table_trimmed <- moved_chunks_table %>%
+      dplyr::filter(!(est_nonA_pos < 2) & !(est_nonA_pos > polya_length - 2))
+    moved_chunks_table_discarded <- subset(
+      moved_chunks_table,
+      !(readname %in% moved_chunks_table_trimmed$readname)
+    )
 
     # subset potential artifacts from read_classes
-    potential_artifacts <- subset(nanopolish_polya_table, readname %in% moved_chunks_table_discarded$readname)
+    potential_artifacts <- subset(
+      nanopolish_polya_table,
+      readname %in% moved_chunks_table_discarded$readname
+    )
 
     decorated_reads_edited <- nanopolish_polya_table %>%
-      dplyr::mutate(class = dplyr::case_when(
-        readname %in% potential_artifacts$readname ~ paste0(class,"-WARN"),
-        TRUE ~ paste0(class)))
-
+      dplyr::mutate(
+        class = dplyr::case_when(
+          readname %in% potential_artifacts$readname ~ paste0(class, "-WARN"),
+          TRUE ~ paste0(class)
+        )
+      )
 
     # label potential artifacts in nonadenosine residue dataframe
     moved_chunks_table_qc <- moved_chunks_table %>%
-      dplyr::mutate(prediction=dplyr::case_when(est_nonA_pos < 2 ~ paste0(prediction, "-WARN"),
-                                                est_nonA_pos > polya_length-2 ~ paste0(prediction, "-WARN"),
-                                                TRUE~ paste0(prediction)))
-
+      dplyr::mutate(
+        prediction = dplyr::case_when(
+          est_nonA_pos < 2 ~ paste0(prediction, "-WARN"),
+          est_nonA_pos > polya_length - 2 ~ paste0(prediction, "-WARN"),
+          TRUE ~ paste0(prediction)
+        )
+      )
 
     #CREATE FINAL OUTPUT
     #prevent potential bugs inherited from nanopolish multimapping
@@ -1541,8 +1928,7 @@ create_outputs <- function(tail_feature_list,
 
     ninetails_output[['read_classes']] <- decorated_reads_edited
     ninetails_output[['nonadenosine_residues']] <- moved_chunks_table_qc
-
-  } else{
+  } else {
     #CREATE FINAL OUTPUT
     #prevent potential bugs inherited from nanopolish multimapping
     nanopolish_polya_table <- unique(nanopolish_polya_table)
@@ -1553,5 +1939,4 @@ create_outputs <- function(tail_feature_list,
   }
 
   return(ninetails_output)
-
 }

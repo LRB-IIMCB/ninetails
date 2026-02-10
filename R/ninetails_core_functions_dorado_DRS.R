@@ -25,43 +25,64 @@
 #'   cli_log = message
 #' )
 #' }
-process_dorado_summary <- function(dorado_summary,
-                                   save_dir,
-                                   part_size,
-                                   cli_log) {
+process_dorado_summary <- function(
+  dorado_summary,
+  save_dir,
+  part_size,
+  cli_log) {
 
   # Assertions
   if (missing(part_size)) {
-    stop("Number of reads per file part (part_size) is missing. Please provide a valid part_size argument.", call. = FALSE)
+    stop(
+      "Number of reads per file part (part_size) is missing. Please provide a valid part_size argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(part_size) && part_size > 0,
-                   "Reads per part must be numeric and positive. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(part_size) && part_size > 0,
+    "Reads per part must be numeric and positive. Please provide a valid argument."
+  )
 
   # Handle input data and get prefix
   if (is.character(dorado_summary)) {
-    cli_log(sprintf("Reading summary file: %s", basename(dorado_summary)), "INFO")
+    cli_log(
+      sprintf("Reading summary file: %s", basename(dorado_summary)),
+      "INFO"
+    )
 
     # First, let's peek at the file structure
     cli_log("Checking file structure...", "INFO")
-    tryCatch({
-      # Read first few lines to check structure
-      headers <- names(vroom::vroom(dorado_summary, n_max = 1, show_col_types = FALSE))
-      cli_log(sprintf("Found columns: %s", paste(headers, collapse=", ")), "INFO")
+    tryCatch(
+      {
+        # Read first few lines to check structure
+        headers <- names(vroom::vroom(
+          dorado_summary,
+          n_max = 1,
+          show_col_types = FALSE
+        ))
+        cli_log(
+          sprintf("Found columns: %s", paste(headers, collapse = ", ")),
+          "INFO"
+        )
 
-      # Now read the actual data
-      summary_data <- vroom::vroom(dorado_summary, show_col_types = FALSE)
+        # Now read the actual data
+        summary_data <- vroom::vroom(dorado_summary, show_col_types = FALSE)
 
-      if (!"read_id" %in% headers) {
-        cli_log("WARNING: 'read_id' column not found. Available columns are:", "WARNING")
-        cli_log(paste(headers, collapse=", "), "WARNING")
-        stop("Required column 'read_id' not found in summary file")
+        if (!"read_id" %in% headers) {
+          cli_log(
+            "WARNING: 'read_id' column not found. Available columns are:",
+            "WARNING"
+          )
+          cli_log(paste(headers, collapse = ", "), "WARNING")
+          stop("Required column 'read_id' not found in summary file")
+        }
+      },
+      error = function(e) {
+        cli_log(sprintf("Error reading summary file: %s", e$message), "ERROR")
+        stop(e$message)
       }
-
-    }, error = function(e) {
-      cli_log(sprintf("Error reading summary file: %s", e$message), "ERROR")
-      stop(e$message)
-    })
+    )
 
     # Extract prefix from original file name
     summary_prefix <- tools::file_path_sans_ext(basename(dorado_summary))
@@ -75,7 +96,9 @@ process_dorado_summary <- function(dorado_summary,
     # Use default prefix for data frame input
     summary_prefix <- "summary"
   } else {
-    stop("Invalid dorado_summary format. Must be either a file path or a data frame.")
+    stop(
+      "Invalid dorado_summary format. Must be either a file path or a data frame."
+    )
   }
 
   # Create output directory if it doesn't exist
@@ -83,13 +106,11 @@ process_dorado_summary <- function(dorado_summary,
     dir.create(save_dir, recursive = TRUE)
   }
 
-
   # this is to filter input summary data and decrease size of processing reads
   # filtering out data with bad alignment quality (mostly trash)
   # reads without proper tails (misidentified due to pore clog)
   # reads with too short tails (at least 10 nt is required)
   summary_data <- ninetails::filter_dorado_summary(summary_data)
-
 
   # Calculate number of parts needed
   total_reads <- nrow(summary_data)
@@ -110,24 +131,26 @@ process_dorado_summary <- function(dorado_summary,
     part_data <- summary_data[start_idx:end_idx, ]
 
     # Create output filename using prefix from original file
-    output_file <- file.path(save_dir,
-                             sprintf("%s_part%d.txt", summary_prefix, i))
+    output_file <- file.path(
+      save_dir,
+      sprintf("%s_part%d.txt", summary_prefix, i)
+    )
 
     # Save data
-    vroom::vroom_write(part_data,
-                       file = output_file,
-                       delim = "\t")
+    vroom::vroom_write(part_data, file = output_file, delim = "\t")
 
     output_files[i] <- output_file
 
-    cli_log(sprintf("Saved part %d/%d: %s", i, num_parts, basename(output_file)), "INFO")
+    cli_log(
+      sprintf("Saved part %d/%d: %s", i, num_parts, basename(output_file)),
+      "INFO"
+    )
   }
 
   cli_log(sprintf("Summary split into %d parts", num_parts), "SUCCESS")
 
   return(output_files)
 }
-
 
 
 #' Extract poly(A) tail signal segments from POD5 files using parallel Python processing
@@ -225,9 +248,7 @@ process_dorado_summary <- function(dorado_summary,
 #' @importFrom reticulate py_config import import_builtins py_to_r
 #' @importFrom parallel detectCores
 #' @importFrom utils write.csv
-extract_tails_from_pod5 <- function(polya_data,
-                                    pod5_dir,
-                                    num_cores = 1) {
+extract_tails_from_pod5 <- function(polya_data, pod5_dir, num_cores = 1) {
 
   # Default to all cores minus 1 if not specified
   if (is.null(num_cores)) {
@@ -238,25 +259,36 @@ extract_tails_from_pod5 <- function(polya_data,
   required_cols <- c("read_id", "filename", "poly_tail_start", "poly_tail_end")
   missing_cols <- setdiff(required_cols, colnames(polya_data))
   if (length(missing_cols) > 0) {
-    stop(sprintf("Missing required columns: %s", paste(missing_cols, collapse = ", ")))
+    stop(sprintf(
+      "Missing required columns: %s",
+      paste(missing_cols, collapse = ", ")
+    ))
   }
 
   # Filter valid reads
   if ("poly_tail_length" %in% colnames(polya_data)) {
-    polya_data <- polya_data[polya_data$poly_tail_length > 10 &
-                               polya_data$poly_tail_start > 0, ]
+    polya_data <- polya_data[
+      polya_data$poly_tail_length > 10 &
+        polya_data$poly_tail_start > 0,
+    ]
   } else {
     polya_data <- polya_data[polya_data$poly_tail_start > 0, ]
   }
 
   if (nrow(polya_data) == 0) {
-    return(list())  # Return empty list if no valid reads
+    return(list()) # Return empty list if no valid reads
   }
 
   # Get Python script path
-  python_script <- system.file("extdata", "extract_pod5_signals.py", package = "ninetails")
+  python_script <- system.file(
+    "extdata",
+    "extract_pod5_signals.py",
+    package = "ninetails"
+  )
   if (!file.exists(python_script)) {
-    stop("POD5 extraction script not found. Please reinstall ninetails package.")
+    stop(
+      "POD5 extraction script not found. Please reinstall ninetails package."
+    )
   }
 
   # Create temp files
@@ -269,19 +301,23 @@ extract_tails_from_pod5 <- function(polya_data,
   write.csv(polya_data, input_file, row.names = FALSE)
 
   # Build and execute Python command
-  python_cmd <- sprintf('"%s" "%s" --input "%s" --pod5_dir "%s" --output "%s" --num_cores %d',
-                        reticulate::py_config()$python,
-                        python_script,
-                        input_file,
-                        pod5_dir,
-                        output_file,
-                        num_cores)
+  python_cmd <- sprintf(
+    '"%s" "%s" --input "%s" --pod5_dir "%s" --output "%s" --num_cores %d',
+    reticulate::py_config()$python,
+    python_script,
+    input_file,
+    pod5_dir,
+    output_file,
+    num_cores
+  )
 
   exit_code <- system(python_cmd, intern = FALSE)
 
   if (exit_code != 0 || !file.exists(output_file)) {
     unlink(c(input_file, output_file))
-    stop("POD5 extraction failed. Ensure 'pod5' Python module is installed: pip install pod5")
+    stop(
+      "POD5 extraction failed. Ensure 'pod5' Python module is installed: pip install pod5"
+    )
   }
 
   # Load results
@@ -299,7 +335,6 @@ extract_tails_from_pod5 <- function(polya_data,
 
   return(signals_list)
 }
-
 
 
 #' Preprocess Dorado inputs for ninetails analysis (no BAM processing)
@@ -379,29 +414,41 @@ extract_tails_from_pod5 <- function(polya_data,
 #'   cli_log = message
 #' )
 #' }
-preprocess_inputs <- function(dorado_summary,
-                              pod5_dir,
-                              num_cores,
-                              qc,
-                              save_dir,
-                              prefix,
-                              part_size,
-                              cli_log) {
+preprocess_inputs <- function(
+  dorado_summary,
+  pod5_dir,
+  num_cores,
+  qc,
+  save_dir,
+  prefix,
+  part_size,
+  cli_log) {
 
   # Input validation and configuration
   cli_log("Validating input parameters", "INFO", "Validating Inputs")
-  assert_condition(is.numeric(num_cores) && num_cores > 0,
-                   "Number of cores must be a positive numeric value")
-  assert_condition(is.character(pod5_dir),
-                   "POD5 directory path must be a character string")
+  assert_condition(
+    is.numeric(num_cores) && num_cores > 0,
+    "Number of cores must be a positive numeric value"
+  )
+  assert_condition(
+    is.character(pod5_dir),
+    "POD5 directory path must be a character string"
+  )
   assert_dir_exists(pod5_dir, "POD5")
-  assert_condition(is.numeric(part_size) && part_size >= 1,
-                   "Part size must be at least 1")
+  assert_condition(
+    is.numeric(part_size) && part_size >= 1,
+    "Part size must be at least 1"
+  )
 
   ################################################################################
   # SUMMARY FILE PROCESSING
   ################################################################################
-  cli_log("Processing summary files...", "INFO", "Summary Processing", bullet = TRUE)
+  cli_log(
+    "Processing summary files...",
+    "INFO",
+    "Summary Processing",
+    bullet = TRUE
+  )
 
   # Read and validate summary file
   if (is.character(dorado_summary)) {
@@ -414,15 +461,29 @@ preprocess_inputs <- function(dorado_summary,
   }
 
   # Validate required columns for poly(A) information
-  required_cols <- c("read_id", "filename", "poly_tail_length", "poly_tail_start", "poly_tail_end")
+  required_cols <- c(
+    "read_id",
+    "filename",
+    "poly_tail_length",
+    "poly_tail_start",
+    "poly_tail_end"
+  )
   missing_cols <- setdiff(required_cols, colnames(summary_data))
 
   if (length(missing_cols) > 0) {
-    stop(sprintf("Summary file missing required poly(A) columns: %s. Please ensure you are using Dorado summary files with poly(A) information.",
-                 paste(missing_cols, collapse = ", ")))
+    stop(sprintf(
+      "Summary file missing required poly(A) columns: %s. Please ensure you are using Dorado summary files with poly(A) information.",
+      paste(missing_cols, collapse = ", ")
+    ))
   }
 
-  cli_log(sprintf("Summary contains %d reads with poly(A) information", nrow(summary_data)), "INFO")
+  cli_log(
+    sprintf(
+      "Summary contains %d reads with poly(A) information",
+      nrow(summary_data)
+    ),
+    "INFO"
+  )
 
   # Apply quality control filtering if requested
   if (qc) {
@@ -441,8 +502,14 @@ preprocess_inputs <- function(dorado_summary,
     filtered_count <- initial_count - final_count
 
     if (filtered_count > 0) {
-      cli_log(sprintf("QC filtering removed %d reads (%d remaining)",
-                      filtered_count, final_count), "INFO")
+      cli_log(
+        sprintf(
+          "QC filtering removed %d reads (%d remaining)",
+          filtered_count,
+          final_count
+        ),
+        "INFO"
+      )
     }
   }
 
@@ -474,7 +541,10 @@ preprocess_inputs <- function(dorado_summary,
 
     # Create output filename with prefix if provided
     if (nchar(prefix) > 0) {
-      output_file <- file.path(summary_dir, sprintf("%s_summary_part%d.txt", prefix, i))
+      output_file <- file.path(
+        summary_dir,
+        sprintf("%s_summary_part%d.txt", prefix, i)
+      )
     } else {
       output_file <- file.path(summary_dir, sprintf("summary_part%d.txt", i))
     }
@@ -483,7 +553,16 @@ preprocess_inputs <- function(dorado_summary,
     vroom::vroom_write(part_data, file = output_file, delim = "\t")
     part_files[i] <- output_file
 
-    cli_log(sprintf("Saved part %d/%d: %s (%d reads)", i, num_parts, basename(output_file), nrow(part_data)), "INFO")
+    cli_log(
+      sprintf(
+        "Saved part %d/%d: %s (%d reads)",
+        i,
+        num_parts,
+        basename(output_file),
+        nrow(part_data)
+      ),
+      "INFO"
+    )
   }
 
   cli_log(sprintf("Summary split into %d parts", length(part_files)), "SUCCESS")
@@ -491,7 +570,12 @@ preprocess_inputs <- function(dorado_summary,
   ################################################################################
   # EXTRACTING POLY(A) SIGNALS FROM POD5
   ################################################################################
-  cli_log("Extracting poly(A) signals from POD5 files...", "INFO", "Signal Extraction", bullet = TRUE)
+  cli_log(
+    "Extracting poly(A) signals from POD5 files...",
+    "INFO",
+    "Signal Extraction",
+    bullet = TRUE
+  )
 
   polya_signal_dir <- file.path(save_dir, "polya_signal_dir")
   if (!dir.exists(polya_signal_dir)) {
@@ -501,7 +585,14 @@ preprocess_inputs <- function(dorado_summary,
   polya_signal_files <- character(length(part_files))
 
   for (i in seq_along(part_files)) {
-    cli_log(sprintf("Processing part %d/%d for signal extraction", i, length(part_files)), "INFO")
+    cli_log(
+      sprintf(
+        "Processing part %d/%d for signal extraction",
+        i,
+        length(part_files)
+      ),
+      "INFO"
+    )
 
     # Load current part
     current_summary <- vroom::vroom(part_files[i], show_col_types = FALSE)
@@ -525,7 +616,14 @@ preprocess_inputs <- function(dorado_summary,
       saveRDS(signals, output_file)
       polya_signal_files[i] <- output_file
 
-      cli_log(sprintf("Extracted signals for %d reads in part %d", length(signals), i), "INFO")
+      cli_log(
+        sprintf(
+          "Extracted signals for %d reads in part %d",
+          length(signals),
+          i
+        ),
+        "INFO"
+      )
     } else {
       cli_log(sprintf("No signals extracted for part %d", i), "WARNING")
     }
@@ -542,7 +640,13 @@ preprocess_inputs <- function(dorado_summary,
     stop("No poly(A) signals were successfully extracted from any part")
   }
 
-  cli_log(sprintf("Successfully extracted signals from %d parts", length(polya_signal_files)), "SUCCESS")
+  cli_log(
+    sprintf(
+      "Successfully extracted signals from %d parts",
+      length(polya_signal_files)
+    ),
+    "SUCCESS"
+  )
 
   # Return paths to processed files
   return(list(
@@ -550,7 +654,6 @@ preprocess_inputs <- function(dorado_summary,
     polya_signal_files = polya_signal_files
   ))
 }
-
 
 
 #' Detection of outliers (peaks & valleys) in ONT signal using z-scores (Ultra-fast vectorized version).
@@ -711,11 +814,13 @@ filter_signal_by_threshold_vectorized <- function(signal) {
   for (i in (window_size + 1):n) {
     # Get window efficiently
     window_start <- max(1L, i - window_size)
-    window_data <- adj_signal[window_start:(i-1)]
+    window_data <- adj_signal[window_start:(i - 1)]
 
     # Fast statistics
     window_mean <- sum(window_data) / length(window_data)
-    window_sd <- sqrt(sum((window_data - window_mean)^2) / (length(window_data) - 1))
+    window_sd <- sqrt(
+      sum((window_data - window_mean)^2) / (length(window_data) - 1)
+    )
 
     # Outlier detection
     deviation <- abs(adj_signal[i] - window_mean)
@@ -735,8 +840,6 @@ filter_signal_by_threshold_vectorized <- function(signal) {
 
   return(result)
 }
-
-
 
 
 #' Creates a nested list of Dorado tail features (raw signal + pseudomoves).
@@ -774,25 +877,34 @@ filter_signal_by_threshold_vectorized <- function(signal) {
 #'   num_cores = 4
 #' )
 #' }
-create_tail_features_list_dorado <- function(signal_list,
-                                             num_cores) {
-
+create_tail_features_list_dorado <- function(signal_list, num_cores) {
 
   # Assertions
   if (missing(signal_list)) {
-    stop("Signal list is missing. Please provide a valid signal_list argument.", call. = FALSE)
+    stop(
+      "Signal list is missing. Please provide a valid signal_list argument.",
+      call. = FALSE
+    )
   }
   if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. = FALSE)
+    stop(
+      "Number of declared cores is missing. Please provide a valid num_cores argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.list(signal_list),
-                   "Provided signal_list is not a list. Please provide a valid list of raw signal vectors.")
-  assert_condition(is.numeric(num_cores),
-                   "Declared num_cores must be numeric. Please provide a valid value.")
-  assert_condition(all(sapply(signal_list, is.numeric)),
-                   "All elements of signal_list must be numeric vectors (raw tail signal traces).")
-
+  assert_condition(
+    is.list(signal_list),
+    "Provided signal_list is not a list. Please provide a valid list of raw signal vectors."
+  )
+  assert_condition(
+    is.numeric(num_cores),
+    "Declared num_cores must be numeric. Please provide a valid value."
+  )
+  assert_condition(
+    all(sapply(signal_list, is.numeric)),
+    "All elements of signal_list must be numeric vectors (raw tail signal traces)."
+  )
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -808,15 +920,24 @@ create_tail_features_list_dorado <- function(signal_list,
   output_nested_list <- list()
 
   #progressbar header
-  cat(paste0('[', as.character(Sys.time()), '] ','Computing pseudomoves...', '\n', sep=''))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Computing pseudomoves...',
+    '\n',
+    sep = ''
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(signal_list),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(signal_list),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
@@ -827,21 +948,29 @@ create_tail_features_list_dorado <- function(signal_list,
   #   - store the raw signal trace
   #   - compute pseudomoves with ninetails::filter_signal_by_threshold()
   #   - return as a named sublist under the read ID
-  output_nested_list <- foreach::foreach(x = names(signal_list),
-                                         .combine = c,
-                                         .inorder = TRUE,
-                                         .errorhandling = "pass",
-                                         .options.snow = opts,
-                                         .options.multicore = mc_options) %dopar% (function(x) {
-                                           stats::setNames(list(list(
-                                             tail_signal = signal_list[[x]],
-                                             tail_pseudomoves = ninetails::filter_signal_by_threshold(signal_list[[x]]))
-                                           ), x)
-                                         })(x)
+  output_nested_list <- foreach::foreach(
+    x = names(signal_list),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = "pass",
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    (function(x) {
+      stats::setNames(
+        list(list(
+          tail_signal = signal_list[[x]],
+          tail_pseudomoves = ninetails::filter_signal_by_threshold(signal_list[[
+            x
+          ]])
+        )),
+        x
+      )
+    })(x)
 
   #close(pb)
   # Done comm
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n', sep=''))
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n', sep = ''))
 
   return(output_nested_list)
 }
@@ -904,22 +1033,31 @@ create_tail_features_list_dorado <- function(signal_list,
 #'   tail_feature_list = tail_feature_list
 #' )
 #' }
-split_tail_centered_dorado <- function(readname,
-                                       tail_feature_list) {
+split_tail_centered_dorado <- function(readname, tail_feature_list) {
 
   #assertions
   if (missing(readname)) {
-    stop("Readname is missing. Please provide a valid readname argument.", call. =FALSE)
+    stop(
+      "Readname is missing. Please provide a valid readname argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(tail_feature_list)) {
-    stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+    stop(
+      "List of tail features is missing. Please provide a valid tail_feature_list argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.character(readname),
-                   "Given readname is not a character string. Please provide a valid readname.")
-  assert_condition(is.list(tail_feature_list),
-                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
+  assert_condition(
+    is.character(readname),
+    "Given readname is not a character string. Please provide a valid readname."
+  )
+  assert_condition(
+    is.list(tail_feature_list),
+    "Given tail_feature_list is not a list (class). Please provide valid file format."
+  )
 
   # Extract required data
   # In the Dorado pipeline, moves are not used:
@@ -936,7 +1074,7 @@ split_tail_centered_dorado <- function(readname,
   # This strategy is chosen with the expectation that ONT will eventually refine
   # their poly(A) detection algorithm.
   if (length(pseudomoves) >= 3) {
-    idx <- (length(pseudomoves)-2):length(pseudomoves)
+    idx <- (length(pseudomoves) - 2):length(pseudomoves)
     pseudomoves[idx][pseudomoves[idx] != 0] <- 0
   }
 
@@ -950,12 +1088,16 @@ split_tail_centered_dorado <- function(readname,
   mod_rle <- rle(pseudomoves)
   # pseudomoves filtered by condition (potentially decorated - empyrical!)
   condition <- mod_rle$lengths >= 5 & mod_rle$values != 0
-  if (!any(condition)) return(NULL)  # No valid chunks, return NULL
+  if (!any(condition)) {
+    return(NULL)
+  } # No valid chunks, return NULL
   # For each valid run:
   # - Compute its starting position
   # - Compute chunk boundaries centered on the middle of the run
   # - Each chunk has a fixed window size of 100 bases (Â±50 around center)
-  first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths, -1)))[condition]
+  first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths, -1)))[
+    condition
+  ]
   # length of pseudomoves satisfying condition
   filtered_length <- mod_rle$lengths[condition]
   # extracted coordinates (indices)
@@ -966,19 +1108,32 @@ split_tail_centered_dorado <- function(readname,
   # - If the start position is < 1, left-pad with NAs
   # - Later, NAs are imputed with frequent signal values
   # extract signal chunks centered on potential modification
-  list_1 <- lapply(1:length(start_positions), function(i) if(start_positions[i] >0) signal[start_positions[i]:end_positions[i]]
-                   else c(rep(NA, abs(start_positions[i]-1)), signal[1:end_positions[i]]))
+  list_1 <- lapply(1:length(start_positions), function(i) {
+    if (start_positions[i] > 0) {
+      signal[start_positions[i]:end_positions[i]]
+    } else {
+      c(rep(NA, abs(start_positions[i] - 1)), signal[1:end_positions[i]])
+    }
+  })
 
   # NAs introduced by left-padding are replaced by random draws
   # from the 5 most frequent observed signal values.
   # This ensures consistent chunk length without introducing
   # artificial bias from fixed-value padding.
-  most_freq_vals <- as.numeric(names(sort(table(signal), decreasing = TRUE)[1:5]))
-  list_1 <- lapply(list_1, function(n) replace(n, is.na(n), sample(most_freq_vals, sum(is.na(n)), TRUE)))
+  most_freq_vals <- as.numeric(names(sort(table(signal), decreasing = TRUE)[
+    1:5
+  ]))
+  list_1 <- lapply(list_1, function(n) {
+    replace(n, is.na(n), sample(most_freq_vals, sum(is.na(n)), TRUE))
+  })
 
   # naming chunks
   #   <readname>_<chunk_index>
-  chunk_names <- paste0(rep(readname, length(list_1)), '_', seq_along(start_positions))
+  chunk_names <- paste0(
+    rep(readname, length(list_1)),
+    '_',
+    seq_along(start_positions)
+  )
   names(list_1) <- chunk_names
 
   # retrieve coordinates as list_2 and list_3:
@@ -989,7 +1144,10 @@ split_tail_centered_dorado <- function(readname,
   #   - chunk_sequence   (raw signal segment, length = 100)
   #   - chunk_start_pos  (starting index in original signal)
   #   - chunk_end_pos    (ending index in original signal)
-  out <- purrr::transpose(purrr::set_names(list(list_1, list_2, list_3), c('chunk_sequence', 'chunk_start_pos', 'chunk_end_pos')))
+  out <- purrr::transpose(purrr::set_names(
+    list(list_1, list_2, list_3),
+    c('chunk_sequence', 'chunk_start_pos', 'chunk_end_pos')
+  ))
   return(out)
 }
 
@@ -1036,22 +1194,31 @@ split_tail_centered_dorado <- function(readname,
 #'   num_cores = 3
 #' )
 #' }
-create_tail_chunk_list_dorado <- function(tail_feature_list,
-                                          num_cores) {
+create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
 
   # assertions
   if (missing(num_cores)) {
-    stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
+    stop(
+      "Number of declared cores is missing. Please provide a valid num_cores argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(tail_feature_list)) {
-    stop("List of features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
+    stop(
+      "List of features is missing. Please provide a valid tail_feature_list argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(num_cores),
-                   "Declared core number must be numeric. Please provide a valid argument.")
-  assert_condition(is.list(tail_feature_list),
-                   "Given tail_feature_list is not a list (class). Please provide valid file format.")
+  assert_condition(
+    is.numeric(num_cores),
+    "Declared core number must be numeric. Please provide a valid argument."
+  )
+  assert_condition(
+    is.list(tail_feature_list),
+    "Given tail_feature_list is not a list (class). Please provide valid file format."
+  )
 
   # creating cluster for parallel computing
   my_cluster <- parallel::makeCluster(num_cores)
@@ -1061,15 +1228,23 @@ create_tail_chunk_list_dorado <- function(tail_feature_list,
   mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ','Creating tail segmentation data...', '\n'))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Creating tail segmentation data...',
+    '\n'
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(tail_feature_list),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(tail_feature_list),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
@@ -1079,22 +1254,29 @@ create_tail_chunk_list_dorado <- function(tail_feature_list,
   # For each read (element of tail_feature_list):
   #   - Call split_tail_centered_dorado() on the read
   #   - Collect resulting signal chunks into a nested list
-  tail_chunk_list <- foreach::foreach(i = seq_along(tail_feature_list),
-                                      .combine = c,
-                                      .inorder = TRUE,
-                                      .errorhandling = 'pass',
-                                      .options.snow = opts,
-                                      .options.multicore = mc_options) %dopar% {
-                                        lapply(names(tail_feature_list[i]), function(x) ninetails::split_tail_centered_dorado(x, tail_feature_list))
-                                      }
+  tail_chunk_list <- foreach::foreach(
+    i = seq_along(tail_feature_list),
+    .combine = c,
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      lapply(names(tail_feature_list[i]), function(x) {
+        ninetails::split_tail_centered_dorado(x, tail_feature_list)
+      })
+    }
 
   names(tail_chunk_list) <- names(tail_feature_list)
   # Remove NULLs (reads with no valid chunks)
-  tail_chunk_list <- rrapply::rrapply(tail_chunk_list,
-                                      condition = Negate(is.null),
-                                      how = "prune")
+  tail_chunk_list <- rrapply::rrapply(
+    tail_chunk_list,
+    condition = Negate(is.null),
+    how = "prune"
+  )
   # Done comment
-  cat(paste0('[', as.character(Sys.time()), '] ','Done!', '\n'))
+  cat(paste0('[', as.character(Sys.time()), '] ', 'Done!', '\n'))
 
   return(tail_chunk_list)
 }
@@ -1269,23 +1451,33 @@ create_tail_chunk_list_dorado <- function(tail_feature_list,
 #'   original_summary = "data/original_dorado_summary.tsv"
 #' )
 #' }
-create_outputs_dorado <- function(dorado_summary_dir,
-                                  nonA_temp_dir,
-                                  polya_chunks_dir,
-                                  num_cores = 1,
-                                  qc = TRUE,
-                                  original_summary) {
-
+create_outputs_dorado <- function(
+  dorado_summary_dir,
+  nonA_temp_dir,
+  polya_chunks_dir,
+  num_cores = 1,
+  qc = TRUE,
+  original_summary) {
 
   # Assertions
-  if (missing(dorado_summary_dir)) stop("Dorado summary directory is missing.", call. = FALSE)
-  if (missing(nonA_temp_dir)) stop("Non-A predictions directory is missing.", call. = FALSE)
-  if (missing(polya_chunks_dir)) stop("PolyA chunks directory is missing.", call. = FALSE)
-  if (missing(num_cores)) stop("Number of cores is missing.", call. = FALSE)
+  if (missing(dorado_summary_dir)) {
+    stop("Dorado summary directory is missing.", call. = FALSE)
+  }
+  if (missing(nonA_temp_dir)) {
+    stop("Non-A predictions directory is missing.", call. = FALSE)
+  }
+  if (missing(polya_chunks_dir)) {
+    stop("PolyA chunks directory is missing.", call. = FALSE)
+  }
+  if (missing(num_cores)) {
+    stop("Number of cores is missing.", call. = FALSE)
+  }
 
   # Batch argument validation
   args <- list(dorado_summary_dir, nonA_temp_dir, polya_chunks_dir)
-  dirs_exist <- sapply(args, function(x) is.character(x) && length(x) == 1 && dir.exists(x))
+  dirs_exist <- sapply(args, function(x) {
+    is.character(x) && length(x) == 1 && dir.exists(x)
+  })
   if (!all(dirs_exist)) {
     stop("All directory arguments must be valid existing paths.", call. = FALSE)
   }
@@ -1295,13 +1487,31 @@ create_outputs_dorado <- function(dorado_summary_dir,
   }
 
   # Check files exist (batch operation)
-  dorado_files <- list.files(dorado_summary_dir, pattern = "\\.txt$|\\.tsv$|\\.csv$", full.names = TRUE)
-  chunk_files <- list.files(polya_chunks_dir, pattern = "\\.rds$", full.names = TRUE)
-  nonA_files <- list.files(nonA_temp_dir, pattern = "\\.rds$", full.names = TRUE)
+  dorado_files <- list.files(
+    dorado_summary_dir,
+    pattern = "\\.txt$|\\.tsv$|\\.csv$",
+    full.names = TRUE
+  )
+  chunk_files <- list.files(
+    polya_chunks_dir,
+    pattern = "\\.rds$",
+    full.names = TRUE
+  )
+  nonA_files <- list.files(
+    nonA_temp_dir,
+    pattern = "\\.rds$",
+    full.names = TRUE
+  )
 
-  if (length(dorado_files) == 0) stop("No summary files found in dorado_summary_dir", call. = FALSE)
-  if (length(chunk_files) == 0) stop("No RDS files found in polya_chunks_dir", call. = FALSE)
-  if (length(nonA_files) == 0) stop("No prediction files found in nonA_temp_dir", call. = FALSE)
+  if (length(dorado_files) == 0) {
+    stop("No summary files found in dorado_summary_dir", call. = FALSE)
+  }
+  if (length(chunk_files) == 0) {
+    stop("No RDS files found in polya_chunks_dir", call. = FALSE)
+  }
+  if (length(nonA_files) == 0) {
+    stop("No prediction files found in nonA_temp_dir", call. = FALSE)
+  }
 
   ################################################################################
   # LOAD SUMMARY DATA: ORIGINAL AND PARTS
@@ -1309,9 +1519,15 @@ create_outputs_dorado <- function(dorado_summary_dir,
 
   # columns to keep (the rest are an unnecessary burden on memory)
   # they refer to all summary files (original and filtered)
-  selected_cols <- c("filename", "read_id", "poly_tail_length", "poly_tail_start",
-                     "poly_tail_end", "alignment_genome", "alignment_direction",
-                     "alignment_mapq")
+  selected_cols <- c(
+    "filename",
+    "read_id",
+    "poly_tail_length",
+    "poly_tail_start",
+    "poly_tail_end",
+    "alignment_genome",
+    "alignment_direction",
+    "alignment_mapq")
 
   # Load filtered dorado summary parts and reuse it
   ################################################################################
@@ -1323,14 +1539,23 @@ create_outputs_dorado <- function(dorado_summary_dir,
   # (IV) the poly(A) tail must be at least 10 nt long
 
   cat("Loading Dorado summary files...\n")
-  dorado_summary_qc_passed <- dplyr::bind_rows(lapply(dorado_files, function(x) {
-    suppressMessages(vroom::vroom(x, delim = "\t", show_col_types = FALSE,
-                                  col_select = tidyselect::all_of(selected_cols)))
-  }))
+  dorado_summary_qc_passed <- dplyr::bind_rows(lapply(
+    dorado_files,
+    function(x) {
+      suppressMessages(vroom::vroom(
+        x,
+        delim = "\t",
+        show_col_types = FALSE,
+        col_select = tidyselect::all_of(selected_cols)
+      ))
+    }
+  ))
 
   qc_passed_reads <- unique(dorado_summary_qc_passed$read_id)
-  cat(sprintf("Loaded %d reads that passed QC filtering\n", length(qc_passed_reads)))
-
+  cat(sprintf(
+    "Loaded %d reads that passed QC filtering\n",
+    length(qc_passed_reads)
+  ))
 
   # Load original summary data
   ################################################################################
@@ -1339,19 +1564,23 @@ create_outputs_dorado <- function(dorado_summary_dir,
   # and to avoid potential errors. The Ninetails pipeline considers only mapped reads;
   # the rest are marked as unclassified.
 
-
   # keep only columns of interest
   if (is.character(original_summary)) {
     cat("Loading original dorado summary for complete read classification...\n")
-    dorado_summary <- vroom::vroom(original_summary, show_col_types = FALSE,
-                                   col_select = tidyselect::all_of(selected_cols))
-    cat(sprintf("Loaded %d total reads from original summary\n", nrow(dorado_summary)))
-  } else if (is.data.frame(original_summary)){
+    dorado_summary <- vroom::vroom(
+      original_summary,
+      show_col_types = FALSE,
+      col_select = tidyselect::all_of(selected_cols)
+    )
+    cat(sprintf(
+      "Loaded %d total reads from original summary\n",
+      nrow(dorado_summary)
+    ))
+  } else if (is.data.frame(original_summary)) {
     dorado_summary <- original_summary[, selected_cols, drop = FALSE]
   } else {
     stop("original_summary must be a file path or data frame")
   }
-
 
   ################################################################################
   # LOAD PREDICTIONS
@@ -1366,35 +1595,58 @@ create_outputs_dorado <- function(dorado_summary_dir,
   mc_options <- list(preschedule = TRUE, set.seed = FALSE, cleanup = FALSE)
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Loading non-A prediction files...', '\n'))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Loading non-A prediction files...',
+    '\n'
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(nonA_files),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(nonA_files),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
   # Load all predictions in parallel
-  all_predictions <- foreach::foreach(i = seq_along(nonA_files),
-                                      .inorder = TRUE,
-                                      .errorhandling = 'pass',
-                                      .options.snow = opts,
-                                      .options.multicore = mc_options) %dopar% {
-                                        preds <- readRDS(nonA_files[i])
+  all_predictions <- foreach::foreach(
+    i = seq_along(nonA_files),
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      preds <- readRDS(nonA_files[i])
 
-                                        # Standardize prediction format
-                                        if (is.list(preds) && 'chunkname' %in% names(preds)) {
-                                          data.frame(chunkname = preds$chunkname, prediction = preds$prediction, stringsAsFactors = FALSE)
-                                        } else if (is.list(preds)) {
-                                          data.frame(chunkname = names(preds), prediction = unlist(preds), stringsAsFactors = FALSE)
-                                        } else {
-                                          data.frame(chunkname = names(preds), prediction = as.vector(preds), stringsAsFactors = FALSE)
-                                        }
-                                      }
+      # Standardize prediction format
+      if (is.list(preds) && 'chunkname' %in% names(preds)) {
+        data.frame(
+          chunkname = preds$chunkname,
+          prediction = preds$prediction,
+          stringsAsFactors = FALSE
+        )
+      } else if (is.list(preds)) {
+        data.frame(
+          chunkname = names(preds),
+          prediction = unlist(preds),
+          stringsAsFactors = FALSE
+        )
+      } else {
+        data.frame(
+          chunkname = names(preds),
+          prediction = as.vector(preds),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
 
   # Combine all predictions
   cat("Combining all predictions...\n")
@@ -1408,42 +1660,62 @@ create_outputs_dorado <- function(dorado_summary_dir,
 
   # vectorized substitution of predictions with letter code
   prediction_dict <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")
-  moved_chunks_table$prediction <- prediction_dict[as.character(moved_chunks_table$prediction)]
-
+  moved_chunks_table$prediction <- prediction_dict[as.character(
+    moved_chunks_table$prediction
+  )]
 
   #extract reads with move==1 and modification absent (not detected)
-  moved_blank_readnames <- names(which(with(moved_chunks_table, tapply(prediction, read_id, unique) == 'A')))
+  moved_blank_readnames <- names(which(with(
+    moved_chunks_table,
+    tapply(prediction, read_id, unique) == 'A'
+  )))
 
   # cleaned chunks_table from A-exclusive
-  moved_chunks_table <- subset(moved_chunks_table, !(read_id %in% moved_blank_readnames))
+  moved_chunks_table <- subset(
+    moved_chunks_table,
+    !(read_id %in% moved_blank_readnames)
+  )
   # cleaned chunks_table A-containing rows (other remain)
-  moved_chunks_table <- moved_chunks_table[!(moved_chunks_table$prediction=="A"),]
+  moved_chunks_table <- moved_chunks_table[
+    !(moved_chunks_table$prediction == "A"),
+  ]
 
   ################################################################################
   # POSITION ESTIMATION
   ################################################################################
 
   # header for progress bar
-  cat(paste0('[', as.character(Sys.time()), '] ', 'Loading chunk files for position estimation...', '\n'))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Loading chunk files for position estimation...',
+    '\n'
+  ))
 
   # progress bar
-  pb <- utils::txtProgressBar(min = 0,
-                              max = length(chunk_files),
-                              style = 3,
-                              width = 50,
-                              char = "=",
-                              file = stderr())
+  pb <- utils::txtProgressBar(
+    min = 0,
+    max = length(chunk_files),
+    style = 3,
+    width = 50,
+    char = "=",
+    file = stderr()
+  )
   progress <- function(n) utils::setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
   # Load chunks to extract positional information
-  chunk_data_list <- foreach::foreach(i = seq_along(chunk_files),
-                                      .inorder = TRUE,
-                                      .errorhandling = 'pass',
-                                      .options.snow = opts,
-                                      .options.multicore = mc_options) %dopar% {
-                                        readRDS(chunk_files[i])
-                                      }
+  chunk_data_list <- foreach::foreach(
+    i = seq_along(chunk_files),
+    .inorder = TRUE,
+    .errorhandling = 'pass',
+    .options.snow = opts,
+    .options.multicore = mc_options
+  ) %dopar%
+    {
+      readRDS(chunk_files[i])
+    }
 
   all_chunks <- do.call(c, chunk_data_list)
 
@@ -1453,36 +1725,65 @@ create_outputs_dorado <- function(dorado_summary_dir,
   non_a_position_list <- lapply(seq_along(all_chunks), function(i) {
     read_name <- names(all_chunks)[i]
     chunks <- all_chunks[[i]]
-    if (is.null(chunks) || length(chunks) == 0) return(NULL)
+    if (is.null(chunks) || length(chunks) == 0) {
+      return(NULL)
+    }
 
     data.frame(
       read_id = rep(read_name, length(chunks)),
       chunkname = paste0(read_name, '_', seq_along(chunks)),
-      centr_signal_pos = sapply(chunks, function(x) mean(c(x$chunk_start_pos, x$chunk_end_pos))),
+      centr_signal_pos = sapply(chunks, function(x) {
+        mean(c(x$chunk_start_pos, x$chunk_end_pos))
+      }),
       stringsAsFactors = FALSE
     )
   })
 
   non_a_position_list <- dplyr::bind_rows(non_a_position_list)
-  non_a_position_list$chunkname <- sub('_.*\\*', '', non_a_position_list$chunkname)
+  non_a_position_list$chunkname <- sub(
+    '_.*\\*',
+    '',
+    non_a_position_list$chunkname
+  )
 
   # Merge with FILTERED summary data for position calculation (already loaded)
-  non_a_position_list <- dplyr::left_join(non_a_position_list, dorado_summary_qc_passed, by = "read_id")
-  non_a_position_list$signal_length <- 0.2 * (non_a_position_list$poly_tail_end - non_a_position_list$poly_tail_start)
+  non_a_position_list <- dplyr::left_join(
+    non_a_position_list,
+    dorado_summary_qc_passed,
+    by = "read_id"
+  )
+  non_a_position_list$signal_length <- 0.2 *
+    (non_a_position_list$poly_tail_end - non_a_position_list$poly_tail_start)
 
   # Final merge of chunk table with nonAs and position calculations
-  moved_chunks_table <- dplyr::left_join(moved_chunks_table, non_a_position_list,
-                                         by = c("read_id", "chunkname"))
+  moved_chunks_table <- dplyr::left_join(
+    moved_chunks_table,
+    non_a_position_list,
+    by = c("read_id", "chunkname")
+  )
 
   # estimate non-A nucleotide position
   ##############################################################################
   # in the Dorado pipeline, all calculations are rounded to integer values
   #unline in the Guppy legacy pipeline
-  moved_chunks_table$est_nonA_pos <- round(moved_chunks_table$poly_tail_length - ((moved_chunks_table$poly_tail_length * moved_chunks_table$centr_signal_pos) / moved_chunks_table$signal_length), 0)
+  moved_chunks_table$est_nonA_pos <- round(
+    moved_chunks_table$poly_tail_length -
+      ((moved_chunks_table$poly_tail_length *
+        moved_chunks_table$centr_signal_pos) /
+        moved_chunks_table$signal_length),
+    0
+  )
 
   # clean up the output nonA table (safer by colnames):
-  moved_chunks_table <- moved_chunks_table[, c("read_id", "alignment_genome", "prediction", "est_nonA_pos",
-                                               "poly_tail_length", "signal_length", "alignment_mapq")]
+  moved_chunks_table <- moved_chunks_table[, c(
+    "read_id",
+    "alignment_genome",
+    "prediction",
+    "est_nonA_pos",
+    "poly_tail_length",
+    "signal_length",
+    "alignment_mapq"
+  )]
 
   ################################################################################
   # CLASSIFY READS
@@ -1490,16 +1791,22 @@ create_outputs_dorado <- function(dorado_summary_dir,
 
   # Quality control on predictions (remove terminal predictions)
   if (qc == TRUE) {
-    potential_artifacts <- with(moved_chunks_table,
-                                (est_nonA_pos < 2) | (est_nonA_pos > poly_tail_length - 2))
+    potential_artifacts <- with(
+      moved_chunks_table,
+      (est_nonA_pos < 2) | (est_nonA_pos > poly_tail_length - 2)
+    )
 
-    moved_chunks_table_discarded_ids <- unique(moved_chunks_table$read_id[potential_artifacts])
+    moved_chunks_table_discarded_ids <- unique(moved_chunks_table$read_id[
+      potential_artifacts
+    ])
 
     moved_chunks_table <- moved_chunks_table[!potential_artifacts, ]
 
     # Update blank reads
-    moved_blank_readnames <- unique(c(moved_blank_readnames, moved_chunks_table_discarded_ids))
-
+    moved_blank_readnames <- unique(c(
+      moved_blank_readnames,
+      moved_chunks_table_discarded_ids
+    ))
   }
 
   # Select readnames of decorated ones
@@ -1507,7 +1814,9 @@ create_outputs_dorado <- function(dorado_summary_dir,
 
   # Handle other (discarded) reads - they are in original dorado summary
   ##############################################################################
-  dorado_summary <- dorado_summary[!dorado_summary$read_id %in% decorated_read_ids,]
+  dorado_summary <- dorado_summary[
+    !dorado_summary$read_id %in% decorated_read_ids,
+  ]
 
   # # Initialize ALL reads with default classification
   # dorado_summary$class <- "unclassified"
@@ -1515,16 +1824,26 @@ create_outputs_dorado <- function(dorado_summary_dir,
   dorado_summary <- dorado_summary %>%
     dplyr::filter(!read_id %in% decorated_read_ids) %>%
     dplyr::mutate(
-      comments = dplyr::case_when((alignment_direction=="*" & alignment_mapq==0) ~ "UNM",
-                                  !(alignment_direction=="*" & alignment_mapq==0) & poly_tail_length < 10 ~ "IRL",
-                                  !(!(alignment_direction=="*" & alignment_mapq==0) & poly_tail_length < 10) & poly_tail_start == 0 ~ "BAC",
-                                  read_id %in% moved_blank_readnames ~ "MPU",
-                                  TRUE ~ "MAU"),
-      class = dplyr::case_when(read_id %in% moved_blank_readnames ~ "blank",
-                               comments == "MAU" ~ "blank",
-                               TRUE ~ "unclassified"))
+      comments = dplyr::case_when(
+        (alignment_direction == "*" & alignment_mapq == 0) ~ "UNM",
+        !(alignment_direction == "*" & alignment_mapq == 0) &
+          poly_tail_length < 10 ~ "IRL",
+        !(!(alignment_direction == "*" & alignment_mapq == 0) &
+          poly_tail_length < 10) &
+          poly_tail_start == 0 ~ "BAC",
+        read_id %in% moved_blank_readnames ~ "MPU",
+        TRUE ~ "MAU"
+      ),
+      class = dplyr::case_when(
+        read_id %in% moved_blank_readnames ~ "blank",
+        comments == "MAU" ~ "blank",
+        TRUE ~ "unclassified"
+      )
+    )
   # Handle decorated reads
-  dorado_summary_qc_passed <- dorado_summary_qc_passed[dorado_summary_qc_passed$read_id %in% decorated_read_ids,]
+  dorado_summary_qc_passed <- dorado_summary_qc_passed[
+    dorado_summary_qc_passed$read_id %in% decorated_read_ids,
+  ]
 
   dorado_summary_qc_passed$class <- "decorated"
   dorado_summary_qc_passed$comments <- "YAY"
@@ -1538,21 +1857,44 @@ create_outputs_dorado <- function(dorado_summary_dir,
   read_classes$filename <- NULL
   names(read_classes)[names(read_classes) == "read_id"] <- "readname"
   names(read_classes)[names(read_classes) == "alignment_genome"] <- "contig"
-  names(read_classes)[names(read_classes) == "poly_tail_length"] <- "polya_length"
+  names(read_classes)[
+    names(read_classes) == "poly_tail_length"
+  ] <- "polya_length"
   names(read_classes)[names(read_classes) == "alignment_mapq"] <- "qc_tag"
   # order columns
-  read_classes <- read_classes[, c("readname", "contig", "polya_length", "qc_tag", "class", "comments")]
-
+  read_classes <- read_classes[, c(
+    "readname",
+    "contig",
+    "polya_length",
+    "qc_tag",
+    "class",
+    "comments"
+  )]
 
   # Handle moved chunk table
   # It can be cleaned now, since some cols can be finally dropped
   moved_chunks_table$signal_length <- NULL
-  names(moved_chunks_table)[names(moved_chunks_table) == "read_id"] <- "readname"
-  names(moved_chunks_table)[names(moved_chunks_table) == "alignment_genome"] <- "contig"
-  names(moved_chunks_table)[names(moved_chunks_table) == "poly_tail_length"] <- "polya_length"
-  names(moved_chunks_table)[names(moved_chunks_table) == "alignment_mapq"] <- "qc_tag"
+  names(moved_chunks_table)[
+    names(moved_chunks_table) == "read_id"
+  ] <- "readname"
+  names(moved_chunks_table)[
+    names(moved_chunks_table) == "alignment_genome"
+  ] <- "contig"
+  names(moved_chunks_table)[
+    names(moved_chunks_table) == "poly_tail_length"
+  ] <- "polya_length"
+  names(moved_chunks_table)[
+    names(moved_chunks_table) == "alignment_mapq"
+  ] <- "qc_tag"
   # order columns
-  moved_chunks_table <- moved_chunks_table[, c("readname", "contig","prediction", "est_nonA_pos", "polya_length", "qc_tag")]
+  moved_chunks_table <- moved_chunks_table[, c(
+    "readname",
+    "contig",
+    "prediction",
+    "est_nonA_pos",
+    "polya_length",
+    "qc_tag"
+  )]
 
   # Summary statistics
   cat("\n=== Classification Summary ===\n")
@@ -1572,6 +1914,8 @@ create_outputs_dorado <- function(dorado_summary_dir,
   cat(sprintf("\nTotal reads in output: %d\n", nrow(read_classes)))
   cat(sprintf("Non-A predictions: %d\n", nrow(moved_chunks_table)))
 
-  return(list(read_classes = read_classes, nonadenosine_residues = moved_chunks_table))
-
+  return(list(
+    read_classes = read_classes,
+    nonadenosine_residues = moved_chunks_table
+  ))
 }

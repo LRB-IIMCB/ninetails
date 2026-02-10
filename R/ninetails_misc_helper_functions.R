@@ -30,7 +30,9 @@ assert_condition <- function(cond, msg = "Assertion failed") {
 #' @keywords internal
 #'
 is_string <- function(x, min.chars = 1, null.ok = FALSE) {
-  if (is.null(x)) return(null.ok)
+  if (is.null(x)) {
+    return(null.ok)
+  }
   is.character(x) && length(x) == 1 && !is.na(x) && nchar(x) >= min.chars
 }
 
@@ -109,11 +111,14 @@ no_na <- function(x) {
 #' }
 #'
 is_multifast5 <- function(fast5_file_structure) {
-
-  assert_condition(is.data.frame(fast5_file_structure),
-                   "fast5_file_structure must be a data frame (output of rhdf5::h5ls())")
-  assert_condition("name" %in% colnames(fast5_file_structure),
-                   "fast5_file_structure must contain 'name' column")
+  assert_condition(
+    is.data.frame(fast5_file_structure),
+    "fast5_file_structure must be a data frame (output of rhdf5::h5ls())"
+  )
+  assert_condition(
+    "name" %in% colnames(fast5_file_structure),
+    "fast5_file_structure must contain 'name' column"
+  )
 
   sum(grepl('read_', fast5_file_structure$name)) > 0
 }
@@ -141,14 +146,17 @@ is_multifast5 <- function(fast5_file_structure) {
 #' }
 #'
 is_RNA <- function(fast5_file, read_id) {
-
-  assert_condition(is_string(fast5_file),
-                   "fast5_file must be a character string path")
+  assert_condition(
+    is_string(fast5_file),
+    "fast5_file must be a character string path"
+  )
   assert_file_exists(fast5_file, "fast5_file")
-  assert_condition(is_string(read_id),
-                   "read_id must be a character string")
+  assert_condition(is_string(read_id), "read_id must be a character string")
 
-  read_context_tags <- rhdf5::h5readAttributes(fast5_file, paste0(read_id, "/context_tags"))
+  read_context_tags <- rhdf5::h5readAttributes(
+    fast5_file,
+    paste0(read_id, "/context_tags")
+  )
   read_context_tags$experiment_type == "rna"
 }
 
@@ -198,61 +206,108 @@ is_RNA <- function(fast5_file, read_id) {
 # This lookup function is inspired by adnaniazi's explore-basecaller-and-fast5type.R from tailfindr
 # https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R
 
-check_fast5_filetype <- function(workspace,
-                                 basecall_group){
-
+check_fast5_filetype <- function(workspace, basecall_group) {
   #Assertions
   if (missing(workspace)) {
-    stop("Directory with basecalled fast5s is missing. Please provide a valid workspace argument.", call. =FALSE)
+    stop(
+      "Directory with basecalled fast5s is missing. Please provide a valid workspace argument.",
+      call. = FALSE
+    )
   }
 
   if (missing(basecall_group)) {
-    stop("Basecall group is missing. Please provide a valid basecall_group argument.", call. =FALSE)
+    stop(
+      "Basecall group is missing. Please provide a valid basecall_group argument.",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.character(workspace),
-                   "Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files.")
-
+  assert_condition(
+    is.character(workspace),
+    "Path to fast5 files is not a character string. Please provide valid path to basecalled fast5 files."
+  )
 
   #list fast5 files in given dir
-  fast5_files_list <- list.files(path = workspace, pattern = "\\.fast5$", recursive = TRUE, full.names = TRUE)
+  fast5_files_list <- list.files(
+    path = workspace,
+    pattern = "\\.fast5$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
 
   #count fast5 files
   num_fast5_files <- length(fast5_files_list)
 
-  cat(paste0('[', as.character(Sys.time()), '] ','Found ', num_fast5_files, ' fast5 file(s) in provided directory.\n'))
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Found ',
+    num_fast5_files,
+    ' fast5 file(s) in provided directory.\n'
+  ))
 
   #closer look into the first file on the list
-  selected_fast5_file <-fast5_files_list[1]
-  selected_fast5_file_structure <- rhdf5::h5ls(file.path(selected_fast5_file), recursive = FALSE)
+  selected_fast5_file <- fast5_files_list[1]
+  selected_fast5_file_structure <- rhdf5::h5ls(
+    file.path(selected_fast5_file),
+    recursive = FALSE
+  )
 
   selected_fast5_read <- selected_fast5_file_structure$name[1]
 
-  cat(paste0('[', as.character(Sys.time()), '] ','Analyzing one of the given fast5 files to check', '\n','if the data are in required format... \n'))
-
+  cat(paste0(
+    '[',
+    as.character(Sys.time()),
+    '] ',
+    'Analyzing one of the given fast5 files to check',
+    '\n',
+    'if the data are in required format... \n'
+  ))
 
   # checking whether fast5 file is single or multi
   if (!is_multifast5(selected_fast5_file_structure)) {
-    stop("The provided fast5 is single fast5 file. Please provide multifast5 file(s).", call. = FALSE)
+    stop(
+      "The provided fast5 is single fast5 file. Please provide multifast5 file(s).",
+      call. = FALSE
+    )
   }
 
   # check whether file is basecalled or not
-  tryCatch(selected_basecall_group <- rhdf5::h5read(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group)), error = function(e) { cat("The previewed fast5 file does not contain defined basecall_group. Check basecall_group - is it valid? Ninetails requires fast5 files basecalled by Guppy.") })
+  tryCatch(
+    selected_basecall_group <- rhdf5::h5read(
+      selected_fast5_file,
+      paste0(selected_fast5_read, "/Analyses/", basecall_group)
+    ),
+    error = function(e) {
+      cat(
+        "The previewed fast5 file does not contain defined basecall_group. Check basecall_group - is it valid? Ninetails requires fast5 files basecalled by Guppy."
+      )
+    }
+  )
 
   if (exists('selected_basecall_group')) {
     # checking whether the fast5 file contains RNA ONT reads
     if (!is_RNA(selected_fast5_file, selected_fast5_read)) {
-      stop("The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.", call. = FALSE)
+      stop(
+        "The provided fast5 does not contain RNA reads. Please provide multifast5 file(s) with RNA reads.",
+        call. = FALSE
+      )
     }
 
-
     # retrieve basecaller & basecalling model (read attributes)
-    selected_basecall_group <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/Analyses/", basecall_group))
+    selected_basecall_group <- rhdf5::h5readAttributes(
+      selected_fast5_file,
+      paste0(selected_fast5_read, "/Analyses/", basecall_group)
+    )
     basecaller_used <- selected_basecall_group$name
     model_used <- selected_basecall_group$model_type
 
     # retrieve guppy basecaller version (read attributes)
-    path_to_guppy_version <- rhdf5::h5readAttributes(selected_fast5_file,paste0(selected_fast5_read,"/tracking_id"))
+    path_to_guppy_version <- rhdf5::h5readAttributes(
+      selected_fast5_file,
+      paste0(selected_fast5_read, "/tracking_id")
+    )
     guppy_version <- path_to_guppy_version$guppy_version
 
     # close all handled instances (groups, attrs) of fast5 file
@@ -261,16 +316,22 @@ check_fast5_filetype <- function(workspace,
     cat('  Previewed fast5 file parameters:\n')
     cat('    data type: RNA \n')
     cat('    fast5 file type: multifast5 \n')
-    cat('    basecaller used:',basecaller_used,' \n')
-    cat('    basecaller version:',guppy_version,' \n')
-    cat('    basecalling model:',model_used,' \n',' \n')
-
+    cat('    basecaller used:', basecaller_used, ' \n')
+    cat('    basecaller version:', guppy_version, ' \n')
+    cat('    basecalling model:', model_used, ' \n', ' \n')
   } else {
     # close all handled instances (groups, attrs) of fast5 file
     rhdf5::h5closeAll()
-    stop(paste0('[', as.character(Sys.time()), '] ','Ninetails encountered an error. Please provide fast5 files basecalled by Guppy software. '), call. =FALSE)
+    stop(
+      paste0(
+        '[',
+        as.character(Sys.time()),
+        '] ',
+        'Ninetails encountered an error. Please provide fast5 files basecalled by Guppy software. '
+      ),
+      call. = FALSE
+    )
   }
-
 }
 
 ################################################################################
@@ -306,32 +367,44 @@ check_fast5_filetype <- function(workspace,
 #'
 #' }
 #'
-winsorize_signal <- function(signal){
-
+winsorize_signal <- function(signal) {
   #assertions
 
   if (missing(signal)) {
-    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
+    stop(
+      "Signal vector is missing. Please provide a valid signal argument.",
+      .call = FALSE
+    )
   }
 
-  assert_condition(is.numeric(signal),
-                   "Signal vector must be numeric. Please provide a valid argument.")
-  assert_condition(is.atomic(signal),
-                   "Signal vector must be atomic. Please provide a valid argument.")
-  assert_condition(no_na(signal),
-                   "Signal vector must not contain missing values. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(signal),
+    "Signal vector must be numeric. Please provide a valid argument."
+  )
+  assert_condition(
+    is.atomic(signal),
+    "Signal vector must be atomic. Please provide a valid argument."
+  )
+  assert_condition(
+    no_na(signal),
+    "Signal vector must not contain missing values. Please provide a valid argument."
+  )
 
-  signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
+  signal_q <- stats::quantile(
+    x = signal,
+    probs = c(0.005, 0.995),
+    na.rm = TRUE,
+    type = 7
+  )
   minimal_val <- signal_q[1L]
   maximal_val <- signal_q[2L]
 
-  signal[signal<minimal_val] <- minimal_val
-  signal[signal>maximal_val] <- maximal_val
+  signal[signal < minimal_val] <- minimal_val
+  signal[signal > maximal_val] <- maximal_val
 
   winsorized_signal <- as.integer(signal)
 
   return(winsorized_signal)
-
 }
 
 
@@ -363,10 +436,15 @@ winsorize_signal <- function(signal){
 #'
 #' }
 #'
-substitute_gaps <- function(pseudomoves){
+substitute_gaps <- function(pseudomoves) {
   rle_pseudomoves <- rle(pseudomoves)
-  indx <- rle_pseudomoves$lengths < 2 & rle_pseudomoves$values == 0 & c(Inf, rle_pseudomoves$values[-length(rle_pseudomoves$values)]) == c(rle_pseudomoves$values[-1], Inf)
-  if (any(indx)) rle_pseudomoves$values[indx] <- rle_pseudomoves$values[which(indx)-1]
+  indx <- rle_pseudomoves$lengths < 2 &
+    rle_pseudomoves$values == 0 &
+    c(Inf, rle_pseudomoves$values[-length(rle_pseudomoves$values)]) ==
+      c(rle_pseudomoves$values[-1], Inf)
+  if (any(indx)) {
+    rle_pseudomoves$values[indx] <- rle_pseudomoves$values[which(indx) - 1]
+  }
   adjusted_pseudomoves <- inverse.rle(rle_pseudomoves)
 
   return(adjusted_pseudomoves)
@@ -409,9 +487,14 @@ substitute_gaps <- function(pseudomoves){
 #'
 #' }
 #'
-load_keras_model <- function(keras_model_path){
+load_keras_model <- function(keras_model_path) {
   if (rlang::is_missing(keras_model_path)) {
-    path_to_default_model <- system.file("extdata", "cnn_model", "gasf_gadf_combined_model_20220808.h5", package="ninetails")
+    path_to_default_model <- system.file(
+      "extdata",
+      "cnn_model",
+      "gasf_gadf_combined_model_20220808.h5",
+      package = "ninetails"
+    )
     keras_model <- keras::load_model_hdf5(path_to_default_model)
   } else {
     keras_model <- keras::load_model_hdf5(keras_model_path)
@@ -462,11 +545,12 @@ load_keras_model <- function(keras_model_path){
 #'
 #' }
 #'
-get_mode <- function(x, method ="density", na.rm = FALSE) {
-
+get_mode <- function(x, method = "density", na.rm = FALSE) {
   # assertions
-  assert_condition(is.numeric(x),
-                   "Provided vector must be numeric. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(x),
+    "Provided vector must be numeric. Please provide a valid argument."
+  )
 
   x <- unlist(x)
   if (na.rm) {
@@ -476,14 +560,11 @@ get_mode <- function(x, method ="density", na.rm = FALSE) {
   if (method %in% c("value", "density", "") | is.na(method)) {
     # Return actual mode (from the real values in dataset)
     if (method %in% c("density", "")) {
-
       # Return density mode for normalized data - only for numeric!)
       d <- stats::density(x)
-      return(d$x[d$y==max(d$y)])
+      return(d$x[d$y == max(d$y)])
       #return(modeest::mlv(x,na.rm=TRUE,method="parzen", abc=T)) #in some cases this method produces "weird" output
-
     } else if (method %in% c("value")) {
-
       uniqx <- unique(x)
       n <- length(uniqx)
       freqx <- tabulate(match(x, uniqx))
@@ -491,7 +572,10 @@ get_mode <- function(x, method ="density", na.rm = FALSE) {
       return(uniqx[which(modex)])
     }
   } else {
-    stop("Wrong mode provided. Please provide either 'density' or 'value'", call. =FALSE)
+    stop(
+      "Wrong mode provided. Please provide either 'density' or 'value'",
+      call. = FALSE
+    )
   }
 }
 
@@ -522,16 +606,17 @@ get_mode <- function(x, method ="density", na.rm = FALSE) {
 #' }
 #'
 correct_labels <- function(df) {
+  assert_condition(
+    is.data.frame(df),
+    "Provided input must be dataframe. Please provide a valid argument."
+  )
 
-  assert_condition(is.data.frame(df),
-                   "Provided input must be dataframe. Please provide a valid argument.")
-
-  if("class" %in% colnames(df)) {
-    df$class <- ifelse(df$class %in% c("unmodified", "unclassified"),
-                       "blank",
-                       ifelse(df$class == "blank",
-                              "unclassified",
-                              "decorated"))
+  if ("class" %in% colnames(df)) {
+    df$class <- ifelse(
+      df$class %in% c("unmodified", "unclassified"),
+      "blank",
+      ifelse(df$class == "blank", "unclassified", "decorated")
+    )
   }
 
   return(df)
@@ -591,9 +676,7 @@ correct_labels <- function(df) {
 #' filtered <- filter_dorado_summary(df)
 #'
 #' }
-filter_dorado_summary <- function(dorado_summary){
-
-
+filter_dorado_summary <- function(dorado_summary) {
   # If input is a file path, read with vroom
   if (is.character(dorado_summary)) {
     dorado_summary <- vroom::vroom(dorado_summary, delim = "\t")
@@ -605,7 +688,10 @@ filter_dorado_summary <- function(dorado_summary){
   required_cols <- c("read_id", "poly_tail_length")
   missing_cols <- setdiff(required_cols, names(dorado_summary))
   if (length(missing_cols) > 0) {
-    stop(sprintf("Required columns missing: %s", paste(missing_cols, collapse = ", ")))
+    stop(sprintf(
+      "Required columns missing: %s",
+      paste(missing_cols, collapse = ", ")
+    ))
   }
 
   #These are the reads that fulfill the quality criteria for classification by Ninetails:
@@ -616,16 +702,15 @@ filter_dorado_summary <- function(dorado_summary){
   #(IV) the poly(A) tail must be at least 10 nt long (shorter tails cannot be reliably processed by the CNN).
 
   dorado_summary_filtered <- dorado_summary %>%
-    dplyr::filter(alignment_direction!="*" &
-                  alignment_mapq!=0 &
-                  poly_tail_start!=0 &
-                  poly_tail_length>=10)
-
+    dplyr::filter(
+      alignment_direction != "*" &
+        alignment_mapq != 0 &
+        poly_tail_start != 0 &
+        poly_tail_length >= 10
+    )
 
   return(dorado_summary_filtered)
-
 }
-
 
 
 #' Check and handle existing output directory for ninetails analysis
@@ -686,20 +771,32 @@ filter_dorado_summary <- function(dorado_summary){
 #'   # User chose to abort
 #' }
 #' }
-check_output_directory <- function(save_dir,
-                                   log_message) {
-
+check_output_directory <- function(save_dir, log_message) {
   # Check if directory exists
   if (!dir.exists(save_dir)) {
     # Directory doesn't exist, create it
-    tryCatch({
-      dir.create(save_dir, recursive = TRUE)
-      log_message(sprintf("Created output directory: %s", save_dir), "INFO", "Directory Setup")
-      return(TRUE)
-    }, error = function(e) {
-      log_message(sprintf("Failed to create output directory: %s", e$message), "ERROR", "Directory Setup")
-      stop(sprintf("Cannot create output directory: %s", e$message), call. = FALSE)
-    })
+    tryCatch(
+      {
+        dir.create(save_dir, recursive = TRUE)
+        log_message(
+          sprintf("Created output directory: %s", save_dir),
+          "INFO",
+          "Directory Setup"
+        )
+        return(TRUE)
+      },
+      error = function(e) {
+        log_message(
+          sprintf("Failed to create output directory: %s", e$message),
+          "ERROR",
+          "Directory Setup"
+        )
+        stop(
+          sprintf("Cannot create output directory: %s", e$message),
+          call. = FALSE
+        )
+      }
+    )
   }
 
   # Directory exists, check if it's empty
@@ -707,13 +804,23 @@ check_output_directory <- function(save_dir,
 
   if (length(existing_files) == 0) {
     # Directory is empty, safe to proceed
-    log_message(sprintf("Using existing empty directory: %s", save_dir), "INFO", "Directory Setup")
+    log_message(
+      sprintf("Using existing empty directory: %s", save_dir),
+      "INFO",
+      "Directory Setup"
+    )
     return(TRUE)
   }
 
   # Directory contains files, prompt user
-  log_message(sprintf("Output directory already exists and contains %d files", length(existing_files)),
-              "WARNING", "Directory Conflict")
+  log_message(
+    sprintf(
+      "Output directory already exists and contains %d files",
+      length(existing_files)
+    ),
+    "WARNING",
+    "Directory Conflict"
+  )
   log_message(sprintf("Directory path: %s", save_dir), "WARNING")
 
   # Display warning to user
@@ -749,18 +856,31 @@ check_output_directory <- function(save_dir,
     user_input <- tolower(trimws(user_input))
 
     if (user_input %in% c("a", "abort")) {
-      log_message("User chose to abort analysis due to existing files", "INFO", "User Decision")
+      log_message(
+        "User chose to abort analysis due to existing files",
+        "INFO",
+        "User Decision"
+      )
       cli::cli_alert_info("Analysis aborted by user.")
       return(FALSE)
-
     } else if (user_input %in% c("c", "continue")) {
-      log_message("User chose to continue and overwrite existing files", "WARNING", "User Decision")
-      log_message(sprintf("Proceeding with analysis in directory: %s", save_dir), "WARNING")
-      cli::cli_alert_warning("Proceeding with analysis. Existing files may be overwritten.")
+      log_message(
+        "User chose to continue and overwrite existing files",
+        "WARNING",
+        "User Decision"
+      )
+      log_message(
+        sprintf("Proceeding with analysis in directory: %s", save_dir),
+        "WARNING"
+      )
+      cli::cli_alert_warning(
+        "Proceeding with analysis. Existing files may be overwritten."
+      )
       return(TRUE)
-
     } else {
-      cli::cli_alert_danger("Invalid input. Please enter 'a' to abort or 'c' to continue.")
+      cli::cli_alert_danger(
+        "Invalid input. Please enter 'a' to abort or 'c' to continue."
+      )
     }
   }
 }
@@ -799,12 +919,12 @@ check_output_directory <- function(save_dir,
 #'
 #' }
 count_trailing_chars <- function(string, char) {
-
   # assertions
-  assert_condition(is_string(string),
-                   "string must be a character string")
-  assert_condition(is_string(char) && nchar(char) == 1,
-                   "char must be a single character")
+  assert_condition(is_string(string), "string must be a character string")
+  assert_condition(
+    is_string(char) && nchar(char) == 1,
+    "char must be a single character"
+  )
 
   count <- 0
   len <- nchar(string)
@@ -846,16 +966,13 @@ count_trailing_chars <- function(string, char) {
 #'
 #' }
 reverse_complement <- function(sequence) {
-
   # assertions
-  assert_condition(is_string(sequence),
-                   "sequence must be a character string")
+  assert_condition(is_string(sequence), "sequence must be a character string")
 
   # avoid function break by lowercase
   sequence <- toupper(sequence)
 
-
-  complement_map <- c(A="T", T="A", G="C", C="G", N="N")
+  complement_map <- c(A = "T", T = "A", G = "C", C = "G", N = "N")
   chars <- strsplit(sequence, "")[[1]]
   comp <- sapply(chars, function(c) complement_map[c], USE.NAMES = FALSE)
   paste(rev(comp), collapse = "")
@@ -906,12 +1023,9 @@ reverse_complement <- function(sequence) {
 #'
 #' }
 edit_distance_hw <- function(query, target) {
-
   # assertions
-  assert_condition(is_string(query),
-                   "query must be a character string")
-  assert_condition(is_string(target),
-                   "target must be a character string")
+  assert_condition(is_string(query), "query must be a character string")
+  assert_condition(is_string(target), "target must be a character string")
 
   query_len <- nchar(query)
   target_len <- nchar(target)

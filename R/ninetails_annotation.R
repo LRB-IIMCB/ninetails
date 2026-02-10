@@ -75,29 +75,35 @@
 #'
 #' }
 #'
-annotate_with_biomart <- function(input_data,
-                                  attributes_to_get=c('ensembl_transcript_id',
-                                                      'external_gene_name',
-                                                      'description',
-                                                      'transcript_biotype'),
-                                  filters='ensembl_transcript_id',
-                                  organism=NULL,
-                                  mart_to_use=NULL){
-
+annotate_with_biomart <- function(
+  input_data,
+  attributes_to_get = c(
+    'ensembl_transcript_id',
+    'external_gene_name',
+    'description',
+    'transcript_biotype'),
+  filters = 'ensembl_transcript_id',
+  organism = NULL,
+  mart_to_use = NULL) {
 
   #assertions
   if (missing(input_data)) {
-    stop("Please provide a dataframe with ninetails results as an input.",
-         call. = FALSE)
+    stop(
+      "Please provide a dataframe with ninetails results as an input.",
+      call. = FALSE
+    )
   }
 
-
   if (!is.data.frame(input_data) || nrow(input_data) == 0) {
-    stop("Empty data frame provided as an input (input_data). Please provide valid input")}
+    stop(
+      "Empty data frame provided as an input (input_data). Please provide valid input"
+    )
+  }
 
-
-  assert_condition(length(attributes) > 0,
-                   "please provide attributes to get from biomart")
+  assert_condition(
+    length(attributes) > 0,
+    "please provide attributes to get from biomart"
+  )
 
   # Assert that at least one of organism or mart_to_use is provided
   if (!is.null(organism) && !is.null(mart_to_use)) {
@@ -122,54 +128,58 @@ annotate_with_biomart <- function(input_data,
   ensembl_ids <- unique(input_data$ensembl_transcript_id_short)
   ensembl_ids <- ensembl_ids[!is.na(ensembl_ids)]
 
-  input_data <- input_data %>% dplyr::rename(ensembl_transcript_id = ensembl_transcript_id_short)
+  input_data <- input_data %>%
+    dplyr::rename(ensembl_transcript_id = ensembl_transcript_id_short)
 
-
-  if (is.null(organism)){
-
-    annotation_data <- biomaRt::getBM(attributes=attributes_to_get,
-                                      filters = filters,
-                                      values = ensembl_ids,
-                                      mart = mart_to_use)
-
-  } else if (organism=="mmusculus") {
-
-    mart_to_use <- biomaRt::useMart(biomart='ENSEMBL_MART_ENSEMBL',
-                                    dataset = 'mmusculus_gene_ensembl')
-
-
-  } else if(organism=="hsapiens") {
-
-    mart_to_use <- biomaRt::useMart(biomart='ENSEMBL_MART_ENSEMBL',
-                                    dataset = 'hsapiens_gene_ensembl')
-
-  } else if (organism=="athaliana") {
-
-    mart_to_use <- biomaRt::useEnsemblGenomes(biomart = "plants_mart",
-                                              dataset = "athaliana_eg_gene")
-
-  } else if (organism=="scerevisiae"){
-
-    mart_to_use <- biomaRt::useEnsemblGenomes(biomart = "fungi_mart",
-                                              dataset = "scerevisiae_eg_gene")
-
+  if (is.null(organism)) {
+    annotation_data <- biomaRt::getBM(
+      attributes = attributes_to_get,
+      filters = filters,
+      values = ensembl_ids,
+      mart = mart_to_use
+    )
+  } else if (organism == "mmusculus") {
+    mart_to_use <- biomaRt::useMart(
+      biomart = 'ENSEMBL_MART_ENSEMBL',
+      dataset = 'mmusculus_gene_ensembl'
+    )
+  } else if (organism == "hsapiens") {
+    mart_to_use <- biomaRt::useMart(
+      biomart = 'ENSEMBL_MART_ENSEMBL',
+      dataset = 'hsapiens_gene_ensembl'
+    )
+  } else if (organism == "athaliana") {
+    mart_to_use <- biomaRt::useEnsemblGenomes(
+      biomart = "plants_mart",
+      dataset = "athaliana_eg_gene"
+    )
+  } else if (organism == "scerevisiae") {
+    mart_to_use <- biomaRt::useEnsemblGenomes(
+      biomart = "fungi_mart",
+      dataset = "scerevisiae_eg_gene"
+    )
   } else {
-    stop("Please provide valid organism name (mmusculus, hsapiens, athaliana) or mart object (mart_to_use)",
-         call. = FALSE)
+    stop(
+      "Please provide valid organism name (mmusculus, hsapiens, athaliana) or mart object (mart_to_use)",
+      call. = FALSE
+    )
   }
 
-
-  annotation_data <- biomaRt::getBM(attributes=attributes_to_get,
-                                    filters = filters,
-                                    values = ensembl_ids,
-                                    mart = mart_to_use)
-
+  annotation_data <- biomaRt::getBM(
+    attributes = attributes_to_get,
+    filters = filters,
+    values = ensembl_ids,
+    mart = mart_to_use
+  )
 
   if (!is.data.frame(annotation_data) || nrow(annotation_data) == 0) {
-    stop("Could not retrieve annotation data for given transcript IDs. Check if the organism or mart_to_use was defined correctly")}
+    stop(
+      "Could not retrieve annotation data for given transcript IDs. Check if the organism or mart_to_use was defined correctly"
+    )
+  }
 
-
-  input_data_annotated <-  input_data %>% dplyr::left_join(annotation_data) %>%
+  input_data_annotated <- input_data %>%
+    dplyr::left_join(annotation_data) %>%
     dplyr::rename(ensembl_transcript_id_short = ensembl_transcript_id)
 
   return(input_data_annotated)

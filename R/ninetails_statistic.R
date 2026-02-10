@@ -64,54 +64,91 @@
 #'
 #' }
 #'
-nonA_fisher <- function(ninetails_data,
-                        grouping_factor,
-                        base,
-                        min_reads=0,
-                        transcript_id_column=NA) {
+nonA_fisher <- function(
+    ninetails_data,
+    grouping_factor,
+    base,
+    min_reads = 0,
+    transcript_id_column = NA) {
 
   # Assertions
   if (missing(ninetails_data)) {
-    stop("Ninetails data are missing. Please provide a valid ninetails_data argument",
-         call. = FALSE)
+    stop(
+      "Ninetails data are missing. Please provide a valid ninetails_data argument",
+      call. = FALSE
+    )
   }
   if (missing(base)) {
-    stop("Base is missing. Please provide 'base' argument as character string (C, G or U).",
-         call. =FALSE)
+    stop(
+      "Base is missing. Please provide 'base' argument as character string (C, G or U).",
+      call. = FALSE
+    )
   }
   if (missing(transcript_id_column)) {
-    stop("Transcript_id_column is missing. Please provide 'transcript_id_column' argument as character string.",
-         call. =FALSE)
+    stop(
+      "Transcript_id_column is missing. Please provide 'transcript_id_column' argument as character string.",
+      call. = FALSE
+    )
   }
-
 
   if (!is.data.frame(ninetails_data) || nrow(ninetails_data) == 0) {
-    stop("Empty data frame provided as an input (ninetails_data). Please provide valid input")
+    stop(
+      "Empty data frame provided as an input (ninetails_data). Please provide valid input"
+    )
   }
 
-  assert_condition(is.numeric(min_reads),
-                   "Non-numeric parameter provided (min_reads)")
-  assert_condition(grouping_factor %in% colnames(ninetails_data),
-                   paste0(grouping_factor, " is not a column of input dataset"))
-
+  assert_condition(
+    is.numeric(min_reads),
+    "Non-numeric parameter provided (min_reads)"
+  )
+  assert_condition(
+    grouping_factor %in% colnames(ninetails_data),
+    paste0(grouping_factor, " is not a column of input dataset")
+  )
 
   # if grouping factor has more than two levels
-  if (length(levels(ninetails_data[[grouping_factor]]))>2) {
-    if(is.na(condition1) && is.na(condition2)) {
+  if (length(levels(ninetails_data[[grouping_factor]])) > 2) {
+    if (is.na(condition1) && is.na(condition2)) {
       #throw error when no conditions for comparison are specified
-      stop(paste0("grouping_factor ",grouping_factor," has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"))
+      stop(paste0(
+        "grouping_factor ",
+        grouping_factor,
+        " has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"
+      ))
     } else {
       # filter input data leaving only specified conditions, dropping other factor levels
-      assert_condition(condition1 %in% levels(ninetails_data[[grouping_factor]]),
-                       paste0(condition1, " is not a level of ", grouping_factor, " (grouping_factor)"))
-      assert_condition(condition2 %in% levels(ninetails_data[[grouping_factor]]),
-                       paste0(condition2, " is not a level of ", grouping_factor, " (grouping_factor)"))
-      assert_condition(condition2 != condition1,
-                       "condition2 should be different than condition1")
-      ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(grouping_factor) %in% c(condition1,condition2)) %>% droplevels()
+      assert_condition(
+        condition1 %in% levels(ninetails_data[[grouping_factor]]),
+        paste0(
+          condition1,
+          " is not a level of ",
+          grouping_factor,
+          " (grouping_factor)"
+        )
+      )
+      assert_condition(
+        condition2 %in% levels(ninetails_data[[grouping_factor]]),
+        paste0(
+          condition2,
+          " is not a level of ",
+          grouping_factor,
+          " (grouping_factor)"
+        )
+      )
+      assert_condition(
+        condition2 != condition1,
+        "condition2 should be different than condition1"
+      )
+      ninetails_data <- ninetails_data %>%
+        dplyr::filter(
+          !!rlang::sym(grouping_factor) %in% c(condition1, condition2)
+        ) %>%
+        droplevels()
     }
-  } else if (length(levels(ninetails_data[[grouping_factor]]))==1) {
-    stop("Only 1 level present for grouping factor. Choose another groping factor for comparison")
+  } else if (length(levels(ninetails_data[[grouping_factor]])) == 1) {
+    stop(
+      "Only 1 level present for grouping factor. Choose another groping factor for comparison"
+    )
   } else {
     condition1 = levels(ninetails_data[[grouping_factor]])[1]
     condition2 = levels(ninetails_data[[grouping_factor]])[2]
@@ -120,76 +157,84 @@ nonA_fisher <- function(ninetails_data,
   # initial status code
   stats_code = codes_stats = "OK"
   # calculate group counts
-  group_counts = ninetails_data %>% dplyr::group_by(!!!rlang::syms(c(grouping_factor))) %>% dplyr::count()
+  group_counts = ninetails_data %>%
+    dplyr::group_by(!!!rlang::syms(c(grouping_factor))) %>%
+    dplyr::count()
 
   stats <- NA
 
-  if (base=="C") {
+  if (base == "C") {
     count_column <- "counts_C"
-  } else if (base=="G") {
+  } else if (base == "G") {
     count_column <- "counts_G"
-  } else if (base=="U") {
+  } else if (base == "U") {
     count_column <- "counts_U"
-  } else if (base=="all") {
+  } else if (base == "all") {
     #ninetails_data <- ninetails_data %>% dplyr::mutate(counts_nonA=)
     count_column <- "counts_nonA"
   } else {
-    stop("Wrong non-A nucleotide defined. To compute statistics, please provide 'base' argument as character string (C, G, U or all).")
+    stop(
+      "Wrong non-A nucleotide defined. To compute statistics, please provide 'base' argument as character string (C, G, U or all)."
+    )
   }
 
-
-  if (nrow(group_counts)==2) {
-    if (group_counts[1,]$n < min_reads) {
-      if (group_counts[2,]$n < min_reads) {
+  if (nrow(group_counts) == 2) {
+    if (group_counts[1, ]$n < min_reads) {
+      if (group_counts[2, ]$n < min_reads) {
         stats_code = "B_LC"
       } else {
         stats_code = "G_LC"
       }
-    } else if (group_counts[2,]$n < min_reads) {
+    } else if (group_counts[2, ]$n < min_reads) {
       stats_code = "G_LC"
     } else {
       options(scipen = 999)
 
       # summarize nonAs
-      contingency_table <- ninetails::summarize_nonA(merged_nonA_tables = ninetails_data,
-                                                     summary_factors=grouping_factor,
-                                                     transcript_id_column=transcript_id_column) %>%
-        dplyr::select(!!rlang::sym(grouping_factor),
-                      counts_blank,
-                      !!rlang::sym(count_column))
+      contingency_table <- ninetails::summarize_nonA(
+        merged_nonA_tables = ninetails_data,
+        summary_factors = grouping_factor,
+        transcript_id_column = transcript_id_column
+      ) %>%
+        dplyr::select(
+          !!rlang::sym(grouping_factor),
+          counts_blank,
+          !!rlang::sym(count_column)
+        )
       contingency_table <- as.data.frame(contingency_table) # coerce tibble to df as setting names to tibble is deprecated
       row.names(contingency_table) <- contingency_table[[grouping_factor]] # set rownames
       contingency_table[[grouping_factor]] <- NULL # drop grouping col
       stats <- suppressWarnings(stats::fisher.test(contingency_table))$p.value
-
-
     }
-  } else if (nrow(group_counts)==1) {
+  } else if (nrow(group_counts) == 1) {
     stats_code = "G_NA"
-  } else if (nrow(group_counts)==0) {
+  } else if (nrow(group_counts) == 0) {
     stats_code = "B_NA"
   } else {
     stats_code = "ERR"
   }
 
   # create output
-  stats <- tibble::tibble(p.value=stats,stats_code=as.character(stats_code))
+  stats <- tibble::tibble(
+    p.value = stats,
+    stats_code = as.character(stats_code)
+  )
 
   return(stats)
-
 }
 
-stat_codes_list = list(OK = "OK",
-                       G1_NA = "GROUP1_NA",
-                       G2_NA = "GROUP2_NA",
-                       G1_LC = "G1_LOW_COUNT",
-                       G2_LC = "G2_LOW_COUNT",
-                       B_NA = "DATA FOR BOTH GROUPS NOT AVAILABLE",
-                       B_LC = "LOW COUNTS FOR BOTH GROUPS",
-                       G_LC = "LOW COUNT FOR ONE GROUP",
-                       G_NA = "DATA FOR ONE GROUP NOT AVAILABLE",
-                       ERR = "OTHER ERROR")
-
+stat_codes_list = list(
+  OK = "OK",
+  G1_NA = "GROUP1_NA",
+  G2_NA = "GROUP2_NA",
+  G1_LC = "G1_LOW_COUNT",
+  G2_LC = "G2_LOW_COUNT",
+  B_NA = "DATA FOR BOTH GROUPS NOT AVAILABLE",
+  B_LC = "LOW COUNTS FOR BOTH GROUPS",
+  G_LC = "LOW COUNT FOR ONE GROUP",
+  G_NA = "DATA FOR ONE GROUP NOT AVAILABLE",
+  ERR = "OTHER ERROR"
+)
 
 
 #' Perform Fisher's exact test per transcript with BH p-value adjustment
@@ -284,123 +329,195 @@ stat_codes_list = list(OK = "OK",
 #' )
 #'
 #' }
-calculate_fisher <- function(ninetails_data,
-                             transcript_id_column = "ensembl_transcript_id_short",
-                             min_reads = 0,
-                             min_nonA_reads=0,
-                             grouping_factor = "sample_name",
-                             condition1=NA,
-                             condition2=NA,
-                             alpha=0.05,
-                             base="C",
-                             ...){
-
+calculate_fisher <- function(
+  ninetails_data,
+  transcript_id_column = "ensembl_transcript_id_short",
+  min_reads = 0,
+  min_nonA_reads = 0,
+  grouping_factor = "sample_name",
+  condition1 = NA,
+  condition2 = NA,
+  alpha = 0.05,
+  base = "C",
+  ...) {
   # Assertions
   if (missing(ninetails_data)) {
-    stop("Ninetails data are missing. Please provide a valid ninetails_data argument",
-         call. = FALSE)
+    stop(
+      "Ninetails data are missing. Please provide a valid ninetails_data argument",
+      call. = FALSE
+    )
   }
   if (missing(transcript_id_column)) {
-    stop("Transcript_id_column is missing. Please provide a valid transcript_id_column argument",
-         call. = FALSE)
+    stop(
+      "Transcript_id_column is missing. Please provide a valid transcript_id_column argument",
+      call. = FALSE
+    )
   }
   if (missing(min_reads)) {
-    stop("Min_reads are missing. Please provide a valid min_reads argument",
-         call. = FALSE)
+    stop(
+      "Min_reads are missing. Please provide a valid min_reads argument",
+      call. = FALSE
+    )
   }
   if (missing(min_nonA_reads)) {
-    stop("Min_nonA_reads data are missing. Please provide a valid min_nonA_reads argument",
-         call. = FALSE)
+    stop(
+      "Min_nonA_reads data are missing. Please provide a valid min_nonA_reads argument",
+      call. = FALSE
+    )
   }
   if (missing(base)) {
-    stop("Base definition is missing. Please provide a valid base argument",
-         call. = FALSE)
+    stop(
+      "Base definition is missing. Please provide a valid base argument",
+      call. = FALSE
+    )
   }
 
-  assert_condition(is.numeric(min_reads),
-                   "Min_reads must be numeric. Please provide a valid argument.")
-  assert_condition(is.numeric(min_nonA_reads),
-                   "Min_nonA_reads must be numeric. Please provide a valid argument.")
-  assert_condition(is.numeric(alpha),
-                   "Alpha must be numeric. Please provide a valid argument.")
+  assert_condition(
+    is.numeric(min_reads),
+    "Min_reads must be numeric. Please provide a valid argument."
+  )
+  assert_condition(
+    is.numeric(min_nonA_reads),
+    "Min_nonA_reads must be numeric. Please provide a valid argument."
+  )
+  assert_condition(
+    is.numeric(alpha),
+    "Alpha must be numeric. Please provide a valid argument."
+  )
 
   if (!is.data.frame(ninetails_data) || nrow(ninetails_data) == 0) {
-    stop("Empty data frame provided as an input (ninetails_data). Please provide valid input")
+    stop(
+      "Empty data frame provided as an input (ninetails_data). Please provide valid input"
+    )
   }
-
 
   # if grouping factor has more than two levels
-  if (length(levels(ninetails_data[[grouping_factor]]))>2) {
-    if(is.na(condition1) && is.na(condition2)) {
+  if (length(levels(ninetails_data[[grouping_factor]])) > 2) {
+    if (is.na(condition1) && is.na(condition2)) {
       #throw error when no conditions for comparison are specified
-      stop(paste0("grouping_factor ",grouping_factor," has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"))
-    }
-    else {
+      stop(paste0(
+        "grouping_factor ",
+        grouping_factor,
+        " has more than 2 levels. Please specify condtion1 and condition2 to select comparison pairs"
+      ))
+    } else {
       # filter input data leaving only specified conditions, dropping other factor levels
-      assert_condition(condition1 %in% levels(ninetails_data[[grouping_factor]]),
-                       paste0(condition1, " is not a level of ", grouping_factor, " (grouping_factor)"))
-      assert_condition(condition2 %in% levels(ninetails_data[[grouping_factor]]),
-                       paste0(condition2, " is not a level of ", grouping_factor, " (grouping_factor)"))
-      assert_condition(condition2 != condition1,
-                       "condition2 should be different than condition1")
+      assert_condition(
+        condition1 %in% levels(ninetails_data[[grouping_factor]]),
+        paste0(
+          condition1,
+          " is not a level of ",
+          grouping_factor,
+          " (grouping_factor)"
+        )
+      )
+      assert_condition(
+        condition2 %in% levels(ninetails_data[[grouping_factor]]),
+        paste0(
+          condition2,
+          " is not a level of ",
+          grouping_factor,
+          " (grouping_factor)"
+        )
+      )
+      assert_condition(
+        condition2 != condition1,
+        "condition2 should be different than condition1"
+      )
 
-      ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(grouping_factor) %in% c(condition1,condition2)) %>%
+      ninetails_data <- ninetails_data %>%
+        dplyr::filter(
+          !!rlang::sym(grouping_factor) %in% c(condition1, condition2)
+        ) %>%
         dplyr::mutate() %>%
         droplevels()
-
     }
-  }
-  else if (length(levels(ninetails_data[[grouping_factor]]))==1) {
-    stop("Only 1 level present for grouping factor. Choose another groping factor for comparison")
-  }
-  else {
+  } else if (length(levels(ninetails_data[[grouping_factor]])) == 1) {
+    stop(
+      "Only 1 level present for grouping factor. Choose another groping factor for comparison"
+    )
+  } else {
     condition1 = levels(ninetails_data[[grouping_factor]])[1]
     condition2 = levels(ninetails_data[[grouping_factor]])[2]
   }
 
   # filter out transcripts with not enough amount of non-A reads among the whole pool of reads:
-  mod_summarized <- ninetails_data %>% dplyr::ungroup() %>%
-    dplyr::mutate(sum_nonA = rowSums(dplyr::across(dplyr::starts_with('prediction_')))) %>%
-    dplyr::group_by(!!!rlang::syms(c(transcript_id_column,grouping_factor))) %>%
-    dplyr::summarise(dplyr::across(c(sum_nonA), list(counts = ~ sum(.x != 0))), .groups= 'drop') %>%
-    dplyr::rename_with(~stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'), 3:dplyr::last_col())
+  mod_summarized <- ninetails_data %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      sum_nonA = rowSums(dplyr::across(dplyr::starts_with('prediction_')))
+    ) %>%
+    dplyr::group_by(
+      !!!rlang::syms(c(transcript_id_column, grouping_factor))
+    ) %>%
+    dplyr::summarise(
+      dplyr::across(c(sum_nonA), list(counts = ~ sum(.x != 0))),
+      .groups = 'drop'
+    ) %>%
+    dplyr::rename_with(
+      ~ stringr::str_replace(.x, '^\\w+_(\\w+)_(\\w+)', '\\2_\\1'),
+      3:dplyr::last_col()
+    )
   # apply filtering criterion (minimal nonA read content)
-  mod_summarized_filtered <- mod_summarized %>% dplyr::filter(counts_nonA>=min_nonA_reads)
+  mod_summarized_filtered <- mod_summarized %>%
+    dplyr::filter(counts_nonA >= min_nonA_reads)
   #extract filtered trans
   contig <- as.name(transcript_id_column)
-  mod_summarized_filtered <-  unique(mod_summarized_filtered[[contig]])
+  mod_summarized_filtered <- unique(mod_summarized_filtered[[contig]])
 
-  ninetails_data <- ninetails_data %>% dplyr::filter(!!rlang::sym(contig) %in% mod_summarized_filtered)
+  ninetails_data <- ninetails_data %>%
+    dplyr::filter(!!rlang::sym(contig) %in% mod_summarized_filtered)
 
   #ninetails_data <- ninetails_data[ninetails_data$contig %in% mod_summarized_filtered,]
   #ninetails_data <- ninetails_data[transcript_id_column %in% mod_summarized_filtered,]
 
-
   ninetails_data_stat <- ninetails_data %>%
-    dplyr::mutate(transcript_id=get(c(transcript_id_column))) %>%
+    dplyr::mutate(transcript_id = get(c(transcript_id_column))) %>%
     dplyr::group_by(get(c(transcript_id_column))) %>%
     tidyr::nest()
 
   message("calculating statistics")
   ninetails_data_stat <- ninetails_data_stat %>%
-    dplyr::mutate(stats=purrr::map(data,ninetails::nonA_fisher,grouping_factor=grouping_factor,min_reads=min_reads, base=base,transcript_id_column = transcript_id_column)) %>%
-    dplyr::select(-data) %>% tidyr::unnest(cols = c(stats)) %>% dplyr::rename(!!transcript_id_column := "get(c(transcript_id_column))")
-
+    dplyr::mutate(
+      stats = purrr::map(
+        data,
+        ninetails::nonA_fisher,
+        grouping_factor = grouping_factor,
+        min_reads = min_reads,
+        base = base,
+        transcript_id_column = transcript_id_column
+      )
+    ) %>%
+    dplyr::select(-data) %>%
+    tidyr::unnest(cols = c(stats)) %>%
+    dplyr::rename(!!transcript_id_column := "get(c(transcript_id_column))")
 
   message("Finished")
 
   message("Adjusting p.value")
-  ninetails_data_stat$padj <- stats::p.adjust(ninetails_data_stat$p.value, method = "BH")
+  ninetails_data_stat$padj <- stats::p.adjust(
+    ninetails_data_stat$p.value,
+    method = "BH"
+  )
 
   # create significance factor
   ninetails_data_stat <- ninetails_data_stat %>%
-    dplyr::mutate(significance = dplyr::case_when(is.na(padj)  ~ "NotSig",
-                                                  (padj < alpha) ~ paste0("FDR<", alpha),
-                                                  TRUE ~ "NotSig"))
-  ninetails_data_stat$stats_code <- sapply(ninetails_data_stat$stats_code,
-                                           FUN = function(x) {stat_codes_list[[x]]},simplify = "vector",USE.NAMES = FALSE) %>% unlist()
-
-
+    dplyr::mutate(
+      significance = dplyr::case_when(
+        is.na(padj) ~ "NotSig",
+        (padj < alpha) ~ paste0("FDR<", alpha),
+        TRUE ~ "NotSig"
+      )
+    )
+  ninetails_data_stat$stats_code <- sapply(
+    ninetails_data_stat$stats_code,
+    FUN = function(x) {
+      stat_codes_list[[x]]
+    },
+    simplify = "vector",
+    USE.NAMES = FALSE
+  ) %>%
+    unlist()
 
   ninetails_data_stat <- ninetails_data_stat %>% dplyr::arrange(padj)
 
