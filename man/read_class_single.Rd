@@ -2,31 +2,62 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{read_class_single}
 \alias{read_class_single}
-\title{Reads ninetails read_classes dataframe from file.}
+\title{Reads ninetails read_classes data frame from file.}
 \usage{
 read_class_single(class_path, sample_name = NA)
 }
 \arguments{
-\item{class_path}{a character string. Path to ninetails output file}
+\item{class_path}{Character string. Path to the ninetails
+\code{read_classes} output file (\code{.tsv}).}
 
-\item{sample_name}{a sample identifier (optional), provided as a character
-string. If specified will be included as an additional column sample_name.
-
-Function based on PK (smaegol) NanoTail read_polya_single
-https://github.com/LRB-IIMCB/nanotail/
-Many thanks to the NanoTail developer for help and advice!}
+\item{sample_name}{Character string (optional, default \code{NA}). If
+specified, added as a factor column \code{sample_name}. Overwrites any
+existing \code{sample_name} column with a warning.}
 }
 \value{
-a [tibble] with read_classes predictions
+A tibble containing read_classes predictions with the following
+  additional columns (when GENCODE contigs are present):
+\describe{
+  \item{transcript}{Character. Gene symbol parsed from GENCODE contig.}
+  \item{ensembl_transcript_id_full}{Character. Ensembl transcript ID
+    with version number.}
+  \item{ensembl_transcript_id_short}{Character. Ensembl transcript ID
+    without version number.}
+}
 }
 \description{
-This is the basic function used to import read_classes output from check_tails_guppy
-to R.
+Imports a single \code{read_classes} output file produced by
+\code{\link{check_tails_guppy}} (or other ninetails pipelines) into R.
+Optionally attaches a sample identifier and parses GENCODE-style contig
+names into Ensembl transcript IDs.
 }
+\details{
+After loading, the function applies
+\code{\link{correct_labels}} to ensure backward compatibility with the
+label changes introduced in v0.9 (decorated/blank/unclassified). If the
+\code{contig} column contains GENCODE-formatted identifiers, three
+additional columns are created: \code{transcript} (gene symbol),
+\code{ensembl_transcript_id_full} (with version), and
+\code{ensembl_transcript_id_short} (without version).
+}
+\section{Acknowledgements}{
+
+Function based on \code{read_polya_single} from the NanoTail package
+by P. Krawczyk (smaegol):
+\url{https://github.com/LRB-IIMCB/nanotail/}.
+}
+
 \examples{
 \dontrun{
 
 class_path <- "/directory/with/ninetails/read_class_output.tsv"
 class_data <- ninetails::read_class_single(class_path)
+
 }
+}
+\seealso{
+\code{\link{read_class_multiple}} for batch loading,
+  \code{\link{correct_labels}} for the backward-compatibility step,
+  \code{\link{check_tails_guppy}} for the pipeline that produces the
+  input file.
 }

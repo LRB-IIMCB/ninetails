@@ -2,61 +2,68 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{correct_class_data}
 \alias{correct_class_data}
-\title{Corrects the classification of reads contained in class_data table}
+\title{Corrects the classification of reads contained in the class_data table.}
 \usage{
 correct_class_data(residue_data_edited, class_data)
 }
 \arguments{
-\item{residue_data_edited}{[dataframe] A dataframe or tibble containing
-corrected nonA residue predictions produced by \code{\link{correct_residue_data}}
-function.}
+\item{residue_data_edited}{Data frame or tibble. Corrected non-A
+residue predictions produced by \code{\link{correct_residue_data}}.
+Must contain columns \code{mode_pos}, \code{seg_err_quart}, and
+\code{qc_pos}.}
 
-\item{class_data}{[dataframe] A dataframe or tibble containing read_classes
-predictions made by ninetails pipeline}
+\item{class_data}{Data frame or tibble containing read_classes
+predictions from the ninetails pipeline.}
 }
 \value{
-A tibble with corrected class_data (potential artifacts are reclassified).
-In this dataframe, in comparison to the original (raw) class_data, two additional
-columns are present:\itemize{
-\item corr_class - result of corrected classification
-\item corr_comments - comment adjusted accordingly
+A tibble identical to \code{class_data} with two additional
+  columns:
+\describe{
+  \item{corr_class}{Character. Corrected classification: original
+    \code{class} value, or \code{"blank"} for artefact-only reads.}
+  \item{corr_comments}{Character. Corrected comment: original
+    \code{comments} value, or \code{"MPU"} for reclassified reads.}
 }
-
-For more details check documentation of \code{\link{create_outputs}} function
-and \code{\link{reclassify_ninetails_data}} function.
 }
 \description{
-Introduces additional columns to the class_data ('corr_comments' and
-'corr_class'), with reclassification based on positional data
-(tail lengths and distribution of non-A residuals).
+Introduces two additional columns (\code{corr_class} and
+\code{corr_comments}) to the \code{class_data} table, reclassifying
+reads based on the positional quality flags computed by
+\code{\link{correct_residue_data}}. Reads whose \emph{all} non-A
+positions were flagged as ambiguous (\code{qc_pos == "N"}) are
+downgraded from \code{"decorated"} to \code{"blank"}.
 }
 \details{
-Based on these columns, the classification can be adjusted, which minimizes
-the risk of including nanopolish artifacts.
-
----CAUTION---
-
-Reads that contain only non-A nucleotides that are likely to be nanopolish
-artifacts are reclassified in the output table as "blank" ("corr_class"
-column), and their comment is changed from "YAY" to "MPU" ("corr_comments" column).
-The latter is due to maintain compatibility with tag system used in plotting
-functions.
-
-It is recommended that the output of the \code{\link{reclassify_ninetails_data}}
-function be used in further analyses, which is optimized for this purpose.
-
-In order to plot the output of this function directly, one should rename
-'corr_comments' and 'corr_class' columns to 'comments' and 'class'.
+The reclassification logic: for each read, if every non-A residue
+position has \code{qc_pos == "N"}, the read is reclassified as
+\code{"blank"} with comment \code{"MPU"} (to maintain compatibility
+with the tag system used in plotting functions). Reads with at least
+one \code{qc_pos == "Y"} position retain their original class and
+comment.
 }
+\section{Caution}{
+
+It is recommended to use \code{\link{reclassify_ninetails_data}}
+for downstream analyses, as it wraps this function together with
+\code{\link{correct_residue_data}} and performs the necessary column
+renaming. If using this function directly, rename \code{corr_class}
+and \code{corr_comments} to \code{class} and \code{comments} before
+plotting.
+}
+
 \examples{
 \dontrun{
-# the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
-# is required (below denoted as "results") to run the following example
-# for details see the documentation for the \code{\link{check_tails_guppy}}
-# and \code{\link{create_outputs}}
 
-class_data_corrected <- ninetails::correct_class_data(residue_data_edited = residue_data_edited,
-                                                      class_data=results[[1]])
+class_data_corrected <- ninetails::correct_class_data(
+  residue_data_edited = residue_data_edited,
+  class_data = results[[1]])
+
 }
 
+}
+\seealso{
+\code{\link{correct_residue_data}} for the preceding step,
+  \code{\link{reclassify_ninetails_data}} for the high-level wrapper,
+  \code{\link{create_outputs}} for the pipeline that produces the
+  input data.
 }

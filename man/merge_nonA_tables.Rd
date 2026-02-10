@@ -2,49 +2,59 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{merge_nonA_tables}
 \alias{merge_nonA_tables}
-\title{Merges ninetails tabular outputs (read classes and nonadenosine residue data)
-to produce one concise table for all data.}
+\title{Merges ninetails tabular outputs (read classes and nonadenosine residue
+data) to produce one concise table.}
 \usage{
 merge_nonA_tables(class_data, residue_data, pass_only = TRUE)
 }
 \arguments{
-\item{class_data}{A dataframe or tibble containing read_classes predictions
-made by ninetails pipeline}
+\item{class_data}{Data frame or tibble containing read_classes
+predictions produced by the ninetails pipeline.}
 
-\item{residue_data}{A dataframe or tibble containig non-A residue predictions
-made by ninetails pipeline}
+\item{residue_data}{Data frame or tibble containing non-A residue
+predictions produced by the ninetails pipeline.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.
-IMPORTANT NOTE! This option must be set the same as it was during the
-pipeline output production.}
+\item{pass_only}{Logical \code{[TRUE]}. If \code{TRUE}, only reads
+tagged by nanopolish as \code{"PASS"} are included. If \code{FALSE},
+reads tagged as \code{"PASS"} or \code{"SUFFCLIP"} are included.
+\strong{Must match the setting used during pipeline execution.}}
 }
 \value{
-a tibble with summarized info from both ninetails outputs
+A tibble with summarised information from both ninetails
+  outputs: all columns from \code{class_data} plus
+  \code{prediction_C}, \code{prediction_G}, \code{prediction_U}, and
+  \code{nonA_residues}.
 }
 \description{
-Each read is represented by single row.
-The output of this function is a tibble containing additional columns.
-The "prediction" column from the residue_data is spread to 3 separate columns
-(named with "prediction_" prefix), containing either C, G or U hits per read,
-respectively. "Hit" is understood as a single presence of a given non-A residue.
+Combines the \code{read_classes} and \code{nonadenosine_residues} data
+frames into a single wide-format tibble with one row per read. The
+\code{prediction} column from the residue data is spread into three
+columns (\code{prediction_C}, \code{prediction_G}, \code{prediction_U})
+via \code{\link{spread_nonA_residues}}, and a CIGAR-like
+\code{nonA_residues} summary column is appended.
 }
 \details{
-In addition, an extra "nonA_residues" column is located at the end of
-the output table. It contains all non-A residues positions summarized (per read),
-given from the 5' to 3' end, separated by ":".
-
-In this table, only reads that have been classified by ninetails
-are included (reads marked "unclassified" are omitted from the analysis).
+Unclassified reads are excluded before merging. The quality-tag filter
+(\code{pass_only}) must match the setting used during pipeline
+execution to ensure consistency. After the full join, any \code{NA}
+values in numeric columns are replaced with 0.
 }
 \examples{
 \dontrun{
 
-merged_tables <- ninetails::merge_nonA_tables(class_data=class_data,
-                                              residue_data=residue_data,
-                                              pass_only=TRUE)
+merged_tables <- ninetails::merge_nonA_tables(
+  class_data = class_data,
+  residue_data = residue_data,
+  pass_only = TRUE)
 
 }
+}
+\seealso{
+\code{\link{spread_nonA_residues}} for the reshaping step,
+  \code{\link{summarize_nonA}} for transcript-level summaries from the
+  merged table,
+  \code{\link{calculate_fisher}} for statistical testing on the merged
+  table,
+  \code{\link{read_class_single}} and \code{\link{read_residue_single}}
+  for loading the input data.
 }

@@ -2,32 +2,49 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{spread_nonA_residues}
 \alias{spread_nonA_residues}
-\title{Reshapes nonadenosine_residues dataframe.}
+\title{Reshapes nonadenosine_residues data frame to wide format.}
 \usage{
 spread_nonA_residues(residue_data)
 }
 \arguments{
-\item{residue_data}{A dataframe or tibble containig non-A residue predictions
-made by ninetails pipeline (filename ends with "_nonadenosine_residues.tsv")}
+\item{residue_data}{Data frame or tibble containing non-A residue
+predictions produced by the ninetails pipeline (filename typically
+ends with \code{_nonadenosine_residues.tsv}).}
 }
 \value{
-a tibble with spread prediction column (3 cols instead)
+A tibble in wide format with one row per read. In addition to
+  the original columns (minus \code{est_nonA_pos} and
+  \code{prediction}), the following are added:
+\describe{
+  \item{prediction_C}{Integer. Number of C residues detected in the
+    read.}
+  \item{prediction_G}{Integer. Number of G residues detected in the
+    read.}
+  \item{prediction_U}{Integer. Number of U residues detected in the
+    read.}
+  \item{nonA_residues}{Character. CIGAR-like string summarising all
+    non-A positions (e.g. \code{"C12:G25:U40"}).}
+}
 }
 \description{
-Spreads counts of the nonA residues in decorated reads in
-*_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
-to 3 separate columns, each containing respective C, G, U prediction
-per given read.
-}
-\details{
-In addition, an extra "nonA_residues" column is located at the end of
-the output table. It contains all non-A residues positions summarized (per read),
-given from the 5' to 3' end, separated by ":".
+Pivots the \code{prediction} column of the
+\code{nonadenosine_residues} data frame into three separate columns
+(\code{prediction_C}, \code{prediction_G}, \code{prediction_U}), each
+containing the count of respective non-A residues per read. An
+additional \code{nonA_residues} column provides a CIGAR-like summary
+string listing all non-A positions from 5' to 3', separated by
+\code{":"}.
 }
 \examples{
 \dontrun{
 
-spread_table <- ninetails::spread_nonA_residues(residue_data=residue_data)
+spread_table <- ninetails::spread_nonA_residues(
+  residue_data = residue_data)
 
 }
+}
+\seealso{
+\code{\link{merge_nonA_tables}} which calls this function
+  internally,
+  \code{\link{read_residue_single}} for loading residue data.
 }

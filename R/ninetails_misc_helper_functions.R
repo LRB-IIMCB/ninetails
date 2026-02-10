@@ -368,8 +368,8 @@ check_fast5_filetype <- function(workspace, basecall_group) {
 #' }
 #'
 winsorize_signal <- function(signal) {
-  #assertions
 
+  #assertions
   if (missing(signal)) {
     stop(
       "Signal vector is missing. Please provide a valid signal argument.",
@@ -677,6 +677,7 @@ correct_labels <- function(df) {
 #'
 #' }
 filter_dorado_summary <- function(dorado_summary) {
+
   # If input is a file path, read with vroom
   if (is.character(dorado_summary)) {
     dorado_summary <- vroom::vroom(dorado_summary, delim = "\t")

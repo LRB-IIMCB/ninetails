@@ -3,35 +3,71 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{split_tail_centered_trainingset}
 \alias{split_tail_centered_trainingset}
-\title{Extracts fragments of poly(A) tail signal containing potential modifications
-along with its delimitation (positional indices; coordinates) within the tail.}
+\title{Extracts decoration-centered fragments of poly(A) tail signal along
+with positional coordinates.}
 \usage{
 split_tail_centered_trainingset(readname, tail_feature_list)
 }
 \arguments{
-\item{readname}{character string. Name of the given read within the
-analyzed dataset.}
+\item{readname}{Character string. Name (UUID) of the given read.}
 
-\item{tail_feature_list}{list object produced by create_tail_feature_list
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list_trainingset}}.}
 }
 \value{
-a list object (nested) containing 4 categories: resulting fragments
-(chunk_sequence), start coordinate of given fragment (chunk_start_pos)
-its' end coordinate (chunk_end_pos) and "pseudomoves" (pseudomoves)
-corresponding to the given signal chunk arranged by the signal ID and
-positional indices (WARNING! from 3' end!).
+A named nested list where each element corresponds to one chunk
+  and contains:
+\describe{
+  \item{chunk_sequence}{Numeric vector (length 100). The signal
+    fragment centered on the potential modification.}
+  \item{chunk_start_pos}{Integer. Start index of the chunk within the
+    full tail signal (may be negative for left-padded chunks).}
+  \item{chunk_end_pos}{Integer. End index of the chunk within the full
+    tail signal.}
+  \item{pseudomoves}{Numeric vector (length 100). Recomputed
+    pseudomoves for the chunk. Coordinates are from the 3' end.}
+}
 }
 \description{
-This version of the function contains an additional category (pseudomoves)
-within the each chunk sublist, therefore is intended for preparation the
-training/validation data.
+Splits a single read's poly(A) tail signal into fixed-length (100
+data-point) chunks, each centered on a potential non-A decoration
+detected from the pseudomove vector. Chunks whose start position falls
+before index 1 are left-padded with values randomly sampled from the
+three most frequent signal values.
+}
+\details{
+This training-set variant includes an additional \code{pseudomoves}
+element in each chunk sublist, making the output suitable for
+supervised training/validation data preparation. Pseudomoves for each
+extracted chunk are recomputed by calling
+\code{\link{filter_signal_by_threshold}} on the chunk sequence.
+
+The centering procedure:
+\enumerate{
+  \item Runs RLE on the pseudomove vector.
+  \item Selects runs of length >= 4 with non-zero values (empirical
+        modification threshold).
+  \item Centers a 100-element window on the midpoint of each selected
+        run.
+}
+
+Chunk names follow the convention \code{<readname>_<index>}, where
+\code{index} is the sequential position of the modification within
+the read (numbered from the 3' end).
 }
 \examples{
 \dontrun{
 
-split_tail_centered_trainingset(readname= "1234-anexample-r3adn4m3",
-                                tail_feature_list = tail_feature_list)
+split_tail_centered_trainingset(
+  readname = "1234-anexample-r3adn4m3",
+  tail_feature_list = tail_feature_list)
 
 }
+}
+\seealso{
+\code{\link{create_tail_chunk_list_trainingset}} for the
+  parallel wrapper that calls this function,
+  \code{\link{filter_signal_by_threshold}} for pseudomove recomputation
+  on individual chunks,
+  \code{\link{split_tail_centered}} for the production counterpart.
 }

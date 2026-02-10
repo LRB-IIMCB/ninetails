@@ -72,14 +72,13 @@
 #'}
 #
 
-plot_squiggle_fast5 <- function(
-  readname,
-  nanopolish,
-  sequencing_summary,
-  workspace,
-  basecall_group = "Basecall_1D_000",
-  moves = FALSE,
-  rescale = FALSE) {
+plot_squiggle_fast5 <- function(readname,
+                                nanopolish,
+                                sequencing_summary,
+                                workspace,
+                                basecall_group = "Basecall_1D_000",
+                                moves = FALSE,
+                                rescale = FALSE) {
 
   #Assertions
   if (missing(readname)) {
@@ -386,14 +385,13 @@ plot_squiggle_fast5 <- function(
 #'}
 #
 
-plot_tail_range_fast5 <- function(
-  readname,
-  nanopolish,
-  sequencing_summary,
-  workspace,
-  basecall_group = "Basecall_1D_000",
-  moves = FALSE,
-  rescale = FALSE) {
+plot_tail_range_fast5 <- function(readname,
+                                  nanopolish,
+                                  sequencing_summary,
+                                  workspace,
+                                  basecall_group = "Basecall_1D_000",
+                                  moves = FALSE,
+                                  rescale = FALSE) {
 
   #Assertions
   if (missing(readname)) {
@@ -776,7 +774,9 @@ plot_tail_chunk <- function(chunk_name, tail_chunk_list) {
 #'print(example_gaf)
 #'
 #'}
-plot_gaf <- function(gaf_name, gaf_list, save_file = FALSE) {
+plot_gaf <- function(gaf_name,
+                     gaf_list,
+                     save_file = FALSE) {
   #assertions
   if (missing(gaf_name)) {
     stop(
@@ -1009,11 +1009,10 @@ plot_multiple_gaf <- function(gaf_list, num_cores) {
 #' }
 #'
 #'
-plot_class_counts <- function(
-  class_data,
-  grouping_factor = NA,
-  frequency = TRUE,
-  type = "R") {
+plot_class_counts <- function(class_data,
+                              grouping_factor = NA,
+                              frequency = TRUE,
+                              type = "R") {
 
   #assertions
   if (missing(class_data)) {
@@ -1334,11 +1333,10 @@ plot_class_counts <- function(
 #'                                grouping_factor="sample_name",
 #'                                frequency=TRUE)
 #' }
-plot_residue_counts <- function(
-  residue_data,
-  grouping_factor = NA,
-  by_read = FALSE,
-  frequency = TRUE) {
+plot_residue_counts <- function(residue_data,
+                                grouping_factor = NA,
+                                by_read = FALSE,
+                                frequency = TRUE) {
 
   #assertions
   if (missing(residue_data)) {
@@ -1662,14 +1660,13 @@ plot_nanopolish_qc <- function(processing_info, frequency = TRUE) {
 #'
 #'
 #'}
-plot_tail_distribution <- function(
-  input_data,
-  variable_to_plot = "polya_length",
-  grouping_factor = NA,
-  max_length = NA,
-  value_to_show = NA,
-  ndensity = T,
-  title = F) {
+plot_tail_distribution <- function(input_data,
+                                   variable_to_plot = "polya_length",
+                                   grouping_factor = NA,
+                                   max_length = NA,
+                                   value_to_show = NA,
+                                   ndensity = T,
+                                   title = F) {
 
   # Assertions
   if (missing(input_data)) {
@@ -1856,13 +1853,13 @@ plot_tail_distribution <- function(
 #'
 #'}
 #'
-plot_panel_characteristics <- function(
-  input_residue_data,
-  input_class_data = NULL,
-  input_merged_nonA_tables_data = NULL,
-  type = "default",
-  max_length = 300,
-  direction_5_prime = TRUE) {
+plot_panel_characteristics <- function(input_residue_data,
+                                       input_class_data = NULL,
+                                       input_merged_nonA_tables_data = NULL,
+                                       type = "default",
+                                       max_length = 300,
+                                       direction_5_prime = TRUE) {
+
   # ASSERTIONS
   ##############################################################################
 
@@ -2416,7 +2413,9 @@ plot_panel_characteristics <- function(
 #' ninetails::plot_rug_density(residue_data=residue_data, base="C", max_length=100)
 #' }
 #'
-plot_rug_density <- function(residue_data, base, max_length) {
+plot_rug_density <- function(residue_data,
+                             base,
+                             max_length) {
   #assertions
   if (base == "C") {
     colorscale <- ggplot2::scale_fill_manual(values = c("#3a424f"))

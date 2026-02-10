@@ -64,10 +64,10 @@
 #' )
 #'
 #' }
-extract_polya_data <- function(
-  nanopolish,
-  sequencing_summary,
-  pass_only = TRUE) {
+extract_polya_data <- function(nanopolish,
+                               sequencing_summary,
+                               pass_only = TRUE) {
+
   if (missing(nanopolish)) {
     stop(
       "Nanopolish polya output is missing. Please provide a valid nanopolish argument.",
@@ -242,11 +242,10 @@ extract_polya_data <- function(
 #' )
 #'
 #' }
-extract_tail_data <- function(
-  readname,
-  polya_summary,
-  workspace,
-  basecall_group) {
+extract_tail_data <- function(readname,
+                              polya_summary,
+                              workspace,
+                              basecall_group) {
 
   #Assertions
   if (missing(readname)) {
@@ -479,13 +478,12 @@ extract_tail_data <- function(
 #'
 #' }
 #'
-create_tail_feature_list <- function(
-  nanopolish,
-  sequencing_summary,
-  workspace,
-  num_cores,
-  basecall_group,
-  pass_only = TRUE) {
+create_tail_feature_list <- function(nanopolish,
+                                     sequencing_summary,
+                                     workspace,
+                                     num_cores,
+                                     basecall_group,
+                                     pass_only = TRUE) {
 
   # Assertions
   if (missing(num_cores)) {
@@ -683,8 +681,9 @@ create_tail_feature_list <- function(
 #'
 #' }
 filter_signal_by_threshold <- function(signal) {
-  # variable binding/ Initialize vectors for incremental subset assignment
-  baseline <- std_cutoff <- NULL # x <- sd <- baseline <- std_cutoff <- NULL
+
+  # Initialize vectors for incremental subset assignment
+  baseline <- std_cutoff <- NULL
 
   #assertions
   if (missing(signal)) {
@@ -714,7 +713,7 @@ filter_signal_by_threshold <- function(signal) {
 
   # Empyrical parameters:
   adaptive_sampling_window <- 100 # datapoints window for adjusting algo
-  SD_threshold <- 3.5 # how many SD tresholds from avg signal pseudomove should be reported
+  SD_threshold <- 3.5 # how many SD thresholds from avg signal pseudomove should be reported
 
   pseudomoves <- rep(0, length(adjusted_signal))
   filtered_signal <- adjusted_signal
@@ -838,6 +837,7 @@ filter_signal_by_threshold <- function(signal) {
 #'
 #' }
 split_tail_centered <- function(readname, tail_feature_list) {
+
   #assertions
   if (missing(readname)) {
     stop(
@@ -989,6 +989,7 @@ split_tail_centered <- function(readname, tail_feature_list) {
 #'
 #' }
 create_tail_chunk_list <- function(tail_feature_list, num_cores) {
+
   # initial assertions
   if (missing(num_cores)) {
     stop(
@@ -1146,6 +1147,7 @@ create_tail_chunk_list <- function(tail_feature_list, num_cores) {
 #'
 #' }
 create_gaf <- function(tail_chunk, method = "s") {
+
   #assertions
   if (missing(tail_chunk)) {
     stop(
@@ -1242,6 +1244,7 @@ create_gaf <- function(tail_chunk, method = "s") {
 #'
 #' }
 combine_gafs <- function(tail_chunk) {
+
   #assertions
   if (missing(tail_chunk)) {
     stop(
@@ -1305,6 +1308,7 @@ combine_gafs <- function(tail_chunk) {
 #'
 #' }
 create_gaf_list <- function(tail_chunk_list, num_cores) {
+
   # Assertions
   if (missing(num_cores)) {
     stop(
@@ -1420,6 +1424,7 @@ create_gaf_list <- function(tail_chunk_list, num_cores) {
 #'
 #' }
 predict_gaf_classes <- function(gaf_list) {
+
   #assertions
   if (missing(gaf_list)) {
     stop(
@@ -1568,14 +1573,13 @@ predict_gaf_classes <- function(gaf_list) {
 #' }
 #'
 #'
-create_outputs <- function(
-  tail_feature_list,
-  tail_chunk_list,
-  nanopolish,
-  predicted_list,
-  num_cores,
-  pass_only = TRUE,
-  qc = TRUE) {
+create_outputs <- function(tail_feature_list,
+                           tail_chunk_list,
+                           nanopolish,
+                           predicted_list,
+                           num_cores,
+                           pass_only = TRUE,
+                           qc = TRUE) {
 
   #assertions
   if (missing(tail_feature_list)) {

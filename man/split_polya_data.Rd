@@ -2,35 +2,39 @@
 % Please edit documentation in R/ninetails_check_tails_guppy.R
 \name{split_polya_data}
 \alias{split_polya_data}
-\title{Split large poly(A) data file into smaller polya_parts}
+\title{Split large poly(A) data file into smaller parts.}
 \usage{
 split_polya_data(polya_data, part_size = 1e+05, save_dir)
 }
 \arguments{
-\item{polya_data}{character string. Full path of the .tsv file produced
-by either nanopolish polya function or tailfindr. Only DRS-derived tables are
-accepted. In case of tailfindr output, it would be immediately converted to
-nanopolish-like format.}
+\item{polya_data}{Character string or data frame. Full path of the
+poly(A) length file (\code{.tsv}), or an in-memory data frame.}
 
-\item{part_size}{numeric [100000] (optional). If provided, defines maximum
-number of rows in the poly(A) length containing input processed at once.
-This value must be >=1000 (defaults to 1000000).If the size of
-nanopolish/tailfindr output exceeds default 100000 rows, the input dataframe
-would be splitted into parts and processed sequentially to avoid memory
-overflow and pipeline crush.}
+\item{part_size}{Numeric \code{[100000]}. Maximum number of rows per
+output part file.}
 
-\item{save_dir}{character string. Full path of the directory where the output
-files containing the tail composition information should be stored.}
+\item{save_dir}{Character string. Full path of the directory where
+the \code{polya_data_parts} subdirectory will be created.}
 }
 \value{
-List of file paths to created polya_parts
+Character vector of file paths to the created part files,
+  named \code{polya_data_part_<i>_of_<n>.tsv}.
 }
 \description{
-This function is not intended to be used as a standalone function, i.e., outside
-the \code{\link{check_tails_guppy}} function. It does not affect data
-processing; it only provides code to store results in files. It is enclosed
-as a separate function, called by the wrapper, to keep the code clean and
-modular, facilitating further development. Therefore, it should not be called
-manually by the user.
+Divides a poly(A) length table (nanopolish or tailfindr output) into
+smaller files of at most \code{part_size} rows each, saving them to a
+\code{polya_data_parts} subdirectory within \code{save_dir}. This
+prevents memory overflow when processing large datasets.
+}
+\details{
+This function is called internally by
+\code{\link{check_tails_guppy}} when the input exceeds the
+\code{part_size} threshold. It is not intended to be called directly
+by the user.
+}
+\seealso{
+\code{\link{check_tails_guppy}} which calls this function,
+  \code{\link{process_polya_parts}} which processes the resulting
+  parts.
 }
 \keyword{internal}

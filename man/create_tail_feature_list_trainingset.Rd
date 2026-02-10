@@ -3,7 +3,7 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_tail_feature_list_trainingset}
 \alias{create_tail_feature_list_trainingset}
-\title{Extracts features of polyA tails of ONT RNA reads required for finding
+\title{Extracts features of poly(A) tails of ONT RNA reads required for finding
 non-A nucleotides within the given tails.}
 \usage{
 create_tail_feature_list_trainingset(
@@ -16,44 +16,70 @@ create_tail_feature_list_trainingset(
 )
 }
 \arguments{
-\item{nanopolish}{character string. Full path of the .tsv file produced
-by nanopolish polya function.}
+\item{nanopolish}{Character string. Full path of the \code{.tsv} file
+produced by \code{nanopolish polya}.}
 
-\item{sequencing_summary}{character string. Full path of the .txt file
-with sequencing summary.}
+\item{sequencing_summary}{Character string. Full path of the \code{.txt}
+file with the sequencing summary.}
 
-\item{workspace}{character string. Full path of the directory to search the
-basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory containing
+basecalled multi-Fast5 files.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the Fast5 file hierarchy from which the data should be extracted.}
+\item{basecall_group}{Character string \code{["Basecall_1D_000"]}. Name of
+the level in the Fast5 file hierarchy from which the data should be
+extracted.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical \code{[TRUE]}. If \code{TRUE}, only reads tagged
+by nanopolish as \code{"PASS"} are retained. Otherwise, reads tagged as
+\code{"PASS"} or \code{"SUFFCLIP"} are included.}
 }
 \value{
-A list containing read information organized by the read ID
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list with three elements:
+\describe{
+  \item{tail_feature_list}{Named list of per-read feature lists (as
+    returned by \code{\link{extract_tail_data_trainingset}}).}
+  \item{zeromoved_readnames}{Character vector. Read IDs discarded because
+    their tail moves summed to zero.}
+  \item{nonpseudomoved_readnames}{Character vector. Read IDs discarded
+    because their pseudomove chains were too short (< 4).}
+}
+Always assign this returned list to a variable; printing the full list
+to the console may crash the R session.
 }
 \description{
-This is the version of the function useful to produce the training set
-for CNN. Slightly different from the original one.
+This is the training-set variant of the feature extraction wrapper. It
+processes all reads in parallel, calling
+\code{\link{extract_tail_data_trainingset}} for each read, then filters
+out reads with zero-moved tails or pseudomove chains too short to
+represent potential modifications.
+}
+\details{
+The function differs from its production counterpart in that it retains
+reads whose pseudomove chains satisfy a length >= 4 criterion, which is
+required for subsequent modification-centered chunk splitting. Two
+categories of discarded reads are tracked (zero-moved and
+non-pseudomoved) and returned alongside the valid feature list.
 }
 \examples{
 \dontrun{
 
-create_tail_feature_list_trainingset(nanopolish = '/path/to/file',
-                                     sequencing_summary = '/path/to/file',
-                                     workspace = '/path/to/guppy/workspace',
-                                     num_cores = 10,
-                                     basecall_group = 'Basecall_1D_000')
+create_tail_feature_list_trainingset(
+  nanopolish = '/path/to/file',
+  sequencing_summary = '/path/to/file',
+  workspace = '/path/to/guppy/workspace',
+  num_cores = 10,
+  basecall_group = 'Basecall_1D_000')
 
 }
 
+}
+\seealso{
+\code{\link{extract_tail_data_trainingset}} for the per-read
+  extraction step,
+  \code{\link{create_tail_chunk_list_trainingset}} for the next pipeline
+  step,
+  \code{\link{extract_polya_data}} for input data preparation.
 }

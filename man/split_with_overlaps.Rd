@@ -8,28 +8,51 @@
 split_with_overlaps(readname, tail_feature_list, segment, overlap)
 }
 \arguments{
-\item{readname}{character string. Name of the given ONT signal.}
+\item{readname}{Character string. Name (UUID) of the given ONT signal.}
 
-\item{tail_feature_list}{list object produced by create_tail_feature_list
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list_A}}.}
 
-\item{segment}{numeric [1]. Length of the chunk(s) to be created.}
+\item{segment}{Numeric \code{[1]}. Length (in data points) of each
+chunk to be created.}
 
-\item{overlap}{numeric [1]. Length of the overlap between the chunks.}
+\item{overlap}{Numeric \code{[1]}. Length (in data points) of the
+overlap between consecutive chunks.}
 }
 \value{
-a list object containing split chunks of signal.
+A list of numeric vectors, each of length \code{segment},
+  representing the overlapping signal fragments. Trailing \code{NA}
+  values are replaced by imputed values.
 }
 \description{
-In case if the signal is not completely divisible by given segment length,
-the function fills missing data (NAs) with 10 most frequent values from the
-entire signal (randomly sampled).
+Divides a single read's poly(A) tail signal into fixed-length,
+overlapping segments for data augmentation during training-set
+preparation. If the signal is not evenly divisible by the segment
+length, trailing \code{NA} values are imputed with values randomly
+sampled from the 10 most frequent signal values.
+}
+\details{
+This function is used exclusively in the A-only training pipeline
+(\code{\link{create_tail_chunk_list_A}}) to produce overlapping
+windows from reads that do \emph{not} contain modification signals.
+The overlap acts as data augmentation, multiplying the number of
+training examples per read.
 }
 \examples{
 \dontrun{
 
-split_with_overlaps <- function(signal='12fdcb3-ewfd543-34552-1234ddta345',
-                                segment = 300, overlap 100)
+split_with_overlaps(
+  readname = '12fdcb3-ewfd543-34552-1234ddta345',
+  tail_feature_list = tail_feature_list,
+  segment = 300,
+  overlap = 100)
 
 }
+}
+\seealso{
+\code{\link{create_tail_chunk_list_A}} which calls this
+  function,
+  \code{\link{create_tail_feature_list_A}} for the preceding step,
+  \code{\link{split_tail_centered_trainingset}} for the
+  modification-centered splitting alternative.
 }

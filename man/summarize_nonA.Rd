@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{summarize_nonA}
 \alias{summarize_nonA}
-\title{Produces summary table of nonA occurrences within analyzed dataset.}
+\title{Produces summary table of non-A occurrences within an analyzed dataset.}
 \usage{
 summarize_nonA(
   merged_nonA_tables,
@@ -11,38 +11,64 @@ summarize_nonA(
 )
 }
 \arguments{
-\item{merged_nonA_tables}{an output of \code{\link{merge_nonA_tables}} function}
+\item{merged_nonA_tables}{Data frame or tibble. Output of
+\code{\link{merge_nonA_tables}}.}
 
-\item{summary_factors}{character string or vector of strings;
-column(s) used for grouping (default: "group")}
+\item{summary_factors}{Character string or vector of strings. Column
+name(s) used for grouping (default: \code{"group"}).}
 
-\item{transcript_id_column}{character string; column with transcript id data
-(default: "ensembl_transcript_id_short" as added during data preprocessing;
-can be changed by the user)}
+\item{transcript_id_column}{Character string. Column containing the
+transcript identifier (default:
+\code{"ensembl_transcript_id_short"}, as added during data
+pre-processing; can be changed by the user).}
 }
 \value{
-a summary table of nonA occurrences (tibble)
+A tibble with one row per transcript per group, containing:
+\describe{
+  \item{polya_median}{Numeric. Median poly(A) tail length for the
+    transcript.}
+  \item{polya_mean}{Numeric. Mean poly(A) tail length for the
+    transcript.}
+  \item{counts_total}{Integer. Total number of reads mapped to the
+    transcript.}
+  \item{counts_blank}{Integer. Number of reads with no non-A
+    residues.}
+  \item{counts_nonA / hits_nonA}{Integer. Reads with any non-A /
+    total non-A hits.}
+  \item{counts_C / hits_C}{Integer. Reads with C / total C hits.}
+  \item{counts_G / hits_G}{Integer. Reads with G / total G hits.}
+  \item{counts_U / hits_U}{Integer. Reads with U / total U hits.}
+}
 }
 \description{
-Creates a table with statistics for non-A residues occurrences
-for each transcript (ensembl_transcrit_id_short) per each analyzed sample in given dataset.
+Creates a per-transcript summary table with read counts, non-A residue
+counts and hits, and poly(A) tail length statistics, grouped by
+user-defined factors (e.g. sample, condition).
 }
 \details{
-In the table, "counts" are understood as the number of reads in total
-or containing a given type of non-A residue (see column headers for details).
-Whereas "hits" are understood as the number of occurrences of a given
-nonA in total (see column headers for details). Please be aware that
-there may be several "hits" in one read.
-
-The function also reports the mean and median poly(A) tail length
-by transcript.
+The distinction between \strong{counts} and \strong{hits}:
+\itemize{
+  \item \strong{counts} — number of reads containing at least one
+    occurrence of a given non-A residue type.
+  \item \strong{hits} — total number of occurrences of a given non-A
+    residue type across all reads (a single read may contribute
+    multiple hits).
+}
 }
 \examples{
 \dontrun{
 
-summarized <- ninetails::summarize_nonA(merged_nonA_tables=merged_nonA_tables,
-                                        summary_factors="group",
-                                        transcript_id_column="ensembl_transcript_id_short")
+summarized <- ninetails::summarize_nonA(
+  merged_nonA_tables = merged_nonA_tables,
+  summary_factors = "group",
+  transcript_id_column = "ensembl_transcript_id_short")
 
 }
+}
+\seealso{
+\code{\link{merge_nonA_tables}} for preparing the input,
+  \code{\link{calculate_fisher}} for statistical testing on merged
+  data,
+  \code{\link{annotate_with_biomart}} for adding gene-level
+  annotation.
 }

@@ -2,7 +2,8 @@
 % Please edit documentation in R/ninetails_check_tails_guppy.R
 \name{check_tails_guppy}
 \alias{check_tails_guppy}
-\title{Wrapper function for complete DRS processing by ninetails package (legacy mode).}
+\title{Wrapper function for complete DRS processing by ninetails package
+(legacy mode).}
 \usage{
 check_tails_guppy(
   polya_data,
@@ -18,126 +19,138 @@ check_tails_guppy(
 )
 }
 \arguments{
-\item{polya_data}{character string. Full path of the .tsv file produced
-by either nanopolish polya function or tailfindr. Only DRS-derived tables are
-accepted. In case of tailfindr output, it would be immediately converted to
-nanopolish-like format.}
+\item{polya_data}{Character string or data frame. Full path of the
+\code{.tsv} file produced by nanopolish polya or tailfindr (DRS
+only), or an in-memory data frame. Tailfindr input is converted
+automatically.}
 
-\item{sequencing_summary}{character string. Full path of the .txt file
-with sequencing summary.}
+\item{sequencing_summary}{Character string or data frame. Full path
+of the \code{.txt} sequencing summary file, or an in-memory data
+frame.}
 
-\item{workspace}{character string. Full path of the directory to search the
-basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory
+containing basecalled multi-Fast5 files.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.
-This parameter is set to 1 by default.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the Fast5 file hierarchy from which the data should be extracted.
-This parameter is set to 'Basecall_1D_000' by default.}
+\item{basecall_group}{Character string \code{["Basecall_1D_000"]}.
+Name of the level in the Fast5 file hierarchy from which data
+should be extracted.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical \code{[TRUE]}. If \code{TRUE}, only reads
+tagged by nanopolish as \code{"PASS"} are included. If
+\code{FALSE}, reads tagged \code{"PASS"} or \code{"SUFFCLIP"} are
+included.}
 
-\item{qc}{logical [TRUE/FALSE]. If TRUE, the quality control of the output
-predictions would be performed. This means that the reads/non-A residue
-positions in terminal nucleotides, which are most likely artifacts, are
-labeled accordingly as "-WARN" (residues recognized as non-A due to
-nanopolish segmentation error which is inherited from nanopolish,
-as ninetails uses nanopolish segmentation). It is then up to user, whether
-they would like to include or discard such reads from their pipeline. However,
-it is advised to treat them with caution. By default, the qc option is enabled
-(this parameter is set to TRUE).}
+\item{qc}{Logical \code{[TRUE]}. If \code{TRUE}, terminal non-A
+residue positions likely arising from nanopolish segmentation
+errors are labelled with a \code{"-WARN"} suffix. It is up to the
+user whether to include or discard such reads.}
 
-\item{save_dir}{character string. Full path of the directory where the output
-files containing the tail composition information should be stored.}
+\item{save_dir}{Character string. Full path of the directory where
+output files should be stored.}
 
-\item{prefix}{character string (optional). If provided, it will be inserted
-into the names of the output files, positioned between the timestamp
-and the suffix indicating the file type (either read classes or
-nonadenosine residues).}
+\item{prefix}{Character string (optional, default \code{""}). If
+provided, inserted into output file names between the timestamp and
+the file-type suffix.}
 
-\item{part_size}{numeric [100000] (optional). If provided, defines maximum
-number of rows in the poly(A) length containing input processed at once.
-This value must be >=1000 (defaults to 1000000).If the size of
-nanopolish/tailfindr output exceeds default 100000 rows, the input dataframe
-would be splitted into parts and processed sequentially to avoid memory
-overflow and pipeline crush.}
+\item{part_size}{Numeric \code{[1000000]}. Maximum number of rows
+processed at once. Must be >= 1000. If the input exceeds this
+value, it is split and processed sequentially.}
 }
 \value{
-A list containing tail information organized by the read ID
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
-Also a log file as well as read_classes & nonadenosine_residues files
-are created in the user-specified directory.
+A named list with two data frames:
+\describe{
+  \item{read_classes}{Data frame. Per-read classification including
+    columns \code{class} and \code{comments}.}
+  \item{nonadenosine_residues}{Data frame. Detailed positional
+    information for all detected non-A residues.}
+}
+A log file and TSV output files (\code{read_classes},
+\code{nonadenosine_residues}) are also written to \code{save_dir}.
 }
 \description{
-Important note: Due to updates from Oxford Nanopore Technologies
-including the transition from the Guppy basecaller to Dorado,
-a shift in the preferred native data format from FAST5 to POD5,
-and a change in sequencing chemistry from R9 to R10,
-the analysis pipeline based on Guppy outputs and Nanopolish/Tailfindr
-poly(A) tail estimates has been moved to legacy mode.
-To ensure backward compatibility with direct RNA sequencing (DRS) data
-generated using earlier chemistries and algorithms,
-this processing pipeline is still included, but will not be further optimized.
+Orchestrates the full ninetails analysis pipeline for direct RNA
+sequencing (DRS) data basecalled with Guppy and characterised by
+nanopolish (or tailfindr). The function validates inputs, extracts
+poly(A) tail features from multi-Fast5 files, segments tails into
+chunks, computes Gramian Angular Fields (GAFs), classifies reads
+with a pretrained CNN, and writes output files.
 }
 \details{
-This function accepts either nanopolish or tailfindr outputs.
+\strong{Legacy mode.} Due to Oxford Nanopore Technologies' transition
+from Guppy to Dorado, from Fast5 to POD5, and from R9 to R10
+chemistry, this pipeline is maintained for backward compatibility
+only and will not be further optimised. For current data, use
+\code{\link{check_tails_dorado_DRS}} instead.
 
-This function allows to perform all of the steps required to discover
-nonadenosine nucleotides within the given dataset using ninetails.
-Please keep in mind, that during computations the function creates large
-segmentation data. Therefore it may be wise to split the polya data table
-beforehand and then run this function on table chunks.
+The function accepts either nanopolish or tailfindr output (DRS only).
+Tailfindr input is automatically converted to nanopolish-like format
+via \code{\link{check_polya_length_filetype}}.
 
-The output of this function is a list of 2 dataframes, containing:\itemize{
-\item read_classes - classification of reads based on applied criteria
-\item nonadenosine_residues - detailed positional info regarding all
-potential nonadenosine residues detected.
+For large input files (exceeding \code{part_size} rows), the poly(A)
+table is split into parts and processed sequentially via
+\code{\link{process_polya_parts}} to avoid memory overflow.
+
+The pipeline steps are:
+\enumerate{
+  \item Input validation and Fast5 format checking.
+  \item Feature extraction
+    (\code{\link{create_tail_feature_list}}).
+  \item Tail segmentation
+    (\code{\link{create_tail_chunk_list}}).
+  \item GAF computation (\code{\link{create_gaf_list}}).
+  \item CNN classification
+    (\code{\link{predict_gaf_classes}}).
+  \item Output creation (\code{\link{create_outputs}}).
 }
 
-The more detailed info regarding read classification is stored within
-'comments' column. To make the output more compact, it contains codes
-as follows:\itemize{
-\item IRL - insufficient read length
-\item QCF - nanopolish qc failed
-\item MAU - move transition absent, nonA residue undetected
-\item MPU - move transition present, nonA residue undetected
-\item NIN - not included in the analysis (pass only = T)
-\item YAY - move transition present, nonA residue detected
+The \code{comments} column in the output encodes detailed read
+classification:
+\describe{
+  \item{IRL}{Insufficient read length.}
+  \item{QCF}{Nanopolish QC failed.}
+  \item{MAU}{Move transition absent, non-A residue undetected.}
+  \item{MPU}{Move transition present, non-A residue undetected.}
+  \item{NIN}{Not included in analysis (\code{pass_only = TRUE}).}
+  \item{YAY}{Move transition present, non-A residue detected.}
 }
 
-The filtering criteria applied by ninetails are as follows: move of value =1
-present, qc_tag = "PASS" or "PASS" & "SUFFCLIP", length estimated
-by nanopolish >=10 nt).
+Filtering criteria: basecaller move value = 1,
+\code{qc_tag \%in\% c("PASS")} (or \code{c("PASS", "SUFFCLIP")}),
+and nanopolish-estimated tail length >= 10 nt.
 }
 \examples{
 \dontrun{
 
 results <- ninetails::check_tails_guppy(
- polya_data = system.file('extdata',
-                          'test_data',
-                          'nanopolish_output.tsv',
+  polya_data = system.file('extdata', 'test_data',
+                           'nanopolish_output.tsv',
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 'test_data',
+                                   'sequencing_summary.txt',
+                                   package = 'ninetails'),
+  workspace = system.file('extdata', 'test_data',
+                          'basecalled_fast5',
                           package = 'ninetails'),
- sequencing_summary = system.file('extdata',
-                                  'test_data',
-                                  'sequencing_summary.txt',
-                                  package = 'ninetails'),
- workspace = system.file('extdata',
-                         'test_data',
-                         'basecalled_fast5',
-                         package = 'ninetails'),
- num_cores = 2,
- basecall_group = 'Basecall_1D_000',
- pass_only=TRUE,
- qc=TRUE,
- save_dir = '~/Downloads',
- prefix = "prefix",
- part_size=2000)
+  num_cores = 2,
+  basecall_group = 'Basecall_1D_000',
+  pass_only = TRUE,
+  qc = TRUE,
+  save_dir = '~/Downloads',
+  prefix = "prefix",
+  part_size = 2000)
 
 }
+}
+\seealso{
+\code{\link{check_tails_dorado_DRS}} for the current
+  (Dorado-based) pipeline,
+  \code{\link{process_polya_complete}} and
+  \code{\link{process_polya_parts}} for the internal processing
+  functions,
+  \code{\link{check_polya_length_filetype}} for input format
+  detection,
+  \code{\link{create_outputs}} for the output assembly step.
 }

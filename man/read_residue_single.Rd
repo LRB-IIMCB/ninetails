@@ -7,26 +7,55 @@
 read_residue_single(residue_path, sample_name = NA)
 }
 \arguments{
-\item{residue_path}{path to ninetails nonadenosine_residues output file}
+\item{residue_path}{Character string. Path to the ninetails
+\code{nonadenosine_residues} output file (\code{.tsv}).}
 
-\item{sample_name}{sample name (optional), provided as a string.
-If specified will be included as an additional column sample_name.
-
-Function based on PK (smaegol) NanoTail read_polya_single
-https://github.com/LRB-IIMCB/nanotail/
-Many thanks to the NanoTail developer for help and advice!}
+\item{sample_name}{Character string (optional, default \code{NA}). If
+specified, added as a factor column \code{sample_name}. Overwrites any
+existing \code{sample_name} column with a warning.}
 }
 \value{
-a [tibble] with non-A predictions
+A tibble containing non-A residue predictions with the
+  following additional columns (when GENCODE contigs are present):
+\describe{
+  \item{transcript}{Character. Gene symbol parsed from GENCODE contig.}
+  \item{ensembl_transcript_id_full}{Character. Ensembl transcript ID
+    with version number.}
+  \item{ensembl_transcript_id_short}{Character. Ensembl transcript ID
+    without version number.}
+}
 }
 \description{
-This is the basic function used to import output from \code{\link{check_tails_guppy}} to R:
-it imports the dataframe containing non-A detailed position info
-(nonadenosine_residues).
+Imports a single \code{nonadenosine_residues} output file produced by
+\code{\link{check_tails_guppy}} (or other ninetails pipelines) into R.
+Optionally attaches a sample identifier and parses GENCODE-style contig
+names into Ensembl transcript IDs.
 }
+\details{
+If the \code{contig} column contains GENCODE-formatted identifiers,
+three additional columns are created: \code{transcript},
+\code{ensembl_transcript_id_full}, and
+\code{ensembl_transcript_id_short} (see \code{\link{read_class_single}}
+for the same logic applied to class data).
+}
+\section{Acknowledgements}{
+
+Function based on \code{read_polya_single} from the NanoTail package
+by P. Krawczyk (smaegol):
+\url{https://github.com/LRB-IIMCB/nanotail/}.
+}
+
 \examples{
 \dontrun{
+
 residue_path <- "/directory/with/ninetails/nonadenosine_residues_output.tsv"
 residue_data <- ninetails::read_residue_single(residue_path)
+
 }
+}
+\seealso{
+\code{\link{read_residue_multiple}} for batch loading,
+  \code{\link{read_class_single}} for the analogous class data loader,
+  \code{\link{check_tails_guppy}} for the pipeline that produces the
+  input file.
 }

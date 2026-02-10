@@ -3,31 +3,51 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_tail_chunk_list_trainingset}
 \alias{create_tail_chunk_list_trainingset}
-\title{Extracts fragments of poly(A) tails of ONT RNA reads containing non-A
-nucleotides along their coordinates & appends the data to the nested
-list organized by read IDs.}
+\title{Extracts decoration-centered fragments of poly(A) tails for all reads
+and appends positional data to a nested list.}
 \usage{
 create_tail_chunk_list_trainingset(tail_feature_list, num_cores)
 }
 \arguments{
-\item{tail_feature_list}{list object produced by create_tail_feature_list
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list_trainingset}}.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
-a list object 9nested) containing the segmented tail data  (chunks,
-coordinates) organized by the read IDs.
+A named nested list organised by read IDs, where each element
+  is a list of chunk sublists as returned by
+  \code{\link{split_tail_centered_trainingset}}.
 }
 \description{
-This version of the function is intended to be used to produce training and
-validation datasets.
+Parallel wrapper around \code{\link{split_tail_centered_trainingset}}.
+For every read in the feature list, it extracts 100-element signal chunks
+centered on potential non-A modifications and organises them in a nested
+list keyed by read ID.
+}
+\details{
+This training-set variant is intended for preparing training and
+validation datasets. Each chunk sublist contains four fields:
+\code{chunk_sequence}, \code{chunk_start_pos}, \code{chunk_end_pos},
+and \code{pseudomoves} (see
+\code{\link{split_tail_centered_trainingset}}).
 }
 \examples{
 \dontrun{
 
-create_tail_chunk_list_trainingset(tail_feature_list = tail_feature_list,
-                                   num_cores = 2)
+create_tail_chunk_list_trainingset(
+  tail_feature_list = tail_feature_list,
+  num_cores = 2)
+
 }
+}
+\seealso{
+\code{\link{create_tail_feature_list_trainingset}} for the
+  preceding pipeline step,
+  \code{\link{split_tail_centered_trainingset}} for the per-read
+  extraction logic,
+  \code{\link{filter_nonA_chunks_trainingset}} for the next pipeline
+  step,
+  \code{\link{create_gaf_list}} for GAF conversion downstream.
 }

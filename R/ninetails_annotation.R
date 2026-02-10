@@ -75,16 +75,14 @@
 #'
 #' }
 #'
-annotate_with_biomart <- function(
-  input_data,
-  attributes_to_get = c(
-    'ensembl_transcript_id',
-    'external_gene_name',
-    'description',
-    'transcript_biotype'),
-  filters = 'ensembl_transcript_id',
-  organism = NULL,
-  mart_to_use = NULL) {
+annotate_with_biomart <- function(input_data,
+                                  attributes_to_get = c('ensembl_transcript_id',
+                                                        'external_gene_name',
+                                                        'description',
+                                                        'transcript_biotype'),
+                                  filters = 'ensembl_transcript_id',
+                                  organism = NULL,
+                                  mart_to_use = NULL) {
 
   #assertions
   if (missing(input_data)) {
@@ -165,12 +163,10 @@ annotate_with_biomart <- function(
     )
   }
 
-  annotation_data <- biomaRt::getBM(
-    attributes = attributes_to_get,
-    filters = filters,
-    values = ensembl_ids,
-    mart = mart_to_use
-  )
+  annotation_data <- biomaRt::getBM(attributes = attributes_to_get,
+                                    filters = filters,
+                                    values = ensembl_ids,
+                                    mart = mart_to_use)
 
   if (!is.data.frame(annotation_data) || nrow(annotation_data) == 0) {
     stop(

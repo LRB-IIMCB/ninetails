@@ -1451,13 +1451,12 @@ create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
 #'   original_summary = "data/original_dorado_summary.tsv"
 #' )
 #' }
-create_outputs_dorado <- function(
-  dorado_summary_dir,
-  nonA_temp_dir,
-  polya_chunks_dir,
-  num_cores = 1,
-  qc = TRUE,
-  original_summary) {
+create_outputs_dorado <- function(dorado_summary_dir,
+                                  nonA_temp_dir,
+                                  polya_chunks_dir,
+                                  num_cores = 1,
+                                  qc = TRUE,
+                                  original_summary) {
 
   # Assertions
   if (missing(dorado_summary_dir)) {

@@ -2,31 +2,37 @@
 % Please edit documentation in R/ninetails_check_tails_guppy.R
 \name{save_outputs}
 \alias{save_outputs}
-\title{Save pipeline outputs to files}
+\title{Save pipeline outputs to files.}
 \usage{
 save_outputs(outputs, save_dir, prefix = "")
 }
 \arguments{
-\item{outputs}{List containing read_classes and nonadenosine_residues
-data frames produced by the ninetails pipeline}
+\item{outputs}{Named list containing data frames to save. Expected
+names are \code{read_classes} and \code{nonadenosine_residues}.}
 
-\item{save_dir}{character string. Full path of the directory where the output
-files containing the tail composition information should be stored.}
+\item{save_dir}{Character string. Full path of the directory where
+output files should be stored.}
 
-\item{prefix}{character string (optional). If provided, it will be inserted
-into the names of the output files, positioned between the timestamp
-and the suffix indicating the file type (either read classes or
-nonadenosine residues).}
+\item{prefix}{Character string (optional, default \code{""}). If
+provided, inserted into file names between the timestamp and the
+file-type suffix.}
 }
 \value{
-Invisible NULL
+Invisible \code{NULL}. Called for the side effect of writing
+  files.
 }
 \description{
-This function is not intended to be used as a standalone function, i.e., outside
-the \code{\link{check_tails_guppy}} function. It does not affect data
-processing; it only provides code to store results in files. It is enclosed
-as a separate function, called by the wrapper, to keep the code clean and
-modular, facilitating further development. Therefore, it should not be called
-manually by the user.
+Writes the ninetails pipeline output data frames (\code{read_classes}
+and \code{nonadenosine_residues}) to tab-separated files in
+\code{save_dir}. File names include a timestamp and an optional
+user-defined prefix.
+}
+\details{
+This function is called internally by
+\code{\link{check_tails_guppy}} at the end of the pipeline. It is
+not intended to be called directly by the user.
+}
+\seealso{
+\code{\link{check_tails_guppy}} which calls this function.
 }
 \keyword{internal}

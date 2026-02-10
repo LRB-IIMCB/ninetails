@@ -14,36 +14,72 @@ extract_tail_data_trainingset(
 )
 }
 \arguments{
-\item{readname}{character string. Name of the given read within the
-analyzed dataset.}
+\item{readname}{Character string. Name (UUID) of the given read within
+the analyzed dataset.}
 
-\item{polya_summary}{character string. The table containing data extracted
-from nanopolish & sequencing summary (using extract_polya_data() function.}
+\item{polya_summary}{Data frame. The table containing data extracted
+from nanopolish and the sequencing summary (produced by
+\code{\link{extract_polya_data}}).}
 
-\item{workspace}{character string. Full path of the directory to search
-the basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory containing
+basecalled multi-Fast5 files.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the fast5 file hierarchy from which the data should be extracted.}
+\item{basecall_group}{Character string \code{["Basecall_1D_000"]}. Name of
+the level in the Fast5 file hierarchy from which the data should be
+extracted.}
 }
 \value{
-A list containing read information organized by the read ID
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list with four elements:
+\describe{
+  \item{fast5_filename}{Character. Name of the source Fast5 file.}
+  \item{tail_signal}{Numeric vector. Winsorized and downsampled signal
+    corresponding to the poly(A) tail region.}
+  \item{tail_moves}{Numeric vector. Downsampled basecaller moves for the
+    tail region.}
+  \item{tail_pseudomoves}{Numeric vector. Pseudomove values (-1, 0, 1)
+    indicating potential non-A deviations in the tail signal.}
+}
+Always assign this returned list to a variable; printing the full list
+to the console may crash the R session.
 }
 \description{
-This is the version of the function useful to produce the training set
-for CNN. Slightly different from the original one.
+This is the training-set variant of the single-read extraction function.
+It reads raw signal, basecaller moves and channel metadata from a
+multi-Fast5 file, isolates the poly(A) tail region defined by nanopolish,
+winsorizes the signal, downsamples by linear interpolation (to 20\% of
+original length), and computes pseudomoves via
+\code{\link{filter_signal_by_threshold_trainingset}}.
+}
+\details{
+The function differs from its production counterpart
+(\code{\link{extract_tail_data}}) in that:
+\itemize{
+  \item The signal is downsampled (interpolated) to 20\% of its original
+        length to speed up downstream training-set preparation.
+  \item Pseudomoves are computed using the training-set-specific threshold
+        filter (\code{\link{filter_signal_by_threshold_trainingset}}).
+  \item The returned list omits production-only fields and instead provides
+        elements suitable for chunk splitting and GAF creation.
+}
 }
 \examples{
 \dontrun{
 
-extract_tail_data_trainingset(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
-                              polya_summary = polya_summary_table,
-                              workspace = '/path/to/folder/containing/multifast5s',
-                              basecall_group = 'Basecall_1D_000')
+extract_tail_data_trainingset(
+  readname = 'abc123de-fg45-6789-0987-6543hijk2109',
+  polya_summary = polya_summary_table,
+  workspace = '/path/to/folder/containing/multifast5s',
+  basecall_group = 'Basecall_1D_000')
 
 }
 
 
+}
+\seealso{
+\code{\link{create_tail_feature_list_trainingset}} for the
+  parallel wrapper that calls this function,
+  \code{\link{extract_tail_data}} for the production counterpart,
+  \code{\link{winsorize_signal}} for the signal clipping step,
+  \code{\link{filter_signal_by_threshold_trainingset}} for pseudomove
+  detection.
 }

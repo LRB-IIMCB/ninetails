@@ -2,8 +2,8 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{reclassify_ninetails_data}
 \alias{reclassify_ninetails_data}
-\title{Reclassifies ambiguous nonA residues to mitigate potential errors inherited
-from nanopolish segmentation}
+\title{Reclassifies ambiguous non-A residues to mitigate potential errors
+inherited from nanopolish segmentation.}
 \usage{
 reclassify_ninetails_data(
   residue_data,
@@ -14,77 +14,93 @@ reclassify_ninetails_data(
 )
 }
 \arguments{
-\item{residue_data}{[dataframe] A dataframe or tibble containig non-A residue
-predictions made by ninetails pipeline}
+\item{residue_data}{Data frame or tibble containing non-A residue
+predictions from the ninetails pipeline.}
 
-\item{class_data}{[dataframe] A dataframe or tibble containing read_classes
-predictions made by ninetails pipeline}
+\item{class_data}{Data frame or tibble containing read_classes
+predictions from the ninetails pipeline.}
 
-\item{grouping_factor}{[character string]. A grouping variable (e.g. "sample_name")}
+\item{grouping_factor}{Character string or \code{NULL} (default). A
+grouping variable (e.g. \code{"sample_name"}).}
 
-\item{transcript_column}{[character string]. Name of column containing transcript id
-(e.g. "ensembl_transcript_id_short")}
+\item{transcript_column}{Character string. Name of the column
+containing transcript identifiers (e.g. \code{"contig"},
+\code{"ensembl_transcript_id_short"}).}
 
-\item{ref}{[character string] or object or NULL (default) - the whitelist of transcripts
-with hybrid tails - containing 3'UTRs highly enriched with A nucleotides (in last 20
-positions >80%).
-Current version of ninetails contains built-in whitelists, which may be selected
-by the user:\itemize{
-\item 'athaliana' - Arabidopsis thaliana
-\item 'hsapiens' - Homo sapiens
-\item 'mmusculus' - Mus musculus
-\item 'scerevisiae' - Saccharomyces cerevisiae
-\item 'celegans' - Caenorhabditis elegans
-\item 'tbrucei' - Trypanosoma brucei
+\item{ref}{Character string, character vector, or \code{NULL}
+  (default). Whitelist of transcripts with hybrid tails. Built-in
+  options:
+\describe{
+  \item{\code{"athaliana"}}{\emph{Arabidopsis thaliana}}
+  \item{\code{"hsapiens"}}{\emph{Homo sapiens}}
+  \item{\code{"mmusculus"}}{\emph{Mus musculus}}
+  \item{\code{"scerevisiae"}}{\emph{Saccharomyces cerevisiae}}
+  \item{\code{"celegans"}}{\emph{Caenorhabditis elegans}}
+  \item{\code{"tbrucei"}}{\emph{Trypanosoma brucei}}
 }
-It is also possible to provide own whitelist. Important note: whitelist must be consistent
-with the content of the 'transcript_column'. Using whitelist is not mandatory,
-however it allows to retrieve more true positive data.}
+  A custom character vector may also be provided. Must be consistent
+  with the content of \code{transcript_column}. Using a whitelist is
+  optional but allows retrieval of more true positive data.}
 }
 \value{
-A [list] with 2 dataframes containing class_data and residue_data, respectively,
-with corrections for classified data applied.
+A named list with two data frames:
+\describe{
+  \item{class_data}{Data frame. Corrected read classifications with
+    \code{class} and \code{comments} columns updated. Compatible with
+    plotting functions.}
+  \item{residue_data}{Data frame. Filtered non-A residue predictions
+    with ambiguous positions removed. Intermediate QC columns are
+    dropped.}
+}
 }
 \description{
-In the current version, ninetails does not segment reads on its own,
-but inherits segmentation from nanopolish. This segmentation is not ideal.
-Sometimes nucleotides from the 3' ends of some AT-rich transcripts
-are misidentified as poly(A) tails, when in fact they are still nucleotides
-belonging to the body of the transcript. In the case of such transcripts,
-a very large enrichment of non-A positions in close proximity to the body
-of the transcript is observed (peak distribution).
+High-level wrapper that combines
+\code{\link{correct_residue_data}} and
+\code{\link{correct_class_data}} into a single call, producing
+cleaned class and residue data frames ready for downstream analysis
+and visualisation.
 }
 \details{
-If the tail boundaries are recognized incorrectly in the transcript,
-this results in an accumulation of non-A positions detected near
-the 3'end of the transcript. This, in turn, significantly affects
-the results of the analysis. To minimize the impact of potential
-segmentation artifacts, you can use this function to filter out
-such ambiguous nonA positions.
+Nanopolish segmentation can misidentify nucleotides from A-rich
+3' UTR regions as part of the poly(A) tail. When tail boundaries are
+recognised incorrectly, non-A positions accumulate near the 3' end of
+the transcript, significantly affecting analysis results. This function
+flags and removes those ambiguous positions and reclassifies affected
+reads accordingly.
 
-This function takes as input the raw outputs of the ninetails pipeline
-(class_data and residue_data), preferably loaded using the read_class_*
-and read_residue_* functions. It also requires a grouping variable name
-(grouping_factor) and a name of column containing the IDs of the transcripts
-(e.g. "contig", "transcript", "ensembl_transcript_id_short", etc.) desired
-by the user.
-
-The output contains headers identical to those present in the raw ninetails
-outputs. They are fully compatible with the rest of the functions of the
-package, such as those for data visualization.
-
----CAUTION---
-
-Reads that contain only non-A nucleotides that are likely to be nanopolish
-artifacts are reclassified in the class_data table as "blank" ("class"
-column), and their comment is changed from "YAY" to "MPU" ("comments" column).
+The procedure:
+\enumerate{
+  \item \code{\link{correct_residue_data}} annotates each non-A
+    position with a quality flag (\code{qc_pos}).
+  \item \code{\link{correct_class_data}} reclassifies reads whose
+    \emph{all} non-A positions are flagged as ambiguous.
+  \item Ambiguous positions (\code{qc_pos == "N"}) are dropped from
+    the residue table.
+  \item Corrected columns (\code{corr_class}, \code{corr_comments})
+    are renamed to \code{class} and \code{comments}.
 }
+}
+\section{Caution}{
+
+Reads containing only ambiguous non-A positions are reclassified as
+\code{"blank"} in the \code{class} column, and their \code{comments}
+are changed from \code{"YAY"} to \code{"MPU"}.
+}
+
 \examples{
 \dontrun{
 
-rec_results <- ninetails::reclassify_ninetails_data(residue_data=results[[2]],
-                                                    class_data=results[[1]],
-                                                    transcript_column = "contig")
- }
+rec_results <- ninetails::reclassify_ninetails_data(
+  residue_data = results[[2]],
+  class_data = results[[1]],
+  transcript_column = "contig")
 
+}
+
+}
+\seealso{
+\code{\link{correct_residue_data}} and
+  \code{\link{correct_class_data}} for the underlying steps,
+  \code{\link{check_tails_guppy}} and \code{\link{create_outputs}} for
+  the pipeline that produces the input data.
 }

@@ -7,40 +7,67 @@
 check_polya_length_filetype(input)
 }
 \arguments{
-\item{input}{Path to file or data frame containing poly-A length data:
-either produced by nanopolish or tailfindr. In case of tailfindr, only DRS
-data are accepted.}
+\item{input}{Character string or data frame. Either the path to a
+poly(A) length file (nanopolish \code{.tsv} or tailfindr \code{.csv})
+or an in-memory data frame. Only DRS data are accepted for tailfindr
+input.}
 }
 \value{
-Standardized data frame in nanopolish-like format compatible with
-further ninetails processing steps
+A named list with two elements:
+\describe{
+  \item{data}{Data frame / tibble. Standardised poly(A) length data in
+    nanopolish-like format, ready for downstream ninetails processing.}
+  \item{file_type}{Character. One of \code{"nanopolish"} or
+    \code{"tailfindr_drs"}, indicating the detected input format.}
+}
 }
 \description{
-This function checks whether the input poly(A) length files store data from
-correct sequencing platform (Oxford Nanopore DRS sequencing) - if other data
-types are loaded, an error occurs.
+Detects whether an input poly(A) length file originates from nanopolish
+or tailfindr and, if necessary, converts it to the nanopolish-like
+format expected by the ninetails legacy (Guppy/Fast5) pipeline.
+Tailfindr cDNA output is explicitly rejected because the legacy
+pipeline supports only DRS (direct RNA sequencing) data.
 }
 \details{
-Please keep in mind:
-This function is an element of legacy pipeline which would probably
-be retired if fast5 format would be deprecated.
+File-type detection is based on column names:
+\describe{
+  \item{nanopolish}{Identified by the presence of a \code{qc_tag}
+    column. Returned as-is.}
+  \item{tailfindr DRS}{Identified by the presence of \code{read_id},
+    \code{tail_start}, \code{tail_end}, \code{samples_per_nt}, and
+    \code{tail_length}. Converted via
+    \code{\link{convert_tailfindr_output}}.}
+  \item{tailfindr cDNA}{Identified by the presence of a
+    \code{tail_is_valid} column. Raises an error because cDNA data are
+    not compatible with this pipeline.}
+}
+If none of the above patterns match, an error is raised.
+
+This function is part of the legacy pipeline (Guppy basecaller,
+multi-Fast5 files). It may be retired if the Fast5 format is
+deprecated.
 }
 \examples{
 \dontrun{
 
 # run on nanopolish output
 test <- ninetails::check_polya_length_filetype(
-input = system.file('extdata',
-                    'test_data',
-                    'nanopolish_output.tsv',
-                    package = 'ninetails'))
+  input = system.file('extdata', 'test_data',
+                      'nanopolish_output.tsv',
+                      package = 'ninetails'))
 
 # run on tailfindr output
 test <- ninetails::check_polya_length_filetype(
-input = system.file('extdata',
-                    'test_data',
-                    'tailfindr_output.csv',
-                    package = 'ninetails'))
+  input = system.file('extdata', 'test_data',
+                      'tailfindr_output.csv',
+                      package = 'ninetails'))
 
 }
+}
+\seealso{
+\code{\link{convert_tailfindr_output}} for the tailfindr
+  conversion logic,
+  \code{\link{extract_polya_data}} for subsequent processing of the
+  standardised output,
+  \code{\link{check_tails_guppy}} for the legacy pipeline entry point.
 }

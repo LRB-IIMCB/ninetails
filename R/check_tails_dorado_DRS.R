@@ -250,7 +250,7 @@
 #'   \item Results should always be assigned to a variable to prevent console overflow
 #'   \item POD5 files must correspond exactly to reads in the Dorado summary
 #'   \item For datasets >1M reads, consider batch processing or increased \code{part_size}
-#'   \item Position estimates are approximate (±2-3 nt accuracy); validate critical findings
+#'   \item Position estimates are approximate (Â±2-3 nt accuracy); validate critical findings
 #' }
 #'
 #' @examples
@@ -266,30 +266,25 @@
 #'   cleanup = TRUE
 #' )
 #' }
-check_tails_dorado_DRS <- function(
-  dorado_summary,
-  pod5_dir,
-  num_cores = 1,
-  qc = TRUE,
-  save_dir,
-  prefix = "",
-  part_size = 40000,
-  cleanup = FALSE
-) {
+check_tails_dorado_DRS <- function(dorado_summary,
+                                   pod5_dir,
+                                   num_cores = 1,
+                                   qc = TRUE,
+                                   save_dir,
+                                   prefix = "",
+                                   part_size = 40000,
+                                   cleanup = FALSE) {
+
   # Initialize warning flag
   warn_message <- FALSE
 
   # Initialize log collector (needed for directory checking)
   log_collector <- vector("character")
   log_start_time <- Sys.time()
-  log_filename <- format(
-    log_start_time,
-    paste0(
-      "%Y-%m-%d_%H-%M-%S",
-      if (nchar(prefix) > 0) paste0("_", prefix) else "",
-      "_ninetails.log"
-    )
-  )
+  log_filename <- format(log_start_time,
+                         paste0("%Y-%m-%d_%H-%M-%S",
+                                if(nchar(prefix) > 0) paste0("_", prefix) else "",
+                                "_ninetails.log"))
 
   # Create a temporary log message function for directory checking
   temp_log_message <- function(message, type = "INFO", section = NULL) {
@@ -308,10 +303,7 @@ check_tails_dorado_DRS <- function(
 
   # Check and handle output directory BEFORE creating it
   #####################################################
-  should_proceed <- ninetails::check_output_directory(
-    save_dir,
-    temp_log_message
-  )
+  should_proceed <- ninetails::check_output_directory(save_dir, temp_log_message)
 
   if (!should_proceed) {
     cat("Analysis aborted by user.\n")
@@ -355,13 +347,11 @@ check_tails_dorado_DRS <- function(
     if (bullet) {
       cli::cli_bullets(c("*" = message))
     } else {
-      switch(
-        type,
-        "INFO" = cli::cli_alert_info(message),
-        "SUCCESS" = cli::cli_alert_success(message),
-        "WARNING" = cli::cli_alert_warning(message),
-        "ERROR" = cli::cli_alert_danger(message)
-      )
+      switch(type,
+             "INFO" = cli::cli_alert_info(message),
+             "SUCCESS" = cli::cli_alert_success(message),
+             "WARNING" = cli::cli_alert_warning(message),
+             "ERROR" = cli::cli_alert_danger(message))
     }
     log_message(message, type, section)
   }
@@ -369,355 +359,226 @@ check_tails_dorado_DRS <- function(
   #####################################################
   # PIPELINE START
   #####################################################
-  tryCatch(
-    {
-      # Initialize pipeline and log file with header
-      ###################################################
-      cli::cli_h1("Ninetails {utils::packageVersion('ninetails')}")
-      cli::cli_alert_info(paste0("Welcome to Ninetails! ", {
-        utils::packageVersion('ninetails')
-      }))
-      cli::cli_alert_info(
-        "Analysis toolkit for poly(A) tail composition in ONT data"
-      )
+  tryCatch({
+    # Initialize pipeline and log file with header
+    ###################################################
+    cli::cli_h1("Ninetails {utils::packageVersion('ninetails')}")
+    cli::cli_alert_info(paste0("Welcome to Ninetails! ", {utils::packageVersion('ninetails')}))
+    cli::cli_alert_info("Analysis toolkit for poly(A) tail composition in ONT data")
 
-      # Write log file header with welcome message (only once)
-      cat(
-        sprintf(
-          "Ninetails Analysis Log - %s\n",
-          format(log_start_time, "%Y-%m-%d %H:%M:%S")
-        ),
-        file = log_filepath,
-        append = FALSE
-      )
-      cat(
-        sprintf(
-          "Ninetails v%s - Analysis toolkit for poly(A) tail composition in ONT data\n",
-          utils::packageVersion('ninetails')
-        ),
-        file = log_filepath,
-        append = TRUE
-      )
-      cat(
-        "=====================================\n\n",
-        file = log_filepath,
-        append = TRUE
-      )
+    # Write log file header with welcome message (only once)
+    cat(sprintf("Ninetails Analysis Log - %s\n", format(log_start_time, "%Y-%m-%d %H:%M:%S")),
+        file = log_filepath, append = FALSE)
+    cat(sprintf("Ninetails v%s - Analysis toolkit for poly(A) tail composition in ONT data\n",
+                utils::packageVersion('ninetails')),
+        file = log_filepath, append = TRUE)
+    cat("=====================================\n\n", file = log_filepath, append = TRUE)
 
-      # Write any messages from directory checking to the log file
-      if (length(log_collector) > 0) {
-        for (entry in log_collector) {
-          cat(paste0(entry, "\n"), file = log_filepath, append = TRUE)
-        }
+    # Write any messages from directory checking to the log file
+    if (length(log_collector) > 0) {
+      for (entry in log_collector) {
+        cat(paste0(entry, "\n"), file = log_filepath, append = TRUE)
       }
+    }
 
-      cli_log(
-        "Launching *check_tails_dorado_DRS* pipeline",
-        "INFO",
-        "Launching *check_tails_dorado_DRS* pipeline"
-      )
+    cli_log("Launching *check_tails_dorado_DRS* pipeline", "INFO","Launching *check_tails_dorado_DRS* pipeline")
 
-      # Configuration logging display
-      #####################################################
-      cli_log("Configuration", "INFO", "Configuration")
-      cli_log(
-        sprintf(
-          "Dorado summary:              %s",
-          if (!is.object(dorado_summary)) {
-            dorado_summary
-          } else {
-            deparse(substitute(dorado_summary))
-          }
-        ),
-        bullet = TRUE
-      )
-      cli_log(
-        sprintf("Pod5 files directory:        %s", pod5_dir),
-        bullet = TRUE
-      )
-      cli_log(
-        sprintf("Number of cores:             %d", num_cores),
-        bullet = TRUE
-      )
-      cli_log(sprintf("Output quality control:      %s", qc), bullet = TRUE)
-      cli_log(
-        sprintf("Output directory:            %s", save_dir),
-        bullet = TRUE
-      )
-      cli_log(
-        sprintf("Poly(A) processed at once:   %s", part_size),
-        bullet = TRUE
-      )
-      cli_log(
-        sprintf("Cleanup intermediate files:  %s", cleanup),
-        bullet = TRUE
-      )
+    # Configuration logging display
+    #####################################################
+    cli_log("Configuration", "INFO", "Configuration")
+    cli_log(sprintf("Dorado summary:              %s",
+                    if(!is.object(dorado_summary)) dorado_summary else deparse(substitute(dorado_summary))), bullet = TRUE)
+    cli_log(sprintf("Pod5 files directory:        %s", pod5_dir), bullet = TRUE)
+    cli_log(sprintf("Number of cores:             %d", num_cores), bullet = TRUE)
+    cli_log(sprintf("Output quality control:      %s", qc), bullet = TRUE)
+    cli_log(sprintf("Output directory:            %s", save_dir), bullet = TRUE)
+    cli_log(sprintf("Poly(A) processed at once:   %s", part_size), bullet = TRUE)
+    cli_log(sprintf("Cleanup intermediate files:  %s", cleanup), bullet = TRUE)
 
-      # Preprocess input files
-      #####################################################
-      processed_files <- ninetails::preprocess_inputs(
-        dorado_summary = dorado_summary,
-        pod5_dir = pod5_dir,
+    # Preprocess input files
+    #####################################################
+    processed_files <- ninetails::preprocess_inputs(
+      dorado_summary = dorado_summary,
+      pod5_dir = pod5_dir,
+      num_cores = num_cores,
+      qc = qc,
+      save_dir = save_dir,
+      prefix = prefix,
+      part_size = part_size,
+      cli_log = cli_log
+    )
+
+    # Process Dorado data
+    #####################################################
+    polya_signal_files <- processed_files$polya_signal_files
+    nonA_temp_dir <- file.path(save_dir, "nonA_temp_dir")
+    polya_chunks_dir <- file.path(save_dir, "polya_chunks_dir")
+    nonA_results <- ninetails::process_dorado_signal_files(
+      polya_signal_files,
+      nonA_temp_dir,
+      polya_chunks_dir,
+      num_cores,
+      cli_log)
+
+    # Run create_outputs to generate tabular outputs
+    #####################################################
+    cli_log("Creating final outputs...", "INFO", "Creating Output", bullet = TRUE)
+    dorado_summary_dir <- file.path(save_dir, "dorado_summary_dir")
+
+    # Ensure create_outputs_dorado processes all files and returns proper format
+    outputs <- tryCatch({
+      result <- ninetails::create_outputs_dorado(
+        dorado_summary_dir = dorado_summary_dir,
+        nonA_temp_dir = nonA_temp_dir,
+        polya_chunks_dir = polya_chunks_dir,
         num_cores = num_cores,
         qc = qc,
-        save_dir = save_dir,
-        prefix = prefix,
-        part_size = part_size,
-        cli_log = cli_log
+        original_summary = dorado_summary
       )
 
-      # Process Dorado data
-      #####################################################
-      polya_signal_files <- processed_files$polya_signal_files
-      nonA_temp_dir <- file.path(save_dir, "nonA_temp_dir")
-      polya_chunks_dir <- file.path(save_dir, "polya_chunks_dir")
-      nonA_results <- ninetails::process_dorado_signal_files(
-        polya_signal_files,
-        nonA_temp_dir,
-        polya_chunks_dir,
-        num_cores,
-        cli_log
+      # Validate output format - should be a list with read_classes and nonadenosine_residues
+      if (!is.list(result)) {
+        stop("create_outputs_dorado must return a list", call. = FALSE)
+      }
+
+      # Check for expected components
+      expected_names <- c("read_classes", "nonadenosine_residues")
+      if (!all(expected_names %in% names(result))) {
+        cli_log("Warning: Output does not contain expected components. Found components:", "WARNING")
+        cli_log(paste(names(result), collapse = ", "), "WARNING")
+      }
+
+      result
+    }, error = function(e) {
+      cli_log(sprintf("Error in output creation: %s", e$message), "ERROR")
+      stop(e$message, call. = FALSE)
+    })
+    cli_log("Output creation completed", "SUCCESS")
+
+    # Save final outputs
+    #####################################################
+    cli_log("Saving final outputs...", "INFO", "Saving Results", bullet = TRUE)
+
+    # Use the same save_outputs function as in guppy pipeline
+    ninetails::save_outputs(outputs, save_dir, prefix)
+
+    # Cleanup intermediate files if requested
+    #####################################################
+    if (cleanup) {
+      cli_log("Cleaning up intermediate files...", "INFO", "Cleanup", bullet = TRUE)
+
+      # List of intermediate directories to remove
+      intermediate_dirs <- c(
+        file.path(save_dir, "dorado_summary_dir"),
+        file.path(save_dir, "polya_signal_dir"),
+        file.path(save_dir, "nonA_temp_dir"),
+        file.path(save_dir, "polya_chunks_dir")
       )
 
-      # Run create_outputs to generate tabular outputs
-      #####################################################
-      cli_log(
-        "Creating final outputs...",
-        "INFO",
-        "Creating Output",
-        bullet = TRUE
-      )
-      dorado_summary_dir <- file.path(save_dir, "dorado_summary_dir")
-
-      # Ensure create_outputs_dorado processes all files and returns proper format
-      outputs <- tryCatch(
-        {
-          result <- ninetails::create_outputs_dorado(
-            dorado_summary_dir = dorado_summary_dir,
-            nonA_temp_dir = nonA_temp_dir,
-            polya_chunks_dir = polya_chunks_dir,
-            num_cores = num_cores,
-            qc = qc,
-            original_summary = dorado_summary
-          )
-
-          # Validate output format - should be a list with read_classes and nonadenosine_residues
-          if (!is.list(result)) {
-            stop("create_outputs_dorado must return a list", call. = FALSE)
-          }
-
-          # Check for expected components
-          expected_names <- c("read_classes", "nonadenosine_residues")
-          if (!all(expected_names %in% names(result))) {
-            cli_log(
-              "Warning: Output does not contain expected components. Found components:",
-              "WARNING"
-            )
-            cli_log(paste(names(result), collapse = ", "), "WARNING")
-          }
-
-          result
-        },
-        error = function(e) {
-          cli_log(sprintf("Error in output creation: %s", e$message), "ERROR")
-          stop(e$message, call. = FALSE)
-        }
-      )
-      cli_log("Output creation completed", "SUCCESS")
-
-      # Save final outputs
-      #####################################################
-      cli_log(
-        "Saving final outputs...",
-        "INFO",
-        "Saving Results",
-        bullet = TRUE
+      cleanup_summary <- data.frame(
+        directory = character(0),
+        status = character(0),
+        files_removed = integer(0),
+        stringsAsFactors = FALSE
       )
 
-      # Use the same save_outputs function as in guppy pipeline
-      ninetails::save_outputs(outputs, save_dir, prefix)
+      for (dir_path in intermediate_dirs) {
+        if (dir.exists(dir_path)) {
+          tryCatch({
+            # Count files before removal
+            files_count <- length(list.files(dir_path, recursive = TRUE))
 
-      # Cleanup intermediate files if requested
-      #####################################################
-      if (cleanup) {
-        cli_log(
-          "Cleaning up intermediate files...",
-          "INFO",
-          "Cleanup",
-          bullet = TRUE
-        )
+            # Remove directory and all contents
+            unlink(dir_path, recursive = TRUE)
 
-        # List of intermediate directories to remove
-        intermediate_dirs <- c(
-          file.path(save_dir, "dorado_summary_dir"),
-          file.path(save_dir, "polya_signal_dir"),
-          file.path(save_dir, "nonA_temp_dir"),
-          file.path(save_dir, "polya_chunks_dir")
-        )
-
-        cleanup_summary <- data.frame(
-          directory = character(0),
-          status = character(0),
-          files_removed = integer(0),
-          stringsAsFactors = FALSE
-        )
-
-        for (dir_path in intermediate_dirs) {
-          if (dir.exists(dir_path)) {
-            tryCatch(
-              {
-                # Count files before removal
-                files_count <- length(list.files(dir_path, recursive = TRUE))
-
-                # Remove directory and all contents
-                unlink(dir_path, recursive = TRUE)
-
-                # Verify removal
-                if (!dir.exists(dir_path)) {
-                  cli_log(
-                    sprintf(
-                      "Removed: %s (%d files)",
-                      basename(dir_path),
-                      files_count
-                    ),
-                    "SUCCESS"
-                  )
-                  cleanup_summary <- rbind(
-                    cleanup_summary,
-                    data.frame(
-                      directory = basename(dir_path),
-                      status = "removed",
-                      files_removed = files_count,
-                      stringsAsFactors = FALSE
-                    )
-                  )
-                } else {
-                  cli_log(
-                    sprintf("Failed to remove: %s", basename(dir_path)),
-                    "WARNING"
-                  )
-                  cleanup_summary <- rbind(
-                    cleanup_summary,
-                    data.frame(
-                      directory = basename(dir_path),
-                      status = "failed",
-                      files_removed = 0,
-                      stringsAsFactors = FALSE
-                    )
-                  )
-                }
-              },
-              error = function(e) {
-                cli_log(
-                  sprintf(
-                    "Error removing %s: %s",
-                    basename(dir_path),
-                    e$message
-                  ),
-                  "WARNING"
-                )
-                cleanup_summary <<- rbind(
-                  cleanup_summary,
-                  data.frame(
-                    directory = basename(dir_path),
-                    status = "error",
-                    files_removed = 0,
-                    stringsAsFactors = FALSE
-                  )
-                )
-              }
-            )
-          } else {
-            cli_log(
-              sprintf("Directory not found: %s", basename(dir_path)),
-              "INFO"
-            )
-          }
-        }
-
-        # Summary of cleanup
-        total_removed <- sum(cleanup_summary$files_removed)
-        successful_removals <- sum(cleanup_summary$status == "removed")
-
-        if (successful_removals > 0) {
-          cli_log(
-            sprintf(
-              "Cleanup completed: %d directories removed, %d files deleted",
-              successful_removals,
-              total_removed
-            ),
-            "SUCCESS"
-          )
+            # Verify removal
+            if (!dir.exists(dir_path)) {
+              cli_log(sprintf("Removed: %s (%d files)", basename(dir_path), files_count), "SUCCESS")
+              cleanup_summary <- rbind(cleanup_summary,
+                                       data.frame(directory = basename(dir_path),
+                                                  status = "removed",
+                                                  files_removed = files_count,
+                                                  stringsAsFactors = FALSE))
+            } else {
+              cli_log(sprintf("Failed to remove: %s", basename(dir_path)), "WARNING")
+              cleanup_summary <- rbind(cleanup_summary,
+                                       data.frame(directory = basename(dir_path),
+                                                  status = "failed",
+                                                  files_removed = 0,
+                                                  stringsAsFactors = FALSE))
+            }
+          }, error = function(e) {
+            cli_log(sprintf("Error removing %s: %s", basename(dir_path), e$message), "WARNING")
+            cleanup_summary <<- rbind(cleanup_summary,
+                                      data.frame(directory = basename(dir_path),
+                                                 status = "error",
+                                                 files_removed = 0,
+                                                 stringsAsFactors = FALSE))
+          })
         } else {
-          cli_log("No intermediate directories were removed", "INFO")
+          cli_log(sprintf("Directory not found: %s", basename(dir_path)), "INFO")
         }
+      }
+
+      # Summary of cleanup
+      total_removed <- sum(cleanup_summary$files_removed)
+      successful_removals <- sum(cleanup_summary$status == "removed")
+
+      if (successful_removals > 0) {
+        cli_log(sprintf("Cleanup completed: %d directories removed, %d files deleted",
+                        successful_removals, total_removed), "SUCCESS")
       } else {
-        cli_log(
-          "Cleanup disabled - all intermediate files preserved",
-          "INFO",
-          "Cleanup",
-          bullet = TRUE
-        )
-        cli_log("Intermediate directories available for inspection:", "INFO")
+        cli_log("No intermediate directories were removed", "INFO")
+      }
 
-        # List preserved directories
-        intermediate_dirs <- c(
-          "dorado_summary_dir",
-          "polya_signal_dir",
-          "nonA_temp_dir",
-          "polya_chunks_dir"
-        )
-        for (dir_name in intermediate_dirs) {
-          dir_path <- file.path(save_dir, dir_name)
-          if (dir.exists(dir_path)) {
-            file_count <- length(list.files(dir_path, recursive = TRUE))
-            cli_log(sprintf("- %s (%d files)", dir_name, file_count), "INFO")
-          }
+    } else {
+      cli_log("Cleanup disabled - all intermediate files preserved", "INFO", "Cleanup", bullet = TRUE)
+      cli_log("Intermediate directories available for inspection:", "INFO")
+
+      # List preserved directories
+      intermediate_dirs <- c("dorado_summary_dir", "polya_signal_dir", "nonA_temp_dir", "polya_chunks_dir")
+      for (dir_name in intermediate_dirs) {
+        dir_path <- file.path(save_dir, dir_name)
+        if (dir.exists(dir_path)) {
+          file_count <- length(list.files(dir_path, recursive = TRUE))
+          cli_log(sprintf("- %s (%d files)", dir_name, file_count), "INFO")
         }
       }
-
-      # Pipeline statistics
-      #####################################################
-      log_end_time <- Sys.time()
-      runtime <- difftime(log_end_time, log_start_time, units = "mins")
-
-      cli_log("Pipeline Statistics", "INFO")
-      cli_log(sprintf("Total runtime: %.2f minutes", runtime), bullet = TRUE)
-      cli_log("Pipeline completed", "SUCCESS")
-      cli_log(
-        sprintf("Log file saved at: %s", log_filepath),
-        "INFO",
-        bullet = TRUE
-      )
-
-      # Final status messages
-      cli::cli_rule()
-      cli_log("Pipeline completed successfully", "SUCCESS")
-      cli_log(
-        sprintf("Output files saved in: %s", save_dir),
-        "INFO",
-        bullet = TRUE
-      )
-
-      if (warn_message) {
-        cli::cli_alert_warning(paste(
-          "Ninetails exited with WARNING.\n\n",
-          "Check your Dorado outputs and POD5 files for consistency. Some reads may have been omitted from analysis."
-        ))
-      }
-
-      cli::cli_text()
-      cli::cli_text(cli::col_grey("Thank you for using Ninetails."))
-
-      return(outputs)
-    },
-    error = function(e) {
-      cli::cli_alert_danger("Error: {e$message}")
-      cli_log(sprintf("Pipeline error: %s", e$message), "ERROR")
-      cli::cli_alert_danger("Ninetails aborted")
-      return(invisible(NULL))
     }
-  )
+
+    # Pipeline statistics
+    #####################################################
+    log_end_time <- Sys.time()
+    runtime <- difftime(log_end_time, log_start_time, units = "mins")
+
+    cli_log("Pipeline Statistics", "INFO")
+    cli_log(sprintf("Total runtime: %.2f minutes", runtime), bullet = TRUE)
+    cli_log("Pipeline completed", "SUCCESS")
+    cli_log(sprintf("Log file saved at: %s", log_filepath), "INFO", bullet = TRUE)
+
+    # Final status messages
+    cli::cli_rule()
+    cli_log("Pipeline completed successfully", "SUCCESS")
+    cli_log(sprintf("Output files saved in: %s", save_dir), "INFO", bullet = TRUE)
+
+    if (warn_message) {
+      cli::cli_alert_warning(paste(
+        "Ninetails exited with WARNING.\n\n",
+        "Check your Dorado outputs and POD5 files for consistency. Some reads may have been omitted from analysis."
+      ))
+    }
+
+    cli::cli_text()
+    cli::cli_text(cli::col_grey("Thank you for using Ninetails."))
+
+    return(outputs)
+
+  }, error = function(e) {
+    cli::cli_alert_danger("Error: {e$message}")
+    cli_log(sprintf("Pipeline error: %s", e$message), "ERROR")
+    cli::cli_alert_danger("Ninetails aborted")
+    return(invisible(NULL))
+  })
 }
 
 
@@ -763,13 +624,12 @@ check_tails_dorado_DRS <- function(
 #'   cli_log = function(msg, level, ...) message(sprintf("[%s] %s", level, msg))
 #' )
 #' }
-process_dorado_signal_files <- function(
-  polya_signal_files,
-  nonA_temp_dir,
-  polya_chunks_dir,
-  num_cores,
-  cli_log
-) {
+process_dorado_signal_files <- function(polya_signal_files,
+                                        nonA_temp_dir,
+                                        polya_chunks_dir,
+                                        num_cores,
+                                        cli_log) {
+
   # Assertions
   if (!dir.exists(nonA_temp_dir)) {
     dir.create(nonA_temp_dir, recursive = TRUE)
@@ -787,107 +647,50 @@ process_dorado_signal_files <- function(
 
     # Section header for each file
     #####################################################
-    cli_log(
-      sprintf("-- SIGNAL DATA ANALYSIS: %s --", input_basename),
-      "INFO",
-      sprintf("SIGNAL DATA ANALYSIS: %s", input_basename)
-    )
-    cli_log(
-      sprintf("Processing %s for nonA prediction", input_basename),
-      "INFO"
-    )
+    cli_log(sprintf("-- SIGNAL DATA ANALYSIS: %s --", input_basename), "INFO", sprintf("SIGNAL DATA ANALYSIS: %s", input_basename))
+    cli_log(sprintf("Processing %s for nonA prediction", input_basename), "INFO")
 
-    result <- tryCatch(
-      {
-        # Computing Pseudomoves
-        #####################################################
-        cli_log(
-          "Computing pseudomoves...",
-          "INFO",
-          "Computing Pseudomoves",
-          bullet = TRUE
-        )
-        signal_list <- readRDS(signal_file)
-        features <- ninetails::create_tail_features_list_dorado(
-          signal_list,
-          num_cores = num_cores
-        )
-        if (
-          !is.null(features$zeromoved_readnames) &&
-            length(features$zeromoved_readnames) > 0
-        ) {
-          cli_log(
-            sprintf(
-              "%d reads had zero moves",
-              length(features$zeromoved_readnames)
-            ),
-            "WARNING"
-          )
-        }
-        if (
-          !is.null(features$nonpseudomoved_readnames) &&
-            length(features$nonpseudomoved_readnames) > 0
-        ) {
-          cli_log(
-            sprintf(
-              "%d reads did not meet pseudomove criteria",
-              length(features$nonpseudomoved_readnames)
-            ),
-            "WARNING"
-          )
-        }
-        cli_log("Feature extraction completed", "SUCCESS")
-
-        # Creating Chunks
-        #####################################################
-        cli_log(
-          "Creating tail segmentation data...",
-          "INFO",
-          "Creating Chunks",
-          bullet = TRUE
-        )
-        chunks <- ninetails::create_tail_chunk_list_dorado(
-          features,
-          num_cores = num_cores
-        )
-        cli_log("Chunk creation completed", "SUCCESS")
-        saveRDS(chunks, chunks_file)
-        cli_log(sprintf("Saved tail chunk list to %s", chunks_file), "SUCCESS")
-
-        # Generating GAFs
-        #####################################################
-        cli_log(
-          "Computing gramian angular fields...",
-          "INFO",
-          "Generating GAFs",
-          bullet = TRUE
-        )
-        gafs <- ninetails::create_gaf_list(chunks, num_cores = num_cores)
-        cli_log("GAF computation completed", "SUCCESS")
-
-        # Predicting Classes
-        #####################################################
-        cli_log(
-          "Running predictions...",
-          "INFO",
-          "Predicting Classes",
-          bullet = TRUE
-        )
-        preds <- ninetails::predict_gaf_classes(gafs)
-        cli_log("Predictions completed", "SUCCESS")
-
-        saveRDS(preds, output_file)
-        cli_log(sprintf("Saved predictions to %s", output_file), "SUCCESS")
-        list(success = TRUE, file = output_file, chunks_file = chunks_file)
-      },
-      error = function(e) {
-        cli_log(
-          sprintf("Error processing %s: %s", input_basename, e$message),
-          "ERROR"
-        )
-        list(success = FALSE, error = e$message)
+    result <- tryCatch({
+      # Computing Pseudomoves
+      #####################################################
+      cli_log("Computing pseudomoves...", "INFO", "Computing Pseudomoves", bullet = TRUE)
+      signal_list <- readRDS(signal_file)
+      features <- ninetails::create_tail_features_list_dorado(signal_list, num_cores = num_cores)
+      if (!is.null(features$zeromoved_readnames) && length(features$zeromoved_readnames) > 0) {
+        cli_log(sprintf("%d reads had zero moves", length(features$zeromoved_readnames)), "WARNING")
       }
-    )
+      if (!is.null(features$nonpseudomoved_readnames) && length(features$nonpseudomoved_readnames) > 0) {
+        cli_log(sprintf("%d reads did not meet pseudomove criteria", length(features$nonpseudomoved_readnames)), "WARNING")
+      }
+      cli_log("Feature extraction completed", "SUCCESS")
+
+      # Creating Chunks
+      #####################################################
+      cli_log("Creating tail segmentation data...", "INFO", "Creating Chunks", bullet = TRUE)
+      chunks <- ninetails::create_tail_chunk_list_dorado(features, num_cores = num_cores)
+      cli_log("Chunk creation completed", "SUCCESS")
+      saveRDS(chunks, chunks_file)
+      cli_log(sprintf("Saved tail chunk list to %s", chunks_file), "SUCCESS")
+
+      # Generating GAFs
+      #####################################################
+      cli_log("Computing gramian angular fields...", "INFO", "Generating GAFs", bullet = TRUE)
+      gafs <- ninetails::create_gaf_list(chunks, num_cores = num_cores)
+      cli_log("GAF computation completed", "SUCCESS")
+
+      # Predicting Classes
+      #####################################################
+      cli_log("Running predictions...", "INFO", "Predicting Classes", bullet = TRUE)
+      preds <- ninetails::predict_gaf_classes(gafs)
+      cli_log("Predictions completed", "SUCCESS")
+
+      saveRDS(preds, output_file)
+      cli_log(sprintf("Saved predictions to %s", output_file), "SUCCESS")
+      list(success = TRUE, file = output_file, chunks_file = chunks_file)
+    }, error = function(e) {
+      cli_log(sprintf("Error processing %s: %s", input_basename, e$message), "ERROR")
+      list(success = FALSE, error = e$message)
+    })
     results_summary[[input_basename]] <- result
   }
   cli_log("nonA prediction completed for all signal files", "SUCCESS")

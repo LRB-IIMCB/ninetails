@@ -2,30 +2,43 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{count_residues}
 \alias{count_residues}
-\title{Counts non-A residues found in nonadenosine_residues dataframe produced
-by ninetails pipeline.}
+\title{Counts non-A residues found in a nonadenosine_residues data frame
+produced by the ninetails pipeline.}
 \usage{
 count_residues(residue_data, grouping_factor = NA)
 }
 \arguments{
-\item{residue_data}{A dataframe or tibble containig non-A residue predictions
-made by ninetails pipeline}
+\item{residue_data}{Data frame or tibble containing non-A residue
+predictions produced by the ninetails pipeline.}
 
-\item{grouping_factor}{grouping variable (e.g. "sample_name")}
+\item{grouping_factor}{Character string (default \code{NA}). Name of a
+column in \code{residue_data} to use as a grouping variable
+(e.g. \code{"sample_name"}).}
 }
 \value{
-A tibble with counts for each non-A residue
+A tibble with columns for the grouping variable (if provided),
+  \code{prediction} (nucleotide type), and \code{n} (the count).
 }
 \description{
-Process the information returned by ninetails found in the nonadenosine_residues
-dataframe in the prediction column. It is important to highlight that this function
-returns counts as summary of hits, it does not provide a summary per read.
+Tabulates the \code{prediction} column of the
+\code{nonadenosine_residues} data frame, counting occurrences of each
+non-A nucleotide type (C, G, U). Counts represent total hits across
+all reads, \emph{not} per-read summaries (a single read may contribute
+multiple hits).
 }
 \examples{
 \dontrun{
 
-residue_counted <- ninetails::count_residues(residue_data=out[[2]],
-                                             grouping_factor=NA)
+residue_counted <- ninetails::count_residues(
+  residue_data = out[[2]],
+  grouping_factor = NA)
+
 }
 
+}
+\seealso{
+\code{\link{count_class}} for counting read-level classes,
+  \code{\link{read_residue_single}} and
+  \code{\link{read_residue_multiple}} for loading residue data,
+  \code{\link{summarize_nonA}} for transcript-level summaries.
 }

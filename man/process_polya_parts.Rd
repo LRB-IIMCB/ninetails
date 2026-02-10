@@ -2,7 +2,8 @@
 % Please edit documentation in R/ninetails_check_tails_guppy.R
 \name{process_polya_parts}
 \alias{process_polya_parts}
-\title{Variant of check_tails_guppy processing of poly(A) data splitted to parts.}
+\title{Process poly(A) data split into multiple parts through the Guppy
+pipeline.}
 \usage{
 process_polya_parts(
   part_files,
@@ -19,62 +20,66 @@ process_polya_parts(
 )
 }
 \arguments{
-\item{part_files}{List of file paths to poly(A) data parts}
+\item{part_files}{Character vector. File paths to poly(A) data part
+files (as returned by \code{\link{split_polya_data}}).}
 
-\item{sequencing_summary}{character string. Full path of the .txt file
-with sequencing summary or in-memory object with sequencing summary data.}
+\item{sequencing_summary}{Character string or data frame. Full path
+of the sequencing summary file, or an in-memory data frame.}
 
-\item{workspace}{character string. Full path of the directory to search the
-basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory
+containing basecalled multi-Fast5 files.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.
-This parameter is set to 1 by default.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the Fast5 file hierarchy from which the data should be extracted.
-This parameter is set to 'Basecall_1D_000' by default.}
+\item{basecall_group}{Character string \code{["Basecall_1D_000"]}.
+Fast5 hierarchy level for data extraction.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical \code{[TRUE]}. If \code{TRUE}, only
+\code{"PASS"} reads are included.}
 
-\item{qc}{logical [TRUE/FALSE]. If TRUE, the quality control of the output
-predictions would be performed. This means that the reads/non-A residue
-positions in terminal nucleotides, which are most likely artifacts, are
-labeled accordingly as "-WARN" (residues recognized as non-A due to
-nanopolish segmentation error which is inherited from nanopolish,
-as ninetails uses nanopolish segmentation). It is then up to user, whether
-they would like to include or discard such reads from their pipeline. However,
-it is advised to treat them with caution. By default, the qc option is enabled
-(this parameter is set to TRUE).}
+\item{qc}{Logical \code{[TRUE]}. If \code{TRUE}, terminal artefact
+positions are labelled with \code{"-WARN"}.}
 
-\item{save_dir}{character string. Full path of the directory where the output
-files containing the tail composition information should be stored.}
+\item{save_dir}{Character string. Output directory path.}
 
-\item{prefix}{character string (optional). If provided, it will be inserted
-into the names of the output files, positioned between the timestamp
-and the suffix indicating the file type (either read classes or
-nonadenosine residues).}
+\item{prefix}{Character string (optional). Output file name prefix.}
 
-\item{cli_log}{Function for logging}
+\item{cli_log}{Function. Logging closure defined in
+\code{\link{check_tails_guppy}}.}
+
+\item{...}{Additional arguments passed to
+\code{\link{process_polya_complete}}.}
 }
 \value{
-A list containing tail information organized by the read ID.
+A named list with two data frames (merged across all parts):
+\describe{
+  \item{read_classes}{Per-read classification data.}
+  \item{nonadenosine_residues}{Detailed non-A residue positional
+    data.}
+}
 }
 \description{
-In this pipeline variant, the large input poly(A) measurement file is split
-to parts and processed sequentially one by one. This is to avoid memory
-overflow and facilitate potential debugging.
+Iterates over a set of poly(A) data part files (produced by
+\code{\link{split_polya_data}}), processing each sequentially via
+\code{\link{process_polya_complete}}, saving per-part outputs, and
+merging all results into a single output list.
 }
 \details{
-Creates individual outputs for each part and merges them into final results.
+This function is called internally by
+\code{\link{check_tails_guppy}} when the input exceeds the
+\code{part_size} threshold. It requires the \code{cli_log} closure
+defined inside \code{\link{check_tails_guppy}} for formatted
+logging, and therefore should not be called directly by the user.
 
-This function as well as \code{\link{process_polya_complete}}function is not
-intended to be used outside the \code{\link{check_tails_guppy}}function,
-as it requires cli_log which is a custom function within the pipeline wrapper
-required for log file & console prompts formatting. Therefore, should not be
-manually called by the user.
+For each part, intermediate results are saved as TSV files in a
+dedicated subdirectory (\code{part_<i>_of_<n>}) within
+\code{save_dir}. After all parts are processed, \code{read_classes}
+and \code{nonadenosine_residues} tables are merged with
+\code{rbind}.
+}
+\seealso{
+\code{\link{check_tails_guppy}} which calls this function,
+  \code{\link{split_polya_data}} for the input splitting step,
+  \code{\link{process_polya_complete}} for the per-part processing.
 }
 \keyword{internal}

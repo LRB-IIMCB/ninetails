@@ -8,7 +8,7 @@ test_that("create_outputs works correctly", {
   predicted_list = test_predictions
   num_cores=2
   bad_num_cores= "ABC"
-  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails')
+  nanopolish = system.file('extdata', 'test_data','legacy', 'nanopolish_output.tsv', package = 'ninetails')
 
   #tail feature list wrong
   expect_error(create_outputs(tail_feature_list= empty_tempfile,

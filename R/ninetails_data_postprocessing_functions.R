@@ -1,27 +1,55 @@
-#' Reads ninetails read_classes dataframe from file.
+#' Reads ninetails read_classes data frame from file.
 #'
-#' This is the basic function used to import read_classes output from check_tails_guppy
-#' to R.
+#' Imports a single \code{read_classes} output file produced by
+#' \code{\link{check_tails_guppy}} (or other ninetails pipelines) into R.
+#' Optionally attaches a sample identifier and parses GENCODE-style contig
+#' names into Ensembl transcript IDs.
 #'
-#' @param class_path a character string. Path to ninetails output file
+#' @details
+#' After loading, the function applies
+#' \code{\link{correct_labels}} to ensure backward compatibility with the
+#' label changes introduced in v0.9 (decorated/blank/unclassified). If the
+#' \code{contig} column contains GENCODE-formatted identifiers, three
+#' additional columns are created: \code{transcript} (gene symbol),
+#' \code{ensembl_transcript_id_full} (with version), and
+#' \code{ensembl_transcript_id_short} (without version).
 #'
-#' @param sample_name a sample identifier (optional), provided as a character
-#' string. If specified will be included as an additional column sample_name.
+#' @section Acknowledgements:
+#' Function based on \code{read_polya_single} from the NanoTail package
+#' by P. Krawczyk (smaegol):
+#' \url{https://github.com/LRB-IIMCB/nanotail/}.
 #'
-#' Function based on PK (smaegol) NanoTail read_polya_single
-#' https://github.com/LRB-IIMCB/nanotail/
-#' Many thanks to the NanoTail developer for help and advice!
+#' @param class_path Character string. Path to the ninetails
+#'   \code{read_classes} output file (\code{.tsv}).
 #'
-#' @return a [tibble] with read_classes predictions
+#' @param sample_name Character string (optional, default \code{NA}). If
+#'   specified, added as a factor column \code{sample_name}. Overwrites any
+#'   existing \code{sample_name} column with a warning.
+#'
+#' @return A tibble containing read_classes predictions with the following
+#'   additional columns (when GENCODE contigs are present):
+#' \describe{
+#'   \item{transcript}{Character. Gene symbol parsed from GENCODE contig.}
+#'   \item{ensembl_transcript_id_full}{Character. Ensembl transcript ID
+#'     with version number.}
+#'   \item{ensembl_transcript_id_short}{Character. Ensembl transcript ID
+#'     without version number.}
+#' }
+#'
+#' @seealso \code{\link{read_class_multiple}} for batch loading,
+#'   \code{\link{correct_labels}} for the backward-compatibility step,
+#'   \code{\link{check_tails_guppy}} for the pipeline that produces the
+#'   input file.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#'class_path <- "/directory/with/ninetails/read_class_output.tsv"
-#'class_data <- ninetails::read_class_single(class_path)
-#'}
+#' class_path <- "/directory/with/ninetails/read_class_output.tsv"
+#' class_data <- ninetails::read_class_single(class_path)
+#'
+#' }
 read_class_single <- function(class_path, sample_name = NA) {
   # assertions
   if (missing(class_path)) {
@@ -85,40 +113,56 @@ read_class_single <- function(class_path, sample_name = NA) {
 
 #' Reads multiple ninetails read_classes outputs at once.
 #'
-#' This function can be used to load any number of files with read_classes
-#' predictions with single invocation, allowing for metadata specification.
+#' Batch-loads any number of \code{read_classes} prediction files with a
+#' single invocation, attaching sample-level metadata from the provided
+#' \code{samples_table}. Each file is loaded via
+#' \code{\link{read_class_single}} and the results are combined into a
+#' single long-format tibble.
 #'
-#' @param samples_table data.frame or tibble containing samples metadata
-#' and paths to files.
-#' Should have at least two columns: \itemize{
-#' \item class_path - containing path to the read_classes predictions file
-#' \item sample_name - unique sample identifier
+#' @section Acknowledgements:
+#' Function based on \code{read_polya_multiple} from the NanoTail package
+#' by P. Krawczyk (smaegol):
+#' \url{https://github.com/LRB-IIMCB/nanotail/}.
+#'
+#' @param samples_table Data frame or tibble containing sample metadata and
+#'   file paths. Must have at least two columns:
+#' \describe{
+#'   \item{class_path}{Character. Path to the \code{read_classes}
+#'     prediction file for each sample.}
+#'   \item{sample_name}{Character/factor. Unique sample identifier.}
 #' }
+#'   Additional metadata columns (e.g. \code{group}, \code{condition})
+#'   are preserved and propagated to the output.
 #'
-#' @param ... - additional parameters to pass to \code{\link{read_class_single}};
-#' currently accepts sample_name argument
+#' @param ... Additional parameters passed to
+#'   \code{\link{read_class_single}} (currently accepts
+#'   \code{sample_name}).
 #'
-#' Function based on PK (smaegol) NanoTail read_polya_multiple
-#' https://github.com/LRB-IIMCB/nanotail/
-#' Many thanks to the NanoTail developer for help and advice!
+#' @return A tibble containing read_classes data for all specified
+#'   samples, with metadata from \code{samples_table} stored as
+#'   additional columns.
 #'
-#' @return a [tibble] containing read_classes data for
-#' all specified samples, with metadata provided in samples_table
-#' stored as separate columns
-#'
+#' @seealso \code{\link{read_class_single}} for the per-file loader,
+#'   \code{\link{read_residue_multiple}} for the analogous residue data
+#'   loader,
+#'   \code{\link{merge_nonA_tables}} for combining class and residue
+#'   outputs.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' samples_table <- data.frame(class_path = c(path_1,path_2,path_3,path_4),
-#'                             sample_name =c("wt_1","mut_1","wt_2","mut_2"),
-#'                             group = c("wt","mut","wt","mut"))
+#' samples_table <- data.frame(
+#'   class_path = c(path_1, path_2, path_3, path_4),
+#'   sample_name = c("wt_1", "mut_1", "wt_2", "mut_2"),
+#'   group = c("wt", "mut", "wt", "mut"))
 #'
 #' classes_data <- ninetails::read_class_multiple(samples_table)
-#'}
+#'
+#' }
 read_class_multiple <- function(samples_table, ...) {
+
   if (missing(samples_table)) {
     stop("Samples table argument is missing", call. = FALSE)
   }
@@ -156,37 +200,55 @@ read_class_multiple <- function(samples_table, ...) {
   return(class_data)
 }
 
-#' Counts read classes found in read_classes dataframe produced
-#' by ninetails pipeline.
+#' Counts read classes found in a read_classes data frame produced by the
+#' ninetails pipeline.
 #'
-#' Process the information returned by ninetails found in the read_classes
-#' dataframe in the prediction column.
+#' Tabulates the prediction information contained in the \code{read_classes}
+#' data frame. Counts can be computed at two levels of granularity
+#' (detailed or crude) and optionally stratified by a grouping variable.
 #'
-#' @param class_data A dataframe or tibble containig read_classes predictions
-#' made by ninetails pipeline
+#' @details
+#' When \code{detailed = TRUE}, counts are based on the \code{comments}
+#' column, which carries fine-grained labels such as \code{"YAY"} (tail
+#' with non-A residues detected). When \code{detailed = FALSE}, counts
+#' are based on the \code{class} column with three broad categories:
+#' \code{"decorated"}, \code{"blank"}, and \code{"unclassified"}.
 #'
-#' @param grouping_factor character string. A grouping variable
-#' (e.g. "sample_name")
+#' @param class_data Data frame or tibble containing read_classes
+#'   predictions produced by the ninetails pipeline.
 #'
-#' @param detailed logical [TRUE/FALSE]. If TRUE, the counts will be provided
-#' based on the "comments" column, which contains detailed information on the
-#' assigned class. If FALSE, the counts will be provided based on "class" column
-#' which gives more crude glimpse on the classification - i.e. provides an info
-#' whether the reads were considered as "decorated", "blank" and
-#' "unclassified" only. By default, the TRUE option is set.
+#' @param grouping_factor Character string (default \code{NA}). Name of a
+#'   column in \code{class_data} to use as a grouping variable
+#'   (e.g. \code{"sample_name"}).
 #'
+#' @param detailed Logical \code{[TRUE]}. If \code{TRUE}, counts are
+#'   provided based on the \code{comments} column (fine-grained). If
+#'   \code{FALSE}, counts are provided based on the \code{class} column
+#'   (crude: decorated / blank / unclassified only).
 #'
-#' @return A tibble with counts for each non-A residue
+#' @return A tibble with columns for the grouping variable (if provided),
+#'   the classification label (\code{comments} or \code{class}), and
+#'   \code{n} (the count).
+#'
+#' @seealso \code{\link{read_class_single}} and
+#'   \code{\link{read_class_multiple}} for loading class data,
+#'   \code{\link{count_residues}} for the analogous residue-level counts,
+#'   \code{\link{merge_nonA_tables}} for combining class and residue
+#'   data.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
-#' class_counted <- ninetails::count_class(class_data=out[[1]],
-#'                                         grouping_factor=NA,
-#'                                         detailed=TRUE)
-#'}
+#' \dontrun{
+#'
+#' class_counted <- ninetails::count_class(
+#'   class_data = out[[1]],
+#'   grouping_factor = NA,
+#'   detailed = TRUE)
+#'
+#' }
 count_class <- function(class_data, grouping_factor = NA, detailed = TRUE) {
+
   #assertions
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
     stop(
@@ -242,29 +304,56 @@ count_class <- function(class_data, grouping_factor = NA, detailed = TRUE) {
 
 #' Reads ninetails nonadenosine_residues data from file.
 #'
-#' This is the basic function used to import output from \code{\link{check_tails_guppy}} to R:
-#' it imports the dataframe containing non-A detailed position info
-#' (nonadenosine_residues).
+#' Imports a single \code{nonadenosine_residues} output file produced by
+#' \code{\link{check_tails_guppy}} (or other ninetails pipelines) into R.
+#' Optionally attaches a sample identifier and parses GENCODE-style contig
+#' names into Ensembl transcript IDs.
 #'
-#' @param residue_path path to ninetails nonadenosine_residues output file
+#' @details
+#' If the \code{contig} column contains GENCODE-formatted identifiers,
+#' three additional columns are created: \code{transcript},
+#' \code{ensembl_transcript_id_full}, and
+#' \code{ensembl_transcript_id_short} (see \code{\link{read_class_single}}
+#' for the same logic applied to class data).
 #'
-#' @param sample_name sample name (optional), provided as a string.
-#' If specified will be included as an additional column sample_name.
+#' @section Acknowledgements:
+#' Function based on \code{read_polya_single} from the NanoTail package
+#' by P. Krawczyk (smaegol):
+#' \url{https://github.com/LRB-IIMCB/nanotail/}.
 #'
-#' Function based on PK (smaegol) NanoTail read_polya_single
-#' https://github.com/LRB-IIMCB/nanotail/
-#' Many thanks to the NanoTail developer for help and advice!
+#' @param residue_path Character string. Path to the ninetails
+#'   \code{nonadenosine_residues} output file (\code{.tsv}).
+#'
+#' @param sample_name Character string (optional, default \code{NA}). If
+#'   specified, added as a factor column \code{sample_name}. Overwrites any
+#'   existing \code{sample_name} column with a warning.
+#'
+#' @return A tibble containing non-A residue predictions with the
+#'   following additional columns (when GENCODE contigs are present):
+#' \describe{
+#'   \item{transcript}{Character. Gene symbol parsed from GENCODE contig.}
+#'   \item{ensembl_transcript_id_full}{Character. Ensembl transcript ID
+#'     with version number.}
+#'   \item{ensembl_transcript_id_short}{Character. Ensembl transcript ID
+#'     without version number.}
+#' }
+#'
+#' @seealso \code{\link{read_residue_multiple}} for batch loading,
+#'   \code{\link{read_class_single}} for the analogous class data loader,
+#'   \code{\link{check_tails_guppy}} for the pipeline that produces the
+#'   input file.
 #'
 #' @export
 #'
-#' @return a [tibble] with non-A predictions
-#'
 #' @examples
-#'\dontrun{
+#' \dontrun{
+#'
 #' residue_path <- "/directory/with/ninetails/nonadenosine_residues_output.tsv"
 #' residue_data <- ninetails::read_residue_single(residue_path)
-#'}
+#'
+#' }
 read_residue_single <- function(residue_path, sample_name = NA) {
+
   #assertions
   assert_condition(
     !is.na(residue_path) && nchar(residue_path) > 0,
@@ -317,44 +406,56 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 
 #' Reads multiple ninetails nonadenosine_residues outputs at once.
 #'
-#' This function can be used to load any number of files
-#' with nonadenosine_residues predictions with single invocation,
-#' allowing for metadata specification.
+#' Batch-loads any number of \code{nonadenosine_residues} prediction files
+#' with a single invocation, attaching sample-level metadata from the
+#' provided \code{samples_table}. Each file is loaded via
+#' \code{\link{read_residue_single}} and the results are combined into a
+#' single long-format tibble.
 #'
-#' It requires providing a samples_table with metadata necessary
-#' to identify each sample.
+#' @section Acknowledgements:
+#' Function based on \code{read_polya_multiple} from the NanoTail package
+#' by P. Krawczyk (smaegol):
+#' \url{https://github.com/LRB-IIMCB/nanotail/}.
 #'
-#' @param samples_table data.frame or tibble containing samples metadata and
-#' paths to files.
-#' It should contain at least two columns: \itemize{
-#' \item residue_path - containing path to the nonadenosine_residues predictions file
-#' \item sample_name - unique sample identifier
+#' @param samples_table Data frame or tibble containing sample metadata and
+#'   file paths. Must have at least two columns:
+#' \describe{
+#'   \item{residue_path}{Character. Path to the
+#'     \code{nonadenosine_residues} prediction file for each sample.}
+#'   \item{sample_name}{Character/factor. Unique sample identifier.}
 #' }
-#' @param ... - additional parameters to pass to \code{\link{read_residue_single}};
-#' currently accepts sample_name argument
+#'   Additional metadata columns are preserved and propagated to the
+#'   output.
 #'
-#' Function based on PK (smaegol) NanoTail read_polya_multiple
-#' https://github.com/LRB-IIMCB/nanotail/
-#' Many thanks to the NanoTail developer for help and advice!
+#' @param ... Additional parameters passed to
+#'   \code{\link{read_residue_single}} (currently accepts
+#'   \code{sample_name}).
 #'
-#' @return a [tibble] containing non-A residue data for
-#' all specified samples, with metadata provided in samples_table
-#' stored as separate columns
+#' @return A tibble containing non-A residue data for all specified
+#'   samples, with metadata from \code{samples_table} stored as
+#'   additional columns.
 #'
+#' @seealso \code{\link{read_residue_single}} for the per-file loader,
+#'   \code{\link{read_class_multiple}} for the analogous class data
+#'   loader,
+#'   \code{\link{merge_nonA_tables}} for combining class and residue
+#'   outputs.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' samples_table <- data.frame(residue_path = c(path_1,path_2,path_3,path_4),
-#'                             sample_name =c("wt_1","mut_1","wt_2","mut_2"),
-#'                             group = c("wt","mut","wt","mut"))
+#' samples_table <- data.frame(
+#'   residue_path = c(path_1, path_2, path_3, path_4),
+#'   sample_name = c("wt_1", "mut_1", "wt_2", "mut_2"),
+#'   group = c("wt", "mut", "wt", "mut"))
 #'
 #' residues_data <- ninetails::read_residue_multiple(samples_table)
 #'
-#'}
+#' }
 read_residue_multiple <- function(samples_table, ...) {
+
   #assertions
   if (missing(samples_table)) {
     stop("The samples_table argument is missing", call. = FALSE)
@@ -392,30 +493,43 @@ read_residue_multiple <- function(samples_table, ...) {
   return(residue_data)
 }
 
-#' Counts non-A residues found in nonadenosine_residues dataframe produced
-#' by ninetails pipeline.
+#' Counts non-A residues found in a nonadenosine_residues data frame
+#' produced by the ninetails pipeline.
 #'
-#' Process the information returned by ninetails found in the nonadenosine_residues
-#' dataframe in the prediction column. It is important to highlight that this function
-#' returns counts as summary of hits, it does not provide a summary per read.
+#' Tabulates the \code{prediction} column of the
+#' \code{nonadenosine_residues} data frame, counting occurrences of each
+#' non-A nucleotide type (C, G, U). Counts represent total hits across
+#' all reads, \emph{not} per-read summaries (a single read may contribute
+#' multiple hits).
 #'
-#' @param residue_data A dataframe or tibble containig non-A residue predictions
-#' made by ninetails pipeline
+#' @param residue_data Data frame or tibble containing non-A residue
+#'   predictions produced by the ninetails pipeline.
 #'
-#' @param grouping_factor grouping variable (e.g. "sample_name")
+#' @param grouping_factor Character string (default \code{NA}). Name of a
+#'   column in \code{residue_data} to use as a grouping variable
+#'   (e.g. \code{"sample_name"}).
 #'
-#' @return A tibble with counts for each non-A residue
+#' @return A tibble with columns for the grouping variable (if provided),
+#'   \code{prediction} (nucleotide type), and \code{n} (the count).
+#'
+#' @seealso \code{\link{count_class}} for counting read-level classes,
+#'   \code{\link{read_residue_single}} and
+#'   \code{\link{read_residue_multiple}} for loading residue data,
+#'   \code{\link{summarize_nonA}} for transcript-level summaries.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' residue_counted <- ninetails::count_residues(residue_data=out[[2]],
-#'                                              grouping_factor=NA)
-#'}
+#' residue_counted <- ninetails::count_residues(
+#'   residue_data = out[[2]],
+#'   grouping_factor = NA)
+#'
+#' }
 #'
 count_residues <- function(residue_data, grouping_factor = NA) {
+
   # assertions
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
     stop(
@@ -448,30 +562,49 @@ count_residues <- function(residue_data, grouping_factor = NA) {
 }
 
 
-#' Reshapes nonadenosine_residues dataframe.
+#' Reshapes nonadenosine_residues data frame to wide format.
 #'
-#' Spreads counts of the nonA residues in decorated reads in
-#' *_nonadenosine_residues dataframe (residue data) produced by ninetails pipeline
-#' to 3 separate columns, each containing respective C, G, U prediction
-#' per given read.
+#' Pivots the \code{prediction} column of the
+#' \code{nonadenosine_residues} data frame into three separate columns
+#' (\code{prediction_C}, \code{prediction_G}, \code{prediction_U}), each
+#' containing the count of respective non-A residues per read. An
+#' additional \code{nonA_residues} column provides a CIGAR-like summary
+#' string listing all non-A positions from 5' to 3', separated by
+#' \code{":"}.
 #'
-#' In addition, an extra "nonA_residues" column is located at the end of
-#' the output table. It contains all non-A residues positions summarized (per read),
-#' given from the 5' to 3' end, separated by ":".
+#' @param residue_data Data frame or tibble containing non-A residue
+#'   predictions produced by the ninetails pipeline (filename typically
+#'   ends with \code{_nonadenosine_residues.tsv}).
 #'
-#' @param residue_data A dataframe or tibble containig non-A residue predictions
-#' made by ninetails pipeline (filename ends with "_nonadenosine_residues.tsv")
+#' @return A tibble in wide format with one row per read. In addition to
+#'   the original columns (minus \code{est_nonA_pos} and
+#'   \code{prediction}), the following are added:
+#' \describe{
+#'   \item{prediction_C}{Integer. Number of C residues detected in the
+#'     read.}
+#'   \item{prediction_G}{Integer. Number of G residues detected in the
+#'     read.}
+#'   \item{prediction_U}{Integer. Number of U residues detected in the
+#'     read.}
+#'   \item{nonA_residues}{Character. CIGAR-like string summarising all
+#'     non-A positions (e.g. \code{"C12:G25:U40"}).}
+#' }
 #'
-#' @return a tibble with spread prediction column (3 cols instead)
+#' @seealso \code{\link{merge_nonA_tables}} which calls this function
+#'   internally,
+#'   \code{\link{read_residue_single}} for loading residue data.
+#'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' spread_table <- ninetails::spread_nonA_residues(residue_data=residue_data)
+#' spread_table <- ninetails::spread_nonA_residues(
+#'   residue_data = residue_data)
 #'
-#'}
+#' }
 spread_nonA_residues <- function(residue_data) {
+
   #Assertions
   if (missing(residue_data)) {
     stop(
@@ -514,47 +647,61 @@ spread_nonA_residues <- function(residue_data) {
   return(spread_table)
 }
 
-#' Merges ninetails tabular outputs (read classes and nonadenosine residue data)
-#' to produce one concise table for all data.
+#' Merges ninetails tabular outputs (read classes and nonadenosine residue
+#' data) to produce one concise table.
 #'
-#' Each read is represented by single row.
-#' The output of this function is a tibble containing additional columns.
-#' The "prediction" column from the residue_data is spread to 3 separate columns
-#' (named with "prediction_" prefix), containing either C, G or U hits per read,
-#' respectively. "Hit" is understood as a single presence of a given non-A residue.
+#' Combines the \code{read_classes} and \code{nonadenosine_residues} data
+#' frames into a single wide-format tibble with one row per read. The
+#' \code{prediction} column from the residue data is spread into three
+#' columns (\code{prediction_C}, \code{prediction_G}, \code{prediction_U})
+#' via \code{\link{spread_nonA_residues}}, and a CIGAR-like
+#' \code{nonA_residues} summary column is appended.
 #'
-#' In addition, an extra "nonA_residues" column is located at the end of
-#' the output table. It contains all non-A residues positions summarized (per read),
-#' given from the 5' to 3' end, separated by ":".
+#' @details
+#' Unclassified reads are excluded before merging. The quality-tag filter
+#' (\code{pass_only}) must match the setting used during pipeline
+#' execution to ensure consistency. After the full join, any \code{NA}
+#' values in numeric columns are replaced with 0.
 #'
-#' In this table, only reads that have been classified by ninetails
-#' are included (reads marked "unclassified" are omitted from the analysis).
+#' @param class_data Data frame or tibble containing read_classes
+#'   predictions produced by the ninetails pipeline.
 #'
-#' @param class_data A dataframe or tibble containing read_classes predictions
-#' made by ninetails pipeline
+#' @param residue_data Data frame or tibble containing non-A residue
+#'   predictions produced by the ninetails pipeline.
 #'
-#' @param residue_data A dataframe or tibble containig non-A residue predictions
-#' made by ninetails pipeline
+#' @param pass_only Logical \code{[TRUE]}. If \code{TRUE}, only reads
+#'   tagged by nanopolish as \code{"PASS"} are included. If \code{FALSE},
+#'   reads tagged as \code{"PASS"} or \code{"SUFFCLIP"} are included.
+#'   \strong{Must match the setting used during pipeline execution.}
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
-#' IMPORTANT NOTE! This option must be set the same as it was during the
-#' pipeline output production.
+#' @return A tibble with summarised information from both ninetails
+#'   outputs: all columns from \code{class_data} plus
+#'   \code{prediction_C}, \code{prediction_G}, \code{prediction_U}, and
+#'   \code{nonA_residues}.
 #'
-#' @return a tibble with summarized info from both ninetails outputs
+#' @seealso \code{\link{spread_nonA_residues}} for the reshaping step,
+#'   \code{\link{summarize_nonA}} for transcript-level summaries from the
+#'   merged table,
+#'   \code{\link{calculate_fisher}} for statistical testing on the merged
+#'   table,
+#'   \code{\link{read_class_single}} and \code{\link{read_residue_single}}
+#'   for loading the input data.
+#'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' merged_tables <- ninetails::merge_nonA_tables(class_data=class_data,
-#'                                               residue_data=residue_data,
-#'                                               pass_only=TRUE)
+#' merged_tables <- ninetails::merge_nonA_tables(
+#'   class_data = class_data,
+#'   residue_data = residue_data,
+#'   pass_only = TRUE)
 #'
-#'}
-merge_nonA_tables <- function(class_data, residue_data, pass_only = TRUE) {
+#' }
+merge_nonA_tables <- function(class_data,
+                              residue_data,
+                              pass_only = TRUE) {
+
   #Assertions
   if (missing(class_data)) {
     stop(
@@ -614,44 +761,70 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only = TRUE) {
   return(merged_nonA_tables)
 }
 
-#' Produces summary table of nonA occurrences within analyzed dataset.
+#' Produces summary table of non-A occurrences within an analyzed dataset.
 #'
-#' Creates a table with statistics for non-A residues occurrences
-#' for each transcript (ensembl_transcrit_id_short) per each analyzed sample in given dataset.
+#' Creates a per-transcript summary table with read counts, non-A residue
+#' counts and hits, and poly(A) tail length statistics, grouped by
+#' user-defined factors (e.g. sample, condition).
 #'
-#' In the table, "counts" are understood as the number of reads in total
-#' or containing a given type of non-A residue (see column headers for details).
-#' Whereas "hits" are understood as the number of occurrences of a given
-#' nonA in total (see column headers for details). Please be aware that
-#' there may be several "hits" in one read.
+#' @details
+#' The distinction between \strong{counts} and \strong{hits}:
+#' \itemize{
+#'   \item \strong{counts} — number of reads containing at least one
+#'     occurrence of a given non-A residue type.
+#'   \item \strong{hits} — total number of occurrences of a given non-A
+#'     residue type across all reads (a single read may contribute
+#'     multiple hits).
+#' }
 #'
-#' The function also reports the mean and median poly(A) tail length
-#' by transcript.
+#' @param merged_nonA_tables Data frame or tibble. Output of
+#'   \code{\link{merge_nonA_tables}}.
 #'
-#' @param merged_nonA_tables an output of \code{\link{merge_nonA_tables}} function
+#' @param summary_factors Character string or vector of strings. Column
+#'   name(s) used for grouping (default: \code{"group"}).
 #'
-#' @param summary_factors character string or vector of strings;
-#' column(s) used for grouping (default: "group")
+#' @param transcript_id_column Character string. Column containing the
+#'   transcript identifier (default:
+#'   \code{"ensembl_transcript_id_short"}, as added during data
+#'   pre-processing; can be changed by the user).
 #'
-#' @param transcript_id_column character string; column with transcript id data
-#' (default: "ensembl_transcript_id_short" as added during data preprocessing;
-#' can be changed by the user)
+#' @return A tibble with one row per transcript per group, containing:
+#' \describe{
+#'   \item{polya_median}{Numeric. Median poly(A) tail length for the
+#'     transcript.}
+#'   \item{polya_mean}{Numeric. Mean poly(A) tail length for the
+#'     transcript.}
+#'   \item{counts_total}{Integer. Total number of reads mapped to the
+#'     transcript.}
+#'   \item{counts_blank}{Integer. Number of reads with no non-A
+#'     residues.}
+#'   \item{counts_nonA / hits_nonA}{Integer. Reads with any non-A /
+#'     total non-A hits.}
+#'   \item{counts_C / hits_C}{Integer. Reads with C / total C hits.}
+#'   \item{counts_G / hits_G}{Integer. Reads with G / total G hits.}
+#'   \item{counts_U / hits_U}{Integer. Reads with U / total U hits.}
+#' }
 #'
-#' @return a summary table of nonA occurrences (tibble)
+#' @seealso \code{\link{merge_nonA_tables}} for preparing the input,
+#'   \code{\link{calculate_fisher}} for statistical testing on merged
+#'   data,
+#'   \code{\link{annotate_with_biomart}} for adding gene-level
+#'   annotation.
+#'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' summarized <- ninetails::summarize_nonA(merged_nonA_tables=merged_nonA_tables,
-#'                                         summary_factors="group",
-#'                                         transcript_id_column="ensembl_transcript_id_short")
+#' summarized <- ninetails::summarize_nonA(
+#'   merged_nonA_tables = merged_nonA_tables,
+#'   summary_factors = "group",
+#'   transcript_id_column = "ensembl_transcript_id_short")
 #'
-#'}
-summarize_nonA <- function(
-  merged_nonA_tables,
-  summary_factors = c("group"),
-  transcript_id_column = c("ensembl_transcript_id_short")) {
+#' }
+summarize_nonA <- function(merged_nonA_tables,
+                           summary_factors = c("group"),
+                           transcript_id_column = c("ensembl_transcript_id_short")) {
 
   #Assertions
   if (missing(merged_nonA_tables)) {
@@ -736,36 +909,38 @@ summarize_nonA <- function(
 }
 
 
-#' Aggregates the quality control info produced by nanopolish polya function.
+#' Aggregates nanopolish polya quality control information.
 #'
-#' This function returns read counts assigned to each of the qc_tags
-#' per user-predefined grouping variable (grouping_factor) which might be either
-#' a sample name or an experiment condition (the column of choice must be present
-#' within the input table).
+#' Returns read counts for each \code{qc_tag} category (e.g.
+#' \code{"PASS"}, \code{"SUFFCLIP"}, \code{"NOREGION"}, etc.), optionally
+#' stratified by a user-defined grouping variable.
 #'
-#' This is the ninetails' implementation of
-#' \code{\link[nanotail:get_nanopolish_processing_info]{name}}
-#' function originally written by P. Krawczyk (smeagol) and incorporated within
-#' the NanoTail package.
+#' @details
+#' \strong{Caution:} do not use the output of
+#' \code{\link{merge_nonA_tables}} as input, because that table is already
+#' filtered for quality. Use the raw \code{class_data} output from the
+#' ninetails pipeline instead.
 #'
-#' For original source code, see:
-#' https://github.com/LRB-IIMCB/nanotail/blob/master/R/polya_stats.R
+#' @section Acknowledgements:
+#' This is the ninetails implementation of the
+#' \code{get_nanopolish_processing_info} function originally written by
+#' P. Krawczyk (smaegol) and incorporated in the NanoTail package:
+#' \url{https://github.com/LRB-IIMCB/nanotail/blob/master/R/polya_stats.R}.
+#' Variable names were adjusted to match the ninetails naming convention.
 #'
-#' The variable names were adjusted according to the naming convention within
-#' ninetails to avoid confusion.
+#' @param class_data Data frame or tibble containing the raw
+#'   \code{class_data} output from the ninetails pipeline (not the merged
+#'   output).
 #'
-#' Many thanks to the author of original source code for help and advice.
+#' @param grouping_factor Character string (default \code{NA}). Variable
+#'   used for grouping (e.g. \code{"sample_name"}).
 #'
-#' @param class_data A dataframe or tibble containig class_data output
-#' from Ninetails
+#' @return A tibble with columns for the grouping variable (if provided),
+#'   \code{qc_tag}, and \code{n} (the count).
 #'
-#' CAUTION! Do not use \code{\link{merge_nonA_tables}} output, since it is cleaned from
-#' poor quality reads by default!
+#' @seealso \code{\link{read_class_single}} for loading class data,
+#'   \code{\link{count_class}} for counting read classification labels.
 #'
-#' @param grouping_factor [character string] variable used for grouping the data
-#' (e.g. by sample_name)
-#'
-#' @return A tibble with counts for each qc_tag present in the run
 #' @export
 #'
 nanopolish_qc <- function(class_data, grouping_factor = NA) {
@@ -801,70 +976,99 @@ nanopolish_qc <- function(class_data, grouping_factor = NA) {
 }
 
 
-#' Marks uncertain positions of non-A residues in ninetails output data
+#' Marks uncertain positions of non-A residues in ninetails output data.
 #'
-#' Based on quantiles of poly(A) tail length & non-A residue distribution
-#' peak calling per transcript.
+#' Annotates each non-A residue position with a quality flag
+#' (\code{qc_pos}) indicating whether the position is likely genuine
+#' (\code{"Y"}) or a potential nanopolish segmentation artefact
+#' (\code{"N"}). The assessment is based on quantile thresholds of
+#' poly(A) tail length, modal non-A position per transcript, and
+#' optional species-specific whitelists of transcripts with A-rich
+#' 3' UTRs.
 #'
-#' @param class_data [dataframe] A dataframe or tibble containing read_classes
-#' predictions made by ninetails pipeline
-#'
-#' @param residue_data [dataframe] A dataframe or tibble containig non-A residue
-#' predictions made by ninetails pipeline
-#'
-#' @param grouping_factor [character string]. A grouping variable (e.g. "sample_name",
-#' "group", etc.) - optional.
-#'
-#' @param transcript_column [character string]. Name of column containing transcript id
-#' (e.g. "ensembl_transcript_id_short") - required.
-#'
-#' @param ref [character string] or object or NULL (default) - the whitelist of transcripts
-#' with hybrid tails - containing 3'UTRs highly enriched with A nucleotides (in last 20
-#' positions >80%).
-#' Current version of ninetails contains built-in whitelists, which may be selected
-#' by the user:\itemize{
-#' \item 'athaliana' - Arabidopsis thaliana
-#' \item 'hsapiens' - Homo sapiens
-#' \item 'mmusculus' - Mus musculus
-#' \item 'scerevisiae' - Saccharomyces cerevisiae
-#' \item 'celegans' - Caenorhabditis elegans
-#' \item 'tbrucei' - Trypanosoma brucei
+#' @details
+#' Nanopolish segmentation can misidentify nucleotides from A-rich
+#' 3' UTR regions as part of the poly(A) tail. For such transcripts, a
+#' peak of non-A positions accumulates near the transcript body. This
+#' function flags those positions as ambiguous using a combination of:
+#' \itemize{
+#'   \item The modal position of non-A residues per transcript.
+#'   \item The 0.05 quantile of poly(A) tail lengths per transcript
+#'     (segmentation error boundary).
+#'   \item The 0.05 quantile of non-A positions per transcript and
+#'     prediction type.
+#'   \item Species-specific whitelists of transcripts with hybrid tails
+#'     (3' UTRs with > 80\% A in the last 20 positions).
 #' }
-#' It is also possible to provide own whitelist. Important note: whitelist must be consistent
-#' with the content of the 'transcript_column'. Using whitelist is not mandatory,
-#' however it allows to retrieve more true positive data.
 #'
-#' @return A tibble with decorated residue_data. In this dataframe, in comparison
-#' to the original (raw) residue_data, some additional columns are present:\itemize{
-#' \item mode_pos - most frequent position of non-A reported for given transcript
-#' \item mode_len - most frequent tail length reported for given transcript
-#' \item seg_err_quart - 0.05 quantile of tail length for given transcript
-#' \item qc_pos - quality tag for given position "Y" for correct, "N" for ambiguous
-#' \item pos_err_quart - 0.05 quantile of given nonA (C, G, U, respectively) for given transcript
-#' \item count_nonA - number of nonA containing reads for given transcript
-#' \item count - number of reads for given transcript
+#' @param class_data Data frame or tibble containing read_classes
+#'   predictions from the ninetails pipeline.
+#'
+#' @param residue_data Data frame or tibble containing non-A residue
+#'   predictions from the ninetails pipeline.
+#'
+#' @param grouping_factor Character string or \code{NULL} (default). A
+#'   grouping variable (e.g. \code{"sample_name"}, \code{"group"}).
+#'
+#' @param transcript_column Character string. Name of the column
+#'   containing transcript identifiers (e.g.
+#'   \code{"ensembl_transcript_id_short"}).
+#'
+#' @param ref Character string, character vector, or \code{NULL}
+#'   (default). Whitelist of transcripts with hybrid tails. Built-in
+#'   options:
+#' \describe{
+#'   \item{\code{"athaliana"}}{\emph{Arabidopsis thaliana}}
+#'   \item{\code{"hsapiens"}}{\emph{Homo sapiens}}
+#'   \item{\code{"mmusculus"}}{\emph{Mus musculus}}
+#'   \item{\code{"scerevisiae"}}{\emph{Saccharomyces cerevisiae}}
+#'   \item{\code{"celegans"}}{\emph{Caenorhabditis elegans}}
+#'   \item{\code{"tbrucei"}}{\emph{Trypanosoma brucei}}
 #' }
+#'   A custom character vector of transcript IDs may also be provided.
+#'   Must be consistent with the content of \code{transcript_column}.
+#'
+#' @return A tibble based on \code{residue_data} with the following
+#'   additional columns:
+#' \describe{
+#'   \item{mode_pos}{Integer. Most frequent non-A position reported for
+#'     the transcript.}
+#'   \item{mode_len}{Integer. Most frequent tail length reported for the
+#'     transcript.}
+#'   \item{seg_err_quart}{Numeric. 0.05 quantile of tail length for the
+#'     transcript.}
+#'   \item{qc_pos}{Character. Quality flag: \code{"Y"} for likely
+#'     genuine, \code{"N"} for ambiguous.}
+#'   \item{pos_err_quart}{Numeric. 0.05 quantile of non-A position for
+#'     the transcript and prediction type.}
+#'   \item{count_nonA}{Integer. Number of non-A-containing reads for
+#'     the transcript.}
+#'   \item{count}{Integer. Total number of reads for the transcript.}
+#' }
+#'
+#' @seealso \code{\link{correct_class_data}} for the companion function
+#'   that reclassifies reads based on this output,
+#'   \code{\link{reclassify_ninetails_data}} for the high-level wrapper,
+#'   \code{\link{check_tails_guppy}} and \code{\link{create_outputs}} for
+#'   the pipeline that produces the input data.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
-#' # is required (below denoted as "results") to run the following example
-#' # for details see the documentation for the \code{\link{check_tails_guppy}}
-#' # and \code{\link{create_outputs}}
 #'
-#' residue_data_edited <- ninetails::correct_residue_data(class_data=results[[1]],
-#'                                                        residue_data=results[[2]],
-#'                                                        transcript_column="contig")
+#' residue_data_edited <- ninetails::correct_residue_data(
+#'   class_data = results[[1]],
+#'   residue_data = results[[2]],
+#'   transcript_column = "contig")
+#'
 #' }
 #'
-correct_residue_data <- function(
-  class_data,
-  residue_data,
-  grouping_factor = NULL,
-  transcript_column,
-  ref = NULL) {
+correct_residue_data <- function(class_data,
+                                 residue_data,
+                                 grouping_factor = NULL,
+                                 transcript_column,
+                                 ref = NULL) {
 
   # assertions
   if (missing(class_data)) {
@@ -1013,57 +1217,62 @@ correct_residue_data <- function(
   return(residue_data_edited)
 }
 
-#' Corrects the classification of reads contained in class_data table
+#' Corrects the classification of reads contained in the class_data table.
 #'
-#' Introduces additional columns to the class_data ('corr_comments' and
-#' 'corr_class'), with reclassification based on positional data
-#' (tail lengths and distribution of non-A residuals).
+#' Introduces two additional columns (\code{corr_class} and
+#' \code{corr_comments}) to the \code{class_data} table, reclassifying
+#' reads based on the positional quality flags computed by
+#' \code{\link{correct_residue_data}}. Reads whose \emph{all} non-A
+#' positions were flagged as ambiguous (\code{qc_pos == "N"}) are
+#' downgraded from \code{"decorated"} to \code{"blank"}.
 #'
-#' Based on these columns, the classification can be adjusted, which minimizes
-#' the risk of including nanopolish artifacts.
+#' @details
+#' The reclassification logic: for each read, if every non-A residue
+#' position has \code{qc_pos == "N"}, the read is reclassified as
+#' \code{"blank"} with comment \code{"MPU"} (to maintain compatibility
+#' with the tag system used in plotting functions). Reads with at least
+#' one \code{qc_pos == "Y"} position retain their original class and
+#' comment.
 #'
-#' ---CAUTION---
+#' @section Caution:
+#' It is recommended to use \code{\link{reclassify_ninetails_data}}
+#' for downstream analyses, as it wraps this function together with
+#' \code{\link{correct_residue_data}} and performs the necessary column
+#' renaming. If using this function directly, rename \code{corr_class}
+#' and \code{corr_comments} to \code{class} and \code{comments} before
+#' plotting.
 #'
-#' Reads that contain only non-A nucleotides that are likely to be nanopolish
-#' artifacts are reclassified in the output table as "blank" ("corr_class"
-#' column), and their comment is changed from "YAY" to "MPU" ("corr_comments" column).
-#' The latter is due to maintain compatibility with tag system used in plotting
-#' functions.
+#' @param residue_data_edited Data frame or tibble. Corrected non-A
+#'   residue predictions produced by \code{\link{correct_residue_data}}.
+#'   Must contain columns \code{mode_pos}, \code{seg_err_quart}, and
+#'   \code{qc_pos}.
 #'
-#' It is recommended that the output of the \code{\link{reclassify_ninetails_data}}
-#' function be used in further analyses, which is optimized for this purpose.
+#' @param class_data Data frame or tibble containing read_classes
+#'   predictions from the ninetails pipeline.
 #'
-#' In order to plot the output of this function directly, one should rename
-#' 'corr_comments' and 'corr_class' columns to 'comments' and 'class'.
-#'
-#' @param residue_data_edited [dataframe] A dataframe or tibble containing
-#' corrected nonA residue predictions produced by \code{\link{correct_residue_data}}
-#' function.
-#'
-#' @param class_data [dataframe] A dataframe or tibble containing read_classes
-#' predictions made by ninetails pipeline
-#'
-#' @return A tibble with corrected class_data (potential artifacts are reclassified).
-#' In this dataframe, in comparison to the original (raw) class_data, two additional
-#' columns are present:\itemize{
-#' \item corr_class - result of corrected classification
-#' \item corr_comments - comment adjusted accordingly
+#' @return A tibble identical to \code{class_data} with two additional
+#'   columns:
+#' \describe{
+#'   \item{corr_class}{Character. Corrected classification: original
+#'     \code{class} value, or \code{"blank"} for artefact-only reads.}
+#'   \item{corr_comments}{Character. Corrected comment: original
+#'     \code{comments} value, or \code{"MPU"} for reclassified reads.}
 #' }
 #'
-#' For more details check documentation of \code{\link{create_outputs}} function
-#' and \code{\link{reclassify_ninetails_data}} function.
+#' @seealso \code{\link{correct_residue_data}} for the preceding step,
+#'   \code{\link{reclassify_ninetails_data}} for the high-level wrapper,
+#'   \code{\link{create_outputs}} for the pipeline that produces the
+#'   input data.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
-#' # is required (below denoted as "results") to run the following example
-#' # for details see the documentation for the \code{\link{check_tails_guppy}}
-#' # and \code{\link{create_outputs}}
 #'
-#' class_data_corrected <- ninetails::correct_class_data(residue_data_edited = residue_data_edited,
-#'                                                       class_data=results[[1]])
+#' class_data_corrected <- ninetails::correct_class_data(
+#'   residue_data_edited = residue_data_edited,
+#'   class_data = results[[1]])
+#'
 #' }
 #'
 correct_class_data <- function(residue_data_edited, class_data) {
@@ -1138,88 +1347,100 @@ correct_class_data <- function(residue_data_edited, class_data) {
   return(class_data)
 }
 
-#' Reclassifies ambiguous nonA residues to mitigate potential errors inherited
-#' from nanopolish segmentation
+#' Reclassifies ambiguous non-A residues to mitigate potential errors
+#' inherited from nanopolish segmentation.
 #'
-#' In the current version, ninetails does not segment reads on its own,
-#' but inherits segmentation from nanopolish. This segmentation is not ideal.
-#' Sometimes nucleotides from the 3' ends of some AT-rich transcripts
-#' are misidentified as poly(A) tails, when in fact they are still nucleotides
-#' belonging to the body of the transcript. In the case of such transcripts,
-#' a very large enrichment of non-A positions in close proximity to the body
-#' of the transcript is observed (peak distribution).
+#' High-level wrapper that combines
+#' \code{\link{correct_residue_data}} and
+#' \code{\link{correct_class_data}} into a single call, producing
+#' cleaned class and residue data frames ready for downstream analysis
+#' and visualisation.
 #'
-#' If the tail boundaries are recognized incorrectly in the transcript,
-#' this results in an accumulation of non-A positions detected near
-#' the 3'end of the transcript. This, in turn, significantly affects
-#' the results of the analysis. To minimize the impact of potential
-#' segmentation artifacts, you can use this function to filter out
-#' such ambiguous nonA positions.
+#' @details
+#' Nanopolish segmentation can misidentify nucleotides from A-rich
+#' 3' UTR regions as part of the poly(A) tail. When tail boundaries are
+#' recognised incorrectly, non-A positions accumulate near the 3' end of
+#' the transcript, significantly affecting analysis results. This function
+#' flags and removes those ambiguous positions and reclassifies affected
+#' reads accordingly.
 #'
-#' This function takes as input the raw outputs of the ninetails pipeline
-#' (class_data and residue_data), preferably loaded using the read_class_*
-#' and read_residue_* functions. It also requires a grouping variable name
-#' (grouping_factor) and a name of column containing the IDs of the transcripts
-#' (e.g. "contig", "transcript", "ensembl_transcript_id_short", etc.) desired
-#' by the user.
-#'
-#' The output contains headers identical to those present in the raw ninetails
-#' outputs. They are fully compatible with the rest of the functions of the
-#' package, such as those for data visualization.
-#'
-#' ---CAUTION---
-#'
-#' Reads that contain only non-A nucleotides that are likely to be nanopolish
-#' artifacts are reclassified in the class_data table as "blank" ("class"
-#' column), and their comment is changed from "YAY" to "MPU" ("comments" column).
-#'
-#'
-#' @param residue_data [dataframe] A dataframe or tibble containig non-A residue
-#' predictions made by ninetails pipeline
-#'
-#' @param class_data [dataframe] A dataframe or tibble containing read_classes
-#' predictions made by ninetails pipeline
-#'
-#' @param grouping_factor [character string]. A grouping variable (e.g. "sample_name")
-#'
-#' @param transcript_column [character string]. Name of column containing transcript id
-#' (e.g. "ensembl_transcript_id_short")
-#'
-#' @param ref [character string] or object or NULL (default) - the whitelist of transcripts
-#' with hybrid tails - containing 3'UTRs highly enriched with A nucleotides (in last 20
-#' positions >80%).
-#' Current version of ninetails contains built-in whitelists, which may be selected
-#' by the user:\itemize{
-#' \item 'athaliana' - Arabidopsis thaliana
-#' \item 'hsapiens' - Homo sapiens
-#' \item 'mmusculus' - Mus musculus
-#' \item 'scerevisiae' - Saccharomyces cerevisiae
-#' \item 'celegans' - Caenorhabditis elegans
-#' \item 'tbrucei' - Trypanosoma brucei
+#' The procedure:
+#' \enumerate{
+#'   \item \code{\link{correct_residue_data}} annotates each non-A
+#'     position with a quality flag (\code{qc_pos}).
+#'   \item \code{\link{correct_class_data}} reclassifies reads whose
+#'     \emph{all} non-A positions are flagged as ambiguous.
+#'   \item Ambiguous positions (\code{qc_pos == "N"}) are dropped from
+#'     the residue table.
+#'   \item Corrected columns (\code{corr_class}, \code{corr_comments})
+#'     are renamed to \code{class} and \code{comments}.
 #' }
-#' It is also possible to provide own whitelist. Important note: whitelist must be consistent
-#' with the content of the 'transcript_column'. Using whitelist is not mandatory,
-#' however it allows to retrieve more true positive data.
 #'
-#' @return A [list] with 2 dataframes containing class_data and residue_data, respectively,
-#' with corrections for classified data applied.
+#' @section Caution:
+#' Reads containing only ambiguous non-A positions are reclassified as
+#' \code{"blank"} in the \code{class} column, and their \code{comments}
+#' are changed from \code{"YAY"} to \code{"MPU"}.
+#'
+#' @param residue_data Data frame or tibble containing non-A residue
+#'   predictions from the ninetails pipeline.
+#'
+#' @param class_data Data frame or tibble containing read_classes
+#'   predictions from the ninetails pipeline.
+#'
+#' @param grouping_factor Character string or \code{NULL} (default). A
+#'   grouping variable (e.g. \code{"sample_name"}).
+#'
+#' @param transcript_column Character string. Name of the column
+#'   containing transcript identifiers (e.g. \code{"contig"},
+#'   \code{"ensembl_transcript_id_short"}).
+#'
+#' @param ref Character string, character vector, or \code{NULL}
+#'   (default). Whitelist of transcripts with hybrid tails. Built-in
+#'   options:
+#' \describe{
+#'   \item{\code{"athaliana"}}{\emph{Arabidopsis thaliana}}
+#'   \item{\code{"hsapiens"}}{\emph{Homo sapiens}}
+#'   \item{\code{"mmusculus"}}{\emph{Mus musculus}}
+#'   \item{\code{"scerevisiae"}}{\emph{Saccharomyces cerevisiae}}
+#'   \item{\code{"celegans"}}{\emph{Caenorhabditis elegans}}
+#'   \item{\code{"tbrucei"}}{\emph{Trypanosoma brucei}}
+#' }
+#'   A custom character vector may also be provided. Must be consistent
+#'   with the content of \code{transcript_column}. Using a whitelist is
+#'   optional but allows retrieval of more true positive data.
+#'
+#' @return A named list with two data frames:
+#' \describe{
+#'   \item{class_data}{Data frame. Corrected read classifications with
+#'     \code{class} and \code{comments} columns updated. Compatible with
+#'     plotting functions.}
+#'   \item{residue_data}{Data frame. Filtered non-A residue predictions
+#'     with ambiguous positions removed. Intermediate QC columns are
+#'     dropped.}
+#' }
+#'
+#' @seealso \code{\link{correct_residue_data}} and
+#'   \code{\link{correct_class_data}} for the underlying steps,
+#'   \code{\link{check_tails_guppy}} and \code{\link{create_outputs}} for
+#'   the pipeline that produces the input data.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' rec_results <- ninetails::reclassify_ninetails_data(residue_data=results[[2]],
-#'                                                     class_data=results[[1]],
-#'                                                     transcript_column = "contig")
-#'  }
+#' rec_results <- ninetails::reclassify_ninetails_data(
+#'   residue_data = results[[2]],
+#'   class_data = results[[1]],
+#'   transcript_column = "contig")
 #'
-reclassify_ninetails_data <- function(
-  residue_data,
-  class_data,
-  grouping_factor = NULL,
-  transcript_column,
-  ref = NULL) {
+#' }
+#'
+reclassify_ninetails_data <- function(residue_data,
+                                      class_data,
+                                      grouping_factor = NULL,
+                                      transcript_column,
+                                      ref = NULL) {
 
   # assertions
   if (missing(residue_data)) {
@@ -1312,25 +1533,40 @@ reclassify_ninetails_data <- function(
   return(output)
 }
 
-#' Counts reads with certain amount of nonA occurrences (instances)
+#' Counts reads by number of non-A occurrence instances.
 #'
-#' The function counts reads with single, two or more separate instances of nonA
-#' occurrences as reported by ninetails main pipeline.
+#' Categorises reads into three abundance bins based on how many
+#' separate non-A residue occurrences (instances) were detected per
+#' read: \code{"single"} (1), \code{"two"} (2), or \code{"more"} (>= 3).
+#' Returns the count of reads in each bin, optionally stratified by a
+#' grouping variable.
 #'
-#' @param residue_data A dataframe or tibble containig non-A residue predictions
-#' made by ninetails pipeline
+#' @param residue_data Data frame or tibble containing non-A residue
+#'   predictions from the ninetails pipeline.
 #'
-#' @param grouping_factor grouping variable (e.g. "sample_name")
+#' @param grouping_factor Character string (default \code{NA}). Name of a
+#'   column to use as a grouping variable (e.g. \code{"sample_name"}).
 #'
-#' @return A tibble with counts for each amount of nonA occurrences (single, two, more)
+#' @return A tibble with columns for the grouping variable (if provided),
+#'   \code{instances} (one of \code{"single"}, \code{"two"},
+#'   \code{"more"}), and \code{count} (the number of reads in each bin).
+#'
+#' @seealso \code{\link{count_residues}} for counting total residue hits,
+#'   \code{\link{count_class}} for counting read-level classes,
+#'   \code{\link{read_residue_single}} for loading residue data.
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' nonA_abundance <- ninetails::count_nonA_abundance(residue_data=residue_data,
-#'                                                   grouping_factor="sample_name")
+#'
+#' nonA_abundance <- ninetails::count_nonA_abundance(
+#'   residue_data = residue_data,
+#'   grouping_factor = "sample_name")
+#'
 #' }
 count_nonA_abundance <- function(residue_data, grouping_factor = NA) {
+
   # assertions
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
     stop(

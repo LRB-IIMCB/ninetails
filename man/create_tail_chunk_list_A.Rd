@@ -3,39 +3,49 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_tail_chunk_list_A}
 \alias{create_tail_chunk_list_A}
-\title{Creates list of tail chunks containing As exclusively.}
+\title{Creates list of tail chunks containing only A nucleotides.}
 \usage{
 create_tail_chunk_list_A(tail_feature_list, num_cores)
 }
 \arguments{
-\item{tail_feature_list}{list object produced by create_tail_feature_list
-function.}
+\item{tail_feature_list}{List object produced by
+\code{\link{create_tail_feature_list_A}}.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
-a list object (nested) containing the segmented tail data  (chunks,
-coordinates) organized by the read IDs.
+A named nested list organised by read IDs, where each element
+  is a list of numeric vectors (each of length 100) representing the
+  overlapping signal fragments.
 }
 \description{
-Extracts fragments of polyA tails of ONT RNA reads containing only A
-nucleotides along their coordinates & appends the data to the nested
-list organized by read IDs.
+Extracts overlapping fragments of poly(A) tail signals that do
+\emph{not} contain non-A nucleotides and organises them in a nested
+list keyed by read ID.
 }
 \details{
-This version of the function is intended to be used to produce training and
-validation datasets. It is designed to filter signal fragments that DO NOT
-contain potential non-A nucleotides.
-
-This function segments the signals with overlaps, making the data multiplied (data augmentation).
+This training-set variant is designed for A-only reference data
+preparation. Unlike \code{\link{create_tail_chunk_list_trainingset}}
+(which centres chunks on modifications), this function uses
+\code{\link{split_with_overlaps}} with \code{segment = 100} and
+\code{overlap = 50}, effectively performing data augmentation by
+producing overlapping windows across the entire tail signal.
 }
 \examples{
 \dontrun{
 
-create_tail_chunk_list_A(tail_feature_list = tail_feature_list,
-                         num_cores = 2)
+create_tail_chunk_list_A(
+  tail_feature_list = tail_feature_list,
+  num_cores = 2)
 
 }
 
+}
+\seealso{
+\code{\link{create_tail_feature_list_A}} for the preceding
+  pipeline step,
+  \code{\link{split_with_overlaps}} for the per-read segmentation logic,
+  \code{\link{create_gaf_list_A}} for the next pipeline step,
+  \code{\link{create_tail_chunk_list_trainingset}} for the non-A variant.
 }

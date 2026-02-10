@@ -3,31 +3,50 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{create_gaf_list_A}
 \alias{create_gaf_list_A}
-\title{Produces list of GAFs containing exclusively A-nucleotides for neural net
-training.}
+\title{Produces list of GAFs containing exclusively A-nucleotides for neural
+network training.}
 \usage{
 create_gaf_list_A(tail_chunk_list, num_cores)
 }
 \arguments{
-\item{tail_chunk_list}{character string. The list object produced
-by create_chunk_list function.}
+\item{tail_chunk_list}{List object produced by
+\code{\link{create_tail_chunk_list_A}}.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
-A list of gaf matrices organized by the read ID_index
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list of GAF matrices, where each element corresponds
+  to one signal chunk and is named \code{<readname>_<index>}. Always
+  assign this returned list to a variable; printing the full list to
+  the console may crash the R session.
 }
 \description{
-This version of the function is intended to be used to produce training and
-validation datasets. It is designed to work on signal fragments that
-contain only A residues.
+Converts A-only signal chunks into Gramian Angular Field (GAF)
+matrices in parallel. Each chunk is transformed via
+\code{\link{combine_gafs}} and the resulting matrices are collected in
+a flat named list suitable for direct input to the CNN training
+pipeline.
+}
+\details{
+This training-set variant is designed to work on signal fragments
+that contain only A residues (produced by
+\code{\link{create_tail_chunk_list_A}}). The naming convention for
+output elements is \code{<readname>_<chunk_index>}.
 }
 \examples{
 \dontrun{
 
-create_gaf_list_A(feature_list = tail_chunk_list, num_cores = 10)
+create_gaf_list_A(
+  tail_chunk_list = tail_chunk_list,
+  num_cores = 10)
+
 }
+}
+\seealso{
+\code{\link{create_tail_chunk_list_A}} for the preceding
+  pipeline step,
+  \code{\link{combine_gafs}} for the GAF transformation,
+  \code{\link{create_gaf_list}} for the production counterpart,
+  \code{\link{prepare_trainingset}} for the top-level wrapper.
 }

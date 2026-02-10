@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{correct_residue_data}
 \alias{correct_residue_data}
-\title{Marks uncertain positions of non-A residues in ninetails output data}
+\title{Marks uncertain positions of non-A residues in ninetails output data.}
 \usage{
 correct_residue_data(
   class_data,
@@ -13,60 +13,91 @@ correct_residue_data(
 )
 }
 \arguments{
-\item{class_data}{[dataframe] A dataframe or tibble containing read_classes
-predictions made by ninetails pipeline}
+\item{class_data}{Data frame or tibble containing read_classes
+predictions from the ninetails pipeline.}
 
-\item{residue_data}{[dataframe] A dataframe or tibble containig non-A residue
-predictions made by ninetails pipeline}
+\item{residue_data}{Data frame or tibble containing non-A residue
+predictions from the ninetails pipeline.}
 
-\item{grouping_factor}{[character string]. A grouping variable (e.g. "sample_name",
-"group", etc.) - optional.}
+\item{grouping_factor}{Character string or \code{NULL} (default). A
+grouping variable (e.g. \code{"sample_name"}, \code{"group"}).}
 
-\item{transcript_column}{[character string]. Name of column containing transcript id
-(e.g. "ensembl_transcript_id_short") - required.}
+\item{transcript_column}{Character string. Name of the column
+containing transcript identifiers (e.g.
+\code{"ensembl_transcript_id_short"}).}
 
-\item{ref}{[character string] or object or NULL (default) - the whitelist of transcripts
-with hybrid tails - containing 3'UTRs highly enriched with A nucleotides (in last 20
-positions >80%).
-Current version of ninetails contains built-in whitelists, which may be selected
-by the user:\itemize{
-\item 'athaliana' - Arabidopsis thaliana
-\item 'hsapiens' - Homo sapiens
-\item 'mmusculus' - Mus musculus
-\item 'scerevisiae' - Saccharomyces cerevisiae
-\item 'celegans' - Caenorhabditis elegans
-\item 'tbrucei' - Trypanosoma brucei
+\item{ref}{Character string, character vector, or \code{NULL}
+  (default). Whitelist of transcripts with hybrid tails. Built-in
+  options:
+\describe{
+  \item{\code{"athaliana"}}{\emph{Arabidopsis thaliana}}
+  \item{\code{"hsapiens"}}{\emph{Homo sapiens}}
+  \item{\code{"mmusculus"}}{\emph{Mus musculus}}
+  \item{\code{"scerevisiae"}}{\emph{Saccharomyces cerevisiae}}
+  \item{\code{"celegans"}}{\emph{Caenorhabditis elegans}}
+  \item{\code{"tbrucei"}}{\emph{Trypanosoma brucei}}
 }
-It is also possible to provide own whitelist. Important note: whitelist must be consistent
-with the content of the 'transcript_column'. Using whitelist is not mandatory,
-however it allows to retrieve more true positive data.}
+  A custom character vector of transcript IDs may also be provided.
+  Must be consistent with the content of \code{transcript_column}.}
 }
 \value{
-A tibble with decorated residue_data. In this dataframe, in comparison
-to the original (raw) residue_data, some additional columns are present:\itemize{
-\item mode_pos - most frequent position of non-A reported for given transcript
-\item mode_len - most frequent tail length reported for given transcript
-\item seg_err_quart - 0.05 quantile of tail length for given transcript
-\item qc_pos - quality tag for given position "Y" for correct, "N" for ambiguous
-\item pos_err_quart - 0.05 quantile of given nonA (C, G, U, respectively) for given transcript
-\item count_nonA - number of nonA containing reads for given transcript
-\item count - number of reads for given transcript
+A tibble based on \code{residue_data} with the following
+  additional columns:
+\describe{
+  \item{mode_pos}{Integer. Most frequent non-A position reported for
+    the transcript.}
+  \item{mode_len}{Integer. Most frequent tail length reported for the
+    transcript.}
+  \item{seg_err_quart}{Numeric. 0.05 quantile of tail length for the
+    transcript.}
+  \item{qc_pos}{Character. Quality flag: \code{"Y"} for likely
+    genuine, \code{"N"} for ambiguous.}
+  \item{pos_err_quart}{Numeric. 0.05 quantile of non-A position for
+    the transcript and prediction type.}
+  \item{count_nonA}{Integer. Number of non-A-containing reads for
+    the transcript.}
+  \item{count}{Integer. Total number of reads for the transcript.}
 }
 }
 \description{
-Based on quantiles of poly(A) tail length & non-A residue distribution
-peak calling per transcript.
+Annotates each non-A residue position with a quality flag
+(\code{qc_pos}) indicating whether the position is likely genuine
+(\code{"Y"}) or a potential nanopolish segmentation artefact
+(\code{"N"}). The assessment is based on quantile thresholds of
+poly(A) tail length, modal non-A position per transcript, and
+optional species-specific whitelists of transcripts with A-rich
+3' UTRs.
+}
+\details{
+Nanopolish segmentation can misidentify nucleotides from A-rich
+3' UTR regions as part of the poly(A) tail. For such transcripts, a
+peak of non-A positions accumulates near the transcript body. This
+function flags those positions as ambiguous using a combination of:
+\itemize{
+  \item The modal position of non-A residues per transcript.
+  \item The 0.05 quantile of poly(A) tail lengths per transcript
+    (segmentation error boundary).
+  \item The 0.05 quantile of non-A positions per transcript and
+    prediction type.
+  \item Species-specific whitelists of transcripts with hybrid tails
+    (3' UTRs with > 80\% A in the last 20 positions).
+}
 }
 \examples{
 \dontrun{
-# the output of function \code{\link{check_tails_guppy}} or \code{\link{create_outputs}}
-# is required (below denoted as "results") to run the following example
-# for details see the documentation for the \code{\link{check_tails_guppy}}
-# and \code{\link{create_outputs}}
 
-residue_data_edited <- ninetails::correct_residue_data(class_data=results[[1]],
-                                                       residue_data=results[[2]],
-                                                       transcript_column="contig")
+residue_data_edited <- ninetails::correct_residue_data(
+  class_data = results[[1]],
+  residue_data = results[[2]],
+  transcript_column = "contig")
+
 }
 
+}
+\seealso{
+\code{\link{correct_class_data}} for the companion function
+  that reclassifies reads based on this output,
+  \code{\link{reclassify_ninetails_data}} for the high-level wrapper,
+  \code{\link{check_tails_guppy}} and \code{\link{create_outputs}} for
+  the pipeline that produces the input data.
 }

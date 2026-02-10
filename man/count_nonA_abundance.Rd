@@ -2,26 +2,40 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{count_nonA_abundance}
 \alias{count_nonA_abundance}
-\title{Counts reads with certain amount of nonA occurrences (instances)}
+\title{Counts reads by number of non-A occurrence instances.}
 \usage{
 count_nonA_abundance(residue_data, grouping_factor = NA)
 }
 \arguments{
-\item{residue_data}{A dataframe or tibble containig non-A residue predictions
-made by ninetails pipeline}
+\item{residue_data}{Data frame or tibble containing non-A residue
+predictions from the ninetails pipeline.}
 
-\item{grouping_factor}{grouping variable (e.g. "sample_name")}
+\item{grouping_factor}{Character string (default \code{NA}). Name of a
+column to use as a grouping variable (e.g. \code{"sample_name"}).}
 }
 \value{
-A tibble with counts for each amount of nonA occurrences (single, two, more)
+A tibble with columns for the grouping variable (if provided),
+  \code{instances} (one of \code{"single"}, \code{"two"},
+  \code{"more"}), and \code{count} (the number of reads in each bin).
 }
 \description{
-The function counts reads with single, two or more separate instances of nonA
-occurrences as reported by ninetails main pipeline.
+Categorises reads into three abundance bins based on how many
+separate non-A residue occurrences (instances) were detected per
+read: \code{"single"} (1), \code{"two"} (2), or \code{"more"} (>= 3).
+Returns the count of reads in each bin, optionally stratified by a
+grouping variable.
 }
 \examples{
 \dontrun{
-nonA_abundance <- ninetails::count_nonA_abundance(residue_data=residue_data,
-                                                  grouping_factor="sample_name")
+
+nonA_abundance <- ninetails::count_nonA_abundance(
+  residue_data = residue_data,
+  grouping_factor = "sample_name")
+
 }
+}
+\seealso{
+\code{\link{count_residues}} for counting total residue hits,
+  \code{\link{count_class}} for counting read-level classes,
+  \code{\link{read_residue_single}} for loading residue data.
 }

@@ -8,30 +8,59 @@
 filter_signal_by_threshold_trainingset(signal)
 }
 \arguments{
-\item{signal}{numeric vector. An ONT read fragment corresponding to the tail
-region of the read of interest as delimited by nanopolish polya function (the
-fragments are stored in tail_feature_list[[1]] produced by the
-create_tail_feature_list() function.}
+\item{signal}{Numeric vector. An ONT read fragment corresponding to the
+poly(A) tail region as delimited by nanopolish polya (stored in
+\code{tail_feature_list[[1]]} produced by
+\code{\link{create_tail_feature_list_trainingset}}).}
 }
 \value{
-numeric vector of "pseudomoves" corresponding to the analyzed tail
-region; containing values ranging from -1 to 1.
+Numeric vector of pseudomoves with values in \{-1, 0, 1\}:
+\describe{
+  \item{1}{Signal exceeds baseline (peak) — potential G nucleotide.}
+  \item{-1}{Signal falls below baseline (valley) — potential C or U
+    nucleotide.}
+  \item{0}{Signal within baseline range — homopolymer A region.}
+}
 }
 \description{
-This is the version of the function useful to produce the training set
-for CNN. Slightly different from the original one.
+This is the training-set variant of the z-score-based peak/valley
+detection function. It identifies deviations in the poly(A) tail
+signal that may correspond to non-adenosine nucleotides (C, G, or U)
+by applying a moving-average z-score filter with empirically calibrated
+parameters.
 }
 \details{
-The function created based on the following source:
-Brakel, J.P.G. van (2014). "Robust peak detection algorithm using z-scores".
-Stack Overflow. Available at:
-https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362
+The algorithm prepends 100 calibration data points (sampled from the
+10 most frequent signal values and the first 10 observations) to
+stabilise the baseline estimate. It then applies a sliding window of
+100 data points: any observation exceeding 3.5 standard deviations
+from the running mean is classified as a peak (+1) or valley (-1);
+all other positions are scored 0. After trimming the calibration
+prefix, terminal positions are zeroed out (first 5 and last 5) to
+prevent edge artefacts from entering downstream chunk extraction.
+Finally, \code{\link{substitute_gaps}} is applied to fill isolated
+zero-gaps in the pseudomove vector.
+}
+\section{Acknowledgements}{
+
+The z-score peak detection algorithm is based on:
+Brakel, J.P.G. van (2014). \emph{"Robust peak detection algorithm
+using z-scores"}. Stack Overflow. Available at:
+\url{https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362}
 (version: 2020-11-08).
 }
+
 \examples{
 \dontrun{
 
-filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+filter_signal_by_threshold_trainingset(
+  signal = tail_feature_list[[1]][["readname"]][[4]])
 
 }
+}
+\seealso{
+\code{\link{extract_tail_data_trainingset}} which calls this
+  function,
+  \code{\link{filter_signal_by_threshold}} for the production counterpart,
+  \code{\link{substitute_gaps}} for the gap-filling post-processing step.
 }

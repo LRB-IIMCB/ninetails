@@ -3,81 +3,75 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{filter_nonA_chunks_trainingset}
 \alias{filter_nonA_chunks_trainingset}
-\title{Filters read chunks containing nonadenosine nucleotides of interest for
-neural net training set preparation.}
+\title{Filters read chunks containing non-adenosine nucleotides of interest for
+neural network training-set preparation.}
 \usage{
 filter_nonA_chunks_trainingset(tail_chunk_list, value, num_cores)
 }
 \arguments{
-\item{tail_chunk_list}{character string. The list object produced
-by create_chunk_list function.}
+\item{tail_chunk_list}{List object produced by
+\code{\link{create_tail_chunk_list_trainingset}}.}
 
-\item{value}{numeric [1]. A parameter that controls whether valleys (C, U)
-or peaks (G) are filtered. For C, U nucleotides it takes the value of -1,
-for G nucleotide it takes the value of 1.}
+\item{value}{Numeric \code{[1]}. Controls whether valleys (C/U) or peaks
+  (G) are retained:
+\describe{
+  \item{-1}{Retain chunks containing valleys (C or U nucleotides).}
+  \item{1}{Retain chunks containing peaks (G nucleotide).}
+}}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 }
 \value{
-a list of signal chunks filtered based on the user-defined value
-parameter.
+A named list of filtered chunk sublists, where names correspond
+  to read IDs. Empty reads (no chunks passing the filter) are removed.
 }
 \description{
-The function is designed to be used on a generated set of synthetic
-spike-ins (laboratory produced) containing a particular type of residue
-(G, C or U in the context of 3'-homopolymer A, respectively).
+Designed for use with synthetic spike-in data containing a single type
+of non-A residue (G, C, or U in the context of 3'-homopolymer A). The
+function retains only chunks whose pseudomove vectors contain a
+consecutive run of the specified \code{value} (peak or valley) of
+length >= 4 and whose start position is non-negative.
 }
 \details{
-IMPORTANT NOTE!
-The function is not suitable for preparing a set containing
-pure (containing only A) fragments of polyA tails.
+The filtering takes advantage of the characteristic pseudomove
+patterns produced by the z-score signal filter:
+\itemize{
+  \item G nucleotides produce a \strong{peak} (pseudomove = +1).
+  \item C and U nucleotides produce a \strong{valley} (pseudomove = -1).
+}
 
-This function currently allows to produce the filtered list of chunks
-containing the signal deviations corresponding to the given non-A nucleotide
-of interest. In its current form, the function allows filtering signal
-fragments having C, G or U nucleotides (one category at a time).
+The function does \emph{not} distinguish between C and U (both produce
+valleys); classification is handled downstream by the CNN. Therefore
+it is essential that training datasets for C and U differ in the
+transcript bodies they map to and/or are not sequenced in a single run.
 
-The function uses as input a list of fragments (chunks) centered on a
-deviation in the signal produced by create_tail_chunk_list() function.
+\strong{Important:} this function is \emph{not} suitable for preparing
+the A-only reference set. Use
+\code{\link{create_tail_feature_list_A}} for that purpose.
 
-It takes advantage of the fact that when filtering a signal based on moving
-average & standard deviation filters, a characteristic pattern of "pseudomoves"
-is produced. Which corresponds to changes in the signal visible even
-to the naked eye. Empirically, it has been established that the presence
-of nucleotide G results in a peak, while the presence of nucleotides C
-and U results in a valley. These deviations mostly have specific parameters
-(depth and width) based on which filtering criteria can be established.
-
-Before performing filtering, the user needs to know what type of nucleotide
-(G, C or U) they are dealing with in a given data set. Otherwise, it may be
-difficult to interpret the results, and the network training itself may
-not lead to satisfactory results.
-
-The filtering procedure is controlled by the value parameter. It determines
-whether chunks containing a peak (value then takes the value 1) or a valley
-(value takes the value -1) are kept in the output.
-
-The function does not distinguish between fragments containing C and U
-(both produce valley; the classification is handled by CNN). Therefore,
-it is important that the training datasets differ in the transcript bodies
-to which they can be mapped and/or are not run together in a single
-sequencing run.
-
-Before proceeding further, it is advisable to perform a visual inspection
-of at least some of the filtered signals. It may be necessary to manually
-adjust the hardcoded parameters of other functions (contact dev/maintainer
-for further details).
+Before proceeding, visual inspection of at least some filtered signals
+is advisable. It may be necessary to manually adjust hardcoded
+parameters (contact the developer/maintainer for details).
 }
 \examples{
 \dontrun{
 
 # filtering G residue:
-filter_nonA_chunks_trainingset(tail_chunk_list = list_object_with_tail_chunks,
-                               value = 1, num_cores = 2)
+filter_nonA_chunks_trainingset(
+  tail_chunk_list = list_object_with_tail_chunks,
+  value = 1, num_cores = 2)
 
-# filtering C/U (user must know which type of residue is dealing with):
-filter_nonA_chunks_trainingset(tail_chunk_list = list_object_with_tail_chunks,
-                               value = -1, num_cores = 2)
+# filtering C/U (user must know which type of residue is dealt with):
+filter_nonA_chunks_trainingset(
+  tail_chunk_list = list_object_with_tail_chunks,
+  value = -1, num_cores = 2)
+
 }
+}
+\seealso{
+\code{\link{create_tail_chunk_list_trainingset}} for the
+  preceding pipeline step,
+  \code{\link{create_gaf_list}} for GAF conversion downstream,
+  \code{\link{prepare_trainingset}} for the top-level wrapper.
 }

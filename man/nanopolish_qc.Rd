@@ -2,40 +2,43 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{nanopolish_qc}
 \alias{nanopolish_qc}
-\title{Aggregates the quality control info produced by nanopolish polya function.}
+\title{Aggregates nanopolish polya quality control information.}
 \usage{
 nanopolish_qc(class_data, grouping_factor = NA)
 }
 \arguments{
-\item{class_data}{A dataframe or tibble containig class_data output
-from Ninetails
+\item{class_data}{Data frame or tibble containing the raw
+\code{class_data} output from the ninetails pipeline (not the merged
+output).}
 
-CAUTION! Do not use \code{\link{merge_nonA_tables}} output, since it is cleaned from
-poor quality reads by default!}
-
-\item{grouping_factor}{[character string] variable used for grouping the data
-(e.g. by sample_name)}
+\item{grouping_factor}{Character string (default \code{NA}). Variable
+used for grouping (e.g. \code{"sample_name"}).}
 }
 \value{
-A tibble with counts for each qc_tag present in the run
+A tibble with columns for the grouping variable (if provided),
+  \code{qc_tag}, and \code{n} (the count).
 }
 \description{
-This function returns read counts assigned to each of the qc_tags
-per user-predefined grouping variable (grouping_factor) which might be either
-a sample name or an experiment condition (the column of choice must be present
-within the input table).
+Returns read counts for each \code{qc_tag} category (e.g.
+\code{"PASS"}, \code{"SUFFCLIP"}, \code{"NOREGION"}, etc.), optionally
+stratified by a user-defined grouping variable.
 }
 \details{
-This is the ninetails' implementation of
-\code{\link[nanotail:get_nanopolish_processing_info]{name}}
-function originally written by P. Krawczyk (smeagol) and incorporated within
-the NanoTail package.
+\strong{Caution:} do not use the output of
+\code{\link{merge_nonA_tables}} as input, because that table is already
+filtered for quality. Use the raw \code{class_data} output from the
+ninetails pipeline instead.
+}
+\section{Acknowledgements}{
 
-For original source code, see:
-https://github.com/LRB-IIMCB/nanotail/blob/master/R/polya_stats.R
+This is the ninetails implementation of the
+\code{get_nanopolish_processing_info} function originally written by
+P. Krawczyk (smaegol) and incorporated in the NanoTail package:
+\url{https://github.com/LRB-IIMCB/nanotail/blob/master/R/polya_stats.R}.
+Variable names were adjusted to match the ninetails naming convention.
+}
 
-The variable names were adjusted according to the naming convention within
-ninetails to avoid confusion.
-
-Many thanks to the author of original source code for help and advice.
+\seealso{
+\code{\link{read_class_single}} for loading class data,
+  \code{\link{count_class}} for counting read classification labels.
 }

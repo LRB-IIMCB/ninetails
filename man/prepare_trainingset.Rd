@@ -3,7 +3,8 @@
 %   R/ninetails_training_dataset_production_functions.R
 \name{prepare_trainingset}
 \alias{prepare_trainingset}
-\title{Filters out signals of given type of interest.}
+\title{Filters out signals of a given nucleotide type for neural network
+training-set preparation.}
 \usage{
 prepare_trainingset(
   nucleotide,
@@ -16,52 +17,82 @@ prepare_trainingset(
 )
 }
 \arguments{
-\item{nucleotide}{character. One of the following ["A"/"C"/"G","U"].
-This parameter defines the type of filtering approach applied to the input
-dataset in order to obtain the signals potentially carrying the
-desired nucleotide context.}
+\item{nucleotide}{Character. One of \code{"A"}, \code{"C"}, \code{"G"},
+or \code{"U"}. Defines the type of signal filtering applied to
+produce training data for the desired nucleotide context.}
 
-\item{nanopolish}{character string. Full path of the .tsv file produced
-by nanopolish polya function.}
+\item{nanopolish}{Character string. Full path of the \code{.tsv} file
+produced by \code{nanopolish polya}.}
 
-\item{sequencing_summary}{character string. Full path of the .txt file
-with sequencing summary.}
+\item{sequencing_summary}{Character string. Full path of the \code{.txt}
+file with the sequencing summary.}
 
-\item{workspace}{character string. Full path of the directory to search the
-basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory containing
+basecalled multi-Fast5 files.}
 
-\item{num_cores}{numeric [1]. Number of physical cores to use in processing
-the data. Do not exceed 1 less than the number of cores at your disposal.}
+\item{num_cores}{Numeric \code{[1]}. Number of physical cores to use.
+Do not exceed 1 less than the number of cores at your disposal.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the fast5 file hierarchy from which the data should be extracted.}
+\item{basecall_group}{Character string \code{["Basecall_1D_000"]}. Name of
+the level in the Fast5 file hierarchy from which the data should be
+extracted.}
 
-\item{pass_only}{logical [TRUE/FALSE]. If TRUE, only reads tagged by
-nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-As a default, "TRUE" value is set.}
+\item{pass_only}{Logical \code{[TRUE]}. If \code{TRUE}, only reads tagged
+by nanopolish as \code{"PASS"} are retained. Otherwise, reads tagged as
+\code{"PASS"} or \code{"SUFFCLIP"} are included.}
 }
 \value{
-A list of filtered GAF matrices organized by the read ID_index
-is returned. Always assign this returned list to a variable, otherwise
-the long list will be printed to the console, which may crash your R session.
+A named list of GAF matrices organised by
+  \code{<read_ID>_<index>}. Always assign this returned list to a
+  variable; printing the full list to the console may crash the R session.
 }
 \description{
-Filters out signals corresponding to a given category of reads
-(containing A-nucleotides alone or particular types of non-adenosine
-nucleotides: G, C or U) in order to prepare the set for neural network
-training.
+Top-level convenience wrapper that orchestrates the complete
+training-set production pipeline for a single nucleotide category.
+Depending on the selected \code{nucleotide}, it chains the appropriate
+feature extraction, chunk splitting, filtering, and GAF creation
+functions into a single call.
+}
+\details{
+The internal pipeline differs by nucleotide:
+\describe{
+  \item{\code{"A"}}{Uses the A-only branch:
+    \code{\link{create_tail_feature_list_A}} \eqn{\rightarrow}
+    \code{\link{create_tail_chunk_list_A}} \eqn{\rightarrow}
+    \code{\link{create_gaf_list_A}}.}
+  \item{\code{"C"}}{Uses the non-A branch with \code{value = -1}
+    (valley filtering):
+    \code{\link{create_tail_feature_list_trainingset}} \eqn{\rightarrow}
+    \code{\link{create_tail_chunk_list_trainingset}} \eqn{\rightarrow}
+    \code{\link{filter_nonA_chunks_trainingset}} \eqn{\rightarrow}
+    \code{\link{create_gaf_list}}.}
+  \item{\code{"G"}}{Uses the non-A branch with \code{value = 1}
+    (peak filtering).}
+  \item{\code{"U"}}{Uses the non-A branch with \code{value = -1}
+    (valley filtering), same filter direction as C.}
+}
 }
 \examples{
 \dontrun{
 
-prepare_trainingset(nucleotide="A"
-                    nanopolish = '/path/to/file',
-                    sequencing_summary = '/path/to/file',
-                    workspace = '/path/to/guppy/workspace',
-                    num_cores = 10,
-                    basecall_group = 'Basecall_1D_000',
-                    pass_only=TRUE)
+prepare_trainingset(
+  nucleotide = "A",
+  nanopolish = '/path/to/file',
+  sequencing_summary = '/path/to/file',
+  workspace = '/path/to/guppy/workspace',
+  num_cores = 10,
+  basecall_group = 'Basecall_1D_000',
+  pass_only = TRUE)
+
 }
 
+}
+\seealso{
+\code{\link{create_tail_feature_list_trainingset}},
+  \code{\link{create_tail_feature_list_A}},
+  \code{\link{create_tail_chunk_list_trainingset}},
+  \code{\link{create_tail_chunk_list_A}},
+  \code{\link{filter_nonA_chunks_trainingset}},
+  \code{\link{create_gaf_list}},
+  \code{\link{create_gaf_list_A}}.
 }

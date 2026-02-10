@@ -64,12 +64,11 @@
 #'
 #' }
 #'
-nonA_fisher <- function(
-    ninetails_data,
-    grouping_factor,
-    base,
-    min_reads = 0,
-    transcript_id_column = NA) {
+nonA_fisher <- function(ninetails_data,
+                        grouping_factor,
+                        base,
+                        min_reads = 0,
+                        transcript_id_column = NA) {
 
   # Assertions
   if (missing(ninetails_data)) {
@@ -329,17 +328,16 @@ stat_codes_list = list(
 #' )
 #'
 #' }
-calculate_fisher <- function(
-  ninetails_data,
-  transcript_id_column = "ensembl_transcript_id_short",
-  min_reads = 0,
-  min_nonA_reads = 0,
-  grouping_factor = "sample_name",
-  condition1 = NA,
-  condition2 = NA,
-  alpha = 0.05,
-  base = "C",
-  ...) {
+calculate_fisher <- function(ninetails_data,
+                             transcript_id_column = "ensembl_transcript_id_short",
+                             min_reads = 0,
+                             min_nonA_reads = 0,
+                             grouping_factor = "sample_name",
+                             condition1 = NA,
+                             condition2 = NA,
+                             alpha = 0.05,
+                             base = "C",
+                             ...) {
   # Assertions
   if (missing(ninetails_data)) {
     stop(

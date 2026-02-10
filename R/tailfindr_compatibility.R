@@ -1,80 +1,99 @@
-#' Converts tailfindR results to format compatible with Ninetails
+#' Converts tailfindr results to format compatible with ninetails
 #'
-#' This function allows to reformat the output of the tailfindR pipeline,
-#' so it could be passed to the Ninetails pipeline.
+#' Reformats the output of the tailfindr pipeline so it can be passed
+#' to the ninetails legacy (Guppy) pipeline in place of nanopolish polya
+#' output. The function renames key columns, creates derived columns, and
+#' introduces dummy quality tags to approximate the nanopolish output
+#' schema.
 #'
-#' The function renames some crucial columns according to the naming convention
-#' adopted by Ninetails:\itemize{
-#'  \item read_id -> readname
-#'  \item tail_start -> polya_start
-#'  \item tail_length -> polya_length
+#' @details
+#' The following column mappings are applied:
+#' \describe{
+#'   \item{\code{read_id} \eqn{\rightarrow} \code{readname}}{Read identifier
+#'     renamed to match the ninetails naming convention.}
+#'   \item{\code{tail_start} \eqn{\rightarrow} \code{polya_start}}{Start
+#'     coordinate of the poly(A) tail.}
+#'   \item{\code{tail_length} \eqn{\rightarrow} \code{polya_length}}{Estimated
+#'     poly(A) tail length.}
 #' }
 #'
-#' The function creates additional columns based on columns present in original
-#' tailfindR output, to mimick the output of nanopolish polya function:\itemize{
-#'  \item transcript_start - based on the coordinate in tail_end +1 position forward
-#'  \item contig - nanopolish returns mapping info, which is absent in tailfindR
-#'  output. Therefore, the dummy value "tailfindr_out" is inserted there.
-#'  \item qc_tag - since tailfindR does not provide the quality tag, the simple
-#'  dummy is introduced. As the detection region of the R9.4.1 pore spans 5
-#'  nucleotides, which in turn leads to predictions shorter than 10 nt (2 full
-#'  adjacent 5-mers with no overlaps) to be unreliable, this variable assumes 2
-#'  possible values: PASS for tails longer or equal to 10 nt, and NOREGION
-#'  for tails shorter than 10 nt. This is not the ideal solution, but the most
-#'  plausible one, given the fact that tailfindR does not produce the signal
-#'  quality metrics itself.
+#' The following columns are created:
+#' \describe{
+#'   \item{\code{transcript_start}}{Set to \code{tail_end + 1}.}
+#'   \item{\code{contig}}{Dummy value \code{"tailfindr_out"} (nanopolish
+#'     returns mapping information, which is absent in tailfindr output).}
+#'   \item{\code{qc_tag}}{Simplified quality tag. Because the R9.4.1 pore
+#'     detection region spans 5 nucleotides, tails shorter than 10 nt
+#'     (2 full adjacent 5-mers with no overlap) are unreliable. Therefore
+#'     \code{qc_tag} is set to \code{"PASS"} for tails >= 10 nt and
+#'     \code{"NOREGION"} otherwise.}
 #' }
 #'
-#' IMPORTANT WARNING
+#' @section Warning:
+#' Ninetails is optimised to work with nanopolish polya output. The
+#' HMM-based approach of nanopolish provides more robust tail boundary
+#' predictions than the slope estimator used by tailfindr. In particular,
+#' ninetails relies on the quality tags produced by nanopolish
+#' (\code{"PASS"} / \code{"SUFFCLIP"}). When using tailfindr output, the
+#' signal quality cannot be inferred, which may lead to poor-quality
+#' signals being passed to the CNN and consequently misclassified.
+#' \strong{Use tailfindr input at your own risk.}
 #'
-#' Ninetails was originally intended to work with the output produced by
-#' nanopolish polya function.
-#' According to our experience in Laboratory of RNA Biology, HMM provide more
-#' robust prediction than the slope estimator. Therefore, we rely on the output
-#' provided by nanopolish. Ninetails is optimized to work with data produced by
-#' nanopolish. Hence, predictions made with tailfindR results should be treated
-#' with high caution. Especially given that the Ninetails relies heavily on
-#' quality tags produced by nanopolish polya function. It takes into consideration
-#' only those signals, which fulfill nanopolish quality criteria (marked either
-#' as "PASS" or "SUFFCLIP"). In case of tailfindR output, the quality of signal
-#' can't be inferred based on the result provided. Therefore it may happen that
-#' the signal of poor quality, insufficient to produce reliable predictions,
-#' can be passed to the neural network, and - as a result - misclassified.
+#' @param tailfindr_output Character string or data frame. Either the full
+#'   path of the \code{.csv} file produced by tailfindr, or an in-memory
+#'   data frame containing tailfindr result data. Required columns:
+#'   \code{read_id}, \code{tail_start}, \code{tail_end},
+#'   \code{tail_length}.
 #'
-#' TL;DR
-#' Ninetails is optimized to work with nanopolish. If you use it with tailfindR
-#' output - it is on your own risk.
+#' @return A tibble containing tailfindr results reformatted to resemble
+#'   the output of \code{nanopolish polya}, with columns:
+#' \describe{
+#'   \item{readname}{Character. Read identifier (renamed from
+#'     \code{read_id}).}
+#'   \item{polya_start}{Integer. Start coordinate of the poly(A) tail
+#'     (renamed from \code{tail_start}).}
+#'   \item{tail_end}{Integer. End coordinate of the poly(A) tail
+#'     (retained from tailfindr).}
+#'   \item{polya_length}{Numeric. Estimated tail length (renamed from
+#'     \code{tail_length}).}
+#'   \item{transcript_start}{Integer. Transcript start coordinate
+#'     (\code{tail_end + 1}).}
+#'   \item{contig}{Character. Dummy mapping target
+#'     (\code{"tailfindr_out"}).}
+#'   \item{qc_tag}{Character. Quality tag (\code{"PASS"} or
+#'     \code{"NOREGION"}).}
+#' }
+#' Always assign this returned tibble to a variable; printing the full
+#' tibble to the console may crash the R session.
 #'
-#' @param tailfindr_output character string. Either full path of the .csv file
-#' produced by tailfindR or an environment object containing tailfindR result
-#' data.
-#'
-#' @return A tibble/df containing tailfindR results reformatted to resemble the
-#' output of nanopolish polya function compatible with the Ninetails pipeline.
-#' Always assign this returned tibble to a variable. Otherwise
-#' the long tibble will be printed to the console, which may crash your
-#' R session.
+#' @seealso \code{\link{check_polya_length_filetype}} which uses this
+#'   function internally,
+#'   \code{\link{check_tails_guppy}} for the legacy pipeline that accepts the
+#'   converted output as its \code{nanopolish} argument,
+#'   \code{\link{extract_polya_data}} for how nanopolish output is
+#'   normally processed.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' df <- ninetails::convert_tailfindr_output(tailfindr_output = '/tf/out.csv')
+#' df <- ninetails::convert_tailfindr_output(
+#'   tailfindr_output = '/path/to/tailfindr_out.csv')
 #'
-#' #The output of this function shall be passed to the Ninetails pipeline as
-#' nanopolish variable, for instance:
-#'
-#' results <- ninetails::check_tails(nanopolish = converted_tailfindr,
+#' # The output can be passed to the ninetails pipeline as the
+#' # nanopolish argument:
+#' results <- ninetails::check_tails(
+#'   nanopolish = df,
 #'   sequencing_summary = '/path/to/sequencing_summary.txt',
 #'   workspace = '/path/to/workspace',
 #'   num_cores = 2,
 #'   basecall_group = 'Basecall_1D_000',
-#'   pass_only=TRUE,
+#'   pass_only = TRUE,
 #'   save_dir = '~/Downloads')
-#'}
+#'
+#' }
 convert_tailfindr_output <- function(tailfindr_output){
-
 
 
   # Accept either path to file or in-memory file
@@ -114,41 +133,68 @@ convert_tailfindr_output <- function(tailfindr_output){
 
 #' Check and convert poly(A) length file format
 #'
-#' This function checks whether the input poly(A) length files store data from
-#' correct sequencing platform (Oxford Nanopore DRS sequencing) - if other data
-#' types are loaded, an error occurs.
+#' Detects whether an input poly(A) length file originates from nanopolish
+#' or tailfindr and, if necessary, converts it to the nanopolish-like
+#' format expected by the ninetails legacy (Guppy/Fast5) pipeline.
+#' Tailfindr cDNA output is explicitly rejected because the legacy
+#' pipeline supports only DRS (direct RNA sequencing) data.
 #'
-#' Please keep in mind:
-#' This function is an element of legacy pipeline which would probably
-#' be retired if fast5 format would be deprecated.
+#' @details
+#' File-type detection is based on column names:
+#' \describe{
+#'   \item{nanopolish}{Identified by the presence of a \code{qc_tag}
+#'     column. Returned as-is.}
+#'   \item{tailfindr DRS}{Identified by the presence of \code{read_id},
+#'     \code{tail_start}, \code{tail_end}, \code{samples_per_nt}, and
+#'     \code{tail_length}. Converted via
+#'     \code{\link{convert_tailfindr_output}}.}
+#'   \item{tailfindr cDNA}{Identified by the presence of a
+#'     \code{tail_is_valid} column. Raises an error because cDNA data are
+#'     not compatible with this pipeline.}
+#' }
+#' If none of the above patterns match, an error is raised.
 #'
-#' @param input Path to file or data frame containing poly-A length data:
-#' either produced by nanopolish or tailfindr. In case of tailfindr, only DRS
-#' data are accepted.
+#' This function is part of the legacy pipeline (Guppy basecaller,
+#' multi-Fast5 files). It may be retired if the Fast5 format is
+#' deprecated.
 #'
-#' @return Standardized data frame in nanopolish-like format compatible with
-#' further ninetails processing steps
+#' @param input Character string or data frame. Either the path to a
+#'   poly(A) length file (nanopolish \code{.tsv} or tailfindr \code{.csv})
+#'   or an in-memory data frame. Only DRS data are accepted for tailfindr
+#'   input.
+#'
+#' @return A named list with two elements:
+#' \describe{
+#'   \item{data}{Data frame / tibble. Standardised poly(A) length data in
+#'     nanopolish-like format, ready for downstream ninetails processing.}
+#'   \item{file_type}{Character. One of \code{"nanopolish"} or
+#'     \code{"tailfindr_drs"}, indicating the detected input format.}
+#' }
+#'
+#' @seealso \code{\link{convert_tailfindr_output}} for the tailfindr
+#'   conversion logic,
+#'   \code{\link{extract_polya_data}} for subsequent processing of the
+#'   standardised output,
+#'   \code{\link{check_tails_guppy}} for the legacy pipeline entry point.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
 #' # run on nanopolish output
 #' test <- ninetails::check_polya_length_filetype(
-#' input = system.file('extdata',
-#'                     'test_data',
-#'                     'nanopolish_output.tsv',
-#'                     package = 'ninetails'))
+#'   input = system.file('extdata', 'test_data',
+#'                       'nanopolish_output.tsv',
+#'                       package = 'ninetails'))
 #'
 #' # run on tailfindr output
 #' test <- ninetails::check_polya_length_filetype(
-#' input = system.file('extdata',
-#'                     'test_data',
-#'                     'tailfindr_output.csv',
-#'                     package = 'ninetails'))
+#'   input = system.file('extdata', 'test_data',
+#'                       'tailfindr_output.csv',
+#'                       package = 'ninetails'))
 #'
-#'}
+#' }
 check_polya_length_filetype <- function(input) {
 
   # Initialize result list

@@ -7,36 +7,55 @@
 read_class_multiple(samples_table, ...)
 }
 \arguments{
-\item{samples_table}{data.frame or tibble containing samples metadata
-and paths to files.
-Should have at least two columns: \itemize{
-\item class_path - containing path to the read_classes predictions file
-\item sample_name - unique sample identifier
-}}
+\item{samples_table}{Data frame or tibble containing sample metadata and
+  file paths. Must have at least two columns:
+\describe{
+  \item{class_path}{Character. Path to the \code{read_classes}
+    prediction file for each sample.}
+  \item{sample_name}{Character/factor. Unique sample identifier.}
+}
+  Additional metadata columns (e.g. \code{group}, \code{condition})
+  are preserved and propagated to the output.}
 
-\item{...}{- additional parameters to pass to \code{\link{read_class_single}};
-currently accepts sample_name argument
-
-Function based on PK (smaegol) NanoTail read_polya_multiple
-https://github.com/LRB-IIMCB/nanotail/
-Many thanks to the NanoTail developer for help and advice!}
+\item{...}{Additional parameters passed to
+\code{\link{read_class_single}} (currently accepts
+\code{sample_name}).}
 }
 \value{
-a [tibble] containing read_classes data for
-all specified samples, with metadata provided in samples_table
-stored as separate columns
+A tibble containing read_classes data for all specified
+  samples, with metadata from \code{samples_table} stored as
+  additional columns.
 }
 \description{
-This function can be used to load any number of files with read_classes
-predictions with single invocation, allowing for metadata specification.
+Batch-loads any number of \code{read_classes} prediction files with a
+single invocation, attaching sample-level metadata from the provided
+\code{samples_table}. Each file is loaded via
+\code{\link{read_class_single}} and the results are combined into a
+single long-format tibble.
 }
+\section{Acknowledgements}{
+
+Function based on \code{read_polya_multiple} from the NanoTail package
+by P. Krawczyk (smaegol):
+\url{https://github.com/LRB-IIMCB/nanotail/}.
+}
+
 \examples{
 \dontrun{
 
-samples_table <- data.frame(class_path = c(path_1,path_2,path_3,path_4),
-                            sample_name =c("wt_1","mut_1","wt_2","mut_2"),
-                            group = c("wt","mut","wt","mut"))
+samples_table <- data.frame(
+  class_path = c(path_1, path_2, path_3, path_4),
+  sample_name = c("wt_1", "mut_1", "wt_2", "mut_2"),
+  group = c("wt", "mut", "wt", "mut"))
 
 classes_data <- ninetails::read_class_multiple(samples_table)
+
 }
+}
+\seealso{
+\code{\link{read_class_single}} for the per-file loader,
+  \code{\link{read_residue_multiple}} for the analogous residue data
+  loader,
+  \code{\link{merge_nonA_tables}} for combining class and residue
+  outputs.
 }

@@ -4,8 +4,8 @@
 
 test_that("extract_polya_data correctly reads from provided files", {
   empty_tempfile = tempfile()
-  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails')
-  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', package = 'ninetails')
+  nanopolish = system.file('extdata', 'test_data', 'legacy', 'nanopolish_output.tsv', package = 'ninetails')
+  sequencing_summary = system.file('extdata', 'test_data', 'legacy', 'sequencing_summary.txt', package = 'ninetails')
 
   # empty nanopolish
   expect_error(extract_polya_data(nanopolish = empty_tempfile, sequencing_summary = sequencing_summary, pass_only = TRUE))
@@ -27,8 +27,8 @@ test_that("extract_polya_data correctly reads from provided files", {
 test_that("extract_tail_data correctly reads from provided files", {
 
   empty_tempfile = tempfile()
-  test_workspace = system.file('extdata', 'test_data', 'basecalled_fast5', package = 'ninetails')
-  uncalled_workspace= system.file('extdata', 'test_data', 'uncalled_fast5', package = 'ninetails')
+  test_workspace = system.file('extdata', 'test_data', 'legacy','basecalled_fast5', package = 'ninetails')
+  uncalled_workspace= system.file('extdata', 'test_data','legacy', 'uncalled_fast5', package = 'ninetails')
   test_basecall_group = 'Basecall_1D_000'
   wrong_basecall_group = 'Basecall_1D_003'
 
@@ -72,10 +72,10 @@ test_that("create_tail_feature_list correctly produces the output", {
 
   empty_tempfile = tempfile()
   num_cores=2
-  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails')
-  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', package = 'ninetails')
-  test_workspace = system.file('extdata', 'test_data', 'basecalled_fast5', package = 'ninetails')
-  uncalled_workspace= system.file('extdata', 'test_data', 'uncalled_fast5', package = 'ninetails')
+  nanopolish = system.file('extdata', 'test_data', 'legacy','nanopolish_output.tsv', package = 'ninetails')
+  sequencing_summary = system.file('extdata', 'test_data','legacy', 'sequencing_summary.txt', package = 'ninetails')
+  test_workspace = system.file('extdata', 'test_data', 'legacy','basecalled_fast5', package = 'ninetails')
+  uncalled_workspace= system.file('extdata', 'test_data', 'legacy','uncalled_fast5', package = 'ninetails')
   test_basecall_group = 'Basecall_1D_000'
   wrong_basecall_group = 'Basecall_1D_003'
 

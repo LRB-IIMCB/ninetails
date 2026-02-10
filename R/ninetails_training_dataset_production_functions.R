@@ -1,45 +1,81 @@
+################################################################################
+# FUNCTIONS DEVELOPED TO HANDLA GUPPY DATA
+################################################################################
 #' Extracts tail features of single RNA read from respective basecalled
 #' multi-fast5 file.
 #'
-#' This is the version of the function useful to produce the training set
-#' for CNN. Slightly different from the original one.
+#' This is the training-set variant of the single-read extraction function.
+#' It reads raw signal, basecaller moves and channel metadata from a
+#' multi-Fast5 file, isolates the poly(A) tail region defined by nanopolish,
+#' winsorizes the signal, downsamples by linear interpolation (to 20\% of
+#' original length), and computes pseudomoves via
+#' \code{\link{filter_signal_by_threshold_trainingset}}.
 #'
-#' @param readname character string. Name of the given read within the
-#' analyzed dataset.
+#' @details
+#' The function differs from its production counterpart
+#' (\code{\link{extract_tail_data}}) in that:
+#' \itemize{
+#'   \item The signal is downsampled (interpolated) to 20\% of its original
+#'         length to speed up downstream training-set preparation.
+#'   \item Pseudomoves are computed using the training-set-specific threshold
+#'         filter (\code{\link{filter_signal_by_threshold_trainingset}}).
+#'   \item The returned list omits production-only fields and instead provides
+#'         elements suitable for chunk splitting and GAF creation.
+#' }
 #'
-#' @param polya_summary character string. The table containing data extracted
-#' from nanopolish & sequencing summary (using extract_polya_data() function.
+#' @param readname Character string. Name (UUID) of the given read within
+#'   the analyzed dataset.
 #'
-#' @param workspace character string. Full path of the directory to search
-#' the basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @param polya_summary Data frame. The table containing data extracted
+#'   from nanopolish and the sequencing summary (produced by
+#'   \code{\link{extract_polya_data}}).
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the fast5 file hierarchy from which the data should be extracted.
+#' @param workspace Character string. Full path of the directory containing
+#'   basecalled multi-Fast5 files.
 #'
-#' @return A list containing read information organized by the read ID
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @param basecall_group Character string \code{["Basecall_1D_000"]}. Name of
+#'   the level in the Fast5 file hierarchy from which the data should be
+#'   extracted.
+#'
+#' @return A named list with four elements:
+#' \describe{
+#'   \item{fast5_filename}{Character. Name of the source Fast5 file.}
+#'   \item{tail_signal}{Numeric vector. Winsorized and downsampled signal
+#'     corresponding to the poly(A) tail region.}
+#'   \item{tail_moves}{Numeric vector. Downsampled basecaller moves for the
+#'     tail region.}
+#'   \item{tail_pseudomoves}{Numeric vector. Pseudomove values (-1, 0, 1)
+#'     indicating potential non-A deviations in the tail signal.}
+#' }
+#' Always assign this returned list to a variable; printing the full list
+#' to the console may crash the R session.
+#'
+#' @seealso \code{\link{create_tail_feature_list_trainingset}} for the
+#'   parallel wrapper that calls this function,
+#'   \code{\link{extract_tail_data}} for the production counterpart,
+#'   \code{\link{winsorize_signal}} for the signal clipping step,
+#'   \code{\link{filter_signal_by_threshold_trainingset}} for pseudomove
+#'   detection.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' extract_tail_data_trainingset(readname = 'abc123de-fg45-6789-0987-6543hijk2109',
-#'                               polya_summary = polya_summary_table,
-#'                               workspace = '/path/to/folder/containing/multifast5s',
-#'                               basecall_group = 'Basecall_1D_000')
+#' extract_tail_data_trainingset(
+#'   readname = 'abc123de-fg45-6789-0987-6543hijk2109',
+#'   polya_summary = polya_summary_table,
+#'   workspace = '/path/to/folder/containing/multifast5s',
+#'   basecall_group = 'Basecall_1D_000')
 #'
-#'}
+#' }
 #'
 #'
+extract_tail_data_trainingset <- function(readname,
+                                          polya_summary,
+                                          workspace,
+                                          basecall_group) {
 
-extract_tail_data_trainingset <- function(
-  readname,
-  polya_summary,
-  workspace,
-  basecall_group
-) {
   #Assertions
   if (missing(readname)) {
     stop(
@@ -189,59 +225,83 @@ extract_tail_data_trainingset <- function(
 }
 
 
-#' Extracts features of polyA tails of ONT RNA reads required for finding
+#' Extracts features of poly(A) tails of ONT RNA reads required for finding
 #' non-A nucleotides within the given tails.
 #'
-#' This is the version of the function useful to produce the training set
-#' for CNN. Slightly different from the original one.
+#' This is the training-set variant of the feature extraction wrapper. It
+#' processes all reads in parallel, calling
+#' \code{\link{extract_tail_data_trainingset}} for each read, then filters
+#' out reads with zero-moved tails or pseudomove chains too short to
+#' represent potential modifications.
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' @details
+#' The function differs from its production counterpart in that it retains
+#' reads whose pseudomove chains satisfy a length >= 4 criterion, which is
+#' required for subsequent modification-centered chunk splitting. Two
+#' categories of discarded reads are tracked (zero-moved and
+#' non-pseudomoved) and returned alongside the valid feature list.
 #'
-#' @param sequencing_summary character string. Full path of the .txt file
-#' with sequencing summary.
+#' @param nanopolish Character string. Full path of the \code{.tsv} file
+#'   produced by \code{nanopolish polya}.
 #'
-#' @param workspace character string. Full path of the directory to search the
-#' basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @param sequencing_summary Character string. Full path of the \code{.txt}
+#'   file with the sequencing summary.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param workspace Character string. Full path of the directory containing
+#'   basecalled multi-Fast5 files.
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the Fast5 file hierarchy from which the data should be extracted.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
+#' @param basecall_group Character string \code{["Basecall_1D_000"]}. Name of
+#'   the level in the Fast5 file hierarchy from which the data should be
+#'   extracted.
 #'
-#' @return A list containing read information organized by the read ID
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @param pass_only Logical \code{[TRUE]}. If \code{TRUE}, only reads tagged
+#'   by nanopolish as \code{"PASS"} are retained. Otherwise, reads tagged as
+#'   \code{"PASS"} or \code{"SUFFCLIP"} are included.
+#'
+#' @return A named list with three elements:
+#' \describe{
+#'   \item{tail_feature_list}{Named list of per-read feature lists (as
+#'     returned by \code{\link{extract_tail_data_trainingset}}).}
+#'   \item{zeromoved_readnames}{Character vector. Read IDs discarded because
+#'     their tail moves summed to zero.}
+#'   \item{nonpseudomoved_readnames}{Character vector. Read IDs discarded
+#'     because their pseudomove chains were too short (< 4).}
+#' }
+#' Always assign this returned list to a variable; printing the full list
+#' to the console may crash the R session.
+#'
+#' @seealso \code{\link{extract_tail_data_trainingset}} for the per-read
+#'   extraction step,
+#'   \code{\link{create_tail_chunk_list_trainingset}} for the next pipeline
+#'   step,
+#'   \code{\link{extract_polya_data}} for input data preparation.
 #'
 #' @importFrom foreach %dopar%
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' create_tail_feature_list_trainingset(nanopolish = '/path/to/file',
-#'                                      sequencing_summary = '/path/to/file',
-#'                                      workspace = '/path/to/guppy/workspace',
-#'                                      num_cores = 10,
-#'                                      basecall_group = 'Basecall_1D_000')
+#' create_tail_feature_list_trainingset(
+#'   nanopolish = '/path/to/file',
+#'   sequencing_summary = '/path/to/file',
+#'   workspace = '/path/to/guppy/workspace',
+#'   num_cores = 10,
+#'   basecall_group = 'Basecall_1D_000')
 #'
-#'}
+#' }
 #'
-create_tail_feature_list_trainingset <- function(
-  nanopolish,
-  sequencing_summary,
-  workspace,
-  num_cores,
-  basecall_group,
-  pass_only = TRUE
-) {
+create_tail_feature_list_trainingset <- function(nanopolish,
+                                                 sequencing_summary,
+                                                 workspace,
+                                                 num_cores,
+                                                 basecall_group,
+                                                 pass_only = TRUE) {
+
   # Assertions
   if (missing(num_cores)) {
     stop(
@@ -329,7 +389,6 @@ create_tail_feature_list_trainingset <- function(
       })
     }
 
-  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
@@ -372,33 +431,60 @@ create_tail_feature_list_trainingset <- function(
 
 #' Detection of outliers (peaks & valleys) in ONT signal using z-scores.
 #'
-#' This is the version of the function useful to produce the training set
-#' for CNN. Slightly different from the original one.
+#' This is the training-set variant of the z-score-based peak/valley
+#' detection function. It identifies deviations in the poly(A) tail
+#' signal that may correspond to non-adenosine nucleotides (C, G, or U)
+#' by applying a moving-average z-score filter with empirically calibrated
+#' parameters.
 #'
-#' The function created based on the following source:
-#' Brakel, J.P.G. van (2014). "Robust peak detection algorithm using z-scores".
-#' Stack Overflow. Available at:
-#' https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362
+#' @details
+#' The algorithm prepends 100 calibration data points (sampled from the
+#' 10 most frequent signal values and the first 10 observations) to
+#' stabilise the baseline estimate. It then applies a sliding window of
+#' 100 data points: any observation exceeding 3.5 standard deviations
+#' from the running mean is classified as a peak (+1) or valley (-1);
+#' all other positions are scored 0. After trimming the calibration
+#' prefix, terminal positions are zeroed out (first 5 and last 5) to
+#' prevent edge artefacts from entering downstream chunk extraction.
+#' Finally, \code{\link{substitute_gaps}} is applied to fill isolated
+#' zero-gaps in the pseudomove vector.
+#'
+#' @section Acknowledgements:
+#' The z-score peak detection algorithm is based on:
+#' Brakel, J.P.G. van (2014). \emph{"Robust peak detection algorithm
+#' using z-scores"}. Stack Overflow. Available at:
+#' \url{https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362}
 #' (version: 2020-11-08).
 #'
+#' @param signal Numeric vector. An ONT read fragment corresponding to the
+#'   poly(A) tail region as delimited by nanopolish polya (stored in
+#'   \code{tail_feature_list[[1]]} produced by
+#'   \code{\link{create_tail_feature_list_trainingset}}).
 #'
-#' @param signal numeric vector. An ONT read fragment corresponding to the tail
-#' region of the read of interest as delimited by nanopolish polya function (the
-#' fragments are stored in tail_feature_list[[1]] produced by the
-#' create_tail_feature_list() function.
+#' @return Numeric vector of pseudomoves with values in \{-1, 0, 1\}:
+#' \describe{
+#'   \item{1}{Signal exceeds baseline (peak) — potential G nucleotide.}
+#'   \item{-1}{Signal falls below baseline (valley) — potential C or U
+#'     nucleotide.}
+#'   \item{0}{Signal within baseline range — homopolymer A region.}
+#' }
 #'
-#' @return numeric vector of "pseudomoves" corresponding to the analyzed tail
-#' region; containing values ranging from -1 to 1.
+#' @seealso \code{\link{extract_tail_data_trainingset}} which calls this
+#'   function,
+#'   \code{\link{filter_signal_by_threshold}} for the production counterpart,
+#'   \code{\link{substitute_gaps}} for the gap-filling post-processing step.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' filter_signal_by_threshold(signal=tail_feature_list[[1]][["readname"]][[4]])
+#' filter_signal_by_threshold_trainingset(
+#'   signal = tail_feature_list[[1]][["readname"]][[4]])
 #'
-#'}
+#' }
 filter_signal_by_threshold_trainingset <- function(signal) {
+
   #assertions
   if (missing(signal)) {
     stop(
@@ -478,35 +564,71 @@ filter_signal_by_threshold_trainingset <- function(signal) {
 }
 
 
-#' Extracts fragments of poly(A) tail signal containing potential modifications
-#' along with its delimitation (positional indices; coordinates) within the tail.
+#' Extracts decoration-centered fragments of poly(A) tail signal along
+#' with positional coordinates.
 #'
-#' This version of the function contains an additional category (pseudomoves)
-#' within the each chunk sublist, therefore is intended for preparation the
-#' training/validation data.
+#' Splits a single read's poly(A) tail signal into fixed-length (100
+#' data-point) chunks, each centered on a potential non-A decoration
+#' detected from the pseudomove vector. Chunks whose start position falls
+#' before index 1 are left-padded with values randomly sampled from the
+#' three most frequent signal values.
 #'
-#' @param readname character string. Name of the given read within the
-#' analyzed dataset.
+#' @details
+#' This training-set variant includes an additional \code{pseudomoves}
+#' element in each chunk sublist, making the output suitable for
+#' supervised training/validation data preparation. Pseudomoves for each
+#' extracted chunk are recomputed by calling
+#' \code{\link{filter_signal_by_threshold}} on the chunk sequence.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
-#' function.
+#' The centering procedure:
+#' \enumerate{
+#'   \item Runs RLE on the pseudomove vector.
+#'   \item Selects runs of length >= 4 with non-zero values (empirical
+#'         modification threshold).
+#'   \item Centers a 100-element window on the midpoint of each selected
+#'         run.
+#' }
 #'
-#' @return a list object (nested) containing 4 categories: resulting fragments
-#' (chunk_sequence), start coordinate of given fragment (chunk_start_pos)
-#' its' end coordinate (chunk_end_pos) and "pseudomoves" (pseudomoves)
-#' corresponding to the given signal chunk arranged by the signal ID and
-#' positional indices (WARNING! from 3' end!).
+#' Chunk names follow the convention \code{<readname>_<index>}, where
+#' \code{index} is the sequential position of the modification within
+#' the read (numbered from the 3' end).
+#'
+#' @param readname Character string. Name (UUID) of the given read.
+#'
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list_trainingset}}.
+#'
+#' @return A named nested list where each element corresponds to one chunk
+#'   and contains:
+#' \describe{
+#'   \item{chunk_sequence}{Numeric vector (length 100). The signal
+#'     fragment centered on the potential modification.}
+#'   \item{chunk_start_pos}{Integer. Start index of the chunk within the
+#'     full tail signal (may be negative for left-padded chunks).}
+#'   \item{chunk_end_pos}{Integer. End index of the chunk within the full
+#'     tail signal.}
+#'   \item{pseudomoves}{Numeric vector (length 100). Recomputed
+#'     pseudomoves for the chunk. Coordinates are from the 3' end.}
+#' }
+#'
+#' @seealso \code{\link{create_tail_chunk_list_trainingset}} for the
+#'   parallel wrapper that calls this function,
+#'   \code{\link{filter_signal_by_threshold}} for pseudomove recomputation
+#'   on individual chunks,
+#'   \code{\link{split_tail_centered}} for the production counterpart.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' split_tail_centered_trainingset(readname= "1234-anexample-r3adn4m3",
-#'                                 tail_feature_list = tail_feature_list)
+#' split_tail_centered_trainingset(
+#'   readname = "1234-anexample-r3adn4m3",
+#'   tail_feature_list = tail_feature_list)
 #'
-#'}
+#' }
 split_tail_centered_trainingset <- function(readname, tail_feature_list) {
+
   #assertions
   if (missing(readname)) {
     stop(
@@ -599,30 +721,51 @@ split_tail_centered_trainingset <- function(readname, tail_feature_list) {
   return(out)
 }
 
-#' Extracts fragments of poly(A) tails of ONT RNA reads containing non-A
-#' nucleotides along their coordinates & appends the data to the nested
-#' list organized by read IDs.
+#' Extracts decoration-centered fragments of poly(A) tails for all reads
+#' and appends positional data to a nested list.
 #'
-#' This version of the function is intended to be used to produce training and
-#' validation datasets.
+#' Parallel wrapper around \code{\link{split_tail_centered_trainingset}}.
+#' For every read in the feature list, it extracts 100-element signal chunks
+#' centered on potential non-A modifications and organises them in a nested
+#' list keyed by read ID.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
-#' function.
+#' @details
+#' This training-set variant is intended for preparing training and
+#' validation datasets. Each chunk sublist contains four fields:
+#' \code{chunk_sequence}, \code{chunk_start_pos}, \code{chunk_end_pos},
+#' and \code{pseudomoves} (see
+#' \code{\link{split_tail_centered_trainingset}}).
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list_trainingset}}.
 #'
-#' @return a list object 9nested) containing the segmented tail data  (chunks,
-#' coordinates) organized by the read IDs.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
+#'
+#' @return A named nested list organised by read IDs, where each element
+#'   is a list of chunk sublists as returned by
+#'   \code{\link{split_tail_centered_trainingset}}.
+#'
+#' @seealso \code{\link{create_tail_feature_list_trainingset}} for the
+#'   preceding pipeline step,
+#'   \code{\link{split_tail_centered_trainingset}} for the per-read
+#'   extraction logic,
+#'   \code{\link{filter_nonA_chunks_trainingset}} for the next pipeline
+#'   step,
+#'   \code{\link{create_gaf_list}} for GAF conversion downstream.
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' create_tail_chunk_list_trainingset(tail_feature_list = tail_feature_list,
-#'                                    num_cores = 2)
-#'}
+#' create_tail_chunk_list_trainingset(
+#'   tail_feature_list = tail_feature_list,
+#'   num_cores = 2)
+#'
+#' }
 create_tail_chunk_list_trainingset <- function(tail_feature_list, num_cores) {
+
   # initial assertions
   if (missing(num_cores)) {
     stop(
@@ -709,30 +852,57 @@ create_tail_chunk_list_trainingset <- function(tail_feature_list, num_cores) {
 
 #' Splits signal to overlapping fragments of equal length.
 #'
-#' In case if the signal is not completely divisible by given segment length,
-#' the function fills missing data (NAs) with 10 most frequent values from the
-#' entire signal (randomly sampled).
+#' Divides a single read's poly(A) tail signal into fixed-length,
+#' overlapping segments for data augmentation during training-set
+#' preparation. If the signal is not evenly divisible by the segment
+#' length, trailing \code{NA} values are imputed with values randomly
+#' sampled from the 10 most frequent signal values.
 #'
-#' @param readname character string. Name of the given ONT signal.
+#' @details
+#' This function is used exclusively in the A-only training pipeline
+#' (\code{\link{create_tail_chunk_list_A}}) to produce overlapping
+#' windows from reads that do \emph{not} contain modification signals.
+#' The overlap acts as data augmentation, multiplying the number of
+#' training examples per read.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
-#' function.
+#' @param readname Character string. Name (UUID) of the given ONT signal.
 #'
-#' @param segment numeric [1]. Length of the chunk(s) to be created.
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list_A}}.
 #'
-#' @param overlap numeric [1]. Length of the overlap between the chunks.
+#' @param segment Numeric \code{[1]}. Length (in data points) of each
+#'   chunk to be created.
 #'
-#' @return a list object containing split chunks of signal.
+#' @param overlap Numeric \code{[1]}. Length (in data points) of the
+#'   overlap between consecutive chunks.
+#'
+#' @return A list of numeric vectors, each of length \code{segment},
+#'   representing the overlapping signal fragments. Trailing \code{NA}
+#'   values are replaced by imputed values.
+#'
+#' @seealso \code{\link{create_tail_chunk_list_A}} which calls this
+#'   function,
+#'   \code{\link{create_tail_feature_list_A}} for the preceding step,
+#'   \code{\link{split_tail_centered_trainingset}} for the
+#'   modification-centered splitting alternative.
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' split_with_overlaps <- function(signal='12fdcb3-ewfd543-34552-1234ddta345',
-#'                                 segment = 300, overlap 100)
+#' split_with_overlaps(
+#'   readname = '12fdcb3-ewfd543-34552-1234ddta345',
+#'   tail_feature_list = tail_feature_list,
+#'   segment = 300,
+#'   overlap = 100)
 #'
 #' }
-split_with_overlaps <- function(readname, tail_feature_list, segment, overlap) {
+split_with_overlaps <- function(readname,
+                                tail_feature_list,
+                                segment,
+                                overlap) {
+
   #extract required data
   signal <- tail_feature_list[[1]][[readname]][[2]]
 
@@ -756,59 +926,83 @@ split_with_overlaps <- function(readname, tail_feature_list, segment, overlap) {
   return(result_split)
 }
 
-#' Extracts features of poly(A) tails of ONT RNA reads required for finding
-#' non-A nucleotides within the given tails.
+#' Extracts features of poly(A) tails containing only A nucleotides for
+#' training-set preparation.
 #'
-#' This is the version of the function useful to produce the training set
-#' for CNN. Slightly different from the original one. This version allows
-#' to prepare the dataset of only A containing signals.
+#' Training-set variant of the feature extraction wrapper designed
+#' exclusively for A-only signals. It processes all reads in parallel via
+#' \code{\link{extract_tail_data_trainingset}}, then applies an inverse
+#' filtering criterion: only reads whose pseudomove vectors do \emph{not}
+#' contain consecutive non-zero runs of length >= 4 are retained. This
+#' ensures the resulting dataset represents pure homopolymer A tails
+#' without modification artefacts.
 #'
+#' @details
+#' The inverse filtering uses a sliding-window approach
+#' (\code{stats::embed}) to detect runs of >= 4 consecutive non-zero
+#' pseudomoves. Reads that pass this filter (i.e. have no such runs)
+#' are collected as the A-only reference set. Unlike
+#' \code{\link{create_tail_feature_list_trainingset}}, the returned list
+#' does not include \code{zeromoved_readnames} or
+#' \code{nonpseudomoved_readnames} categories.
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' @param nanopolish Character string. Full path of the \code{.tsv} file
+#'   produced by \code{nanopolish polya}.
 #'
-#' @param sequencing_summary character string. Full path of the .txt file
-#' with sequencing summary.
+#' @param sequencing_summary Character string. Full path of the \code{.txt}
+#'   file with the sequencing summary.
 #'
-#' @param workspace character string. Full path of the directory to search the
-#' basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @param workspace Character string. Full path of the directory containing
+#'   basecalled multi-Fast5 files.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the Fast5 file hierarchy from which the data should be extracted.
+#' @param basecall_group Character string \code{["Basecall_1D_000"]}. Name of
+#'   the level in the Fast5 file hierarchy from which the data should be
+#'   extracted.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
+#' @param pass_only Logical \code{[TRUE]}. If \code{TRUE}, only reads tagged
+#'   by nanopolish as \code{"PASS"} are retained. Otherwise, reads tagged as
+#'   \code{"PASS"} or \code{"SUFFCLIP"} are included.
 #'
-#' @return A list containing read information organized by the read ID
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @return A named list with one element:
+#' \describe{
+#'   \item{tail_feature_list}{Named list of per-read feature lists (as
+#'     returned by \code{\link{extract_tail_data_trainingset}}) containing
+#'     only reads with pure A tails.}
+#' }
+#' Always assign this returned list to a variable; printing the full list
+#' to the console may crash the R session.
+#'
+#' @seealso \code{\link{create_tail_feature_list_trainingset}} for the
+#'   non-A variant,
+#'   \code{\link{create_tail_chunk_list_A}} for the next pipeline step,
+#'   \code{\link{extract_tail_data_trainingset}} for per-read extraction,
+#'   \code{\link{prepare_trainingset}} for the top-level wrapper.
 #'
 #' @importFrom foreach %dopar%
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' create_tail_feature_list_A(nanopolish = '/path/to/file',
-#'                                      sequencing_summary = '/path/to/file',
-#'                                      workspace = '/path/to/guppy/workspace',
-#'                                      num_cores = 10,
-#'                                      basecall_group = 'Basecall_1D_000')
-#'}
-create_tail_feature_list_A <- function(
-  nanopolish,
-  sequencing_summary,
-  workspace,
-  num_cores,
-  basecall_group,
-  pass_only = TRUE
-) {
+#' create_tail_feature_list_A(
+#'   nanopolish = '/path/to/file',
+#'   sequencing_summary = '/path/to/file',
+#'   workspace = '/path/to/guppy/workspace',
+#'   num_cores = 10,
+#'   basecall_group = 'Basecall_1D_000')
+#'
+#' }
+create_tail_feature_list_A <- function(nanopolish,
+                                       sequencing_summary,
+                                       workspace,
+                                       num_cores,
+                                       basecall_group,
+                                       pass_only = TRUE) {
+
   # Assertions
   if (missing(num_cores)) {
     stop(
@@ -896,7 +1090,6 @@ create_tail_feature_list_A <- function(
       })
     }
 
-  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   squiggle_names <- polya_summary$readname
@@ -925,37 +1118,49 @@ create_tail_feature_list_A <- function(
 }
 
 
-#' Creates list of tail chunks containing As exclusively.
+#' Creates list of tail chunks containing only A nucleotides.
 #'
-#' Extracts fragments of polyA tails of ONT RNA reads containing only A
-#' nucleotides along their coordinates & appends the data to the nested
-#' list organized by read IDs.
+#' Extracts overlapping fragments of poly(A) tail signals that do
+#' \emph{not} contain non-A nucleotides and organises them in a nested
+#' list keyed by read ID.
 #'
-#' This version of the function is intended to be used to produce training and
-#' validation datasets. It is designed to filter signal fragments that DO NOT
-#' contain potential non-A nucleotides.
+#' @details
+#' This training-set variant is designed for A-only reference data
+#' preparation. Unlike \code{\link{create_tail_chunk_list_trainingset}}
+#' (which centres chunks on modifications), this function uses
+#' \code{\link{split_with_overlaps}} with \code{segment = 100} and
+#' \code{overlap = 50}, effectively performing data augmentation by
+#' producing overlapping windows across the entire tail signal.
 #'
-#' This function segments the signals with overlaps, making the data multiplied (data augmentation).
+#' @param tail_feature_list List object produced by
+#'   \code{\link{create_tail_feature_list_A}}.
 #'
-#' @param tail_feature_list list object produced by create_tail_feature_list
-#' function.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @return A named nested list organised by read IDs, where each element
+#'   is a list of numeric vectors (each of length 100) representing the
+#'   overlapping signal fragments.
 #'
-#' @return a list object (nested) containing the segmented tail data  (chunks,
-#' coordinates) organized by the read IDs.
+#' @seealso \code{\link{create_tail_feature_list_A}} for the preceding
+#'   pipeline step,
+#'   \code{\link{split_with_overlaps}} for the per-read segmentation logic,
+#'   \code{\link{create_gaf_list_A}} for the next pipeline step,
+#'   \code{\link{create_tail_chunk_list_trainingset}} for the non-A variant.
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' create_tail_chunk_list_A(tail_feature_list = tail_feature_list,
-#'                          num_cores = 2)
+#' create_tail_chunk_list_A(
+#'   tail_feature_list = tail_feature_list,
+#'   num_cores = 2)
 #'
-#'}
+#' }
 #'
 create_tail_chunk_list_A <- function(tail_feature_list, num_cores) {
+
   # initial assertions
   if (missing(num_cores)) {
     stop(
@@ -1026,7 +1231,6 @@ create_tail_chunk_list_A <- function(tail_feature_list, num_cores) {
       })
     }
 
-  #close(pb)
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
@@ -1034,31 +1238,50 @@ create_tail_chunk_list_A <- function(tail_feature_list, num_cores) {
   return(tail_chunk_list)
 }
 
-#' Produces list of GAFs containing exclusively A-nucleotides for neural net
-#' training.
+#' Produces list of GAFs containing exclusively A-nucleotides for neural
+#' network training.
 #'
-#' This version of the function is intended to be used to produce training and
-#' validation datasets. It is designed to work on signal fragments that
-#' contain only A residues.
+#' Converts A-only signal chunks into Gramian Angular Field (GAF)
+#' matrices in parallel. Each chunk is transformed via
+#' \code{\link{combine_gafs}} and the resulting matrices are collected in
+#' a flat named list suitable for direct input to the CNN training
+#' pipeline.
 #'
-#' @param tail_chunk_list character string. The list object produced
-#' by create_chunk_list function.
+#' @details
+#' This training-set variant is designed to work on signal fragments
+#' that contain only A residues (produced by
+#' \code{\link{create_tail_chunk_list_A}}). The naming convention for
+#' output elements is \code{<readname>_<chunk_index>}.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param tail_chunk_list List object produced by
+#'   \code{\link{create_tail_chunk_list_A}}.
 #'
-#' @return A list of gaf matrices organized by the read ID_index
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
+#'
+#' @return A named list of GAF matrices, where each element corresponds
+#'   to one signal chunk and is named \code{<readname>_<index>}. Always
+#'   assign this returned list to a variable; printing the full list to
+#'   the console may crash the R session.
+#'
+#' @seealso \code{\link{create_tail_chunk_list_A}} for the preceding
+#'   pipeline step,
+#'   \code{\link{combine_gafs}} for the GAF transformation,
+#'   \code{\link{create_gaf_list}} for the production counterpart,
+#'   \code{\link{prepare_trainingset}} for the top-level wrapper.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' create_gaf_list_A(feature_list = tail_chunk_list, num_cores = 10)
-#'}
+#' create_gaf_list_A(
+#'   tail_chunk_list = tail_chunk_list,
+#'   num_cores = 10)
+#'
+#' }
 create_gaf_list_A <- function(tail_chunk_list, num_cores) {
+
   # Assertions
   if (missing(num_cores)) {
     stop(
@@ -1117,7 +1340,6 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores) {
       lapply(tail_chunk_list[[i]], function(x) ninetails::combine_gafs(x))
     }
 
-  #close(pb)
 
   #naming chunks based on readnames & indices
   for (chunk in seq_along(tail_chunk_list)) {
@@ -1134,80 +1356,75 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores) {
   return(gaf_list)
 }
 
-#' Filters read chunks containing nonadenosine nucleotides of interest for
-#' neural net training set preparation.
+#' Filters read chunks containing non-adenosine nucleotides of interest for
+#' neural network training-set preparation.
 #'
-#' The function is designed to be used on a generated set of synthetic
-#' spike-ins (laboratory produced) containing a particular type of residue
-#' (G, C or U in the context of 3'-homopolymer A, respectively).
+#' Designed for use with synthetic spike-in data containing a single type
+#' of non-A residue (G, C, or U in the context of 3'-homopolymer A). The
+#' function retains only chunks whose pseudomove vectors contain a
+#' consecutive run of the specified \code{value} (peak or valley) of
+#' length >= 4 and whose start position is non-negative.
 #'
-#' IMPORTANT NOTE!
-#' The function is not suitable for preparing a set containing
-#' pure (containing only A) fragments of polyA tails.
+#' @details
+#' The filtering takes advantage of the characteristic pseudomove
+#' patterns produced by the z-score signal filter:
+#' \itemize{
+#'   \item G nucleotides produce a \strong{peak} (pseudomove = +1).
+#'   \item C and U nucleotides produce a \strong{valley} (pseudomove = -1).
+#' }
 #'
-#' This function currently allows to produce the filtered list of chunks
-#' containing the signal deviations corresponding to the given non-A nucleotide
-#' of interest. In its current form, the function allows filtering signal
-#' fragments having C, G or U nucleotides (one category at a time).
+#' The function does \emph{not} distinguish between C and U (both produce
+#' valleys); classification is handled downstream by the CNN. Therefore
+#' it is essential that training datasets for C and U differ in the
+#' transcript bodies they map to and/or are not sequenced in a single run.
 #'
-#' The function uses as input a list of fragments (chunks) centered on a
-#' deviation in the signal produced by create_tail_chunk_list() function.
+#' \strong{Important:} this function is \emph{not} suitable for preparing
+#' the A-only reference set. Use
+#' \code{\link{create_tail_feature_list_A}} for that purpose.
 #'
-#' It takes advantage of the fact that when filtering a signal based on moving
-#' average & standard deviation filters, a characteristic pattern of "pseudomoves"
-#' is produced. Which corresponds to changes in the signal visible even
-#' to the naked eye. Empirically, it has been established that the presence
-#' of nucleotide G results in a peak, while the presence of nucleotides C
-#' and U results in a valley. These deviations mostly have specific parameters
-#' (depth and width) based on which filtering criteria can be established.
+#' Before proceeding, visual inspection of at least some filtered signals
+#' is advisable. It may be necessary to manually adjust hardcoded
+#' parameters (contact the developer/maintainer for details).
 #'
-#' Before performing filtering, the user needs to know what type of nucleotide
-#' (G, C or U) they are dealing with in a given data set. Otherwise, it may be
-#' difficult to interpret the results, and the network training itself may
-#' not lead to satisfactory results.
+#' @param tail_chunk_list List object produced by
+#'   \code{\link{create_tail_chunk_list_trainingset}}.
 #'
-#' The filtering procedure is controlled by the value parameter. It determines
-#' whether chunks containing a peak (value then takes the value 1) or a valley
-#' (value takes the value -1) are kept in the output.
+#' @param value Numeric \code{[1]}. Controls whether valleys (C/U) or peaks
+#'   (G) are retained:
+#' \describe{
+#'   \item{-1}{Retain chunks containing valleys (C or U nucleotides).}
+#'   \item{1}{Retain chunks containing peaks (G nucleotide).}
+#' }
 #'
-#' The function does not distinguish between fragments containing C and U
-#' (both produce valley; the classification is handled by CNN). Therefore,
-#' it is important that the training datasets differ in the transcript bodies
-#' to which they can be mapped and/or are not run together in a single
-#' sequencing run.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' Before proceeding further, it is advisable to perform a visual inspection
-#' of at least some of the filtered signals. It may be necessary to manually
-#' adjust the hardcoded parameters of other functions (contact dev/maintainer
-#' for further details).
+#' @return A named list of filtered chunk sublists, where names correspond
+#'   to read IDs. Empty reads (no chunks passing the filter) are removed.
 #'
-#' @param tail_chunk_list character string. The list object produced
-#' by create_chunk_list function.
-#'
-#' @param value numeric [1]. A parameter that controls whether valleys (C, U)
-#' or peaks (G) are filtered. For C, U nucleotides it takes the value of -1,
-#' for G nucleotide it takes the value of 1.
-#'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
-#'
-#' @return a list of signal chunks filtered based on the user-defined value
-#' parameter.
+#' @seealso \code{\link{create_tail_chunk_list_trainingset}} for the
+#'   preceding pipeline step,
+#'   \code{\link{create_gaf_list}} for GAF conversion downstream,
+#'   \code{\link{prepare_trainingset}} for the top-level wrapper.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
 #' # filtering G residue:
-#' filter_nonA_chunks_trainingset(tail_chunk_list = list_object_with_tail_chunks,
-#'                                value = 1, num_cores = 2)
+#' filter_nonA_chunks_trainingset(
+#'   tail_chunk_list = list_object_with_tail_chunks,
+#'   value = 1, num_cores = 2)
 #'
-#' # filtering C/U (user must know which type of residue is dealing with):
-#' filter_nonA_chunks_trainingset(tail_chunk_list = list_object_with_tail_chunks,
-#'                                value = -1, num_cores = 2)
+#' # filtering C/U (user must know which type of residue is dealt with):
+#' filter_nonA_chunks_trainingset(
+#'   tail_chunk_list = list_object_with_tail_chunks,
+#'   value = -1, num_cores = 2)
+#'
 #' }
 filter_nonA_chunks_trainingset <- function(tail_chunk_list, value, num_cores) {
+
   #assertions
   if (missing(num_cores)) {
     stop(
@@ -1292,7 +1509,6 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list, value, num_cores) {
       lapply(filtered_output, function(x) x)
     }
 
-  #close(pb)
 
   #remove empty sublists
   filtered_input <- Filter(function(x) length(x) > 0, filtered_input)
@@ -1310,65 +1526,94 @@ filter_nonA_chunks_trainingset <- function(tail_chunk_list, value, num_cores) {
 }
 
 
-#' Filters out signals of given type of interest.
+#' Filters out signals of a given nucleotide type for neural network
+#' training-set preparation.
 #'
-#' Filters out signals corresponding to a given category of reads
-#' (containing A-nucleotides alone or particular types of non-adenosine
-#' nucleotides: G, C or U) in order to prepare the set for neural network
-#' training.
+#' Top-level convenience wrapper that orchestrates the complete
+#' training-set production pipeline for a single nucleotide category.
+#' Depending on the selected \code{nucleotide}, it chains the appropriate
+#' feature extraction, chunk splitting, filtering, and GAF creation
+#' functions into a single call.
 #'
-#' @param nucleotide character. One of the following ["A"/"C"/"G","U"].
-#' This parameter defines the type of filtering approach applied to the input
-#' dataset in order to obtain the signals potentially carrying the
-#' desired nucleotide context.
+#' @details
+#' The internal pipeline differs by nucleotide:
+#' \describe{
+#'   \item{\code{"A"}}{Uses the A-only branch:
+#'     \code{\link{create_tail_feature_list_A}} \eqn{\rightarrow}
+#'     \code{\link{create_tail_chunk_list_A}} \eqn{\rightarrow}
+#'     \code{\link{create_gaf_list_A}}.}
+#'   \item{\code{"C"}}{Uses the non-A branch with \code{value = -1}
+#'     (valley filtering):
+#'     \code{\link{create_tail_feature_list_trainingset}} \eqn{\rightarrow}
+#'     \code{\link{create_tail_chunk_list_trainingset}} \eqn{\rightarrow}
+#'     \code{\link{filter_nonA_chunks_trainingset}} \eqn{\rightarrow}
+#'     \code{\link{create_gaf_list}}.}
+#'   \item{\code{"G"}}{Uses the non-A branch with \code{value = 1}
+#'     (peak filtering).}
+#'   \item{\code{"U"}}{Uses the non-A branch with \code{value = -1}
+#'     (valley filtering), same filter direction as C.}
+#' }
 #'
-#' @param nanopolish character string. Full path of the .tsv file produced
-#' by nanopolish polya function.
+#' @param nucleotide Character. One of \code{"A"}, \code{"C"}, \code{"G"},
+#'   or \code{"U"}. Defines the type of signal filtering applied to
+#'   produce training data for the desired nucleotide context.
 #'
-#' @param sequencing_summary character string. Full path of the .txt file
-#' with sequencing summary.
+#' @param nanopolish Character string. Full path of the \code{.tsv} file
+#'   produced by \code{nanopolish polya}.
 #'
-#' @param workspace character string. Full path of the directory to search the
-#' basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @param sequencing_summary Character string. Full path of the \code{.txt}
+#'   file with the sequencing summary.
 #'
-#' @param num_cores numeric [1]. Number of physical cores to use in processing
-#' the data. Do not exceed 1 less than the number of cores at your disposal.
+#' @param workspace Character string. Full path of the directory containing
+#'   basecalled multi-Fast5 files.
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the fast5 file hierarchy from which the data should be extracted.
+#' @param num_cores Numeric \code{[1]}. Number of physical cores to use.
+#'   Do not exceed 1 less than the number of cores at your disposal.
 #'
-#' @param pass_only logical [TRUE/FALSE]. If TRUE, only reads tagged by
-#' nanopolish as "PASS" would be taken into consideration. Otherwise, reads
-#' tagged as "PASS" & "SUFFCLIP" will be taken into account in analysis.
-#' As a default, "TRUE" value is set.
+#' @param basecall_group Character string \code{["Basecall_1D_000"]}. Name of
+#'   the level in the Fast5 file hierarchy from which the data should be
+#'   extracted.
 #'
-#' @return A list of filtered GAF matrices organized by the read ID_index
-#' is returned. Always assign this returned list to a variable, otherwise
-#' the long list will be printed to the console, which may crash your R session.
+#' @param pass_only Logical \code{[TRUE]}. If \code{TRUE}, only reads tagged
+#'   by nanopolish as \code{"PASS"} are retained. Otherwise, reads tagged as
+#'   \code{"PASS"} or \code{"SUFFCLIP"} are included.
+#'
+#' @return A named list of GAF matrices organised by
+#'   \code{<read_ID>_<index>}. Always assign this returned list to a
+#'   variable; printing the full list to the console may crash the R session.
+#'
+#' @seealso \code{\link{create_tail_feature_list_trainingset}},
+#'   \code{\link{create_tail_feature_list_A}},
+#'   \code{\link{create_tail_chunk_list_trainingset}},
+#'   \code{\link{create_tail_chunk_list_A}},
+#'   \code{\link{filter_nonA_chunks_trainingset}},
+#'   \code{\link{create_gaf_list}},
+#'   \code{\link{create_gaf_list_A}}.
 #'
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#' prepare_trainingset(nucleotide="A"
-#'                     nanopolish = '/path/to/file',
-#'                     sequencing_summary = '/path/to/file',
-#'                     workspace = '/path/to/guppy/workspace',
-#'                     num_cores = 10,
-#'                     basecall_group = 'Basecall_1D_000',
-#'                     pass_only=TRUE)
-#'}
+#' prepare_trainingset(
+#'   nucleotide = "A",
+#'   nanopolish = '/path/to/file',
+#'   sequencing_summary = '/path/to/file',
+#'   workspace = '/path/to/guppy/workspace',
+#'   num_cores = 10,
+#'   basecall_group = 'Basecall_1D_000',
+#'   pass_only = TRUE)
 #'
-prepare_trainingset <- function(
-  nucleotide,
-  nanopolish,
-  sequencing_summary,
-  workspace,
-  num_cores = 1,
-  basecall_group = "Basecall_1D_000",
-  pass_only = TRUE
-) {
+#' }
+#'
+prepare_trainingset <- function(nucleotide,
+                                nanopolish,
+                                sequencing_summary,
+                                workspace,
+                                num_cores = 1,
+                                basecall_group = "Basecall_1D_000",
+                                pass_only = TRUE) {
+
   # nucleotide selection
   if (nucleotide == "A") {
     # process the A-containing data; split tails with overlaps

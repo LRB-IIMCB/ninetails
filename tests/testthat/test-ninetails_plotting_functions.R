@@ -2,10 +2,10 @@
 
 test_that("plot_squiggle correctly parses data & draws a signal plot", {
   empty_tempfile = tempfile()
-  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails')
-  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', package = 'ninetails')
-  test_workspace = system.file('extdata', 'test_data', 'basecalled_fast5', package = 'ninetails')
-  uncalled_workspace= system.file('extdata', 'test_data', 'uncalled_fast5', package = 'ninetails')
+  nanopolish = system.file('extdata', 'test_data', 'legacy', 'nanopolish_output.tsv', package = 'ninetails')
+  sequencing_summary = system.file('extdata', 'test_data', 'legacy','sequencing_summary.txt', package = 'ninetails')
+  test_workspace = system.file('extdata', 'test_data', 'legacy','basecalled_fast5', package = 'ninetails')
+  uncalled_workspace= system.file('extdata', 'test_data', 'legacy', 'uncalled_fast5', package = 'ninetails')
   test_basecall_group = 'Basecall_1D_000'
   wrong_basecall_group = 'Basecall_1D_003'
 
@@ -55,10 +55,10 @@ test_that("plot_squiggle correctly parses data & draws a signal plot", {
 
 test_that("plot_tail_range correctly parses data & draws a signal plot", {
   empty_tempfile = tempfile()
-  nanopolish = system.file('extdata', 'test_data', 'nanopolish_output.tsv', package = 'ninetails')
-  sequencing_summary = system.file('extdata', 'test_data', 'sequencing_summary.txt', package = 'ninetails')
-  test_workspace = system.file('extdata', 'test_data', 'basecalled_fast5', package = 'ninetails')
-  uncalled_workspace= system.file('extdata', 'test_data', 'uncalled_fast5', package = 'ninetails')
+  nanopolish = system.file('extdata', 'test_data', 'legacy','nanopolish_output.tsv', package = 'ninetails')
+  sequencing_summary = system.file('extdata', 'test_data', 'legacy','sequencing_summary.txt', package = 'ninetails')
+  test_workspace = system.file('extdata', 'test_data', 'legacy','basecalled_fast5', package = 'ninetails')
+  uncalled_workspace= system.file('extdata', 'test_data', 'legacy', 'uncalled_fast5', package = 'ninetails')
   test_basecall_group = 'Basecall_1D_000'
   wrong_basecall_group = 'Basecall_1D_003'
 

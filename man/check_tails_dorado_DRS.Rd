@@ -140,7 +140,7 @@ conversion is not feasible.
   \item Results should always be assigned to a variable to prevent console overflow
   \item POD5 files must correspond exactly to reads in the Dorado summary
   \item For datasets >1M reads, consider batch processing or increased \code{part_size}
-  \item Position estimates are approximate (±2-3 nt accuracy); validate critical findings
+  \item Position estimates are approximate (Â±2-3 nt accuracy); validate critical findings
 }
 }
 \section{Pipeline Overview}{

@@ -2,36 +2,55 @@
 % Please edit documentation in R/ninetails_data_postprocessing_functions.R
 \name{count_class}
 \alias{count_class}
-\title{Counts read classes found in read_classes dataframe produced
-by ninetails pipeline.}
+\title{Counts read classes found in a read_classes data frame produced by the
+ninetails pipeline.}
 \usage{
 count_class(class_data, grouping_factor = NA, detailed = TRUE)
 }
 \arguments{
-\item{class_data}{A dataframe or tibble containig read_classes predictions
-made by ninetails pipeline}
+\item{class_data}{Data frame or tibble containing read_classes
+predictions produced by the ninetails pipeline.}
 
-\item{grouping_factor}{character string. A grouping variable
-(e.g. "sample_name")}
+\item{grouping_factor}{Character string (default \code{NA}). Name of a
+column in \code{class_data} to use as a grouping variable
+(e.g. \code{"sample_name"}).}
 
-\item{detailed}{logical [TRUE/FALSE]. If TRUE, the counts will be provided
-based on the "comments" column, which contains detailed information on the
-assigned class. If FALSE, the counts will be provided based on "class" column
-which gives more crude glimpse on the classification - i.e. provides an info
-whether the reads were considered as "decorated", "blank" and
-"unclassified" only. By default, the TRUE option is set.}
+\item{detailed}{Logical \code{[TRUE]}. If \code{TRUE}, counts are
+provided based on the \code{comments} column (fine-grained). If
+\code{FALSE}, counts are provided based on the \code{class} column
+(crude: decorated / blank / unclassified only).}
 }
 \value{
-A tibble with counts for each non-A residue
+A tibble with columns for the grouping variable (if provided),
+  the classification label (\code{comments} or \code{class}), and
+  \code{n} (the count).
 }
 \description{
-Process the information returned by ninetails found in the read_classes
-dataframe in the prediction column.
+Tabulates the prediction information contained in the \code{read_classes}
+data frame. Counts can be computed at two levels of granularity
+(detailed or crude) and optionally stratified by a grouping variable.
+}
+\details{
+When \code{detailed = TRUE}, counts are based on the \code{comments}
+column, which carries fine-grained labels such as \code{"YAY"} (tail
+with non-A residues detected). When \code{detailed = FALSE}, counts
+are based on the \code{class} column with three broad categories:
+\code{"decorated"}, \code{"blank"}, and \code{"unclassified"}.
 }
 \examples{
 \dontrun{
-class_counted <- ninetails::count_class(class_data=out[[1]],
-                                        grouping_factor=NA,
-                                        detailed=TRUE)
+
+class_counted <- ninetails::count_class(
+  class_data = out[[1]],
+  grouping_factor = NA,
+  detailed = TRUE)
+
 }
+}
+\seealso{
+\code{\link{read_class_single}} and
+  \code{\link{read_class_multiple}} for loading class data,
+  \code{\link{count_residues}} for the analogous residue-level counts,
+  \code{\link{merge_nonA_tables}} for combining class and residue
+  data.
 }
