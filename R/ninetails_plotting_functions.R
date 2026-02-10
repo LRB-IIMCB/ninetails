@@ -1,5 +1,5 @@
 ################################################################################
-# VISUAL INSPECTION OF SIGNALS
+# VISUAL INSPECTION OF SIGNALS - FAST5-BASED
 ################################################################################
 #' Draws an entire squiggle for given read.
 #'
@@ -49,7 +49,7 @@
 #' @examples
 #' \dontrun{
 #'
-#'plot <- ninetails::plot_squiggle(
+#'plot <- ninetails::plot_squiggle_fast5(
 #'  readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
 #'  nanopolish = system.file('extdata',
 #'                           'test_data',
@@ -72,17 +72,13 @@
 #'}
 #
 
-plot_squiggle <- function(readname,
-                          nanopolish,
-                          sequencing_summary,
-                          workspace,
-                          basecall_group = "Basecall_1D_000",
-                          moves=FALSE,
-                          rescale=FALSE){
-
-  # variable binding (suppressing R CMD check from throwing an error)
-  polya_start <- transcript_start <- adapter_start <- leader_start <- filename <- read_id <- position <- time <- pA <- segment <- NULL
-
+plot_squiggle_fast5 <- function(readname,
+                                nanopolish,
+                                sequencing_summary,
+                                workspace,
+                                basecall_group = "Basecall_1D_000",
+                                moves=FALSE,
+                                rescale=FALSE){
 
   #Assertions
   if (missing(readname)) {
@@ -288,7 +284,7 @@ plot_squiggle <- function(readname,
 #' @examples
 #' \dontrun{
 #'
-#' plot <- ninetails::plot_tail_range(
+#' plot <- ninetails::plot_tail_range_fast5(
 #'   readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
 #'   nanopolish = system.file('extdata',
 #'                            'test_data',
@@ -311,16 +307,13 @@ plot_squiggle <- function(readname,
 #'}
 #
 
-plot_tail_range <- function(readname,
-                            nanopolish,
-                            sequencing_summary,
-                            workspace,
-                            basecall_group = "Basecall_1D_000",
-                            moves=FALSE,
-                            rescale=FALSE){
-
-  # variable binding (suppressing R CMD check from throwing an error)
-  polya_start <- transcript_start <- adapter_start <- leader_start <- filename <- read_id <- position <- time <- pA <- segment <- NULL
+plot_tail_range_fast5 <- function(readname,
+                                  nanopolish,
+                                  sequencing_summary,
+                                  workspace,
+                                  basecall_group = "Basecall_1D_000",
+                                  moves=FALSE,
+                                  rescale=FALSE){
 
 
   #Assertions
@@ -364,8 +357,6 @@ plot_tail_range <- function(readname,
   polya_end_position <- transcript_start_position -1
 
 
-
-  #### TU WSTAWIC
   if (is_string(sequencing_summary)) {
     #handle sequencing summary
     assert_file_exists(sequencing_summary)
@@ -491,6 +482,10 @@ plot_tail_range <- function(readname,
 
 }
 
+################################################################################
+# INDEPENDENT OF FAST5 FORMAT
+################################################################################
+
 #' Draws a portion of poly(A) tail squiggle (chunk) for given read.
 #'
 #' This function allows to visualise a single fragment of the poly(A) tail area
@@ -524,9 +519,6 @@ plot_tail_range <- function(readname,
 
 plot_tail_chunk <- function(chunk_name,
                             tail_chunk_list) {
-
-  # avoiding variable binding err
-  signal_name <- signal <- signal_df <- position <- p <- NULL
 
   #assertions
   if (missing(tail_chunk_list)) {
@@ -616,10 +608,6 @@ plot_gaf <- function(gaf_name,
                      gaf_list,
                      save_file=FALSE){
 
-  #avoiding 'no visibe binding to variable' error
-  plt <- gaf <- Var2 <- Var1 <- value <- NULL
-
-
   #assertions
   if (missing(gaf_name)) {
     stop("Gaf_name is missing. Please provide a valid gaf_name argument.", call. =FALSE)
@@ -697,8 +685,7 @@ plot_gaf <- function(gaf_name,
 
 plot_multiple_gaf <- function(gaf_list,
                               num_cores){
-  #avoiding 'no visibe binding to variable' error
-  nam <- NULL
+
 
   #assertions
   if (missing(gaf_list)) {
@@ -809,8 +796,6 @@ plot_class_counts <- function(class_data,
                               frequency=TRUE,
                               type="R") {
 
-  # var binding
-  n <- comments <- total <- prop <- NULL
 
   if (missing(class_data)) {
     stop("Class_data is missing. Please provide a valid class_data argument",
@@ -1015,9 +1000,6 @@ plot_residue_counts <- function(residue_data,
                                 by_read= FALSE,
                                 frequency=TRUE) {
 
-  # var binding
-  n <- prediction <- C <- G <- U <- total <- group <- pC <- pG <- pU<- NULL
-
   if (missing(residue_data)) {
     stop("Residue_data dataframe is missing. Please provide a valid residue_data argument",
          call. = FALSE)
@@ -1123,9 +1105,8 @@ plot_residue_counts <- function(residue_data,
 #' @export
 #'
 #'
-plot_nanopolish_qc <- function(processing_info,frequency=TRUE) {
-  # var binding
-  n <- qc_tag <- NULL
+plot_nanopolish_qc <- function(processing_info,
+                               frequency=TRUE) {
 
   if (missing(processing_info)) {
     stop("Nanopolish processing info is missing. Please provide a valid processing_info argument",
@@ -1277,11 +1258,6 @@ plot_tail_distribution <- function(input_data,
                                    value_to_show=NA,
                                    ndensity=T,
                                    title=F){
-
-
-  # var binding
-  polya_length <- ..density.. <- ..ndensity.. <- NULL
-
 
   # Assertions
   if (missing(input_data)) {
@@ -1789,14 +1765,11 @@ plot_panel_characteristics <- function(input_residue_data,
 #' ninetails::plot_rug_density(residue_data=residue_data, base="C", max_length=100)
 #' }
 #'
-plot_rug_density <- function(residue_data, base, max_length){
-
-  #var binding
-  prediction <- polya_length <- est_nonA_pos <- NULL
+plot_rug_density <- function(residue_data,
+                             base,
+                             max_length){
 
   #assertions
-
-
   if(base=="C"){
     colorscale<- ggplot2::scale_fill_manual(values=c("#3a424f"))
     colorfill <- ggplot2::scale_color_manual(values=c("#3a424f"))
@@ -1880,9 +1853,6 @@ plot_rug_density <- function(residue_data, base, max_length){
 #' }
 plot_nonA_abundance <- function(residue_data,
                                 grouping_factor=NA){
-
-  #var binding
-  instances <- count <- two <- more <- total <- psingle <- ptwo <- pmore <- value <- NULL
 
   #assertions
   if (missing(residue_data)) {

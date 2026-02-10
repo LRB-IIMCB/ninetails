@@ -182,9 +182,6 @@ create_tail_feature_list_trainingset <- function(nanopolish,
                                                  basecall_group,
                                                  pass_only=TRUE){
 
-  # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
-
   # Assertions
   if (missing(num_cores)) {
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
@@ -299,9 +296,6 @@ create_tail_feature_list_trainingset <- function(nanopolish,
 #'}
 filter_signal_by_threshold_trainingset <- function(signal) {
 
-  # variable binding
-  x <- sd <- baseline <- std_cutoff <- NULL
-
   #assertions
   if (missing(signal)) {
     stop("Signal is missing. Please provide a valid signal argument [numeric vec].", call. =FALSE)
@@ -386,8 +380,7 @@ filter_signal_by_threshold_trainingset <- function(signal) {
 #'}
 split_tail_centered_trainingset <- function(readname,
                                             tail_feature_list) {
-  #variable binding
-  tail <- . <- NULL
+
 
   #assertions
   if (missing(readname)) {
@@ -477,8 +470,6 @@ split_tail_centered_trainingset <- function(readname,
 create_tail_chunk_list_trainingset <- function(tail_feature_list,
                                                num_cores){
 
-  # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
 
   # initial assertions
   if (missing(num_cores)) {
@@ -639,9 +630,6 @@ create_tail_feature_list_A <- function(nanopolish,
                                        basecall_group,
                                        pass_only=TRUE){
 
-  # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
-
   # Assertions
   if (missing(num_cores)) {
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
@@ -752,8 +740,7 @@ create_tail_feature_list_A <- function(nanopolish,
 #'
 create_tail_chunk_list_A <- function(tail_feature_list,
                                      num_cores){
-  #variable binding
-  i <- NULL
+
 
   # initial assertions
   if (missing(num_cores)) {
@@ -839,10 +826,8 @@ create_tail_chunk_list_A <- function(tail_feature_list,
 #'
 #' create_gaf_list_A(feature_list = tail_chunk_list, num_cores = 10)
 #'}
-create_gaf_list_A <- function(tail_chunk_list, num_cores){
-
-  #variable binding
-  i <- NULL
+create_gaf_list_A <- function(tail_chunk_list,
+                              num_cores){
 
   # Assertions
   if (missing(num_cores)) {
@@ -978,8 +963,6 @@ create_gaf_list_A <- function(tail_chunk_list, num_cores){
 filter_nonA_chunks_trainingset <- function(tail_chunk_list,
                                            value,
                                            num_cores){
-  #variable binding
-  i <- NULL
 
   #assertions
   if (missing(num_cores)) {

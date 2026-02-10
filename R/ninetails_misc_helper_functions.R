@@ -529,8 +529,6 @@ correct_labels <- function(df) {
 #' }
 filter_dorado_summary <- function(dorado_summary){
 
-  # Variable binding (suppressing R CMD check from throwing an error)
-  alignment_direction <- alignment_mapq <- poly_tail_start <- poly_tail_length <- NULL
 
   # If input is a file path, read with vroom
   if (is.character(dorado_summary)) {
@@ -624,7 +622,8 @@ filter_dorado_summary <- function(dorado_summary){
 #'   # User chose to abort
 #' }
 #' }
-check_output_directory <- function(save_dir, log_message) {
+check_output_directory <- function(save_dir,
+                                   log_message) {
 
   # Check if directory exists
   if (!dir.exists(save_dir)) {

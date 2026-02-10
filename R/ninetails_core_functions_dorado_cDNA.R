@@ -1580,10 +1580,6 @@ create_outputs_dorado_cdna <- function(dorado_summary_dir,
                                        num_cores = 1,
                                        qc = TRUE) {
 
-  # Variable binding for R CMD check
-  read_id <- alignment_genome <- alignment_mapq <- poly_tail_length <- NULL
-  poly_tail_start <- poly_tail_end <- chunkname <- prediction <- NULL
-  centr_signal_pos <- signal_length <- est_nonA_pos <- class <- comments <- tail_type <- NULL
 
   # Assertions
   if (missing(dorado_summary_dir)) stop("Dorado summary directory is missing.", call. = FALSE)
@@ -2000,7 +1996,9 @@ merge_cdna_results <- function(polya_results = NULL,
 #'   prefix = "experiment1"
 #' )
 #' }
-save_cdna_outputs <- function(outputs, save_dir, prefix = "") {
+save_cdna_outputs <- function(outputs,
+                              save_dir,
+                              prefix = "") {
 
   # Input validation
   if (missing(outputs)) {

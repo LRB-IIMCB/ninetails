@@ -777,8 +777,6 @@ filter_signal_by_threshold_vectorized <- function(signal) {
 create_tail_features_list_dorado <- function(signal_list,
                                              num_cores) {
 
-  # variable binding (suppressing R CMD check from throwing an error)
-  x <- NULL
 
   # Assertions
   if (missing(signal_list)) {
@@ -906,10 +904,8 @@ create_tail_features_list_dorado <- function(signal_list,
 #'   tail_feature_list = tail_feature_list
 #' )
 #' }
-split_tail_centered_dorado <- function(readname, tail_feature_list) {
-
-  # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
+split_tail_centered_dorado <- function(readname,
+                                       tail_feature_list) {
 
   #assertions
   if (missing(readname)) {
@@ -1040,9 +1036,8 @@ split_tail_centered_dorado <- function(readname, tail_feature_list) {
 #'   num_cores = 3
 #' )
 #' }
-create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
-  # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
+create_tail_chunk_list_dorado <- function(tail_feature_list,
+                                          num_cores) {
 
   # assertions
   if (missing(num_cores)) {
@@ -1281,11 +1276,6 @@ create_outputs_dorado <- function(dorado_summary_dir,
                                   qc = TRUE,
                                   original_summary) {
 
-  # Variable binding for R CMD check
-  read_id <- alignment_genome <- alignment_mapq <- poly_tail_length <- NULL
-  poly_tail_start <- poly_tail_end <- chunkname <- prediction <- NULL
-  centr_signal_pos <- signal_length <- est_nonA_pos <- class <- comments <- NULL
-  alignment_direction <- i <- NULL
 
   # Assertions
   if (missing(dorado_summary_dir)) stop("Dorado summary directory is missing.", call. = FALSE)

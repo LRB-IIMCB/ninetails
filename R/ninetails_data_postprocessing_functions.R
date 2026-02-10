@@ -106,8 +106,7 @@ read_class_single <- function(class_path, sample_name = NA) {
 #'}
 read_class_multiple <- function(samples_table,...) {
 
-  # var binding
-  sample_name <- class_path <- class_contents <- NULL
+
 
   if (missing(samples_table)) {
     stop("Samples table argument is missing",
@@ -167,8 +166,7 @@ read_class_multiple <- function(samples_table,...) {
 #'                                         detailed=TRUE)
 #'}
 count_class <- function(class_data, grouping_factor=NA, detailed=TRUE) {
-  # variable binding
-  comments <- NULL
+
 
   #assertions
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
@@ -314,8 +312,6 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 #'}
 read_residue_multiple <- function(samples_table,...) {
 
-  # var binding
-  sample_name <- residue_path <- residue_contents <- NULL
 
   #assertions
   if (missing(samples_table)) {
@@ -368,9 +364,9 @@ read_residue_multiple <- function(samples_table,...) {
 #'                                              grouping_factor=NA)
 #'}
 #'
-count_residues <- function(residue_data, grouping_factor=NA) {
-  # variable binding
-  prediction <- NULL
+count_residues <- function(residue_data,
+                           grouping_factor=NA) {
+
 
   # assertions
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
@@ -421,8 +417,7 @@ count_residues <- function(residue_data, grouping_factor=NA) {
 #'}
 spread_nonA_residues <- function(residue_data){
 
-  # var binding
-  group <- readname <- est_nonA_pos <- prediction <- NULL
+
 
   #Assertions
   if (missing(residue_data)) {
@@ -584,8 +579,7 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only=TRUE){
 summarize_nonA <- function(merged_nonA_tables,
                            summary_factors = c("group"),
                            transcript_id_column = c("ensembl_transcript_id_short")) {
-  # var binding
-  starts_with <- sum_nonA <- prediction_C <- prediction_G <- prediction_U <- median <- polya_length <- counts_total <- counts_blank <- zeromod_summarized <- NULL
+
 
   #Assertions
   if (missing(merged_nonA_tables)) {
@@ -675,8 +669,7 @@ summarize_nonA <- function(merged_nonA_tables,
 #'
 nanopolish_qc <- function(class_data,
                           grouping_factor=NA) {
-  #var binding
-  qc_tag <- NULL
+
 
   #assertions
 
@@ -766,10 +759,6 @@ correct_residue_data <- function(class_data,
                                  grouping_factor=NULL,
                                  transcript_column,
                                  ref=NULL){
-
-  # variable binding
-  est_nonA_pos <- mode_pos <- polya_length <- qc_pos <- seg_err_quart <- prediction <- NULL
-  n <- mouse_whitelist <- human_whitelist <- saccer_whitelist <- celegans_whitelist <- arabidopsis_whitelist <- trypa_whitelist <- NULL
 
   # assertions
   if (missing(class_data)) {
@@ -930,8 +919,6 @@ correct_residue_data <- function(class_data,
 #'
 correct_class_data <- function(residue_data_edited, class_data){
 
-  # variable binding
-  n_resid <- no_qc_pos_N <- qc_pos <- readname <- NULL
 
   # assertions
   if (missing(residue_data_edited)) {
@@ -1067,10 +1054,6 @@ reclassify_ninetails_data <- function(residue_data,
                                       ref=NULL){
 
 
-  # variable binding
-  corr_class <- corr_comments <- mode_pos <- count <- qc_pos <- seg_err_quart <- comments <- NULL
-  pos_err_quart <- count_nonA <- mode_len <- NULL
-
   # assertions
   if (missing(residue_data)) {
     stop("The residue_data argument is missing. Please provide the valid residue_data (output of core ninetails pipeline).",
@@ -1153,8 +1136,6 @@ reclassify_ninetails_data <- function(residue_data,
 #' }
 count_nonA_abundance <- function(residue_data,
                                  grouping_factor=NA){
-  # var binding
-  readname <- instances <- NULL
 
   # assertions
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {

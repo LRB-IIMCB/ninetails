@@ -75,8 +75,7 @@
 #'}
 convert_tailfindr_output <- function(tailfindr_output){
 
-  #var binding
-  read_id <- tail_start <- tail_end <- tail_length <- polya_length <- NULL
+
 
   # Accept either path to file or in-memory file
   if (is_string(tailfindr_output)) {

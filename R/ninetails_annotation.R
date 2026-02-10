@@ -57,8 +57,6 @@ annotate_with_biomart <- function(input_data,
                                   organism=NULL,
                                   mart_to_use=NULL){
 
-  # variable binding
-  ensembl_transcript_id_short <- ensembl_transcript_id <- NULL
 
   #assertions
   if (missing(input_data)) {

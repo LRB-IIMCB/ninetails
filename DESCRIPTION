@@ -1,9 +1,14 @@
 Package: ninetails
 Type: Package
 Title: Nonadenosine Nucleotides in Poly(A) Tails
-Version: 1.0.553
-Author: Natalia Gumińska
-Maintainer: The package maintainer <nguminska@iimcb.gov.pl>
+Version: 1.0.554
+Authors@R: 
+    person(given = "Natalia",
+           family = "Gumińska",
+           role = c("aut", "cre"),
+           email = "nguminska@iimcb.gov.pl",
+           comment = c(ORCID = "0000-0002-4599-2897"))
+Maintainer: <nguminska@iimcb.gov.pl>
 Description: Finds noncanonical (nonadenosine) nucleotides 
     in poly(A) tails of Oxford Nanopore direct RNA sequencing reads
     using convolutional neural network based on raw current signal.

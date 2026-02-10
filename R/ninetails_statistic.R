@@ -53,10 +53,11 @@
 #'
 #' }
 #'
-nonA_fisher <- function(ninetails_data,grouping_factor, base, min_reads=0, transcript_id_column=NA) {
-
-  # var binding
-  counts_blank <- NULL
+nonA_fisher <- function(ninetails_data,
+                        grouping_factor,
+                        base,
+                        min_reads=0,
+                        transcript_id_column=NA) {
 
   # Assertions
   if (missing(ninetails_data)) {
@@ -262,11 +263,7 @@ calculate_fisher <- function(ninetails_data,
                              condition2=NA,
                              alpha=0.05,
                              base="C",
-                             ...)
-{
-
-  # vr binding
-  merged_nonA_tables<- sum_nonA <- counts_nonA <- contig <- data<- stats<- padj<- NULL
+                             ...){
 
   # Assertions
   if (missing(ninetails_data)) {
