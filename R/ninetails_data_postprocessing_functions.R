@@ -651,8 +651,8 @@ merge_nonA_tables <- function(class_data, residue_data, pass_only = TRUE) {
 summarize_nonA <- function(
   merged_nonA_tables,
   summary_factors = c("group"),
-  transcript_id_column = c("ensembl_transcript_id_short")
-) {
+  transcript_id_column = c("ensembl_transcript_id_short")) {
+
   #Assertions
   if (missing(merged_nonA_tables)) {
     stop(
@@ -769,8 +769,8 @@ summarize_nonA <- function(
 #' @export
 #'
 nanopolish_qc <- function(class_data, grouping_factor = NA) {
-  #assertions
 
+  #assertions
   if (!is.data.frame(class_data) || nrow(class_data) == 0) {
     stop(
       "Empty data frame provided as an input (class_data). Please provide valid input"
@@ -864,8 +864,8 @@ correct_residue_data <- function(
   residue_data,
   grouping_factor = NULL,
   transcript_column,
-  ref = NULL
-) {
+  ref = NULL) {
+
   # assertions
   if (missing(class_data)) {
     stop(
@@ -1067,6 +1067,7 @@ correct_residue_data <- function(
 #' }
 #'
 correct_class_data <- function(residue_data_edited, class_data) {
+
   # assertions
   if (missing(residue_data_edited)) {
     stop(
@@ -1218,8 +1219,8 @@ reclassify_ninetails_data <- function(
   class_data,
   grouping_factor = NULL,
   transcript_column,
-  ref = NULL
-) {
+  ref = NULL) {
+
   # assertions
   if (missing(residue_data)) {
     stop(
