@@ -734,8 +734,6 @@ plot_multiple_gaf <- function(gaf_list,
     utils::setTxtProgressBar(pb, indx)
   }
 
-  #close(pb)
-
   #label each signal according to corresponding read name to avoid confusion
   gaf_names <- names(gaf_list)
   names(plot_list) <- gaf_names
@@ -1417,14 +1415,6 @@ plot_panel_characteristics <- function(input_residue_data,
                                        max_length=300,
                                        direction_5_prime=TRUE){
 
-  colnames_to_save <- tail_distribution_data <- upper_limit <- group_count <- subtitle_info <- NULL
-  summarized_nonA <- cgu_metrics <- main_metrics <- binned_length_pos <- rel_density_plot <- NULL
-  distrib_plot <- general_read_categories <- residue_counts <- final <-design <- NULL
-  nonA_residues <- prediction <- ygreki <- n <- est_nonA_pos <- est_nonA_pos_2 <- NULL
-  counts <- counts_C <- counts_G <- counts_U <- counts_nonA <- counts_blank <- counts_total<- NULL
-  binned_lengths <- binned_positions <- polya_median <- polya_mean <- NULL
-  counts_of_reads_equal_or_longer_than_est_position <- NULL
-  counts_of_reads_with_nonA_in_given_position <- polya_length<- NULL
 
   # ASSERTIONS
   ##############################################################################
@@ -1575,9 +1565,6 @@ plot_panel_characteristics <- function(input_residue_data,
   #drop unnecessary columns
   input_residue_data$round_pos <- NULL
   input_residue_data$round_length <- NULL
-  #input_residue_data$binned_positions <- NULL
-  #input_residue_data$binned_lengths <- NULL
-
 
   ## READ COUNTS FOR METRIC PLOT
   summarized_nonA <- ninetails::summarize_nonA(input_merged_nonA_tables_data,

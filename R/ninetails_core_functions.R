@@ -39,9 +39,6 @@ extract_polya_data <- function(nanopolish,
                                sequencing_summary,
                                pass_only = TRUE){
 
-  # variable binding (suppressing R CMD check from throwing an error)
-  readname <- polya_start <- transcript_start <- polya_length <- qc_tag  <- filename <- read_id <- NULL
-
   if (missing(nanopolish)) {
     stop("Nanopolish polya output is missing. Please provide a valid nanopolish argument.", .call = FALSE)
   }
@@ -193,7 +190,6 @@ extract_tail_data <- function(readname,
   BaseCalled_template <- rhdf5::h5read(fast5_file_path,paste0(fast5_readname,"/Analyses/", basecall_group, "/BaseCalled_template"))
   move <- BaseCalled_template$Move #how the basecaller "moves" through the called sequence, and allows for a mapping from basecall to raw data
   move <- as.numeric(move) # change data type as moves are originally stored as raw
-  #move <- factor(move, levels=c(0,1))
 
   #read parameter stored in channel_id group
   channel_id <- rhdf5::h5readAttributes(fast5_file_path,paste0(fast5_readname,"/channel_id")) # parent dir for attributes (within fast5 file)
@@ -238,10 +234,6 @@ extract_tail_data <- function(readname,
   extracted_data_single_list[["tail_moves"]] <- moves_tail_range
   #added for robustness
   extracted_data_single_list[["tail_pseudomoves"]] <- pseudomoves
-  # excluded to reduce the output
-  #extracted_data_single_list[["polya_start_pos"]] <- polya_start_position
-  #extracted_data_single_list[["transcript_start_pos"]] <- transcript_start_position
-  #extracted_data_single_list[["tail_length"]] <- polya_summary$polya_length[read_idx]
 
   return(extracted_data_single_list)
 }
@@ -313,7 +305,7 @@ create_tail_feature_list <- function(nanopolish,
                                      pass_only=TRUE){
 
   # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
+  #i <- NULL
 
   # Assertions
   if (missing(num_cores)) {
@@ -367,7 +359,6 @@ create_tail_feature_list <- function(nanopolish,
                                          .options.snow = opts,
                                          .options.multicore = mc_options) %dopar% {lapply(polya_summary$readname[i], function(x) ninetails::extract_tail_data(x,polya_summary,workspace,basecall_group))}
 
-  #close(pb)
 
   #label each signal according to corresponding read name to avoid confusion
   # this deals with issue#5 (nanopolish records do not exactly match seqsummary file)
@@ -445,8 +436,8 @@ create_tail_feature_list <- function(nanopolish,
 #'}
 filter_signal_by_threshold <- function(signal) {
 
-  # variable binding
-  x <- sd <- baseline <- std_cutoff <- NULL
+  # variable binding/ Initialize vectors for incremental subset assignment
+  baseline <- std_cutoff <- NULL # x <- sd <- baseline <- std_cutoff <- NULL
 
   #assertions
   if (missing(signal)) {
@@ -464,15 +455,11 @@ filter_signal_by_threshold <- function(signal) {
   most_freq_vals <- as.numeric(names(sort(table(signal),decreasing=TRUE)[1:20]))
   adjusted_signal <- c(sample(c(most_freq_vals, start_vals), 100, replace=TRUE), signal)
 
-  #interpolatedsignal <- round(stats::approx(signal, method = "linear", n=ceiling(0.05 * length(signal)))[[2]], digits=0)
-  #adjusted_signal <- c(sample(interpolatedsignal, 100, replace=TRUE), signal)
-
   # Empyrical parameters:
   adaptive_sampling_window <- 100 # datapoints window for adjusting algo
   SD_threshold <- 3.5 # how many SD tresholds from avg signal pseudomove should be reported
 
   pseudomoves <- rep(0,length(adjusted_signal))
-  #filtered_signal <- adjusted_signal[1:adaptive_sampling_window] #first sampling
   filtered_signal <- adjusted_signal
 
   baseline[adaptive_sampling_window] <- mean(adjusted_signal[1:adaptive_sampling_window], na.rm=TRUE)
@@ -558,8 +545,6 @@ filter_signal_by_threshold <- function(signal) {
 split_tail_centered <- function(readname,
                                 tail_feature_list) {
 
-  #variable binding
-  tail <- . <- NULL
 
   #assertions
   if (missing(readname)) {
@@ -660,9 +645,6 @@ split_tail_centered <- function(readname,
 create_tail_chunk_list <- function(tail_feature_list,
                                    num_cores){
 
-  # variable binding (suppressing R CMD check from throwing an error)
-  i <- NULL
-
   # initial assertions
   if (missing(num_cores)) {
     stop("Number of declared cores is missing. Please provide a valid num_cores argument.", call. =FALSE)
@@ -711,7 +693,7 @@ create_tail_chunk_list <- function(tail_feature_list,
                                         lapply(names(tail_feature_list[[1]][i]), function(x) ninetails::split_tail_centered(x,tail_feature_list))
                                       }
 
-  #close(pb)
+
 
   #rename first level of nested list accordingly
   names(tail_chunk_list) <- names(tail_feature_list[[1]])
@@ -766,7 +748,8 @@ create_tail_chunk_list <- function(tail_feature_list,
 #'
 #'}
 
-create_gaf <- function(tail_chunk, method="s"){
+create_gaf <- function(tail_chunk,
+                       method="s"){
 
   #assertions
   if (missing(tail_chunk)) {
@@ -891,9 +874,6 @@ combine_gafs <- function(tail_chunk){
 #'}
 create_gaf_list <- function(tail_chunk_list,
                             num_cores){
-
-  #variable biding
-  i <- NULL
 
   # Assertions
   if (missing(num_cores)) {
@@ -1087,11 +1067,7 @@ create_outputs <- function(tail_feature_list,
                            pass_only=TRUE,
                            qc=TRUE){
 
-  #variable binding
-  readname <- polya_length <- qc_tag<- i <- chunkname <- contig <- est_nonA_pos <- NULL
-
   #assertions
-
   if (missing(tail_feature_list)) {
     stop("List of tail features is missing. Please provide a valid tail_feature_list argument.", call. =FALSE)
   }
@@ -1169,7 +1145,6 @@ create_outputs <- function(tail_feature_list,
                                          lapply(names(tail_feature_list[[1]][i]), function(x) length(tail_feature_list[[1]][[x]][[2]]))
                                        }
 
-  #close(pb)
 
   #coerce to df, add names
   tail_length_list <- do.call("rbind.data.frame", tail_length_list)
@@ -1225,11 +1200,6 @@ create_outputs <- function(tail_feature_list,
   # extract readnames
   moved_chunks_table$readname <- sub('\\_.*', '', moved_chunks_table$chunkname)
 
-  #substitute predictions with letter code
-  # moved_chunks_table$prediction[moved_chunks_table$prediction ==0] <- "A"
-  # moved_chunks_table$prediction[moved_chunks_table$prediction ==1] <- "C"
-  # moved_chunks_table$prediction[moved_chunks_table$prediction ==2] <- "G"
-  # moved_chunks_table$prediction[moved_chunks_table$prediction ==3] <- "U"
 
   # vectorized substitution of predictions with letter code
   prediction_dict <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")
@@ -1287,9 +1257,6 @@ create_outputs <- function(tail_feature_list,
 
   decorated_reads <- nanopolish_polya_table[nanopolish_polya_table$readname %in% moved_chunks_table$readname,]
 
-
-  # decorated_reads <- decorated_reads %>% dplyr::mutate(class = "decorated",
-  #                                                      comments = "YAY")
   decorated_reads$class <- "decorated"
   decorated_reads$comments <- "YAY"
 
