@@ -7,20 +7,32 @@
 count_trailing_chars(string, char)
 }
 \arguments{
-\item{string}{Character string to analyze}
+\item{string}{Character string. The sequence to analyze.}
 
-\item{char}{Single character to count at the end of the string}
+\item{char}{Character string of length 1. The character to count at the
+end of the string.}
 }
 \value{
-Integer count of trailing character occurrences
+Integer. Count of trailing character occurrences.
 }
 \description{
-This helper function counts how many times a specific character appears
-consecutively at the end of a string, working backwards from the last character.
+Counts how many times a specific character appears consecutively at the
+end of a string, working backwards from the last character. Used
+internally by the cDNA pipeline for poly(A)/poly(T) tail length
+estimation from basecalled sequences.
 }
 \examples{
 \dontrun{
-count_trailing_chars("ACGTTTTT", "T")  # Returns 4
-count_trailing_chars("ACGT", "A")      # Returns 0
+
+count_trailing_chars("ACGTTTTT", "T")
+# Returns 5
+
+count_trailing_chars("ACGT", "A")
+# Returns 0
+
 }
+}
+\seealso{
+\code{\link{detect_orientation_single}} where trailing character counts
+are used for read orientation classification
 }

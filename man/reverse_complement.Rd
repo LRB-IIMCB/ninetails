@@ -7,18 +7,29 @@
 reverse_complement(sequence)
 }
 \arguments{
-\item{sequence}{Character string containing DNA sequence}
+\item{sequence}{Character string. A DNA sequence containing only the
+characters A, T, G, C, and N.}
 }
 \value{
-Character string with reverse complement sequence
+Character string. The reverse complement of the input sequence.
 }
 \description{
-This function creates the reverse complement of a DNA sequence string,
-handling standard nucleotide bases (A, T, G, C) and ambiguous bases (N).
+Creates the reverse complement of a DNA sequence string, handling standard
+nucleotide bases (A, T, G, C) and ambiguous bases (N). Used internally
+by the cDNA pipeline for primer matching on both strands.
 }
 \examples{
 \dontrun{
-reverse_complement("ATCG")    # Returns "CGAT"
-reverse_complement("AAATTT")  # Returns "AAATTT"
+
+reverse_complement("ATCG")
+# Returns "CGAT"
+
+reverse_complement("AAATTT")
+# Returns "AAATTT"
+
 }
+}
+\seealso{
+\code{\link{detect_orientation_single}} where reverse complement
+sequences are used for primer alignment
 }

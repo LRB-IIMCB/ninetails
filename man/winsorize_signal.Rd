@@ -2,29 +2,39 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{winsorize_signal}
 \alias{winsorize_signal}
-\title{Winsorizes nanopore signal.}
+\title{Winsorize nanopore signal}
 \usage{
 winsorize_signal(signal)
 }
 \arguments{
-\item{signal}{numeric vector. A vector corresponding to given ONT signal.}
+\item{signal}{Numeric vector. A raw ONT signal vector.}
 }
 \value{
-winsorized signal (numeric vector).
+Integer vector. The winsorized signal with extreme values clipped
+  to the 0.5\% and 99.5\% quantiles.
 }
 \description{
-Removes high cliffs (extending above & below
-signal range). Slightly affects signal extremes.
+Clips extreme values in the raw nanopore signal to the 0.5th and 99.5th
+percentiles, removing high cliffs that extend above or below the main
+signal range. This slightly affects signal extremes but preserves the
+overall signal shape for downstream analysis.
 }
-\details{
-Based on the A. Signorell's DescTools
-https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r
+\section{Acknowledgements}{
+
+Based on A. Signorell's DescTools:
+\url{https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r}.
 }
+
 \examples{
 \dontrun{
 
-winsorized_signal <- winsorize_signal(signal= sample(200:300))
+winsorized_signal <- winsorize_signal(signal = sample(200:300))
 
 }
 
+}
+\seealso{
+\code{\link{extract_tail_data}} and
+\code{\link{extract_tails_from_pod5}} where winsorization is applied
+during tail signal extraction
 }

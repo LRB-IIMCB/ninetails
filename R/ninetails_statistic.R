@@ -1,55 +1,66 @@
-#' Performs Fisher's exact test on ninetails' merged output data.
+#' Perform Fisher's exact test on a single transcript in ninetails output
 #'
-#' It runs Fisher's exact test for testing the null of independence of rows and
-#' columns in a contingency table representing given transcript in ninetails
-#' output data. This is a wrapper for fisher.test function from stats package
-#' with additional features to facilitate data wrangling.
+#' Runs Fisher's exact test for testing the null hypothesis of independence
+#' of rows and columns in a 2x2 contingency table representing a given
+#' transcript in ninetails output data. This is a wrapper for
+#' \code{\link[stats]{fisher.test}} with additional data wrangling features.
 #'
-#' It is suitable only for the pairwise comparisons (i.e. for 2x2 contingency
-#' table), where 2 conditions (e.g. WT vs KO) are compared at once.
+#' The function is suitable only for pairwise comparisons (2x2 contingency
+#' tables), where two conditions (e.g. WT vs KO) are compared at once.
+#' The user can set a cutoff number of reads required for the analysis.
 #'
-#' The function allows the user to set a cutoff number of reads required for
-#' the analysis.
+#' This function is intended to be called internally by
+#' \code{\link{calculate_fisher}} and is not typically used standalone.
 #'
-#' This function is intended to work under the calculate_fisher function.
+#' @section Acknowledgements:
+#' Inspired by the Nanotail package written and maintained by
+#' Pawel Krawczyk (smaegol):
+#' \url{https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R}.
+#' Many thanks to the developer of the original source code.
 #'
-#' The function was inspired by the Nanotail package written & maintained by
-#' Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
+#' @param ninetails_data Data frame. The output of
+#'   \code{\link{merge_nonA_tables}} (merged tabular output containing read
+#'   classification and non-A position data).
 #'
-#' Many thanks to the developer of original source code.
+#' @param grouping_factor Character string. The name of the factor variable
+#'   defining groups/conditions (must have exactly 2 levels).
 #'
+#' @param base Character string. Letter representing the non-A nucleotide
+#'   for which statistics are computed. Accepted values: \code{"C"},
+#'   \code{"G"}, \code{"U"}, or \code{"all"} (for all non-A residues
+#'   combined). Default: \code{"C"}.
 #'
-#' @param ninetails_data dataframe - the output of \code{\link{merge_nonA_tables}}
-#' function (merged tabular output containing read classification &
-#' non-A position data).
+#' @param min_reads Numeric. Minimum number of reads representing a given
+#'   transcript to include it in the analysis. Default: 0.
 #'
-#' @param grouping_factor [character string] the name of factor variable defining
-#' groups/conditions (needs to have 2 levels!)
+#' @param transcript_id_column Character string. Name of the column in
+#'   which transcript identifiers are stored. Default: \code{NA}.
 #'
-#' @param base [character string] letter representing particular non-A nucleotide,
-#' for which the statistics are meant to be computed. Currently function accepts
-#' "C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
-#' value is for the nonA residues alltogether.
+#' @return A tibble with results for the given transcript, containing:
+#'   \describe{
+#'     \item{p.value}{Numeric. Raw p-value from Fisher's exact test, or
+#'       \code{NA} if conditions were not met.}
+#'     \item{stats_code}{Character. Status code describing whether the test
+#'       conditions were met (see \code{stat_codes_list} for definitions).}
+#'   }
 #'
-#' @param min_reads [numeric] minimum number of reads representing given
-#' transcript to include it in the analysis
-#'
-#' @param transcript_id_column [character string] name of the column in which
-#' the identifiers of the transcripts are stored. It is set to NA
-#' by default.
-#'
-#' @return a tibble with results for given transcript, including pvalue,
-#' adjusted pvalue, stats_code (the variable describing whether conditions
-#' are met) and significance (FDR based on padj).
+#' @seealso
+#' \code{\link{calculate_fisher}} for the per-transcript wrapper with
+#' multiple-testing correction,
+#' \code{\link{merge_nonA_tables}} for preparing the input,
+#' \code{\link{summarize_nonA}} for contingency table computation
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' test <- ninetails::nonA_fisher(ninetails_data=merged_nonA_tables,
-#'                                grouping_factor = "sample_name",
-#'                                base="C",
-#'                                min_reads=100)
+#'
+#' test <- ninetails::nonA_fisher(
+#'   ninetails_data = merged_nonA_tables,
+#'   grouping_factor = "sample_name",
+#'   base = "C",
+#'   min_reads = 100
+#' )
 #'
 #' }
 #'
@@ -181,62 +192,77 @@ stat_codes_list = list(OK = "OK",
 
 
 
-#' Performs Fisher's exact test for each transcript in ninetails
-#' output data. Then, it performs the Benjamini-Hochberg procedure
-#' (BH step-up procedure) to control the FDR.
+#' Perform Fisher's exact test per transcript with BH p-value adjustment
 #'
-#' This is a wrapper for fisher.test function from stats package and p.adjust
-#' functions with additional features to facilitate data wrangling.
+#' Runs Fisher's exact test for each transcript in ninetails output data
+#' and applies the Benjamini-Hochberg (BH) step-up procedure to control
+#' the false discovery rate. This is a high-level wrapper for
+#' \code{\link[stats]{fisher.test}} and \code{\link[stats]{p.adjust}} with
+#' additional data wrangling features.
 #'
-#' The function was inspired by the Nanotail package written & maintained by
-#' Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
+#' @section Acknowledgements:
+#' Inspired by the Nanotail package written and maintained by
+#' Pawel Krawczyk (smaegol):
+#' \url{https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R}.
+#' Many thanks to the developer of the original source code.
 #'
-#' Many thanks to the developer of original source code.
+#' @param ninetails_data Data frame. The output of
+#'   \code{\link{merge_nonA_tables}} (merged tabular output containing read
+#'   classification and non-A position data).
 #'
-#' @param ninetails_data dataframe - the output of ninetails::merge_nonA_tables
-#' function (merged tabular output containing read classification &
-#' non-A position data).
+#' @param transcript_id_column Character string. Column with transcript ID
+#'   data. Default: \code{"ensembl_transcript_id_short"}; can be changed by
+#'   the user.
 #'
-#' @param transcript_id_column [character string] column with transcript id data
-#' (default: "ensembl_transcript_id_short"; can be changed by the user)
+#' @param min_reads Numeric. Minimum number of reads representing a given
+#'   transcript to include it in the analysis. Default: 0. Keep in mind that
+#'   including many transcripts with low coverage increases the risk of
+#'   rejecting the true null hypothesis (Benjamini-Hochberg procedure).
 #'
-#' @param min_reads [numeric] minimum number of reads representing given
-#' transcript to include it in the analysis. This parameter is set by default
-#' to 0. Please keep in mind that taking into account many transcripts with low
-#' coverage increases the risk of reject true null hypothesis
-#' (Benjamini-Hochberg procedure).
+#' @param min_nonA_reads Numeric. Minimum number of reads containing
+#'   non-adenosine residues (sum of C, G, U) per transcript to include it
+#'   in the analysis. This prevents considering too many observations as
+#'   non-significant during p-value adjustment. Non-A-containing reads are
+#'   typically a small fraction of the total pool, so additional filtering
+#'   can provide more meaningful results. Default: 0.
 #'
-#' @param min_nonA_reads [numeric] minimum number of reads containing
-#' nonadenosine residues (summary for C, G, U alltogether) per given
-#' transcript to include it in the analysis. This parameter prevents from
-#' considering too many observations as nonsignificant in the further pvalue
-#' adjustation. In general, the non-A containing reads are a small fraction
-#' of the total pool of reads. As a rule of thumb, additional filtering
-#' criteria can provide more valuable information regarding the samples
-#' (prevent from rejecting true null hypothesis).
-#' This is set by default to 0.
+#' @param grouping_factor Character string. Name of the grouping variable.
+#'   Default: \code{"sample_name"}.
 #'
-#' @param grouping_factor [character string] grouping variable
-#' (e.g. "sample_name" - default)
+#' @param condition1 Character string. First level of \code{grouping_factor}
+#'   to use for comparison. Required when \code{grouping_factor} has more
+#'   than 2 levels.
 #'
-#' @param condition1 [character string] first level of `grouping_factor`
-#' to use for comparison
+#' @param condition2 Character string. Second level of \code{grouping_factor}
+#'   to use for comparison. Required when \code{grouping_factor} has more
+#'   than 2 levels.
 #'
-#' @param condition2 [character string] second level of `grouping_factor`
-#' to use for comparison
+#' @param alpha Numeric. Significance threshold for FDR. Default: 0.05.
 #'
-#' @param alpha [numeric] an alpha value to consider a hit significant.
-#' Default: 0.05.
+#' @param base Character string. Letter representing the non-A nucleotide
+#'   for which statistics are computed. Accepted values: \code{"C"},
+#'   \code{"G"}, \code{"U"}, or \code{"all"} (for all non-A residues
+#'   combined). Default: \code{"C"}.
 #'
-#' @param base [character string] letter representing particular non-A nucleotide,
-#' for which the statistics are meant to be computed. Currently function accepts
-#' "C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
-#' value is for the nonA residues alltogether.
+#' @param ... Additional parameters passed to \code{\link{nonA_fisher}}
+#'   (under development).
 #'
-#' @param ... additional parameters to pass to nonA_fisher (under development)
+#' @return A tibble with per-transcript test results, sorted by adjusted
+#'   p-value. Columns include:
+#'   \describe{
+#'     \item{<transcript_id_column>}{Transcript identifier}
+#'     \item{p.value}{Numeric. Raw p-value from Fisher's exact test}
+#'     \item{stats_code}{Character. Descriptive status code (see
+#'       \code{stat_codes_list} for full definitions)}
+#'     \item{padj}{Numeric. BH-adjusted p-value}
+#'     \item{significance}{Character. \code{"FDR<alpha"} if significant,
+#'       \code{"NotSig"} otherwise}
+#'   }
 #'
-#' @return a summary table with pvalues, padj and significance levels
-#' for each transcript  (tibble)
+#' @seealso
+#' \code{\link{nonA_fisher}} for the per-transcript Fisher's exact test,
+#' \code{\link{merge_nonA_tables}} for preparing the input,
+#' \code{\link{summarize_nonA}} for contingency table computation
 #'
 #' @importFrom rlang :=
 #'
@@ -244,15 +270,19 @@ stat_codes_list = list(OK = "OK",
 #'
 #' @examples
 #' \dontrun{
-#' test <- ninetails::calculate_fisher(ninetails_data=merged_nonA_tables,
-#'                                     transcript_id_column = "ensembl_transcript_id_short",
-#'                                     min_reads=100,
-#'                                     min_nonA_reads=10,
-#'                                     grouping_factor = "sample_name",
-#'                                     condition1="WT",
-#'                                     condition2="KO",
-#'                                     alpha=0.05,
-#'                                     base="C")
+#'
+#' test <- ninetails::calculate_fisher(
+#'   ninetails_data = merged_nonA_tables,
+#'   transcript_id_column = "ensembl_transcript_id_short",
+#'   min_reads = 100,
+#'   min_nonA_reads = 10,
+#'   grouping_factor = "sample_name",
+#'   condition1 = "WT",
+#'   condition2 = "KO",
+#'   alpha = 0.05,
+#'   base = "C"
+#' )
+#'
 #' }
 calculate_fisher <- function(ninetails_data,
                              transcript_id_column = "ensembl_transcript_id_short",

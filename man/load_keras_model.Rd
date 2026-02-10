@@ -2,23 +2,41 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{load_keras_model}
 \alias{load_keras_model}
-\title{Loads keras model for multiclass signal prediction.}
+\title{Load Keras model for multiclass signal prediction}
 \usage{
 load_keras_model(keras_model_path)
 }
 \arguments{
-\item{keras_model_path}{either missing or character string. Full path of the
-.h5 file with keras model used to predict signal classes. If function is
-called without this argument(argument is missing) the default pretrained
-model will be loaded. Otherwise, the dir with custom model shall be provided.}
+\item{keras_model_path}{Character string or missing. Full path of the
+\code{.h5} file with a Keras model. If missing (default), the pretrained
+model shipped with the package is loaded. Otherwise, the specified custom
+model is loaded.}
+}
+\value{
+A Keras model object ready for prediction.
 }
 \description{
-Loads keras model for multiclass signal prediction.
+Loads a pretrained convolutional neural network (CNN) model for classifying
+Gramian Angular Field representations of poly(A) tail signal chunks into
+nucleotide categories (A, C, G, U). When called without arguments, the
+default model bundled with ninetails is loaded. A custom model path can
+be provided for user-trained models.
 }
 \examples{
 \dontrun{
 
-load_keras_model(keras_model_path = "/path/to/the/model/in/hdf5_format")
+# Load default pretrained model
+model <- load_keras_model()
+
+# Load custom model
+model <- load_keras_model(
+  keras_model_path = "/path/to/the/model/in/hdf5_format"
+)
+
 }
 
+}
+\seealso{
+\code{\link{predict_gaf_classes}} where this function is called,
+\code{\link{combine_gafs}} for preparing GAF input arrays
 }

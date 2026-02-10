@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_annotation.R
 \name{annotate_with_biomart}
 \alias{annotate_with_biomart}
-\title{Annotates the ninetails output data}
+\title{Annotate ninetails output data with biomaRt}
 \usage{
 annotate_with_biomart(
   input_data,
@@ -14,53 +14,79 @@ annotate_with_biomart(
 )
 }
 \arguments{
-\item{input_data}{[dataframe] tabular output of ninetails pipeline.}
+\item{input_data}{Data frame. Tabular output of the ninetails pipeline.
+Must contain a column named \code{ensembl_transcript_id_short}.}
 
-\item{attributes_to_get}{[character] annotation attributes to be retrieved.
-By default: 'external_gene_name','description','transcript_biotype'.}
+\item{attributes_to_get}{Character vector. Annotation attributes to
+retrieve from biomaRt. Default:
+\code{c("ensembl_transcript_id", "external_gene_name", "description",
+"transcript_biotype")}.}
 
-\item{filters}{column of the input dataframe to be matched
-with the target mart (e.g. "ensembl_transcript_id_short")}
+\item{filters}{Character string. Column of the input data frame to match
+with the target mart. Default: \code{"ensembl_transcript_id"}.}
 
-\item{organism}{[character] character string. Currently available::\itemize{
-\item 'athaliana' - Arabidopsis thaliana
-\item 'hsapiens' - Homo sapiens
-\item 'mmusculus' - Mus musculus
-\item 'scerevisiae' - Saccharomyces cerevisiae
+\item{organism}{Character string or \code{NULL}. Organism shorthand for
+built-in mart presets. Currently available:
+\describe{
+  \item{\code{"athaliana"}}{\emph{Arabidopsis thaliana} (Ensembl Plants)}
+  \item{\code{"hsapiens"}}{\emph{Homo sapiens} (Ensembl)}
+  \item{\code{"mmusculus"}}{\emph{Mus musculus} (Ensembl)}
+  \item{\code{"scerevisiae"}}{\emph{Saccharomyces cerevisiae}
+    (Ensembl Fungi)}
 }
-This argument is optional & mutually exclusive with 'mart_to_use'.}
+Mutually exclusive with \code{mart_to_use}. Default: \code{NULL}.}
 
-\item{mart_to_use}{optional: mart object created with \link[biomaRt]{useMart}
-or \link[biomaRt]{useEnsembl} function. This argument is optional
-& mutually exclusive with 'organism'.}
+\item{mart_to_use}{Mart object or \code{NULL}. A mart object created with
+\code{\link[biomaRt]{useMart}} or \code{\link[biomaRt]{useEnsembl}}.
+Mutually exclusive with \code{organism}. Default: \code{NULL}.}
 }
 \value{
-A dataframe with annotated ninetails output data.
+A data frame with the original ninetails output data joined with
+  the retrieved annotation attributes via left join on transcript IDs.
 }
 \description{
-This function is a wrapper for data annotation using the biomaRt package.
+Retrieves gene-level annotation from Ensembl for transcripts in ninetails
+output data. This is a convenience wrapper for \code{\link[biomaRt]{getBM}}
+with built-in organism presets and support for custom mart objects.
 }
 \details{
-For proper execution, this function requires the biomaRt package version
-greater than 2.40.
+Requires the \pkg{biomaRt} package version >= 2.40.
 
-One of the arguments 'organism' or 'mart_to_use' must be defined.
-The arguments 'organism' and 'mart_to_use' are mutually exclusive.
-If both are declared, the function will throw an error.
-
-Function based on PK (smaegol) NanoTail annotate_with_biomart()
-https://github.com/LRB-IIMCB/nanotail/
-Many thanks to the NanoTail developer for help and kind advice!
+Exactly one of \code{organism} or \code{mart_to_use} must be provided.
+The two arguments are mutually exclusive; if both are declared the function
+throws an error.
 }
+\section{Acknowledgements}{
+
+Based on PK (smaegol) NanoTail \code{annotate_with_biomart()}:
+\url{https://github.com/LRB-IIMCB/nanotail/}.
+Many thanks to the NanoTail developer for help and kind advice.
+}
+
 \examples{
- \dontrun{
-# with provided organism
-annot <- ninetails::annotate_with_biomart(input_data=merged_nonA_tables,
-                                          organism="mmusculus")
+\dontrun{
 
-# with provided mart (where 'mart' is the output of \link[biomaRt]{useMart} function)
-annot <- ninetails::annotate_with_biomart(input_data=merged_nonA_tables,
-                                          mart_to_use=mart)
+# With built-in organism preset
+annot <- ninetails::annotate_with_biomart(
+  input_data = merged_nonA_tables,
+  organism = "mmusculus"
+)
+
+# With custom mart object
+mart <- biomaRt::useMart(
+  biomart = "ENSEMBL_MART_ENSEMBL",
+  dataset = "hsapiens_gene_ensembl"
+)
+annot <- ninetails::annotate_with_biomart(
+  input_data = merged_nonA_tables,
+  mart_to_use = mart
+)
+
 }
 
+}
+\seealso{
+\code{\link{merge_nonA_tables}} for preparing the input,
+\code{\link[biomaRt]{getBM}} for the underlying biomaRt query,
+\code{\link[biomaRt]{useMart}} for creating custom mart objects
 }

@@ -2,34 +2,33 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{correct_labels}
 \alias{correct_labels}
-\title{Correcting class recognition in ninetails data}
+\title{Correct read class labels for backward compatibility}
 \usage{
 correct_labels(df)
 }
 \arguments{
-\item{df}{data frame with ninetails read classification results (class_data)
-or the output of \code{\link{merge_nonA_tables}} function.}
+\item{df}{Data frame. Ninetails read classification results
+(\code{class_data}) or the output of \code{\link{merge_nonA_tables}}.
+Must contain a \code{class} column.}
 }
 \value{
-corrected dataframe (with changed class labels)
+Data frame with corrected class labels in the \code{class} column.
 }
 \description{
-This helper fnction solves issues with backcompatibility of ninetails'
- read class naming convention.
-}
-\details{
-Previously, the read classes were named as "modified", "unmodified" and
- "unclassified" (pre-release versions). However, it has been changed
- to more precise terms: "decorated", "blank" and "unclassified", since the
- presence of non-A within poly(A) tail does not necessary have to be
- the result of post-transcriptional, cytoplasmic modification. It might be
- caused by the semi-templated tails or polymerase slippage during RNA
- synthesis/canonical tailing or caused by other potential yet undefined
- mechanisms.
+Resolves naming convention changes between pre-release and current
+versions of ninetails. Previously, read classes were labeled
+\code{"modified"}, \code{"unmodified"}, and \code{"unclassified"}.
+These have been changed to \code{"decorated"}, \code{"blank"}, and
+\code{"unclassified"}, since the presence of non-A within a poly(A)
+tail does not necessarily result from post-transcriptional modification;
+it may be caused by semi-templated tails, polymerase slippage, or other
+mechanisms.
 }
 \examples{
 \dontrun{
+
 class_data <- ninetails::correct_labels(class_data)
+
 }
 
 }

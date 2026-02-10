@@ -2,28 +2,41 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{filter_dorado_summary}
 \alias{filter_dorado_summary}
-\title{Filter Dorado summary file for reads fulfilling ninetails quality criteria}
+\title{Filter Dorado summary for reads fulfilling ninetails quality criteria}
 \usage{
 filter_dorado_summary(dorado_summary)
 }
 \arguments{
-\item{dorado_summary}{Character path to a Dorado summary file (tab-delimited),
-or a data frame containing summary information.}
+\item{dorado_summary}{Character string or data frame. Path to a
+tab-delimited Dorado summary file, or a data frame containing
+equivalent summary information. Must contain at least the columns
+\code{read_id} and \code{poly_tail_length}.}
 }
 \value{
 A filtered tibble or data frame containing only reads that meet
-the filtering criteria.
+  the filtering criteria.
 }
 \description{
-This function takes a Dorado summary file (from ONT Dorado basecaller)
-or a data frame containing equivalent summary information,
-and filters out reads that do not meet ninetails quality and alignment criteria.
-Specifically, it removes reads with missing alignments, low mapping quality,
-poly(A) start positions indicating most likely artifacts,
-or poly(A) tails shorter than 10 bases.
+Takes a Dorado summary file (from ONT Dorado basecaller) or a data frame
+containing equivalent summary information, and filters out reads that do
+not meet ninetails quality and alignment criteria.
+}
+\details{
+Reads must meet all four criteria to pass the filter:
+\enumerate{
+  \item \strong{Mapped}: \code{alignment_direction} is \code{"+"} or
+    \code{"-"}, not \code{"*"}
+  \item \strong{High mapping quality}: \code{alignment_mapq} > 0
+  \item \strong{Valid coordinates}: \code{poly_tail_start} != 0 (in DRS,
+    the adapter passes through the pore first, so a start position of 0
+    indicates a likely artifact)
+  \item \strong{Sufficient length}: \code{poly_tail_length} >= 10 nt
+    (shorter tails cannot be reliably processed by the CNN)
+}
 }
 \examples{
 \dontrun{
+
 # From file
 filtered <- filter_dorado_summary("dorado_summary.txt")
 
@@ -36,5 +49,11 @@ df <- data.frame(
   poly_tail_length = c(20, 5)
 )
 filtered <- filter_dorado_summary(df)
+
 }
+}
+\seealso{
+\code{\link{preprocess_inputs}} and \code{\link{preprocess_inputs_cdna}}
+where this function is called during pipeline initialization,
+\code{\link{process_dorado_summary}} for splitting large summary files
 }

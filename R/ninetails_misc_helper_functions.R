@@ -88,84 +88,6 @@ no_na <- function(x) {
   !anyNA(x)
 }
 
-
-################################################################################
-# SIGNAL PROCESSING HELPERS
-################################################################################
-#' Winsorizes nanopore signal.
-#'
-#' Removes high cliffs (extending above & below
-#' signal range). Slightly affects signal extremes.
-#'
-#' Based on the A. Signorell's DescTools
-#' https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r
-#'
-#'
-#' @param signal numeric vector. A vector corresponding to given ONT signal.
-#'
-#' @return winsorized signal (numeric vector).
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#'
-#' winsorized_signal <- winsorize_signal(signal= sample(200:300))
-#'
-#' }
-#'
-winsorize_signal <- function(signal){
-
-  #assertions
-
-  if (missing(signal)) {
-    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
-  }
-
-  assert_condition(is.numeric(signal),
-                   "Signal vector must be numeric. Please provide a valid argument.")
-  assert_condition(is.atomic(signal),
-                   "Signal vector must be atomic. Please provide a valid argument.")
-  assert_condition(no_na(signal),
-                   "Signal vector must not contain missing values. Please provide a valid argument.")
-
-  signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
-  minimal_val <- signal_q[1L]
-  maximal_val <- signal_q[2L]
-
-  signal[signal<minimal_val] <- minimal_val
-  signal[signal>maximal_val] <- maximal_val
-
-  winsorized_signal <- as.integer(signal)
-
-  return(winsorized_signal)
-
-}
-
-
-#' Loads keras model for multiclass signal prediction.
-#'
-#' @param keras_model_path either missing or character string. Full path of the
-#' .h5 file with keras model used to predict signal classes. If function is
-#' called without this argument(argument is missing) the default pretrained
-#' model will be loaded. Otherwise, the dir with custom model shall be provided.
-#'
-#' @export
-#'
-#' @examples
-#'\dontrun{
-#'
-#' load_keras_model(keras_model_path = "/path/to/the/model/in/hdf5_format")
-#' }
-#'
-load_keras_model <- function(keras_model_path){
-  if (rlang::is_missing(keras_model_path)) {
-    path_to_default_model <- system.file("extdata", "cnn_model", "gasf_gadf_combined_model_20220808.h5", package="ninetails")
-    keras_model <- keras::load_model_hdf5(path_to_default_model)
-  } else {
-    keras_model <- keras::load_model_hdf5(keras_model_path)
-  }
-}
-
 #' Check if fast5 file is multi-read format
 #'
 #' Checks whether the provided fast5 file structure corresponds to a multi-read
@@ -231,31 +153,47 @@ is_RNA <- function(fast5_file, read_id) {
 }
 
 
-#' Checks if the provided directory contains fast5 files in the correct format.
+#' Check if the provided directory contains Fast5 files in the correct format
 #'
-#' This function analyses the structure of the first fast5 file in the given
-#' directory and checks whether it fulfills the analysis requirements (if the
-#' file is multifast5, basecalled by Guppy basecaller and containing provided
-#' basecall_group). Otherwise the function throws an error (with description).
+#' Analyzes the structure of the first Fast5 file in the given directory and
+#' checks whether it fulfills the analysis requirements: the file must be a
+#' multi-Fast5, basecalled by Guppy basecaller, and contain the provided
+#' basecall group and RNA reads. Otherwise the function throws a descriptive
+#' error.
 #'
-#' @param workspace character string. Full path of the directory to search the
-#' basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.
+#' @section Acknowledgements:
+#' This lookup function is inspired by adnaniazi's
+#' \code{explore-basecaller-and-fast5type.R} from tailfindr:
+#' \url{https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R}.
 #'
-#' @param basecall_group character string ["Basecall_1D_000"]. Name of the
-#' level in the Fast5 file hierarchy from which the data should be extracted.
+#' @param workspace Character string. Full path of the directory containing
+#'   the basecalled multi-Fast5 files.
 #'
-#' @return outputs the text info with basic characteristics of the data.
+#' @param basecall_group Character string. Name of the level in the Fast5
+#'   file hierarchy from which data should be extracted (e.g.,
+#'   \code{"Basecall_1D_000"}).
+#'
+#' @return Prints to console: data type (RNA), Fast5 file type (multi-Fast5),
+#'   basecaller used, basecaller version, and basecalling model. Called for its
+#'   side effect; returns invisibly.
+#'
+#' @seealso
+#' \code{\link{is_multifast5}} for the multi-Fast5 format check,
+#' \code{\link{is_RNA}} for the RNA content check,
+#' \code{\link{check_tails_guppy}} where this function is called during
+#' pipeline initialization
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'
-#' check_fast5_filetype <- function(workspace = '/path/to/guppy/workspace',
-#'                                  basecalled_group = 'Basecall_1D_000')
+#' check_fast5_filetype(
+#'   workspace = '/path/to/guppy/workspace',
+#'   basecall_group = 'Basecall_1D_000'
+#' )
 #'
 #' }
-#'
-#'
 #'
 # This lookup function is inspired by adnaniazi's explore-basecaller-and-fast5type.R from tailfindr
 # https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R
@@ -335,22 +273,87 @@ check_fast5_filetype <- function(workspace,
 
 }
 
+################################################################################
+# SIGNAL PROCESSING HELPERS
+################################################################################
+#' Winsorize nanopore signal
+#'
+#' Clips extreme values in the raw nanopore signal to the 0.5th and 99.5th
+#' percentiles, removing high cliffs that extend above or below the main
+#' signal range. This slightly affects signal extremes but preserves the
+#' overall signal shape for downstream analysis.
+#'
+#' @section Acknowledgements:
+#' Based on A. Signorell's DescTools:
+#' \url{https://github.com/AndriSignorell/DescTools/blob/master/R/DescTools.r}.
+#'
+#' @param signal Numeric vector. A raw ONT signal vector.
+#'
+#' @return Integer vector. The winsorized signal with extreme values clipped
+#'   to the 0.5\% and 99.5\% quantiles.
+#'
+#' @seealso
+#' \code{\link{extract_tail_data}} and
+#' \code{\link{extract_tails_from_pod5}} where winsorization is applied
+#' during tail signal extraction
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' winsorized_signal <- winsorize_signal(signal = sample(200:300))
+#'
+#' }
+#'
+winsorize_signal <- function(signal){
+
+  #assertions
+
+  if (missing(signal)) {
+    stop("Signal vector is missing. Please provide a valid signal argument.", .call = FALSE)
+  }
+
+  assert_condition(is.numeric(signal),
+                   "Signal vector must be numeric. Please provide a valid argument.")
+  assert_condition(is.atomic(signal),
+                   "Signal vector must be atomic. Please provide a valid argument.")
+  assert_condition(no_na(signal),
+                   "Signal vector must not contain missing values. Please provide a valid argument.")
+
+  signal_q <- stats::quantile(x=signal, probs=c(0.005, 0.995), na.rm=TRUE, type=7)
+  minimal_val <- signal_q[1L]
+  maximal_val <- signal_q[2L]
+
+  signal[signal<minimal_val] <- minimal_val
+  signal[signal>maximal_val] <- maximal_val
+
+  winsorized_signal <- as.integer(signal)
+
+  return(winsorized_signal)
+
+}
 
 
-
-#' Substitutes 0s surrounded by adjacent nonzeros in pseudomove vector
-#' to facilitate position-centering function.
+#' Substitute short zero-gaps surrounded by nonzero pseudomoves
 #'
-#' This function helps to avoid redundancy introduced by z-score thesholding
-#' algo (this happens when signal is jagged), so one segment would be reported
-#' instead of multiple.
+#' Smooths the pseudomove vector by filling in isolated zero-gaps (length < 2)
+#' flanked by identical nonzero values. This avoids redundancy introduced by
+#' the z-score thresholding algorithm when the signal is jagged, so a single
+#' modification region is reported instead of multiple fragmented segments.
 #'
-#' @param pseudomoves numeric vector produced by z-score
-#' filtering algo (\code{\link{filter_signal_by_threshold}}) corresponding
-#' to the tail region of the read of interest as delimited by
-#' nanopolish polya function.
+#' @param pseudomoves Numeric vector. Pseudomove vector produced by the
+#'   z-score filtering algorithm
+#'   (\code{\link{filter_signal_by_threshold}}), corresponding to the tail
+#'   region of the read of interest as delimited by nanopolish polya function.
 #'
-#' @return a numeric vector of adjusted pseudomoves (smoothened)
+#' @return Numeric vector. Adjusted pseudomoves with short gaps filled.
+#'
+#' @seealso
+#' \code{\link{filter_signal_by_threshold}} and
+#' \code{\link{filter_signal_by_threshold_vectorized}} where this function
+#' is called as a post-processing step
+#'
 #' @export
 #'
 #' @examples
@@ -358,7 +361,7 @@ check_fast5_filetype <- function(workspace,
 #'
 #' substitute_gaps(pseudomoves = pseudomoves_vector)
 #'
-#'}
+#' }
 #'
 substitute_gaps <- function(pseudomoves){
   rle_pseudomoves <- rle(pseudomoves)
@@ -370,52 +373,94 @@ substitute_gaps <- function(pseudomoves){
 }
 
 ################################################################################
-# ADDITIONAL DATA PROCESSING HELPERS
+# LOADING CNN MODEL
 ################################################################################
-#' Calculates statistical mode of given vector.
+#' Load Keras model for multiclass signal prediction
 #'
-#' This function operates in 2 flavours. Either of them can be defined
-#' by the "method" parameter. There are 2 options available: "density"
-#' and "value".
+#' Loads a pretrained convolutional neural network (CNN) model for classifying
+#' Gramian Angular Field representations of poly(A) tail signal chunks into
+#' nucleotide categories (A, C, G, U). When called without arguments, the
+#' default model bundled with ninetails is loaded. A custom model path can
+#' be provided for user-trained models.
 #'
-#' If the "density" (default) option was chosen, then the
-#' statistical mode (most frequent value) would be computed from the
-#' normalized data density distribution. In this mode, the functon returns
-#' a single value.
+#' @param keras_model_path Character string or missing. Full path of the
+#'   \code{.h5} file with a Keras model. If missing (default), the pretrained
+#'   model shipped with the package is loaded. Otherwise, the specified custom
+#'   model is loaded.
 #'
-#' If the "value" option was selected, then the function return the mode based
-#' on actual value. This means that, if the dataset was bi- or multimodal, the
-#' returned vector would contain more than one most frequent values.
+#' @return A Keras model object ready for prediction.
 #'
-#' This function was written based on the following SO thread:
-#' https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
-#' Special thanks to Chris and hugovdberg!
+#' @seealso
+#' \code{\link{predict_gaf_classes}} where this function is called,
+#' \code{\link{combine_gafs}} for preparing GAF input arrays
 #'
-#' @param x vector with values [numeric] to compute the mode for
-#'
-#' @param method [character] string; which method of computing statistical mode
-#' is meant to be used by the function. 2 options available: "value"/"density".
-#' The latter is set by default.
-#'
-#' @param na.rm logical [TRUE/FALSE] whether or not to remove NA values from the
-#' calculation. Set to FALSE by default.
-#'
-#' @return statistical mode of given vector of values [numeric]
 #' @export
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #'
-#'test1 <- c(rep(2,5), rep(3,4), rep(1,4), rep(8,2), rep(7,3), rep(5,3)) # 1 most freq val
-#'test2 <- c(rep(2,5), rep(3,4), rep(1,4), rep(8,5), rep(7,3), rep(5,3)) # 2 most freq val
-#'test3 <- c(rep(2,5), rep(3,4), rep(1,4), rep(8,5), rep(7,5), rep(5,3)) # 3 most freq val
-#'test4 <- c("Lorem", "ipsum", "dolor", "sit", "amet")
+#' # Load default pretrained model
+#' model <- load_keras_model()
 #'
-#'result <- ninetails::get_mode(x=test1, method= "value")
-#'print(result)
-#'class(result)
+#' # Load custom model
+#' model <- load_keras_model(
+#'   keras_model_path = "/path/to/the/model/in/hdf5_format"
+#' )
 #'
-#'}
+#' }
+#'
+load_keras_model <- function(keras_model_path){
+  if (rlang::is_missing(keras_model_path)) {
+    path_to_default_model <- system.file("extdata", "cnn_model", "gasf_gadf_combined_model_20220808.h5", package="ninetails")
+    keras_model <- keras::load_model_hdf5(path_to_default_model)
+  } else {
+    keras_model <- keras::load_model_hdf5(keras_model_path)
+  }
+}
+
+
+################################################################################
+# ADDITIONAL DATA PROCESSING HELPERS
+################################################################################
+#' Calculate the statistical mode of a numeric vector
+#'
+#' Computes the statistical mode (most frequent value) using one of two
+#' methods. The \code{"density"} method (default) returns the mode from
+#' the normalized kernel density estimate and always produces a single
+#' value. The \code{"value"} method returns the actual most frequent
+#' value(s) and may return multiple values for multimodal data.
+#'
+#' @section Acknowledgements:
+#' Written based on the following Stack Overflow thread:
+#' \url{https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode}.
+#' Special thanks to Chris and hugovdberg.
+#'
+#' @param x Numeric vector. Values to compute the mode for.
+#'
+#' @param method Character string. Which method to use for computing the
+#'   statistical mode. Two options: \code{"density"} (default) for the
+#'   kernel density estimate mode, or \code{"value"} for the actual most
+#'   frequent value(s).
+#'
+#' @param na.rm Logical. Whether to remove \code{NA} values before
+#'   computation. Default: \code{FALSE}.
+#'
+#' @return Numeric. The statistical mode of the input vector. Returns a
+#'   single value when \code{method = "density"}, or one or more values
+#'   when \code{method = "value"} (for multimodal data).
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' test1 <- c(rep(2, 5), rep(3, 4), rep(1, 4), rep(8, 2))
+#' test2 <- c(rep(2, 5), rep(3, 4), rep(1, 4), rep(8, 5))
+#'
+#' result <- ninetails::get_mode(x = test1, method = "value")
+#' print(result)
+#'
+#' }
 #'
 get_mode <- function(x, method ="density", na.rm = FALSE) {
 
@@ -450,30 +495,30 @@ get_mode <- function(x, method ="density", na.rm = FALSE) {
   }
 }
 
-#'  Correcting class recognition in ninetails data
+#' Correct read class labels for backward compatibility
 #'
-#'  This helper fnction solves issues with backcompatibility of ninetails'
-#'  read class naming convention.
+#' Resolves naming convention changes between pre-release and current
+#' versions of ninetails. Previously, read classes were labeled
+#' \code{"modified"}, \code{"unmodified"}, and \code{"unclassified"}.
+#' These have been changed to \code{"decorated"}, \code{"blank"}, and
+#' \code{"unclassified"}, since the presence of non-A within a poly(A)
+#' tail does not necessarily result from post-transcriptional modification;
+#' it may be caused by semi-templated tails, polymerase slippage, or other
+#' mechanisms.
 #'
-#'  Previously, the read classes were named as "modified", "unmodified" and
-#'  "unclassified" (pre-release versions). However, it has been changed
-#'  to more precise terms: "decorated", "blank" and "unclassified", since the
-#'  presence of non-A within poly(A) tail does not necessary have to be
-#'  the result of post-transcriptional, cytoplasmic modification. It might be
-#'  caused by the semi-templated tails or polymerase slippage during RNA
-#'  synthesis/canonical tailing or caused by other potential yet undefined
-#'  mechanisms.
+#' @param df Data frame. Ninetails read classification results
+#'   (\code{class_data}) or the output of \code{\link{merge_nonA_tables}}.
+#'   Must contain a \code{class} column.
 #'
-#' @param df data frame with ninetails read classification results (class_data)
-#' or the output of \code{\link{merge_nonA_tables}} function.
-#'
-#' @return corrected dataframe (with changed class labels)
+#' @return Data frame with corrected class labels in the \code{class} column.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#'
 #' class_data <- ninetails::correct_labels(class_data)
+#'
 #' }
 #'
 correct_labels <- function(df) {
@@ -495,25 +540,43 @@ correct_labels <- function(df) {
 ################################################################################
 # REQUIRED BY DORADO-DEPENDENT PIPELINES
 ################################################################################
-#' Filter Dorado summary file for reads fulfilling ninetails quality criteria
+#' Filter Dorado summary for reads fulfilling ninetails quality criteria
 #'
-#' This function takes a Dorado summary file (from ONT Dorado basecaller)
-#' or a data frame containing equivalent summary information,
-#' and filters out reads that do not meet ninetails quality and alignment criteria.
-#' Specifically, it removes reads with missing alignments, low mapping quality,
-#' poly(A) start positions indicating most likely artifacts,
-#' or poly(A) tails shorter than 10 bases.
+#' Takes a Dorado summary file (from ONT Dorado basecaller) or a data frame
+#' containing equivalent summary information, and filters out reads that do
+#' not meet ninetails quality and alignment criteria.
 #'
-#' @param dorado_summary Character path to a Dorado summary file (tab-delimited),
-#' or a data frame containing summary information.
+#' @details
+#' Reads must meet all four criteria to pass the filter:
+#' \enumerate{
+#'   \item \strong{Mapped}: \code{alignment_direction} is \code{"+"} or
+#'     \code{"-"}, not \code{"*"}
+#'   \item \strong{High mapping quality}: \code{alignment_mapq} > 0
+#'   \item \strong{Valid coordinates}: \code{poly_tail_start} != 0 (in DRS,
+#'     the adapter passes through the pore first, so a start position of 0
+#'     indicates a likely artifact)
+#'   \item \strong{Sufficient length}: \code{poly_tail_length} >= 10 nt
+#'     (shorter tails cannot be reliably processed by the CNN)
+#' }
 #'
-#' @returns A filtered tibble or data frame containing only reads that meet
-#' the filtering criteria.
+#' @param dorado_summary Character string or data frame. Path to a
+#'   tab-delimited Dorado summary file, or a data frame containing
+#'   equivalent summary information. Must contain at least the columns
+#'   \code{read_id} and \code{poly_tail_length}.
+#'
+#' @return A filtered tibble or data frame containing only reads that meet
+#'   the filtering criteria.
+#'
+#' @seealso
+#' \code{\link{preprocess_inputs}} and \code{\link{preprocess_inputs_cdna}}
+#' where this function is called during pipeline initialization,
+#' \code{\link{process_dorado_summary}} for splitting large summary files
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#'
 #' # From file
 #' filtered <- filter_dorado_summary("dorado_summary.txt")
 #'
@@ -526,6 +589,7 @@ correct_labels <- function(df) {
 #'   poly_tail_length = c(20, 5)
 #' )
 #' filtered <- filter_dorado_summary(df)
+#'
 #' }
 filter_dorado_summary <- function(dorado_summary){
 
@@ -706,19 +770,33 @@ check_output_directory <- function(save_dir,
 ################################################################################
 #' Count trailing occurrences of a character in a string
 #'
-#' This helper function counts how many times a specific character appears
-#' consecutively at the end of a string, working backwards from the last character.
+#' Counts how many times a specific character appears consecutively at the
+#' end of a string, working backwards from the last character. Used
+#' internally by the cDNA pipeline for poly(A)/poly(T) tail length
+#' estimation from basecalled sequences.
 #'
-#' @param string Character string to analyze
-#' @param char Single character to count at the end of the string
+#' @param string Character string. The sequence to analyze.
 #'
-#' @return Integer count of trailing character occurrences
+#' @param char Character string of length 1. The character to count at the
+#'   end of the string.
+#'
+#' @return Integer. Count of trailing character occurrences.
+#'
+#' @seealso
+#' \code{\link{detect_orientation_single}} where trailing character counts
+#' are used for read orientation classification
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' count_trailing_chars("ACGTTTTT", "T")  # Returns 4
-#' count_trailing_chars("ACGT", "A")      # Returns 0
+#'
+#' count_trailing_chars("ACGTTTTT", "T")
+#' # Returns 5
+#'
+#' count_trailing_chars("ACGT", "A")
+#' # Returns 0
+#'
 #' }
 count_trailing_chars <- function(string, char) {
 
@@ -742,24 +820,39 @@ count_trailing_chars <- function(string, char) {
 
 #' Generate reverse complement of a DNA sequence
 #'
-#' This function creates the reverse complement of a DNA sequence string,
-#' handling standard nucleotide bases (A, T, G, C) and ambiguous bases (N).
+#' Creates the reverse complement of a DNA sequence string, handling standard
+#' nucleotide bases (A, T, G, C) and ambiguous bases (N). Used internally
+#' by the cDNA pipeline for primer matching on both strands.
 #'
-#' @param sequence Character string containing DNA sequence
+#' @param sequence Character string. A DNA sequence containing only the
+#'   characters A, T, G, C, and N.
 #'
-#' @return Character string with reverse complement sequence
+#' @return Character string. The reverse complement of the input sequence.
+#'
+#' @seealso
+#' \code{\link{detect_orientation_single}} where reverse complement
+#' sequences are used for primer alignment
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' reverse_complement("ATCG")    # Returns "CGAT"
-#' reverse_complement("AAATTT")  # Returns "AAATTT"
+#'
+#' reverse_complement("ATCG")
+#' # Returns "CGAT"
+#'
+#' reverse_complement("AAATTT")
+#' # Returns "AAATTT"
+#'
 #' }
 reverse_complement <- function(sequence) {
 
   # assertions
   assert_condition(is_string(sequence),
                    "sequence must be a character string")
+
+  # avoid function break by lowercase
+  sequence <- toupper(sequence)
 
 
   complement_map <- c(A="T", T="A", G="C", C="G", N="N")
@@ -768,23 +861,49 @@ reverse_complement <- function(sequence) {
   paste(rev(comp), collapse = "")
 }
 
-#' Calculate edit distance with sliding window matching
+#' Calculate edit distance with sliding window (HW mode)
 #'
-#' This function implements edit distance calculation with HW mode, where
-#' the query sequence can align anywhere within the target sequence using
-#' a sliding window approach. It finds the minimum edit distance across
-#' all possible alignments.
+#' Computes the minimum edit distance between a query sequence and a target
+#' sequence using a sliding window approach (HW: Hamming-like Window mode).
+#' The query is aligned to all possible substrings of the target of equal
+#' length, and the minimum distance across all alignments is returned.
 #'
-#' @param query Character string with the primer/query sequence
-#' @param target Character string with the target sequence window
+#' Edit distance is computed using the Damerau–Levenshtein distance, as
+#' implemented by \code{\link[utils]{adist}}, which accounts for insertions,
+#' deletions, substitutions, and transpositions.
 #'
-#' @return Integer representing the minimum edit distance found
+#' The sliding-window strategy for edit distance calculation is adapted from
+#' approaches commonly used in natural language processing; see the reference
+#' below for an illustrative example.
+#'
+#' @param query Character string. The primer or query sequence to search for.
+#'
+#' @param target Character string. The target sequence window to search
+#'   within.
+#'
+#' @return Integer. The minimum Damerau–Levenshtein edit distance found across
+#'   all possible sliding window alignments.
+#'
+#' @seealso
+#' \code{\link{detect_orientation_single}} where this function is used
+#' for fuzzy primer matching in read orientation classification.
+#'
+#' @references
+#' Silge, J. (2019). *Natural Language Processing in R: Edit Distance*.
+#' R-bloggers.
+#' \url{https://www.r-bloggers.com/2019/04/natural-language-processing-in-r-edit-distance/}
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' edit_distance_hw("ATCG", "XXATCGXX")  # Returns 0 (perfect match inside)
-#' edit_distance_hw("ATCG", "ATTT")      # Returns minimum distance
+#'
+#' edit_distance_hw("ATCG", "XXATCGXX")
+#' # Returns 0 (perfect match inside target)
+#'
+#' edit_distance_hw("ATCG", "ATTT")
+#' # Returns minimum distance across sliding windows
+#'
 #' }
 edit_distance_hw <- function(query, target) {
 

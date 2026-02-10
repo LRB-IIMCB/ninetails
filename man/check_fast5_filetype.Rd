@@ -2,34 +2,51 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{check_fast5_filetype}
 \alias{check_fast5_filetype}
-\title{Checks if the provided directory contains fast5 files in the correct format.}
+\title{Check if the provided directory contains Fast5 files in the correct format}
 \usage{
 check_fast5_filetype(workspace, basecall_group)
 }
 \arguments{
-\item{workspace}{character string. Full path of the directory to search the
-basecalled fast5 files in. The Fast5 files have to be multi-fast5 file.}
+\item{workspace}{Character string. Full path of the directory containing
+the basecalled multi-Fast5 files.}
 
-\item{basecall_group}{character string ["Basecall_1D_000"]. Name of the
-level in the Fast5 file hierarchy from which the data should be extracted.}
+\item{basecall_group}{Character string. Name of the level in the Fast5
+file hierarchy from which data should be extracted (e.g.,
+\code{"Basecall_1D_000"}).}
 }
 \value{
-outputs the text info with basic characteristics of the data.
+Prints to console: data type (RNA), Fast5 file type (multi-Fast5),
+  basecaller used, basecaller version, and basecalling model. Called for its
+  side effect; returns invisibly.
 }
 \description{
-This function analyses the structure of the first fast5 file in the given
-directory and checks whether it fulfills the analysis requirements (if the
-file is multifast5, basecalled by Guppy basecaller and containing provided
-basecall_group). Otherwise the function throws an error (with description).
+Analyzes the structure of the first Fast5 file in the given directory and
+checks whether it fulfills the analysis requirements: the file must be a
+multi-Fast5, basecalled by Guppy basecaller, and contain the provided
+basecall group and RNA reads. Otherwise the function throws a descriptive
+error.
 }
+\section{Acknowledgements}{
+
+This lookup function is inspired by adnaniazi's
+\code{explore-basecaller-and-fast5type.R} from tailfindr:
+\url{https://github.com/adnaniazi/tailfindr/blob/master/R/explore-basecaller-and-fast5type.R}.
+}
+
 \examples{
 \dontrun{
 
-check_fast5_filetype <- function(workspace = '/path/to/guppy/workspace',
-                                 basecalled_group = 'Basecall_1D_000')
+check_fast5_filetype(
+  workspace = '/path/to/guppy/workspace',
+  basecall_group = 'Basecall_1D_000'
+)
 
 }
 
-
-
+}
+\seealso{
+\code{\link{is_multifast5}} for the multi-Fast5 format check,
+\code{\link{is_RNA}} for the RNA content check,
+\code{\link{check_tails_guppy}} where this function is called during
+pipeline initialization
 }

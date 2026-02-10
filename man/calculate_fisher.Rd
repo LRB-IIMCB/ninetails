@@ -2,9 +2,7 @@
 % Please edit documentation in R/ninetails_statistic.R
 \name{calculate_fisher}
 \alias{calculate_fisher}
-\title{Performs Fisher's exact test for each transcript in ninetails
-output data. Then, it performs the Benjamini-Hochberg procedure
-(BH step-up procedure) to control the FDR.}
+\title{Perform Fisher's exact test per transcript with BH p-value adjustment}
 \usage{
 calculate_fisher(
   ninetails_data,
@@ -20,72 +18,94 @@ calculate_fisher(
 )
 }
 \arguments{
-\item{ninetails_data}{dataframe - the output of ninetails::merge_nonA_tables
-function (merged tabular output containing read classification &
-non-A position data).}
+\item{ninetails_data}{Data frame. The output of
+\code{\link{merge_nonA_tables}} (merged tabular output containing read
+classification and non-A position data).}
 
-\item{transcript_id_column}{[character string] column with transcript id data
-(default: "ensembl_transcript_id_short"; can be changed by the user)}
+\item{transcript_id_column}{Character string. Column with transcript ID
+data. Default: \code{"ensembl_transcript_id_short"}; can be changed by
+the user.}
 
-\item{min_reads}{[numeric] minimum number of reads representing given
-transcript to include it in the analysis. This parameter is set by default
-to 0. Please keep in mind that taking into account many transcripts with low
-coverage increases the risk of reject true null hypothesis
-(Benjamini-Hochberg procedure).}
+\item{min_reads}{Numeric. Minimum number of reads representing a given
+transcript to include it in the analysis. Default: 0. Keep in mind that
+including many transcripts with low coverage increases the risk of
+rejecting the true null hypothesis (Benjamini-Hochberg procedure).}
 
-\item{min_nonA_reads}{[numeric] minimum number of reads containing
-nonadenosine residues (summary for C, G, U alltogether) per given
-transcript to include it in the analysis. This parameter prevents from
-considering too many observations as nonsignificant in the further pvalue
-adjustation. In general, the non-A containing reads are a small fraction
-of the total pool of reads. As a rule of thumb, additional filtering
-criteria can provide more valuable information regarding the samples
-(prevent from rejecting true null hypothesis).
-This is set by default to 0.}
+\item{min_nonA_reads}{Numeric. Minimum number of reads containing
+non-adenosine residues (sum of C, G, U) per transcript to include it
+in the analysis. This prevents considering too many observations as
+non-significant during p-value adjustment. Non-A-containing reads are
+typically a small fraction of the total pool, so additional filtering
+can provide more meaningful results. Default: 0.}
 
-\item{grouping_factor}{[character string] grouping variable
-(e.g. "sample_name" - default)}
+\item{grouping_factor}{Character string. Name of the grouping variable.
+Default: \code{"sample_name"}.}
 
-\item{condition1}{[character string] first level of `grouping_factor`
-to use for comparison}
+\item{condition1}{Character string. First level of \code{grouping_factor}
+to use for comparison. Required when \code{grouping_factor} has more
+than 2 levels.}
 
-\item{condition2}{[character string] second level of `grouping_factor`
-to use for comparison}
+\item{condition2}{Character string. Second level of \code{grouping_factor}
+to use for comparison. Required when \code{grouping_factor} has more
+than 2 levels.}
 
-\item{alpha}{[numeric] an alpha value to consider a hit significant.
-Default: 0.05.}
+\item{alpha}{Numeric. Significance threshold for FDR. Default: 0.05.}
 
-\item{base}{[character string] letter representing particular non-A nucleotide,
-for which the statistics are meant to be computed. Currently function accepts
-"C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
-value is for the nonA residues alltogether.}
+\item{base}{Character string. Letter representing the non-A nucleotide
+for which statistics are computed. Accepted values: \code{"C"},
+\code{"G"}, \code{"U"}, or \code{"all"} (for all non-A residues
+combined). Default: \code{"C"}.}
 
-\item{...}{additional parameters to pass to nonA_fisher (under development)}
+\item{...}{Additional parameters passed to \code{\link{nonA_fisher}}
+(under development).}
 }
 \value{
-a summary table with pvalues, padj and significance levels
-for each transcript  (tibble)
+A tibble with per-transcript test results, sorted by adjusted
+  p-value. Columns include:
+  \describe{
+    \item{<transcript_id_column>}{Transcript identifier}
+    \item{p.value}{Numeric. Raw p-value from Fisher's exact test}
+    \item{stats_code}{Character. Descriptive status code (see
+      \code{stat_codes_list} for full definitions)}
+    \item{padj}{Numeric. BH-adjusted p-value}
+    \item{significance}{Character. \code{"FDR<alpha"} if significant,
+      \code{"NotSig"} otherwise}
+  }
 }
 \description{
-This is a wrapper for fisher.test function from stats package and p.adjust
-functions with additional features to facilitate data wrangling.
+Runs Fisher's exact test for each transcript in ninetails output data
+and applies the Benjamini-Hochberg (BH) step-up procedure to control
+the false discovery rate. This is a high-level wrapper for
+\code{\link[stats]{fisher.test}} and \code{\link[stats]{p.adjust}} with
+additional data wrangling features.
 }
-\details{
-The function was inspired by the Nanotail package written & maintained by
-Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
+\section{Acknowledgements}{
 
-Many thanks to the developer of original source code.
+Inspired by the Nanotail package written and maintained by
+Pawel Krawczyk (smaegol):
+\url{https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R}.
+Many thanks to the developer of the original source code.
 }
+
 \examples{
 \dontrun{
-test <- ninetails::calculate_fisher(ninetails_data=merged_nonA_tables,
-                                    transcript_id_column = "ensembl_transcript_id_short",
-                                    min_reads=100,
-                                    min_nonA_reads=10,
-                                    grouping_factor = "sample_name",
-                                    condition1="WT",
-                                    condition2="KO",
-                                    alpha=0.05,
-                                    base="C")
+
+test <- ninetails::calculate_fisher(
+  ninetails_data = merged_nonA_tables,
+  transcript_id_column = "ensembl_transcript_id_short",
+  min_reads = 100,
+  min_nonA_reads = 10,
+  grouping_factor = "sample_name",
+  condition1 = "WT",
+  condition2 = "KO",
+  alpha = 0.05,
+  base = "C"
+)
+
 }
+}
+\seealso{
+\code{\link{nonA_fisher}} for the per-transcript Fisher's exact test,
+\code{\link{merge_nonA_tables}} for preparing the input,
+\code{\link{summarize_nonA}} for contingency table computation
 }

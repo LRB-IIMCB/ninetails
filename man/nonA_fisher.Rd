@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_statistic.R
 \name{nonA_fisher}
 \alias{nonA_fisher}
-\title{Performs Fisher's exact test on ninetails' merged output data.}
+\title{Perform Fisher's exact test on a single transcript in ninetails output}
 \usage{
 nonA_fisher(
   ninetails_data,
@@ -13,57 +13,71 @@ nonA_fisher(
 )
 }
 \arguments{
-\item{ninetails_data}{dataframe - the output of \code{\link{merge_nonA_tables}}
-function (merged tabular output containing read classification &
-non-A position data).}
+\item{ninetails_data}{Data frame. The output of
+\code{\link{merge_nonA_tables}} (merged tabular output containing read
+classification and non-A position data).}
 
-\item{grouping_factor}{[character string] the name of factor variable defining
-groups/conditions (needs to have 2 levels!)}
+\item{grouping_factor}{Character string. The name of the factor variable
+defining groups/conditions (must have exactly 2 levels).}
 
-\item{base}{[character string] letter representing particular non-A nucleotide,
-for which the statistics are meant to be computed. Currently function accepts
-"C", "G", "U" and "all" arguments. The "C" value is set by default. The "all"
-value is for the nonA residues alltogether.}
+\item{base}{Character string. Letter representing the non-A nucleotide
+for which statistics are computed. Accepted values: \code{"C"},
+\code{"G"}, \code{"U"}, or \code{"all"} (for all non-A residues
+combined). Default: \code{"C"}.}
 
-\item{min_reads}{[numeric] minimum number of reads representing given
-transcript to include it in the analysis}
+\item{min_reads}{Numeric. Minimum number of reads representing a given
+transcript to include it in the analysis. Default: 0.}
 
-\item{transcript_id_column}{[character string] name of the column in which
-the identifiers of the transcripts are stored. It is set to NA
-by default.}
+\item{transcript_id_column}{Character string. Name of the column in
+which transcript identifiers are stored. Default: \code{NA}.}
 }
 \value{
-a tibble with results for given transcript, including pvalue,
-adjusted pvalue, stats_code (the variable describing whether conditions
-are met) and significance (FDR based on padj).
+A tibble with results for the given transcript, containing:
+  \describe{
+    \item{p.value}{Numeric. Raw p-value from Fisher's exact test, or
+      \code{NA} if conditions were not met.}
+    \item{stats_code}{Character. Status code describing whether the test
+      conditions were met (see \code{stat_codes_list} for definitions).}
+  }
 }
 \description{
-It runs Fisher's exact test for testing the null of independence of rows and
-columns in a contingency table representing given transcript in ninetails
-output data. This is a wrapper for fisher.test function from stats package
-with additional features to facilitate data wrangling.
+Runs Fisher's exact test for testing the null hypothesis of independence
+of rows and columns in a 2x2 contingency table representing a given
+transcript in ninetails output data. This is a wrapper for
+\code{\link[stats]{fisher.test}} with additional data wrangling features.
 }
 \details{
-It is suitable only for the pairwise comparisons (i.e. for 2x2 contingency
-table), where 2 conditions (e.g. WT vs KO) are compared at once.
+The function is suitable only for pairwise comparisons (2x2 contingency
+tables), where two conditions (e.g. WT vs KO) are compared at once.
+The user can set a cutoff number of reads required for the analysis.
 
-The function allows the user to set a cutoff number of reads required for
-the analysis.
-
-This function is intended to work under the calculate_fisher function.
-
-The function was inspired by the Nanotail package written & maintained by
-Pawel Krawczyk (smaegol): https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R
-
-Many thanks to the developer of original source code.
+This function is intended to be called internally by
+\code{\link{calculate_fisher}} and is not typically used standalone.
 }
+\section{Acknowledgements}{
+
+Inspired by the Nanotail package written and maintained by
+Pawel Krawczyk (smaegol):
+\url{https://github.com/LRB-IIMCB/nanotail/blob/dev/R/polya_stats.R}.
+Many thanks to the developer of the original source code.
+}
+
 \examples{
 \dontrun{
-test <- ninetails::nonA_fisher(ninetails_data=merged_nonA_tables,
-                               grouping_factor = "sample_name",
-                               base="C",
-                               min_reads=100)
+
+test <- ninetails::nonA_fisher(
+  ninetails_data = merged_nonA_tables,
+  grouping_factor = "sample_name",
+  base = "C",
+  min_reads = 100
+)
 
 }
 
+}
+\seealso{
+\code{\link{calculate_fisher}} for the per-transcript wrapper with
+multiple-testing correction,
+\code{\link{merge_nonA_tables}} for preparing the input,
+\code{\link{summarize_nonA}} for contingency table computation
 }

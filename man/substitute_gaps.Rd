@@ -2,24 +2,24 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{substitute_gaps}
 \alias{substitute_gaps}
-\title{Substitutes 0s surrounded by adjacent nonzeros in pseudomove vector
-to facilitate position-centering function.}
+\title{Substitute short zero-gaps surrounded by nonzero pseudomoves}
 \usage{
 substitute_gaps(pseudomoves)
 }
 \arguments{
-\item{pseudomoves}{numeric vector produced by z-score
-filtering algo (\code{\link{filter_signal_by_threshold}}) corresponding
-to the tail region of the read of interest as delimited by
-nanopolish polya function.}
+\item{pseudomoves}{Numeric vector. Pseudomove vector produced by the
+z-score filtering algorithm
+(\code{\link{filter_signal_by_threshold}}), corresponding to the tail
+region of the read of interest as delimited by nanopolish polya function.}
 }
 \value{
-a numeric vector of adjusted pseudomoves (smoothened)
+Numeric vector. Adjusted pseudomoves with short gaps filled.
 }
 \description{
-This function helps to avoid redundancy introduced by z-score thesholding
-algo (this happens when signal is jagged), so one segment would be reported
-instead of multiple.
+Smooths the pseudomove vector by filling in isolated zero-gaps (length < 2)
+flanked by identical nonzero values. This avoids redundancy introduced by
+the z-score thresholding algorithm when the signal is jagged, so a single
+modification region is reported instead of multiple fragmented segments.
 }
 \examples{
 \dontrun{
@@ -28,4 +28,9 @@ substitute_gaps(pseudomoves = pseudomoves_vector)
 
 }
 
+}
+\seealso{
+\code{\link{filter_signal_by_threshold}} and
+\code{\link{filter_signal_by_threshold_vectorized}} where this function
+is called as a post-processing step
 }

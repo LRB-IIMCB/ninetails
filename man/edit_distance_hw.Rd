@@ -2,27 +2,52 @@
 % Please edit documentation in R/ninetails_misc_helper_functions.R
 \name{edit_distance_hw}
 \alias{edit_distance_hw}
-\title{Calculate edit distance with sliding window matching}
+\title{Calculate edit distance with sliding window (HW mode)}
 \usage{
 edit_distance_hw(query, target)
 }
 \arguments{
-\item{query}{Character string with the primer/query sequence}
+\item{query}{Character string. The primer or query sequence to search for.}
 
-\item{target}{Character string with the target sequence window}
+\item{target}{Character string. The target sequence window to search
+within.}
 }
 \value{
-Integer representing the minimum edit distance found
+Integer. The minimum Damerau–Levenshtein edit distance found across
+  all possible sliding window alignments.
 }
 \description{
-This function implements edit distance calculation with HW mode, where
-the query sequence can align anywhere within the target sequence using
-a sliding window approach. It finds the minimum edit distance across
-all possible alignments.
+Computes the minimum edit distance between a query sequence and a target
+sequence using a sliding window approach (HW: Hamming-like Window mode).
+The query is aligned to all possible substrings of the target of equal
+length, and the minimum distance across all alignments is returned.
+}
+\details{
+Edit distance is computed using the Damerau–Levenshtein distance, as
+implemented by \code{\link[utils]{adist}}, which accounts for insertions,
+deletions, substitutions, and transpositions.
+
+The sliding-window strategy for edit distance calculation is adapted from
+approaches commonly used in natural language processing; see the reference
+below for an illustrative example.
 }
 \examples{
 \dontrun{
-edit_distance_hw("ATCG", "XXATCGXX")  # Returns 0 (perfect match inside)
-edit_distance_hw("ATCG", "ATTT")      # Returns minimum distance
+
+edit_distance_hw("ATCG", "XXATCGXX")
+# Returns 0 (perfect match inside target)
+
+edit_distance_hw("ATCG", "ATTT")
+# Returns minimum distance across sliding windows
+
 }
+}
+\references{
+Silge, J. (2019). *Natural Language Processing in R: Edit Distance*.
+R-bloggers.
+\url{https://www.r-bloggers.com/2019/04/natural-language-processing-in-r-edit-distance/}
+}
+\seealso{
+\code{\link{detect_orientation_single}} where this function is used
+for fuzzy primer matching in read orientation classification.
 }
