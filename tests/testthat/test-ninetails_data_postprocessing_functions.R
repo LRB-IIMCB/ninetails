@@ -1,4 +1,6 @@
-# testing postprocessing fun
+################################################################################
+# Testing data postprocessing functions
+################################################################################
 
 test_that("create_outputs works correctly", {
 

@@ -30,7 +30,6 @@ substitute_gaps(pseudomoves = pseudomoves_vector)
 
 }
 \seealso{
-\code{\link{filter_signal_by_threshold}} and
-\code{\link{filter_signal_by_threshold_vectorized}} where this function
+\code{\link{filter_signal_by_threshold}} where this function
 is called as a post-processing step
 }

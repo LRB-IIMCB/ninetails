@@ -9,7 +9,10 @@ spread_nonA_residues(residue_data)
 \arguments{
 \item{residue_data}{Data frame or tibble containing non-A residue
 predictions produced by the ninetails pipeline (filename typically
-ends with \code{_nonadenosine_residues.tsv}).}
+ends with \code{_nonadenosine_residues.tsv}). Required columns:
+\code{readname}, \code{group}, \code{prediction}, \code{est_nonA_pos}.
+The \code{qc_tag} column may be character (Guppy/nanopolish) or
+numeric (Dorado MAPQ).}
 }
 \value{
 A tibble in wide format with one row per read. In addition to
@@ -34,6 +37,13 @@ containing the count of respective non-A residues per read. An
 additional \code{nonA_residues} column provides a CIGAR-like summary
 string listing all non-A positions from 5' to 3', separated by
 \code{":"}.
+}
+\details{
+This function supports data from both the legacy Guppy/nanopolish
+pipeline and the Dorado pipeline. The \code{qc_tag} column may be
+either character (Guppy: \code{"PASS"}, \code{"SUFFCLIP"}, etc.) or
+numeric (Dorado: MAPQ score). Both types are handled transparently
+and preserved in the output.
 }
 \examples{
 \dontrun{

@@ -9,15 +9,21 @@ merge_nonA_tables(class_data, residue_data, pass_only = TRUE)
 }
 \arguments{
 \item{class_data}{Data frame or tibble containing read_classes
-predictions produced by the ninetails pipeline.}
+predictions produced by the ninetails pipeline. The \code{qc_tag}
+column may be character (Guppy/nanopolish: \code{"PASS"},
+\code{"SUFFCLIP"}, etc.) or numeric (Dorado: MAPQ score).}
 
 \item{residue_data}{Data frame or tibble containing non-A residue
-predictions produced by the ninetails pipeline.}
+predictions produced by the ninetails pipeline. The \code{qc_tag}
+column type must match that of \code{class_data}.}
 
-\item{pass_only}{Logical \code{[TRUE]}. If \code{TRUE}, only reads
-tagged by nanopolish as \code{"PASS"} are included. If \code{FALSE},
-reads tagged as \code{"PASS"} or \code{"SUFFCLIP"} are included.
-\strong{Must match the setting used during pipeline execution.}}
+\item{pass_only}{Logical \code{[TRUE]}. Applies only when
+\code{qc_tag} is character (Guppy/nanopolish pipeline). If
+\code{TRUE}, only reads tagged as \code{"PASS"} are included. If
+\code{FALSE}, reads tagged as \code{"PASS"} or \code{"SUFFCLIP"}
+are included. \strong{Ignored when \code{qc_tag} is numeric}
+(Dorado pipeline), in which case MAPQ > 0 filtering is applied
+instead.}
 }
 \value{
 A tibble with summarised information from both ninetails
@@ -35,16 +41,44 @@ via \code{\link{spread_nonA_residues}}, and a CIGAR-like
 }
 \details{
 Unclassified reads are excluded before merging. The quality-tag filter
-(\code{pass_only}) must match the setting used during pipeline
-execution to ensure consistency. After the full join, any \code{NA}
-values in numeric columns are replaced with 0.
+behaviour depends on the pipeline that produced the input data:
+
+\strong{Guppy/nanopolish pipeline} (character \code{qc_tag}):
+The \code{pass_only} parameter controls filtering. When \code{TRUE},
+only reads tagged as \code{"PASS"} are retained. When \code{FALSE},
+reads tagged as \code{"PASS"} or \code{"SUFFCLIP"} are retained.
+
+\strong{Dorado pipeline} (numeric \code{qc_tag}):
+The \code{qc_tag} column contains MAPQ scores. Filtering is based on
+mapping quality: only reads with \code{qc_tag > 0} are retained. The
+\code{pass_only} parameter is ignored for numeric \code{qc_tag}.
+
+After the full join, any \code{NA} values in numeric columns are
+replaced with 0.
 }
+\section{Pipeline Compatibility}{
+
+This function automatically detects whether data originates from the
+legacy Guppy/nanopolish pipeline (character \code{qc_tag}) or the
+Dorado pipeline (numeric \code{qc_tag}) and applies appropriate
+filtering logic. Both \code{class_data} and \code{residue_data} must
+originate from the same pipeline to ensure consistent \code{qc_tag}
+types during the merge operation.
+}
+
 \examples{
 \dontrun{
 
+# Guppy/nanopolish data (character qc_tag)
 merged_tables <- ninetails::merge_nonA_tables(
   class_data = class_data,
   residue_data = residue_data,
+  pass_only = TRUE)
+
+# Dorado data (numeric qc_tag) - pass_only is ignored
+merged_tables <- ninetails::merge_nonA_tables(
+  class_data = dorado_class_data,
+  residue_data = dorado_residue_data,
   pass_only = TRUE)
 
 }

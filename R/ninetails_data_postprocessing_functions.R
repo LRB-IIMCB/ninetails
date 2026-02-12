@@ -572,9 +572,19 @@ count_residues <- function(residue_data, grouping_factor = NA) {
 #' string listing all non-A positions from 5' to 3', separated by
 #' \code{":"}.
 #'
+#' @details
+#' This function supports data from both the legacy Guppy/nanopolish
+#' pipeline and the Dorado pipeline. The \code{qc_tag} column may be
+#' either character (Guppy: \code{"PASS"}, \code{"SUFFCLIP"}, etc.) or
+#' numeric (Dorado: MAPQ score). Both types are handled transparently
+#' and preserved in the output.
+#'
 #' @param residue_data Data frame or tibble containing non-A residue
 #'   predictions produced by the ninetails pipeline (filename typically
-#'   ends with \code{_nonadenosine_residues.tsv}).
+#'   ends with \code{_nonadenosine_residues.tsv}). Required columns:
+#'   \code{readname}, \code{group}, \code{prediction}, \code{est_nonA_pos}.
+#'   The \code{qc_tag} column may be character (Guppy/nanopolish) or
+#'   numeric (Dorado MAPQ).
 #'
 #' @return A tibble in wide format with one row per read. In addition to
 #'   the original columns (minus \code{est_nonA_pos} and
@@ -605,10 +615,11 @@ count_residues <- function(residue_data, grouping_factor = NA) {
 #' }
 spread_nonA_residues <- function(residue_data) {
 
-  #Assertions
+
+  # Assertions
   if (missing(residue_data)) {
     stop(
-      "A datafraeme with non-A residue data is missing. Please provide a valid residue_data argument",
+      "A dataframe with non-A residue data is missing. Please provide a valid residue_data argument",
       call. = FALSE
     )
   }
@@ -619,7 +630,18 @@ spread_nonA_residues <- function(residue_data) {
     )
   }
 
-  #create column for non-A residue summary (cigar-like string)
+  # Validate required columns
+  required_cols <- c("readname", "group", "prediction", "est_nonA_pos")
+  missing_cols <- setdiff(required_cols, colnames(residue_data))
+  if (length(missing_cols) > 0) {
+    stop(
+      paste0("Required columns missing from residue_data: ",
+             paste(missing_cols, collapse = ", ")),
+      call. = FALSE
+    )
+  }
+
+  # Create column for non-A residue summary (cigar-like string)
   cigar <- residue_data %>%
     dplyr::group_by(group, readname) %>%
     dplyr::arrange(est_nonA_pos, .by_group = TRUE) %>%
@@ -628,7 +650,7 @@ spread_nonA_residues <- function(residue_data) {
       .groups = 'drop'
     )
 
-  # create contingency table with C, G, U counts per read
+  # Create contingency table with C, G, U counts per read
   contingency <- residue_data %>%
     dplyr::select(-est_nonA_pos) %>%
     tidyr::pivot_wider(
@@ -640,12 +662,14 @@ spread_nonA_residues <- function(residue_data) {
       values_fill = 0
     )
 
-  #merge both tables
+  # Merge both tables
   spread_table <- contingency %>%
     dplyr::left_join(cigar, by = c("readname", "group"))
 
   return(spread_table)
 }
+
+
 
 #' Merges ninetails tabular outputs (read classes and nonadenosine residue
 #' data) to produce one concise table.
@@ -659,20 +683,45 @@ spread_nonA_residues <- function(residue_data) {
 #'
 #' @details
 #' Unclassified reads are excluded before merging. The quality-tag filter
-#' (\code{pass_only}) must match the setting used during pipeline
-#' execution to ensure consistency. After the full join, any \code{NA}
-#' values in numeric columns are replaced with 0.
+#' behaviour depends on the pipeline that produced the input data:
+#'
+#' \strong{Guppy/nanopolish pipeline} (character \code{qc_tag}):
+#' The \code{pass_only} parameter controls filtering. When \code{TRUE},
+#' only reads tagged as \code{"PASS"} are retained. When \code{FALSE},
+#' reads tagged as \code{"PASS"} or \code{"SUFFCLIP"} are retained.
+#'
+#' \strong{Dorado pipeline} (numeric \code{qc_tag}):
+#' The \code{qc_tag} column contains MAPQ scores. Filtering is based on
+#' mapping quality: only reads with \code{qc_tag > 0} are retained. The
+#' \code{pass_only} parameter is ignored for numeric \code{qc_tag}.
+#'
+#' After the full join, any \code{NA} values in numeric columns are
+#' replaced with 0.
+#'
+#' @section Pipeline Compatibility:
+#' This function automatically detects whether data originates from the
+#' legacy Guppy/nanopolish pipeline (character \code{qc_tag}) or the
+#' Dorado pipeline (numeric \code{qc_tag}) and applies appropriate
+#' filtering logic. Both \code{class_data} and \code{residue_data} must
+#' originate from the same pipeline to ensure consistent \code{qc_tag}
+#' types during the merge operation.
 #'
 #' @param class_data Data frame or tibble containing read_classes
-#'   predictions produced by the ninetails pipeline.
+#'   predictions produced by the ninetails pipeline. The \code{qc_tag}
+#'   column may be character (Guppy/nanopolish: \code{"PASS"},
+#'   \code{"SUFFCLIP"}, etc.) or numeric (Dorado: MAPQ score).
 #'
 #' @param residue_data Data frame or tibble containing non-A residue
-#'   predictions produced by the ninetails pipeline.
+#'   predictions produced by the ninetails pipeline. The \code{qc_tag}
+#'   column type must match that of \code{class_data}.
 #'
-#' @param pass_only Logical \code{[TRUE]}. If \code{TRUE}, only reads
-#'   tagged by nanopolish as \code{"PASS"} are included. If \code{FALSE},
-#'   reads tagged as \code{"PASS"} or \code{"SUFFCLIP"} are included.
-#'   \strong{Must match the setting used during pipeline execution.}
+#' @param pass_only Logical \code{[TRUE]}. Applies only when
+#'   \code{qc_tag} is character (Guppy/nanopolish pipeline). If
+#'   \code{TRUE}, only reads tagged as \code{"PASS"} are included. If
+#'   \code{FALSE}, reads tagged as \code{"PASS"} or \code{"SUFFCLIP"}
+#'   are included. \strong{Ignored when \code{qc_tag} is numeric}
+#'   (Dorado pipeline), in which case MAPQ > 0 filtering is applied
+#'   instead.
 #'
 #' @return A tibble with summarised information from both ninetails
 #'   outputs: all columns from \code{class_data} plus
@@ -692,9 +741,16 @@ spread_nonA_residues <- function(residue_data) {
 #' @examples
 #' \dontrun{
 #'
+#' # Guppy/nanopolish data (character qc_tag)
 #' merged_tables <- ninetails::merge_nonA_tables(
 #'   class_data = class_data,
 #'   residue_data = residue_data,
+#'   pass_only = TRUE)
+#'
+#' # Dorado data (numeric qc_tag) - pass_only is ignored
+#' merged_tables <- ninetails::merge_nonA_tables(
+#'   class_data = dorado_class_data,
+#'   residue_data = dorado_residue_data,
 #'   pass_only = TRUE)
 #'
 #' }
@@ -702,16 +758,16 @@ merge_nonA_tables <- function(class_data,
                               residue_data,
                               pass_only = TRUE) {
 
-  #Assertions
+  # Assertions
   if (missing(class_data)) {
     stop(
-      "A datafraeme with class data is missing. Please provide a valid class_data argument",
+      "A dataframe with class data is missing. Please provide a valid class_data argument",
       call. = FALSE
     )
   }
   if (missing(residue_data)) {
     stop(
-      "A datafraeme with non-A residue data is missing. Please provide a valid residue_data argument",
+      "A dataframe with non-A residue data is missing. Please provide a valid residue_data argument",
       call. = FALSE
     )
   }
@@ -733,24 +789,59 @@ merge_nonA_tables <- function(class_data,
     "Please provide TRUE/FALSE values for pass_only parameter"
   )
 
-  #drop all unclassified reads
-  class_data <- class_data[!(class_data$class == "unclassified"), ]
-
-  # filter class_data according to predefined condition
-  if (pass_only == TRUE) {
-    class2 <- class_data[class_data$qc_tag == "PASS", ]
-  } else {
-    class2 <- class_data[class_data$qc_tag %in% c("PASS", "SUFFCLIP"), ]
+  # Validate qc_tag column exists
+  if (!"qc_tag" %in% colnames(class_data)) {
+    stop(
+      "Column 'qc_tag' is missing from class_data. Please provide valid ninetails output.",
+      call. = FALSE
+    )
   }
 
-  #spread residue_data
+  # Drop all unclassified reads
+
+  class_data <- class_data[!(class_data$class == "unclassified"), ]
+
+  # Filter class_data according to qc_tag type
+
+  # Character qc_tag: Guppy/nanopolish pipeline ("PASS", "SUFFCLIP", etc.)
+  # Numeric qc_tag: Dorado pipeline (MAPQ score)
+  if (is.character(class_data$qc_tag)) {
+    # Guppy/nanopolish pipeline: filter by qc_tag category
+    if (pass_only == TRUE) {
+      class2 <- class_data[class_data$qc_tag == "PASS", ]
+    } else {
+      class2 <- class_data[class_data$qc_tag %in% c("PASS", "SUFFCLIP"), ]
+    }
+  } else if (is.numeric(class_data$qc_tag)) {
+    # Dorado pipeline: filter by MAPQ > 0
+    # pass_only parameter is ignored for numeric qc_tag
+    class2 <- class_data[class_data$qc_tag > 0, ]
+  } else {
+    stop(
+      paste0("Unexpected qc_tag type: ", class(class_data$qc_tag),
+             ". Expected character (Guppy/nanopolish) or numeric (Dorado)."),
+      call. = FALSE
+    )
+  }
+
+  # Check if filtering resulted in empty data frame
+  if (nrow(class2) == 0) {
+    warning(
+      "No reads passed quality filtering. Returning empty merged table.",
+      call. = FALSE
+    )
+  }
+
+  # Spread residue_data
   spread_table <- ninetails::spread_nonA_residues(residue_data)
 
-  #merge the data (spreaded residue + classes)
+  # Merge the data (spreaded residue + classes)
+  # Join on all common columns
   merged_tables <- class2 %>% dplyr::full_join(spread_table)
 
-  # replace NA with 0 in numeric columns
+  # Replace NA with 0 in numeric columns
   # tidyselect::where() issue solved as in
+
   # https://stackoverflow.com/questions/62459736/how-do-i-use-tidyselect-where-in-a-custom-package
   merged_nonA_tables <- merged_tables %>%
     dplyr::mutate(dplyr::across(
@@ -760,6 +851,8 @@ merge_nonA_tables <- function(class_data,
 
   return(merged_nonA_tables)
 }
+
+
 
 #' Produces summary table of non-A occurrences within an analyzed dataset.
 #'

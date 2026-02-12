@@ -70,8 +70,7 @@ ninetails::filter_signal_by_threshold(
 }
 }
 \seealso{
-\code{\link{filter_signal_by_threshold_vectorized}} for the optimized
-Dorado version, \code{\link{substitute_gaps}} for gap handling,
+\code{\link{substitute_gaps}} for gap handling,
 \code{\link{create_tail_feature_list}} for the complete feature extraction
 pipeline
 }

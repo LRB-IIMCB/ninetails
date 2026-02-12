@@ -2559,7 +2559,7 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
   nonA_counts <- nonA_counts %>%
     tidyr::pivot_wider(names_from = instances, values_from = count) %>%
     dplyr::mutate(total = single + two + more) %>%
-    dplyr::mutate_all(~ replace_na(., 0)) %>%
+    dplyr::mutate_all(~ tidyr::replace_na(., 0)) %>%
     dplyr::group_by(!!rlang::sym(grouping_factor)) %>%
     dplyr::mutate(
       psingle = single / total,
