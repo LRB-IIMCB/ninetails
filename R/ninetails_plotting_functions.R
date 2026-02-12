@@ -1798,61 +1798,150 @@ plot_tail_distribution <- function(input_data,
   return(plot_tails)
 }
 
-#' Plots panel characteristics of ninetails output.
+#' Plot panel characteristics of ninetails output
 #'
-#' Creates a multipanel plot with comprehensive characteristics of input data
-#' produced by ninetails software. Those panel charts provide the most comprehensive
+#' Generates a five-panel summary visualization describing read categories,
+#' poly(A) tail properties, and non-A residue distributions derived from
+#' the ninetails pipeline output. Those panel charts provide the most comprehensive
 #' characterization of a given pool of reads (representing particular transcript
 #' or set of transcripts, respectively).
 #'
-#' Includes 5 panels A-E containing various subplots with the following content:\itemize{
-#' \item A - read categories - result of read classification according to presence/absence
-#' of non-As in their poly(A) tails
-#' \item B - non-A residues - frequency of reads containing given residue among all
-#' of the reads harboring non-A nucleotides
-#' \item C - distribution of lengths of poly(A) tails - overall distribution of lengths
-#' in comparison to the lengths of tails decorated with non-As
-#' \item D - normalized distribution of non-A residues in poly(A) tails -
-#' non-A nucleotide positions normalized to the length of reads in which given residue occurs
-#' \item raw distribution of non-A residues in poly(A) tails - crude depiction
-#' of positions along the tail range
+#' The function assembles panels A–E into a patchwork layout:
+#' \itemize{
+#'   \item \strong{A} – Read categories (blank, non-A containing, total)
+#'   \item \strong{B} – Counts of reads containing C, G, or U residues
+#'   \item \strong{C} – Distribution of poly(A) tail lengths
+#'   \item \strong{D} – Normalized distribution of non-A positions
+#'   \item \strong{E} – Raw distribution of non-A positions
 #' }
 #'
-#' @param input_residue_data A dataframe or tibble containig non-A residue predictions
-#' made by ninetails pipeline
+#' @section Internal column filtering:
 #'
-#' @param input_class_data A dataframe or tibble containing read_classes predictions
-#' made by ninetails pipeline. Mutually exclusive with parameter input_merged_nonA_tables_data
+#' This function internally subsets input data to a predefined set of columns.
+#' Any additional columns present in the input data frames are silently dropped.
+#' Therefore, all columns listed below must be present in the supplied inputs.
 #'
-#' @param input_merged_nonA_tables_data A dataframe or tibble containing merged_nonA_tables data
-#' produced by the \code{\link{merge_nonA_tables}} function. Mutually exclusive with parameter
-#' input_class_data
+#' @section Required columns:
 #'
-#' @param type [character] either "default" or "moderna" - controls the predefined
-#' settings of the plot. In case of moderna adds the default UCUAG pentamer position
-#' to the distribution subplots. By default, the "default" option is set.
+#' \subsection{input_residue_data}{
 #'
-#' @param max_length [numeric] maximum length of plotted tail data
+#' Must contain at least the following columns:
 #'
-#' @param direction_5_prime [logical] by default set to TRUE. controls the direction in which
-#' the non-A positions are reported. Either from 5' end, according to the most common convention,
-#' or from 3' end (as ONT direct RNA seq proceeds).
+#' \describe{
+#'   \item{readname}{Character. Unique read identifier.}
+#'   \item{prediction}{Character or factor. Predicted non-A residue
+#'   (e.g., "C", "G", "U").}
+#'   \item{est_nonA_pos}{Numeric. Estimated position of the non-A residue
+#'   within the poly(A) tail.}
+#'   \item{polya_length}{Numeric. Estimated poly(A) tail length.}
+#' }
 #'
-#' @return a ggplot object
-#' @export
+#' These columns are used for:
+#' \itemize{
+#'   \item binning positions and tail lengths (Panels D and E),
+#'   \item computing normalized residue frequencies,
+#'   \item generating residue-level counts and labels.
+#' }
+#'
+#' }
+#'
+#' \subsection{input_class_data (if supplied)}{
+#'
+#' Must contain at least:
+#'
+#' \describe{
+#'   \item{readname}{Character. Required for merging with residue data.}
+#'   \item{group}{Character or factor. Experimental group identifier.}
+#' }
+#'
+#' This input is internally merged with \code{input_residue_data} using
+#' \code{\link{merge_nonA_tables}}.
+#'
+#' }
+#'
+#' \subsection{input_merged_nonA_tables_data (if supplied)}{
+#'
+#' Must be the output of \code{\link{merge_nonA_tables}} and contain at least
+#' the following columns (used for tail distribution, summarization and plotting):
+#'
+#' \describe{
+#'   \item{sample}{Character. Sample identifier.}
+#'   \item{group}{Character or factor. Experimental group identifier.}
+#'   \item{readname}{Character. Unique read identifier.}
+#'   \item{prediction}{Character or factor. Non-A residue prediction.}
+#'   \item{est_nonA_pos}{Numeric. Estimated non-A position.}
+#'   \item{polya_length}{Numeric. Poly(A) tail length.}
+#'   \item{class}{Character. Read classification label.}
+#'   \item{comments}{Character. Additional classification comments.}
+#'   \item{transcript}{Character. Transcript name.}
+#'   \item{ensembl_transcript_id_full}{Character. Full Ensembl transcript ID.}
+#'   \item{ensembl_transcript_id_short}{Character. Short Ensembl transcript ID.}
+#'   \item{prediction_C}{Numeric or logical. Indicator/count of C residues.}
+#'   \item{prediction_G}{Numeric or logical. Indicator/count of G residues.}
+#'   \item{prediction_U}{Numeric or logical. Indicator/count of U residues.}
+#'   \item{nonA_residues}{Character. Encoded non-A residue information;
+#'   \code{NA} indicates blank tail.}
+#' }
+#'
+#' These columns are required because they are internally retained for:
+#' \itemize{
+#'   \item classification summaries (Panels A and B),
+#'   \item tail length distributions (Panel C),
+#'   \item grouping and normalization logic,
+#'   \item detection of blank vs non-A containing reads.
+#' }
+#'
+#' }
+#'
+#' @section Single-group requirement:
+#'
+#' The input data must represent exactly one experimental group.
+#' If multiple unique values are detected in the \code{group} column,
+#' the function stops with an error.
+#'
+#' Multiple samples within a single group are allowed.
+#'
+#' @param input_residue_data Data frame containing non-A residue predictions.
+#'
+#' @param input_class_data Optional data frame containing read classification
+#' output from ninetails. Mutually exclusive with
+#' \code{input_merged_nonA_tables_data}.
+#'
+#' @param input_merged_nonA_tables_data Optional data frame returned by
+#' \code{\link{merge_nonA_tables}}. Mutually exclusive with
+#' \code{input_class_data}.
+#'
+#' @param type Character string. Either \code{"default"} or \code{"moderna"}.
+#' The \code{"moderna"} option marks the default UCUAG pentamer position (100 nt).
+#'
+#' @param max_length Numeric. Maximum poly(A) tail length displayed
+#' in distribution panels.
+#'
+#' @param direction_5_prime Logical. If \code{TRUE} (default), non-A positions
+#' are reported from the 5' end of the poly(A) tail. If \code{FALSE},
+#' positions are recalculated relative to the 3' end.
+#'
+#' @return A patchwork-assembled \code{ggplot} object containing panels A–E.
+#'
+#' @seealso
+#' \code{\link{merge_nonA_tables}},
+#' \code{\link{summarize_nonA}},
+#' \code{\link{plot_tail_distribution}}
 #'
 #' @examples
-#'\dontrun{
+#' \dontrun{
+#' residue_data_wt <- residue_data[residue_data$group == "WT", ]
 #'
-#' ninetails::plot_panel_characteristics(input_residue_data=residue_data,
-#'                                       input_class_data=class_data,
-#'                                       input_merged_nonA_tables_data=NULL,
-#'                                       type="default",
-#'                                       max_length=100,
-#'                                       direction_5_prime=T)
+#' plot_panel_characteristics(
+#'   input_residue_data = residue_data_wt,
+#'   input_class_data = class_data_wt,
+#'   type = "default",
+#'   max_length = 100
+#' )
+#' }
 #'
-#'}
-#'
+#' @export
+
 plot_panel_characteristics <- function(input_residue_data,
                                        input_class_data = NULL,
                                        input_merged_nonA_tables_data = NULL,
@@ -1890,6 +1979,55 @@ plot_panel_characteristics <- function(input_residue_data,
     stop(
       "Only one dataframe should be provided - either input_class_data or input_merged_nonA_tables_data"
     )
+  }
+
+  # Validate single group requirement
+  if ("group" %in% colnames(input_residue_data)) {
+    n_groups_residue <- length(unique(input_residue_data$group))
+    if (n_groups_residue > 1) {
+      stop(
+        paste0(
+          "Multiple groups detected in input_residue_data (found: ",
+          n_groups_residue, " groups). ",
+          "This function is designed for single-group visualization. ",
+          "Please filter your data to a single group before calling this function. ",
+          "Example: input_residue_data[input_residue_data$group == 'your_group', ]"
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  if (!is.null(input_class_data) && "group" %in% colnames(input_class_data)) {
+    n_groups_class <- length(unique(input_class_data$group))
+    if (n_groups_class > 1) {
+      stop(
+        paste0(
+          "Multiple groups detected in input_class_data (found: ",
+          n_groups_class, " groups). ",
+          "This function is designed for single-group visualization. ",
+          "Please filter your data to a single group before calling this function. ",
+          "Example: input_class_data[input_class_data$group == 'your_group', ]"
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  if (!is.null(input_merged_nonA_tables_data) && "group" %in% colnames(input_merged_nonA_tables_data)) {
+    n_groups_merged <- length(unique(input_merged_nonA_tables_data$group))
+    if (n_groups_merged > 1) {
+      stop(
+        paste0(
+          "Multiple groups detected in input_merged_nonA_tables_data (found: ",
+          n_groups_merged, " groups). ",
+          "This function is designed for single-group visualization. ",
+          "Please filter your data to a single group before calling this function. ",
+          "Example: input_merged_nonA_tables_data[input_merged_nonA_tables_data$group == 'your_group', ]"
+        ),
+        call. = FALSE
+      )
+    }
   }
 
   # PROCESSING INPUTS
@@ -2298,25 +2436,24 @@ plot_panel_characteristics <- function(input_residue_data,
       justification = -.1,
       point_colour = NA
     ) +
-    gghalves::geom_half_point(
-      side = "l",
+    # Rug-like point layer using base ggplot2 (replaces gghalves::geom_half_point
+    # which has compatibility issues with ggplot2 >= 3.4.0)
+    ggplot2::geom_point(
       shape = 124,
-      range_scale = 0,
       size = 6,
       alpha = .3,
-      show.legend = FALSE,
-      color = "#1d2e3b"
+      color = "#1d2e3b",
+      position = ggplot2::position_nudge(x = -0.15),
+      show.legend = FALSE
     ) +
-    ggplot2::coord_cartesian(xlim = c(1.2, NA), clip = "off") +
     ggplot2::theme_bw() +
-    ggplot2::coord_flip() +
+    ggplot2::coord_flip(xlim = c(1.2, NA), clip = "off") +
     ggplot2::scale_fill_manual(values = c("#3a424f", "#50a675", "#b0bdd4")) +
     ggplot2::scale_y_continuous(limits = c(0, max_length)) +
     ggplot2::scale_x_discrete(
       breaks = input_residue_data$prediction,
       labels = input_residue_data$label
     ) +
-
     ggplot2::labs(
       title = "Distribution of non-A residues in poly(A) tails (raw positions)",
       subtitle = paste0(subtitle_info),
@@ -2374,15 +2511,19 @@ plot_panel_characteristics <- function(input_residue_data,
   EE
   "
 
-  # final plot organisation:
-  final <- general_read_categories +
-    residue_counts +
-    distrib_plot +
-    binned_length_pos +
-    rel_density_plot +
-    patchwork::plot_layout(design = design, heights = c(2, 4, 7, 7))
+  #in ggplot2 ≥ 4.0.0, + is now S7-based, and patchwork no longer hijacks it
+  # the same way unless explicitly attached
+  final <- patchwork::wrap_plots(
+    general_read_categories,
+    residue_counts,
+    distrib_plot,
+    binned_length_pos,
+    rel_density_plot,
+    design = design,
+    heights = c(2, 4, 7, 7)
+  )
 
-  #return(rel_density_plot)
+
   return(final)
 }
 

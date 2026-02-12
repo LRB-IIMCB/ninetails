@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_plotting_functions.R
 \name{plot_panel_characteristics}
 \alias{plot_panel_characteristics}
-\title{Plots panel characteristics of ninetails output.}
+\title{Plot panel characteristics of ninetails output}
 \usage{
 plot_panel_characteristics(
   input_residue_data,
@@ -14,59 +14,153 @@ plot_panel_characteristics(
 )
 }
 \arguments{
-\item{input_residue_data}{A dataframe or tibble containig non-A residue predictions
-made by ninetails pipeline}
+\item{input_residue_data}{Data frame containing non-A residue predictions.}
 
-\item{input_class_data}{A dataframe or tibble containing read_classes predictions
-made by ninetails pipeline. Mutually exclusive with parameter input_merged_nonA_tables_data}
+\item{input_class_data}{Optional data frame containing read classification
+output from ninetails. Mutually exclusive with
+\code{input_merged_nonA_tables_data}.}
 
-\item{input_merged_nonA_tables_data}{A dataframe or tibble containing merged_nonA_tables data
-produced by the \code{\link{merge_nonA_tables}} function. Mutually exclusive with parameter
-input_class_data}
+\item{input_merged_nonA_tables_data}{Optional data frame returned by
+\code{\link{merge_nonA_tables}}. Mutually exclusive with
+\code{input_class_data}.}
 
-\item{type}{[character] either "default" or "moderna" - controls the predefined
-settings of the plot. In case of moderna adds the default UCUAG pentamer position
-to the distribution subplots. By default, the "default" option is set.}
+\item{type}{Character string. Either \code{"default"} or \code{"moderna"}.
+The \code{"moderna"} option marks the default UCUAG pentamer position (100 nt).}
 
-\item{max_length}{[numeric] maximum length of plotted tail data}
+\item{max_length}{Numeric. Maximum poly(A) tail length displayed
+in distribution panels.}
 
-\item{direction_5_prime}{[logical] by default set to TRUE. controls the direction in which
-the non-A positions are reported. Either from 5' end, according to the most common convention,
-or from 3' end (as ONT direct RNA seq proceeds).}
+\item{direction_5_prime}{Logical. If \code{TRUE} (default), non-A positions
+are reported from the 5' end of the poly(A) tail. If \code{FALSE},
+positions are recalculated relative to the 3' end.}
 }
 \value{
-a ggplot object
+A patchwork-assembled \code{ggplot} object containing panels A–E.
 }
 \description{
-Creates a multipanel plot with comprehensive characteristics of input data
-produced by ninetails software. Those panel charts provide the most comprehensive
+Generates a five-panel summary visualization describing read categories,
+poly(A) tail properties, and non-A residue distributions derived from
+the ninetails pipeline output. Those panel charts provide the most comprehensive
 characterization of a given pool of reads (representing particular transcript
 or set of transcripts, respectively).
 }
 \details{
-Includes 5 panels A-E containing various subplots with the following content:\itemize{
-\item A - read categories - result of read classification according to presence/absence
-of non-As in their poly(A) tails
-\item B - non-A residues - frequency of reads containing given residue among all
-of the reads harboring non-A nucleotides
-\item C - distribution of lengths of poly(A) tails - overall distribution of lengths
-in comparison to the lengths of tails decorated with non-As
-\item D - normalized distribution of non-A residues in poly(A) tails -
-non-A nucleotide positions normalized to the length of reads in which given residue occurs
-\item raw distribution of non-A residues in poly(A) tails - crude depiction
-of positions along the tail range
+The function assembles panels A–E into a patchwork layout:
+\itemize{
+  \item \strong{A} – Read categories (blank, non-A containing, total)
+  \item \strong{B} – Counts of reads containing C, G, or U residues
+  \item \strong{C} – Distribution of poly(A) tail lengths
+  \item \strong{D} – Normalized distribution of non-A positions
+  \item \strong{E} – Raw distribution of non-A positions
 }
 }
+\section{Internal column filtering}{
+
+
+This function internally subsets input data to a predefined set of columns.
+Any additional columns present in the input data frames are silently dropped.
+Therefore, all columns listed below must be present in the supplied inputs.
+}
+
+\section{Required columns}{
+
+
+\subsection{input_residue_data}{
+
+Must contain at least the following columns:
+
+\describe{
+  \item{readname}{Character. Unique read identifier.}
+  \item{prediction}{Character or factor. Predicted non-A residue
+  (e.g., "C", "G", "U").}
+  \item{est_nonA_pos}{Numeric. Estimated position of the non-A residue
+  within the poly(A) tail.}
+  \item{polya_length}{Numeric. Estimated poly(A) tail length.}
+}
+
+These columns are used for:
+\itemize{
+  \item binning positions and tail lengths (Panels D and E),
+  \item computing normalized residue frequencies,
+  \item generating residue-level counts and labels.
+}
+
+}
+
+\subsection{input_class_data (if supplied)}{
+
+Must contain at least:
+
+\describe{
+  \item{readname}{Character. Required for merging with residue data.}
+  \item{group}{Character or factor. Experimental group identifier.}
+}
+
+This input is internally merged with \code{input_residue_data} using
+\code{\link{merge_nonA_tables}}.
+
+}
+
+\subsection{input_merged_nonA_tables_data (if supplied)}{
+
+Must be the output of \code{\link{merge_nonA_tables}} and contain at least
+the following columns (used for tail distribution, summarization and plotting):
+
+\describe{
+  \item{sample}{Character. Sample identifier.}
+  \item{group}{Character or factor. Experimental group identifier.}
+  \item{readname}{Character. Unique read identifier.}
+  \item{prediction}{Character or factor. Non-A residue prediction.}
+  \item{est_nonA_pos}{Numeric. Estimated non-A position.}
+  \item{polya_length}{Numeric. Poly(A) tail length.}
+  \item{class}{Character. Read classification label.}
+  \item{comments}{Character. Additional classification comments.}
+  \item{transcript}{Character. Transcript name.}
+  \item{ensembl_transcript_id_full}{Character. Full Ensembl transcript ID.}
+  \item{ensembl_transcript_id_short}{Character. Short Ensembl transcript ID.}
+  \item{prediction_C}{Numeric or logical. Indicator/count of C residues.}
+  \item{prediction_G}{Numeric or logical. Indicator/count of G residues.}
+  \item{prediction_U}{Numeric or logical. Indicator/count of U residues.}
+  \item{nonA_residues}{Character. Encoded non-A residue information;
+  \code{NA} indicates blank tail.}
+}
+
+These columns are required because they are internally retained for:
+\itemize{
+  \item classification summaries (Panels A and B),
+  \item tail length distributions (Panel C),
+  \item grouping and normalization logic,
+  \item detection of blank vs non-A containing reads.
+}
+
+}
+}
+
+\section{Single-group requirement}{
+
+
+The input data must represent exactly one experimental group.
+If multiple unique values are detected in the \code{group} column,
+the function stops with an error.
+
+Multiple samples within a single group are allowed.
+}
+
 \examples{
 \dontrun{
+residue_data_wt <- residue_data[residue_data$group == "WT", ]
 
-ninetails::plot_panel_characteristics(input_residue_data=residue_data,
-                                      input_class_data=class_data,
-                                      input_merged_nonA_tables_data=NULL,
-                                      type="default",
-                                      max_length=100,
-                                      direction_5_prime=T)
-
+plot_panel_characteristics(
+  input_residue_data = residue_data_wt,
+  input_class_data = class_data_wt,
+  type = "default",
+  max_length = 100
+)
 }
 
+}
+\seealso{
+\code{\link{merge_nonA_tables}},
+\code{\link{summarize_nonA}},
+\code{\link{plot_tail_distribution}}
 }
