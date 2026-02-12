@@ -1,7 +1,7 @@
 Package: ninetails
 Type: Package
 Title: Nonadenosine Nucleotides in Poly(A) Tails
-Version: 1.0.557
+Version: 1.0.558
 Authors@R: 
     person(given = "Natalia",
            family = "Gumińska",
