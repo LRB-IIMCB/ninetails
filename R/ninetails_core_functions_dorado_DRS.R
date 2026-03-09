@@ -461,9 +461,10 @@ preprocess_inputs <- function(
   }
 
   # From dorado 1.4.0, column name for pod5 files is "input_filename"
-  if (!"filename" %in% colnames(polya_data) && "input_filename" %in% colnames(polya_data)) {
-    colnames(polya_data)[colnames(polya_data) == "input_filename"] <- "filename"
+  if (!"filename" %in% colnames(summary_data) && "input_filename" %in% colnames(summary_data)) {
+    colnames(summary_data)[colnames(summary_data) == "input_filename"] <- "filename"
   }
+
   # Validate required columns for poly(A) information
   required_cols <- c(
     "read_id",
