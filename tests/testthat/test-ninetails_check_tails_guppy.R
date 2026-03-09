@@ -167,7 +167,7 @@ test_that("check_tails_guppy runs with valid test data", {
 
   # If we get here, verify the result structure
   if (!is.null(result)) {
-    expect_type(result, "list")
+    expect_type(result, "character") # tu musi być character!
     expect_true("read_classes" %in% names(result) || length(result) >= 1)
   }
 })

@@ -1009,10 +1009,10 @@ plot_multiple_gaf <- function(gaf_list, num_cores) {
 #' }
 #'
 #'
-plot_class_counts <- function(class_data,
-                              grouping_factor = NA,
-                              frequency = TRUE,
-                              type = "R") {
+plot_class_counts<- function(class_data,
+         grouping_factor = NA,
+         frequency = TRUE,
+         type = "R") {
 
   #assertions
   if (missing(class_data)) {
@@ -1055,10 +1055,33 @@ plot_class_counts <- function(class_data,
       "n column is missing in the input. Invalid output of count_class()."
     )
 
-    class_counts$comments <- factor(
-      class_counts$comments,
-      levels = c("NIN", "IRL", "QCF", "MPU", "MAU", "YAY")
-    )
+    # Detect pipeline type: BAC (dorado DRS) and QCF (guppy) are mutually exclusive
+    # UNM appears when unfiltered BAM is used (pipeline-agnostic)
+    has_bac <- "BAC" %in% class_counts$comments
+    has_unm <- "UNM" %in% class_counts$comments
+
+    if (has_unm && has_bac) {
+      class_counts$comments <- factor(
+        class_counts$comments,
+        levels = c("UNM", "NIN", "IRL", "BAC", "MPU", "MAU", "YAY")
+      )
+    } else if (has_unm && !has_bac) {
+      class_counts$comments <- factor(
+        class_counts$comments,
+        levels = c("UNM", "NIN", "IRL", "QCF", "MPU", "MAU", "YAY")
+      )
+    } else if (!has_unm && has_bac) {
+      class_counts$comments <- factor(
+        class_counts$comments,
+        levels = c("NIN", "IRL", "BAC", "MPU", "MAU", "YAY")
+      )
+    } else {
+      class_counts$comments <- factor(
+        class_counts$comments,
+        levels = c("NIN", "IRL", "QCF", "MPU", "MAU", "YAY")
+      )
+    }
+
     if (ncol(class_counts) > 2) {
       grouping_colname = setdiff(colnames(class_counts), basic_colnames)
 
@@ -1102,25 +1125,38 @@ plot_class_counts <- function(class_data,
         )
     }
 
+    # Base palette shared across all branches
+    base_values <- c(
+      "YAY" = "#ff6600",
+      "MAU" = "#00aad4",
+      "MPU" = "#cccccc",
+      "IRL" = "#4d4d4d",
+      "NIN" = "#1a1a1a",
+      "UNM" = "#8b5e8b"
+    )
+    base_labels <- c(
+      "YAY" = "move transition present, nonA residue detected",
+      "MAU" = "move transition absent, nonA residue undetected",
+      "MPU" = "move transition present, nonA residue undetected",
+      "IRL" = "insufficient tail length (<10nt)",
+      "NIN" = "not included in the analysis (pass only = T)",
+      "UNM" = "unmapped read"
+    )
+
+    if (has_bac) {
+      palette_values <- c(base_values, "BAC" = "#808080")
+      palette_labels <- c(base_labels, "BAC" = "bad poly(A) coordinates")
+    } else {
+      palette_values <- c(base_values, "QCF" = "#808080")
+      palette_labels <- c(base_labels, "QCF" = "nanopolish qc failed")
+    }
+
     class_plot <- class_plot +
       ggplot2::scale_fill_manual(
-        values = c(
-          "YAY" = "#ff6600",
-          "QCF" = "#808080",
-          "MAU" = "#00aad4",
-          "IRL" = "#4d4d4d",
-          "NIN" = "#1a1a1a",
-          "MPU" = "#cccccc"
-        ),
-        labels = c(
-          "YAY" = "move transition present, nonA residue detected",
-          "QCF" = "nanopolish qc failed",
-          "MAU" = "move transition absent, nonA residue undetected",
-          "IRL" = "insufficient read length",
-          "NIN" = "not included in the analysis (pass only = T)",
-          "MPU" = "move transition present, nonA residue undetected"
-        )
+        values = palette_values,
+        labels = palette_labels
       )
+
   } else if (type == "N") {
     class_counts <- ninetails::count_class(
       class_data = class_data,
@@ -1287,6 +1323,7 @@ plot_class_counts <- function(class_data,
 
   return(class_plot)
 }
+
 
 
 #' Plot counts of nonadenosine residues found in ninetails output data
