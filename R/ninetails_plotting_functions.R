@@ -1009,10 +1009,10 @@ plot_multiple_gaf <- function(gaf_list, num_cores) {
 #' }
 #'
 #'
-plot_class_counts<- function(class_data,
-         grouping_factor = NA,
-         frequency = TRUE,
-         type = "R") {
+plot_class_counts <- function(class_data,
+                              grouping_factor = NA,
+                              frequency = TRUE,
+                              type = "R") {
 
   #assertions
   if (missing(class_data)) {
@@ -1174,9 +1174,22 @@ plot_class_counts<- function(class_data,
       "n column is missing in the input. Invalid output of count_class()."
     )
 
+    # [bug fix] Build factor levels and palette from classes actually present
+    # in the data, preserving canonical stack order. This prevents color
+    # misassignment when one or more categories are absent from the dataset.
+    full_palette <- c(
+      "decorated"    = "#ff6600",
+      "blank"        = "#00aad4",
+      "unclassified" = "#808080"
+    )
+    canonical_order <- c("unclassified", "blank", "decorated")
+    present_classes <- unique(as.character(class_counts$class))
+    active_levels   <- intersect(canonical_order, present_classes)
+    active_palette  <- full_palette[active_levels]
+
     class_counts$class <- factor(
       class_counts$class,
-      levels = c("unclassified", "blank", "decorated")
+      levels = active_levels
     )
 
     if (ncol(class_counts) > 2) {
@@ -1223,13 +1236,8 @@ plot_class_counts<- function(class_data,
     }
 
     class_plot <- class_plot +
-      ggplot2::scale_fill_manual(
-        values = c(
-          "decorated" = "#ff6600",
-          "blank" = "#00aad4",
-          "unclassified" = "#808080"
-        )
-      )
+      ggplot2::scale_fill_manual(values = active_palette)
+
   } else if (type == "A") {
     class_counts <- ninetails::count_class(
       class_data = class_data,
@@ -1323,7 +1331,6 @@ plot_class_counts<- function(class_data,
 
   return(class_plot)
 }
-
 
 
 #' Plot counts of nonadenosine residues found in ninetails output data
