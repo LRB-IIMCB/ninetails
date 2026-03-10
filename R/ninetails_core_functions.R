@@ -1809,7 +1809,7 @@ create_outputs <- function(tail_feature_list,
   moved_chunks_table$est_nonA_pos <- round(
     moved_chunks_table$polya_length -
       ((moved_chunks_table$polya_length * moved_chunks_table$centr_signal_pos) /
-        moved_chunks_table$signal_length),
+         moved_chunks_table$signal_length),
     digits = 2
   )
 
@@ -1826,40 +1826,27 @@ create_outputs <- function(tail_feature_list,
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
       dplyr::mutate(
-        comments = dplyr::case_when(
-          polya_length < 10 ~ "IRL",
-          qc_tag == "SUFFCLIP" ~ "NIN",
-          qc_tag == "ADAPTER" ~ "QCF",
-          qc_tag == "NOREGION" ~ "QCF",
-          qc_tag == "READ_FAILED_LOAD" ~ "QCF",
-          readname %in% moved_blank_readnames ~ "MPU",
-          TRUE ~ "MAU"
+        comments = ifelse(
+          polya_length < 10, "IRL",
+          ifelse(qc_tag == "SUFFCLIP", "NIN",
+                 ifelse(qc_tag %in% c("ADAPTER", "NOREGION", "READ_FAILED_LOAD"), "QCF",
+                        ifelse(readname %in% moved_blank_readnames, "MPU", "MAU")
+                 )
+          )
         ),
-        class = dplyr::case_when(
-          polya_length < 10 ~ "unclassified",
-          readname %in% moved_blank_readnames ~ "blank",
-          comments == "MAU" ~ "blank",
-          TRUE ~ "unclassified"
-        )
+        class = ifelse(comments %in% c("MPU", "MAU"), "blank", "unclassified")
       )
   } else {
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
       dplyr::mutate(
-        comments = dplyr::case_when(
-          polya_length < 10 ~ "IRL",
-          qc_tag == "ADAPTER" ~ "QCF",
-          qc_tag == "NOREGION" ~ "QCF",
-          qc_tag == "READ_FAILED_LOAD" ~ "QCF",
-          readname %in% moved_blank_readnames ~ "MPU",
-          TRUE ~ "MAU"
+        comments = ifelse(
+          polya_length < 10, "IRL",
+          ifelse(qc_tag %in% c("ADAPTER", "NOREGION", "READ_FAILED_LOAD"), "QCF",
+                 ifelse(readname %in% moved_blank_readnames, "MPU", "MAU")
+          )
         ),
-        class = dplyr::case_when(
-          polya_length < 10 ~ "unclassified",
-          readname %in% moved_blank_readnames ~ "blank",
-          comments == "MAU" ~ "blank",
-          TRUE ~ "unclassified"
-        )
+        class = ifelse(comments %in% c("MPU", "MAU"), "blank", "unclassified")
       )
   }
 
@@ -1908,19 +1895,16 @@ create_outputs <- function(tail_feature_list,
 
     decorated_reads_edited <- nanopolish_polya_table %>%
       dplyr::mutate(
-        class = dplyr::case_when(
-          readname %in% potential_artifacts$readname ~ paste0(class, "-WARN"),
-          TRUE ~ paste0(class)
-        )
+        class = ifelse(readname %in% potential_artifacts$readname, paste0(class, "-WARN"), class)
       )
 
     # label potential artifacts in nonadenosine residue dataframe
     moved_chunks_table_qc <- moved_chunks_table %>%
       dplyr::mutate(
-        prediction = dplyr::case_when(
-          est_nonA_pos < 2 ~ paste0(prediction, "-WARN"),
-          est_nonA_pos > polya_length - 2 ~ paste0(prediction, "-WARN"),
-          TRUE ~ paste0(prediction)
+        prediction = ifelse(
+          est_nonA_pos < 2 | est_nonA_pos > polya_length - 2,
+          paste0(prediction, "-WARN"),
+          prediction
         )
       )
 

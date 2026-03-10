@@ -1187,10 +1187,15 @@ plot_class_counts <- function(class_data,
     active_levels   <- intersect(canonical_order, present_classes)
     active_palette  <- full_palette[active_levels]
 
-    class_counts$class <- factor(
-      class_counts$class,
-      levels = active_levels
-    )
+    # [bug fix] ungroup() before mutate() to prevent dplyr's grouped_df $<-
+    # method from re-asserting the old factor levels baked into the group
+    # structure by fct_relevel() inside count_class(). as.character() breaks
+    # any inherited factor encoding before the canonical factor is constructed.
+    class_counts <- class_counts %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(
+        class = factor(as.character(class), levels = active_levels)
+      )
 
     if (ncol(class_counts) > 2) {
       grouping_colname = setdiff(colnames(class_counts), basic_colnames)
@@ -1331,7 +1336,6 @@ plot_class_counts <- function(class_data,
 
   return(class_plot)
 }
-
 
 #' Plot counts of nonadenosine residues found in ninetails output data
 #'

@@ -1588,8 +1588,8 @@ create_outputs_dorado <- function(dorado_summary_dir,
   moved_chunks_table$est_nonA_pos <- round(
     moved_chunks_table$poly_tail_length -
       ((moved_chunks_table$poly_tail_length *
-        moved_chunks_table$centr_signal_pos) /
-        moved_chunks_table$signal_length),
+          moved_chunks_table$centr_signal_pos) /
+         moved_chunks_table$signal_length),
     0
   )
 
@@ -1643,21 +1643,15 @@ create_outputs_dorado <- function(dorado_summary_dir,
   dorado_summary <- dorado_summary %>%
     dplyr::filter(!read_id %in% decorated_read_ids) %>%
     dplyr::mutate(
-      comments = dplyr::case_when(
-        (alignment_direction == "*" & alignment_mapq == 0) ~ "UNM",
-        !(alignment_direction == "*" & alignment_mapq == 0) &
-          poly_tail_length < 10 ~ "IRL",
-        !(!(alignment_direction == "*" & alignment_mapq == 0) &
-          poly_tail_length < 10) &
-          poly_tail_start == 0 ~ "BAC",
-        read_id %in% moved_blank_readnames ~ "MPU",
-        TRUE ~ "MAU"
+      comments = ifelse(
+        alignment_direction == "*" & alignment_mapq == 0, "UNM",
+        ifelse(poly_tail_length < 10, "IRL",
+               ifelse(poly_tail_start == 0, "BAC",
+                      ifelse(read_id %in% moved_blank_readnames, "MPU", "MAU")
+               )
+        )
       ),
-      class = dplyr::case_when(
-        read_id %in% moved_blank_readnames ~ "blank",
-        comments == "MAU" ~ "blank",
-        TRUE ~ "unclassified"
-      )
+      class = ifelse(comments %in% c("MPU", "MAU"), "blank", "unclassified")
     )
   # Handle decorated reads
   dorado_summary_qc_passed <- dorado_summary_qc_passed[
@@ -1738,3 +1732,4 @@ create_outputs_dorado <- function(dorado_summary_dir,
     nonadenosine_residues = moved_chunks_table
   ))
 }
+
