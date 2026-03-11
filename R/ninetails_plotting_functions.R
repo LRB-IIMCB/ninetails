@@ -1441,29 +1441,16 @@ plot_residue_counts <- function(residue_data,
   if (ncol(residue_counts) > 2) {
     grouping_colname = setdiff(colnames(residue_counts), basic_colnames)
 
-    residue_plot <- ggplot2::ggplot(
-      residue_counts,
-      ggplot2::aes(x = !!rlang::sym(grouping_colname), fill = prediction, y = n)
-    ) +
-      ggplot2::ylab("count") +
-      ggplot2::theme_bw() +
-      ggplot2::labs(
-        x = "\nsample",
-        fill = "Residue:",
-        title = paste0("Non-A residue counts ", title_suffix)
-      )
-
     if (frequency) {
-      #residue_plot <- residue_plot + ggplot2::geom_bar(stat="identity",position="fill") + ggplot2::ylab("frequency")
       residue_counts <- residue_counts %>%
-        tidyr::pivot_wider(names_from = prediction, values_from = n) %>%
+        tidyr::pivot_wider(names_from = prediction, values_from = n, values_fill = 0) %>%
         dplyr::mutate(
           total = C + G + U,
           pC = C / total,
           pG = G / total,
           pU = U / total
         ) %>%
-        dplyr::select(group, pC, pG, pU) %>%
+        dplyr::select(!!rlang::sym(grouping_colname), pC, pG, pU) %>%
         dplyr::rename(C = pC, G = pG, U = pU) %>%
         tidyr::gather(key = prediction, value = n, C:G:U)
 
@@ -1490,17 +1477,20 @@ plot_residue_counts <- function(residue_data,
         ) +
         ggplot2::geom_bar(stat = "identity", position = "dodge")
     } else {
-      residue_plot <- residue_plot +
+      residue_plot <- ggplot2::ggplot(
+        residue_counts,
+        ggplot2::aes(x = !!rlang::sym(grouping_colname), fill = prediction, y = n)
+      ) +
         ggplot2::geom_bar(stat = "identity", position = "dodge") +
-        ggplot2::ylab("count")
+        ggplot2::ylab("count") +
+        ggplot2::theme_bw() +
+        ggplot2::labs(
+          x = "\nsample",
+          fill = "Residue:",
+          title = paste0("Non-A residue counts ", title_suffix)
+        )
     }
 
-    residue_plot <- residue_plot +
-      ggplot2::labs(
-        x = "\nsample",
-        fill = "Residue:",
-        title = paste0("Non-A residue counts ", title_suffix)
-      )
   } else {
     residue_plot <- ggplot2::ggplot(
       residue_counts,
