@@ -186,33 +186,22 @@ test_that("get_mode errors on non-numeric input", {
 ################################################################################
 
 test_that("correct_labels replaces legacy label 'modified' with 'decorated'", {
-  df <- data.frame(
-    readname = c("read1", "read2"),
-    class = c("modified", "unmodified"),
-    stringsAsFactors = FALSE
-  )
+  df <- data.frame(class = "modified", stringsAsFactors = FALSE)
   result <- correct_labels(df)
-  expect_true("decorated" %in% result$class)
+  expect_equal(result$class, "decorated")
 })
 
-test_that("correct_labels replaces 'unmodified' with 'blank'", {
-  df <- data.frame(
-    readname = c("read1"),
-    class = c("unmodified"),
-    stringsAsFactors = FALSE
-  )
+test_that("correct_labels replaces legacy label 'unmodified' with 'blank'", {
+  df <- data.frame(class = "unmodified", stringsAsFactors = FALSE)
   result <- correct_labels(df)
   expect_equal(result$class, "blank")
 })
 
-test_that("correct_labels replaces 'blank' with 'unclassified'", {
-  df <- data.frame(
-    readname = c("read1"),
-    class = c("blank"),
-    stringsAsFactors = FALSE
-  )
+test_that("correct_labels leaves current labels unchanged", {
+  current_labels <- c("blank", "decorated", "unclassified")
+  df <- data.frame(class = current_labels, stringsAsFactors = FALSE)
   result <- correct_labels(df)
-  expect_equal(result$class, "unclassified")
+  expect_equal(result$class, current_labels)
 })
 
 

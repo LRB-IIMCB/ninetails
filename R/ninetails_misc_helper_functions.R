@@ -612,9 +612,11 @@ correct_labels <- function(df) {
 
   if ("class" %in% colnames(df)) {
     df$class <- ifelse(
-      df$class %in% c("unmodified", "unclassified"),
-      "blank",
-      ifelse(df$class == "blank", "unclassified", "decorated")
+      df$class == "modified",    "decorated",
+      ifelse(
+        df$class == "unmodified", "blank",
+        df$class  # "blank", "decorated", "unclassified" pass through unchanged
+      )
     )
   }
 
