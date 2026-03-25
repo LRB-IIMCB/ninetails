@@ -107,6 +107,20 @@ test_that("is_multifast5 returns FALSE for single-read structure", {
 })
 
 
+test_that("is_multifast5 errors on non-data-frame input", {
+  expect_error(is_multifast5("not a data frame"), "must be a data frame")
+  expect_error(is_multifast5(list(name = "read_123")), "must be a data frame")
+})
+
+test_that("is_multifast5 errors when name column is missing", {
+  mock_structure <- data.frame(
+    other_col = c("read_abc123", "read_def456"),
+    stringsAsFactors = FALSE
+  )
+  expect_error(is_multifast5(mock_structure), "must contain 'name' column")
+})
+
+
 # winsorize_signal
 ################################################################################
 test_that("winsorize_signal works correctly", {
@@ -182,6 +196,12 @@ test_that("get_mode errors on non-numeric input", {
   expect_error(get_mode(c("a", "b", "a")), "must be numeric")
 })
 
+test_that("get_mode errors on invalid method argument", {
+  x <- c(1, 2, 2, 3)
+  expect_error(get_mode(x, method = "invalid"), "Wrong mode provided")
+  expect_error(get_mode(x, method = "mean"), "Wrong mode provided")
+})
+
 # correct_labels
 ################################################################################
 
@@ -245,6 +265,52 @@ test_that("filter_dorado_summary errors when required columns are missing", {
   expect_error(filter_dorado_summary(df), "Required columns missing.*poly_tail_length")
 })
 
+test_that("filter_dorado_summary loads and filters correctly from file path", {
+  tmp_file <- tempfile(fileext = ".tsv")
+  on.exit(unlink(tmp_file))
+
+  df <- data.frame(
+    read_id = c("r1", "r2", "r3", "r4", "r5"),
+    alignment_direction = c("+", "-", "*", "+", "+"),
+    alignment_mapq = c(60, 30, 10, 0, 60),
+    poly_tail_start = c(100, 200, 150, 300, 0),
+    poly_tail_length = c(25, 15, 50, 20, 30),
+    stringsAsFactors = FALSE
+  )
+  utils::write.table(df, tmp_file, sep = "\t", row.names = FALSE, quote = FALSE)
+
+  result <- filter_dorado_summary(tmp_file)
+
+  # r1: passes, r2: passes, r3: fails (*), r4: fails (mapq=0), r5: fails (start=0)
+  expect_equal(nrow(result), 2)
+  expect_true(all(result$read_id %in% c("r1", "r2")))
+})
+
+test_that("filter_dorado_summary errors on nonexistent file path", {
+  fake_path <- "/nonexistent/path/to/summary.tsv"
+  expect_error(filter_dorado_summary(fake_path))
+})
+
+test_that("filter_dorado_summary returns tibble when loaded from file", {
+  tmp_file <- tempfile(fileext = ".tsv")
+  on.exit(unlink(tmp_file))
+
+  df <- data.frame(
+    read_id = c("r1"),
+    alignment_direction = c("+"),
+    alignment_mapq = c(60),
+    poly_tail_start = c(100),
+    poly_tail_length = c(25),
+    stringsAsFactors = FALSE
+  )
+  utils::write.table(df, tmp_file, sep = "\t", row.names = FALSE, quote = FALSE)
+
+  result <- filter_dorado_summary(tmp_file)
+
+  # vroom returns tibble
+  expect_s3_class(result, "tbl_df")
+})
+
 # count_trailing_chars
 ################################################################################
 
@@ -292,6 +358,7 @@ test_that("reverse_complement errors on non-string input", {
   expect_error(reverse_complement(123), "must be a character string")
   expect_error(reverse_complement(c("ATCG", "GCTA")), "must be a character string")
 })
+
 
 
 # edit_distance_hw
@@ -343,6 +410,14 @@ test_that("check_fast5_filetype errors on missing arguments", {
 })
 
 
+test_that("check_fast5_filetype errors on non-character workspace", {
+  expect_error(
+    check_fast5_filetype(workspace = 123, basecall_group = "Basecall_1D_000"),
+    "not a character string"
+  )
+})
+
+
 # is_RNA — argument validation only
 ################################################################################
 
@@ -356,6 +431,7 @@ test_that("is_RNA errors on nonexistent file path", {
 # check_output_directory
 ################################################################################
 test_that("check_output_directory creates new directory", {
+
   tmp_dir <- file.path(tempdir(), paste0("ninetails_test_", Sys.getpid()))
   on.exit(unlink(tmp_dir, recursive = TRUE))
 
@@ -368,6 +444,127 @@ test_that("check_output_directory creates new directory", {
   expect_true(result)
   expect_true(dir.exists(tmp_dir))
 })
+
+test_that("check_output_directory uses existing empty directory", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_empty_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  # create empty directory
+  dir.create(tmp_dir, recursive = TRUE)
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+  result <- check_output_directory(tmp_dir, mock_log)
+
+  expect_true(result)
+})
+
+test_that("check_output_directory returns FALSE when user aborts", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_abort_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  dir.create(tmp_dir, recursive = TRUE)
+  writeLines("test content", file.path(tmp_dir, "existing_file.txt"))
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+
+  result <- suppressMessages(
+    check_output_directory(tmp_dir, mock_log, input_fn = function(...) "a")
+  )
+
+  expect_false(result)
+})
+
+test_that("check_output_directory returns TRUE when user continues", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_continue_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  dir.create(tmp_dir, recursive = TRUE)
+  writeLines("test content", file.path(tmp_dir, "existing_file.txt"))
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+
+  result <- suppressMessages(
+    check_output_directory(tmp_dir, mock_log, input_fn = function(...) "c")
+  )
+
+  expect_true(result)
+})
+
+test_that("check_output_directory handles invalid input then valid input", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_retry_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  dir.create(tmp_dir, recursive = TRUE)
+  writeLines("test content", file.path(tmp_dir, "existing_file.txt"))
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+
+  input_sequence <- c("invalid", "x", "a")
+  call_count <- 0
+  mock_input <- function(...) {
+    call_count <<- call_count + 1
+    input_sequence[call_count]
+  }
+
+  result <- suppressMessages(
+    check_output_directory(tmp_dir, mock_log, input_fn = mock_input)
+  )
+
+  expect_false(result)
+  expect_equal(call_count, 3)
+})
+
+test_that("check_output_directory handles directory with more than 5 files", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_many_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  dir.create(tmp_dir, recursive = TRUE)
+  for (i in 1:8) {
+    writeLines("test content", file.path(tmp_dir, paste0("file_", i, ".txt")))
+  }
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+
+  result <- suppressMessages(
+    check_output_directory(tmp_dir, mock_log, input_fn = function(...) "a")
+  )
+
+  expect_false(result)
+})
+
+test_that("check_output_directory accepts 'abort' as full word", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_abort_full_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  dir.create(tmp_dir, recursive = TRUE)
+  writeLines("test content", file.path(tmp_dir, "existing_file.txt"))
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+
+  result <- suppressMessages(
+    check_output_directory(tmp_dir, mock_log, input_fn = function(...) "abort")
+  )
+
+  expect_false(result)
+})
+
+test_that("check_output_directory accepts 'continue' as full word", {
+  tmp_dir <- file.path(tempdir(), paste0("ninetails_continue_full_", Sys.getpid()))
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  dir.create(tmp_dir, recursive = TRUE)
+  writeLines("test content", file.path(tmp_dir, "existing_file.txt"))
+
+  mock_log <- function(msg, type = "INFO", section = NULL) invisible(NULL)
+
+  result <- suppressMessages(
+    check_output_directory(tmp_dir, mock_log, input_fn = function(...) "continue")
+  )
+
+  expect_true(result)
+})
+
+
 
 
 

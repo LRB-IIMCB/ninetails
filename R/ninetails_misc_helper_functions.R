@@ -681,7 +681,7 @@ filter_dorado_summary <- function(dorado_summary) {
 
   # If input is a file path, read with vroom
   if (is.character(dorado_summary)) {
-    dorado_summary <- vroom::vroom(dorado_summary, delim = "\t")
+    dorado_summary <- vroom::vroom(dorado_summary, delim = "\t", show_col_types = FALSE)
   }
   # Ensure it's a data.frame/tibble
   if (!is.data.frame(dorado_summary)) {
@@ -744,6 +744,8 @@ filter_dorado_summary <- function(dorado_summary) {
 #'   ninetails results will be saved.
 #' @param log_message Function for logging messages to both console and log file.
 #'   Should accept parameters: message, type, section.
+#' @param input_fn Function for reading user input. Defaults to \code{readline}.
+#'   Can be overridden for testing purposes.
 #'
 #' @returns Logical. Returns TRUE if the analysis should proceed, FALSE if the
 #'   user chose to abort the analysis.
@@ -773,7 +775,7 @@ filter_dorado_summary <- function(dorado_summary) {
 #'   # User chose to abort
 #' }
 #' }
-check_output_directory <- function(save_dir, log_message) {
+check_output_directory <- function(save_dir, log_message, input_fn = readline) {
   # Check if directory exists
   if (!dir.exists(save_dir)) {
     # Directory doesn't exist, create it
@@ -854,7 +856,7 @@ check_output_directory <- function(save_dir, log_message) {
 
   # Get user input with validation
   while (TRUE) {
-    user_input <- readline(prompt = "Enter your choice (a/c): ")
+    user_input <- input_fn("Enter your choice (a/c): ")
     user_input <- tolower(trimws(user_input))
 
     if (user_input %in% c("a", "abort")) {
@@ -886,6 +888,7 @@ check_output_directory <- function(save_dir, log_message) {
     }
   }
 }
+
 
 ################################################################################
 # cDNA PIPELINE HELPERS

@@ -4,7 +4,7 @@
 \alias{check_output_directory}
 \title{Check and handle existing output directory for ninetails analysis}
 \usage{
-check_output_directory(save_dir, log_message)
+check_output_directory(save_dir, log_message, input_fn = readline)
 }
 \arguments{
 \item{save_dir}{Character string. Full path to the output directory where
@@ -12,6 +12,9 @@ ninetails results will be saved.}
 
 \item{log_message}{Function for logging messages to both console and log file.
 Should accept parameters: message, type, section.}
+
+\item{input_fn}{Function for reading user input. Defaults to \code{readline}.
+Can be overridden for testing purposes.}
 }
 \value{
 Logical. Returns TRUE if the analysis should proceed, FALSE if the

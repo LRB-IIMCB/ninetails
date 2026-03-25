@@ -5,8 +5,67 @@
 
 # read_class_single
 ################################################################################
+
+test_that("read_class_single errors on missing class_path", {
+  expect_error(read_class_single(),
+               "class_path.*is missing")
+})
+
+test_that("read_class_single errors on NA class_path", {
+  expect_error(read_class_single(class_path = NA),
+               "missing or invalid")
+})
+
+test_that("read_class_single errors on empty string class_path", {
+  expect_error(read_class_single(class_path = ""),
+               "missing or invalid")
+})
+
+test_that("read_class_single errors on nonexistent file", {
+  expect_error(read_class_single(class_path = "/nonexistent/path/file.tsv"),
+               "does not exist")
+})
+
+test_that("read_class_single errors on empty file", {
+  # Create empty temp file
+  tmp_file <- tempfile(fileext = ".tsv")
+  file.create(tmp_file)
+  on.exit(unlink(tmp_file))
+
+  expect_error(read_class_single(class_path = tmp_file),
+               "empty")
+})
+
+
+
+
+
 # read_class_multiple
 ################################################################################
+
+test_that("read_class_multiple errors on missing samples_table", {
+  expect_error(read_class_multiple(),
+               "Samples table.*is missing")
+})
+
+test_that("read_class_multiple errors on empty samples_table", {
+  expect_error(read_class_multiple(samples_table = data.frame()),
+               "Empty data frame")
+})
+
+test_that("read_class_multiple errors on missing class_path column", {
+  bad_table <- data.frame(sample_name = "WT_1")
+  expect_error(read_class_multiple(samples_table = bad_table),
+               "class_path.*sample_name")
+})
+
+test_that("read_class_multiple errors on missing sample_name column", {
+  bad_table <- data.frame(class_path = "/some/path.tsv")
+  expect_error(read_class_multiple(samples_table = bad_table),
+               "class_path.*sample_name")
+})
+
+
 # count_class
 ################################################################################
 
@@ -93,10 +152,118 @@ test_that("count_class returns crude counts with grouping", {
 })
 
 
+test_that("count_class reorders class factor with decorated last", {
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("forcats")
+  skip_if(!exists("class_data_single"), "class_data_single not loaded")
+
+  result <- count_class(class_data = class_data_single, detailed = FALSE)
+
+  # decorated should be last level
+  levels_order <- levels(result$class)
+  expect_equal(levels_order[length(levels_order)], "decorated")
+})
+
 # read_residue_single
 ################################################################################
+
+test_that("read_residue_single errors on NA residue_path", {
+  expect_error(read_residue_single(residue_path = NA),
+               "missing or an empty string")
+})
+
+test_that("read_residue_single errors on empty string residue_path", {
+  expect_error(read_residue_single(residue_path = ""),
+               "missing or an empty string")
+})
+
+test_that("read_residue_single errors on nonexistent file", {
+  expect_error(read_residue_single(residue_path = "/nonexistent/path/file.tsv"),
+               "missing or an empty file")
+})
+
+test_that("read_residue_single errors on empty file", {
+  tmp_file <- tempfile(fileext = ".tsv")
+  file.create(tmp_file)
+  on.exit(unlink(tmp_file))
+
+  expect_error(read_residue_single(residue_path = tmp_file),
+               "missing or an empty file")
+})
+
+test_that("read_residue_single reads valid file", {
+  tmp_file <- tempfile(fileext = ".tsv")
+  on.exit(unlink(tmp_file))
+
+  test_df <- data.frame(
+    readname = c("read_1", "read_2"),
+    contig = c("ENST00000123|a|b|c|d|GENE1|e", "ENST00000456|a|b|c|d|GENE2|e"),
+    prediction = c("G", "C"),
+    est_nonA_pos = c(50, 30),
+    polya_length = c(100, 80),
+    qc_tag = c("PASS", "PASS"),
+    stringsAsFactors = FALSE
+  )
+  utils::write.table(test_df, tmp_file, sep = "\t", row.names = FALSE, quote = FALSE)
+
+  result <- suppressMessages(read_residue_single(residue_path = tmp_file))
+
+  expect_s3_class(result, "tbl_df")
+  expect_true("readname" %in% colnames(result))
+  expect_true("transcript" %in% colnames(result))
+  expect_true("ensembl_transcript_id_full" %in% colnames(result))
+  expect_true("ensembl_transcript_id_short" %in% colnames(result))
+})
+
+test_that("read_residue_single adds sample_name when provided", {
+  tmp_file <- tempfile(fileext = ".tsv")
+  on.exit(unlink(tmp_file))
+
+  test_df <- data.frame(
+    readname = c("read_1"),
+    contig = c("gene1"),
+    prediction = c("G"),
+    est_nonA_pos = c(50),
+    polya_length = c(100),
+    qc_tag = c("PASS"),
+    stringsAsFactors = FALSE
+  )
+  utils::write.table(test_df, tmp_file, sep = "\t", row.names = FALSE, quote = FALSE)
+
+  result <- suppressMessages(suppressWarnings(
+    read_residue_single(residue_path = tmp_file, sample_name = "KO_1")
+  ))
+
+  expect_true("sample_name" %in% colnames(result))
+  expect_equal(as.character(result$sample_name[1]), "KO_1")
+  expect_true(is.factor(result$sample_name))
+})
+
+
 # read_residue_multiple
 ################################################################################
+
+test_that("read_residue_multiple errors on missing samples_table", {
+  expect_error(read_residue_multiple(),
+               "samples_table.*is missing")
+})
+
+test_that("read_residue_multiple errors on empty samples_table", {
+  expect_error(read_residue_multiple(samples_table = data.frame()),
+               "Empty data frame")
+})
+
+test_that("read_residue_multiple errors on missing residue_path column", {
+  bad_table <- data.frame(sample_name = "WT_1")
+  expect_error(read_residue_multiple(samples_table = bad_table),
+               "residue_path.*sample_name")
+})
+
+test_that("read_residue_multiple errors on missing sample_name column", {
+  bad_table <- data.frame(residue_path = "/some/path.tsv")
+  expect_error(read_residue_multiple(samples_table = bad_table),
+               "residue_path.*sample_name")
+})
 # count_residues
 ################################################################################
 
