@@ -97,14 +97,14 @@ plot_squiggle_fast5 <- function(readname,
   if (missing(sequencing_summary)) {
     stop(
       "Sequencing summary file [string] is missing. Please provide a valid sequencing_summary argument.",
-      .call = FALSE
+      call. = FALSE
     )
   }
 
   if (missing(nanopolish)) {
     stop(
       "Nanopolish polya output [string] is missing. Please provide a valid nanopolish argument.",
-      .call = FALSE
+      call. = FALSE
     )
   }
 
