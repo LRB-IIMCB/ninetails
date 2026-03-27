@@ -1,10 +1,15 @@
-
+<!-- badges: start -->
 <a href="https://github.com/nemitheasura/https://github.com/LRB-IIMCB/ninetails/releases/"><img src="https://img.shields.io/github/tag/LRB-IIMCB/ninetails?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
 <a href="https://github.com/nemitheasura/https://github.com/LRB-IIMCB/ninetails/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
 <img src="https://img.shields.io/badge/maintained-yes-blue" alt="maintained - yes">
 <a href="https://www.linux.org/" title="Go to Linux homepage"><img src="https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white" alt="OS - Linux"></a>
 <a href="https://www.microsoft.com/" title="Go to Microsoft homepage"><img src="https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white" alt="OS - Windows"></a>
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13309819.svg)](https://doi.org/10.5281/zenodo.13309819)
+
+[![Codecov test coverage](https://codecov.io/gh/LRB-IIMCB/ninetails/graph/badge.svg)](https://app.codecov.io/gh/LRB-IIMCB/ninetails)
+<!-- badges: end -->
+
+
 
 # Ninetails
 
