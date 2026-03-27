@@ -19,6 +19,8 @@
 ## Introduction
  
 **Ninetails** detects and characterises non-adenosine nucleotides embedded within poly(A) tails of Oxford Nanopore sequencing reads. It currently supports three pipelines:
+
+**WARNING! cDNA pipeline under construction! Please do not use it for now!**
  
 | Pipeline | Basecaller | Input format | Function |
 |---|---|---|---|
