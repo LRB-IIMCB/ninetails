@@ -99,7 +99,7 @@ annotate_with_biomart <- function(input_data,
   }
 
   assert_condition(
-    length(attributes) > 0,
+    length(attributes_to_get) > 0,
     "please provide attributes to get from biomart"
   )
 

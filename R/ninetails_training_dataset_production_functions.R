@@ -1,5 +1,5 @@
 ################################################################################
-# FUNCTIONS DEVELOPED TO HANDLA GUPPY DATA
+# FUNCTIONS DEVELOPED TO HANDLE GUPPY DATA
 ################################################################################
 #' Extracts tail features of single RNA read from respective basecalled
 #' multi-fast5 file.
@@ -512,6 +512,9 @@ filter_signal_by_threshold_trainingset <- function(signal) {
   pseudomoves <- rep(0, length(adjusted_signal))
   filtered_signal <- adjusted_signal
 
+  baseline <- numeric(length(adjusted_signal))
+  std_cutoff <- numeric(length(adjusted_signal))
+
   baseline[adaptive_sampling_window] <- mean(
     adjusted_signal[1:adaptive_sampling_window],
     na.rm = TRUE
@@ -523,7 +526,7 @@ filter_signal_by_threshold_trainingset <- function(signal) {
   for (i in (adaptive_sampling_window + 1):length(adjusted_signal)) {
     if (
       abs(adjusted_signal[i] - baseline[i - 1]) >
-        SD_threshold * std_cutoff[i - 1]
+      SD_threshold * std_cutoff[i - 1]
     ) {
       if (adjusted_signal[i] > baseline[i - 1]) {
         pseudomoves[i] <- 1 #if they go up
@@ -662,6 +665,9 @@ split_tail_centered_trainingset <- function(readname, tail_feature_list) {
   mod_rle <- rle(pseudomoves)
   # pseudomoves filtered by condition (potentially modified - empyrical!)
   condition <- mod_rle$lengths >= 4 & mod_rle$values
+  if (!any(condition)) {
+    return(list())
+  }
   #beginning positions of filtered pseudomoves which satisfy conditions
   first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths, -1)))[
     condition

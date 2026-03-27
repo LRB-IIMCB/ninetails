@@ -117,7 +117,7 @@ make_class_data_qcf <- function(grouped = FALSE) {
   if (grouped) {
     base$sample_name <- c(rep("WT", 3), rep("KO", 3))
   }
-  base
+  return(base)
 }
 
 
@@ -146,7 +146,7 @@ make_class_data_bac <- function(grouped = FALSE) {
   if (grouped) {
     base$sample_name <- c(rep("WT", 3), rep("KO", 3))
   }
-  base
+  return(base)
 }
 
 
@@ -175,7 +175,7 @@ make_class_data_unm_qcf <- function(grouped = FALSE) {
   if (grouped) {
     base$sample_name <- c(rep("WT", 4), rep("KO", 3))
   }
-  base
+  return(base)
 }
 
 
@@ -207,7 +207,7 @@ make_class_data_unm_bac <- function(grouped = FALSE) {
   if (grouped) {
     base$sample_name <- c(rep("WT", 4), rep("KO", 3))
   }
-  base
+  return(base)
 }
 
 
@@ -238,7 +238,7 @@ make_class_data_decorated <- function(grouped = FALSE) {
   if (grouped) {
     base$sample_name <- c(rep("WT", 5), rep("KO", 4))
   }
-  base
+  return(base)
 }
 
 

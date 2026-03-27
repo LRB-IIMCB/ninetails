@@ -4,6 +4,7 @@
 
 
 # Helper: Create test data suitable for Fisher's test
+################################################################################
 # Requires: grouping_factor with 2 levels, counts for blank/decorated reads
 create_fisher_test_data <- function() {
   data.frame(

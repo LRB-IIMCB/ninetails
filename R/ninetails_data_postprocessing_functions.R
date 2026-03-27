@@ -1262,20 +1262,20 @@ correct_residue_data <- function(class_data,
   load(path_to_builtin_whitelists)
 
   #whitelists
-  if (ref == "mmusculus") {
-    whitelist = mouse_whitelist
-  } else if (ref == "hsapiens") {
-    whitelist = human_whitelist
-  } else if (ref == "scerevisiae") {
-    whitelist = saccer_whitelist
-  } else if (ref == "celegans") {
-    whitelist = celegans_whitelist
-  } else if (ref == "athaliana") {
-    whitelist = arabidopsis_whitelist
-  } else if (ref == "tbrucei") {
-    whitelist = trypa_whitelist
+  if (identical(ref, "mmusculus")) {
+    whitelist <- mouse_whitelist
+  } else if (identical(ref, "hsapiens")) {
+    whitelist <- human_whitelist
+  } else if (identical(ref, "scerevisiae")) {
+    whitelist <- saccer_whitelist
+  } else if (identical(ref, "celegans")) {
+    whitelist <- celegans_whitelist
+  } else if (identical(ref, "athaliana")) {
+    whitelist <- arabidopsis_whitelist
+  } else if (identical(ref, "tbrucei")) {
+    whitelist <- trypa_whitelist
   } else {
-    whitelist = ref
+    whitelist <- ref
   }
 
   # merge the filtered data

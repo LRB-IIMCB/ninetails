@@ -1859,7 +1859,7 @@ merge_cdna_results <- function(polya_results = NULL,
     polya_classes <- polya_results$read_classes
 
     # Ensure tail_type column exists
-    if (!"tail_type" %in% colnames(polya_classes)) {
+    if (!"tail_type" %in% colnames(polya_classes) && nrow(polya_classes) > 0) {
       polya_classes$tail_type <- "polyA"
     }
 
@@ -1874,7 +1874,7 @@ merge_cdna_results <- function(polya_results = NULL,
     polyt_classes <- polyt_results$read_classes
 
     # Ensure tail_type column exists
-    if (!"tail_type" %in% colnames(polyt_classes)) {
+    if (!"tail_type" %in% colnames(polyt_classes) && nrow(polyt_classes) > 0) {
       polyt_classes$tail_type <- "polyT"
     }
 
@@ -1898,7 +1898,7 @@ merge_cdna_results <- function(polya_results = NULL,
     polya_mods <- polya_results$nonadenosine_residues
 
     # Ensure tail_type column exists
-    if (!"tail_type" %in% colnames(polya_mods)) {
+    if (!"tail_type" %in% colnames(polya_mods) && nrow(polya_mods) > 0) {
       polya_mods$tail_type <- "polyA"
     }
 
@@ -1913,7 +1913,7 @@ merge_cdna_results <- function(polya_results = NULL,
     polyt_mods <- polyt_results$nonadenosine_residues
 
     # Ensure tail_type column exists
-    if (!"tail_type" %in% colnames(polyt_mods)) {
+    if (!"tail_type" %in% colnames(polyt_mods) && nrow(polyt_mods) > 0) {
       polyt_mods$tail_type <- "polyT"
     }
 
