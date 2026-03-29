@@ -1,0 +1,124 @@
+# Plots poly(A) tail length (or estimated non-A position) distribution in analyzed sample(s).
+
+This function plots distributions of either poly(A) tail lengths or
+estimated non-A residues' positions across the dataset using the
+user-predefned grouping variable (e.g. samples, conditions etc.). The
+grouping variable must be a column within the input dataset passed to
+the function.
+
+## Usage
+
+``` r
+plot_tail_distribution(
+  input_data,
+  variable_to_plot = "polya_length",
+  grouping_factor = NA,
+  max_length = NA,
+  value_to_show = NA,
+  ndensity = T,
+  title = F
+)
+```
+
+## Arguments
+
+- input_data:
+
+  the ninetails pipeline output data preprocessed with the
+  [`merge_nonA_tables`](https://LRB-IIMCB.github.io/ninetails/reference/merge_nonA_tables.md)
+  function or residue_data or other suitable data
+
+- variable_to_plot:
+
+  \[character\] string, the variable to be plotted defined by the user.
+  By default (if not provided by the user) the polya_length would be
+  plotted. Note that this variable has to be the column of input_data.
+
+- grouping_factor:
+
+  \[character\] string, the grouping variable defined by the user. Note
+  that this variable has to be the column of input_data.
+
+- max_length:
+
+  \[numeric\] maximum length of plotted tail data
+
+- value_to_show:
+
+  \[character\] string; one of the measures of central tendency: either
+  the "mode", the "median" or the "mean" value, which user wants to be
+  displayed on the plot. By default, none is specified.
+
+- ndensity:
+
+  logical \[TRUE/FALSE\]. If TRUE, the normalized density would be
+  shown. If false - the data would not be normalized. It is set to
+  "TRUE" by default.
+
+- title:
+
+  logical \[TRUE/FALSE\]. If TRUE, the title + subtitles would be
+  displayed. If not - the title & subtitle would not be visible.
+
+## Value
+
+a ggplot object
+
+## Details
+
+User can specify this in samples_table if the ninetails pipeline output
+is intended to be loaded into R session by
+[`read_residue_multiple`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_multiple.md)
+and
+[`read_class_multiple`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_multiple.md)
+functions or added manually by other means.
+
+The function takes as an input merged ninetails' output dataset, which
+can be produced with the
+[`merge_nonA_tables`](https://LRB-IIMCB.github.io/ninetails/reference/merge_nonA_tables.md)
+function.
+
+The function allows to mark measures of central tendency, either mean,
+median or mode (as vertical dashed line). One of these values may be
+shown on the plot with additional caption in lower right corner. This is
+an optional feature.
+
+Mean and median are computed using base R functions.
+
+The mode value (if specified by value_to_show argument) is computed
+using the
+[`get_mode`](https://LRB-IIMCB.github.io/ninetails/reference/get_mode.md)
+function. This is a custom helper function written based on this thread:
+https://stackoverflow.com/questions/2547402/how-to-find-the-statistical-mode
+
+This returns the density mode for normalized data to avoid unexpected
+results (messed-up plots) which may occur if the distribution is bi- or
+multimodal.
+
+This is the ninetails' implementation of plot_polya_distribution() from
+Nanotail backage by P. Krawczyk (smaegol) written under author's
+permission.
+
+The original code is available here:
+https://github.com/smaegol/nanotail/blob/master/R/polya_plots.R
+
+The function was simplified & adjusted to ninetails' naming convention
+to avoid confusion & overwriting, if both packages are loaded in the
+same R session.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+
+plt <- ninetails::plot_tail_distribution(input_data = merged_nonA_tables,
+                                         variable_to_plot = "polya_length",
+                                         grouping_factor = "group",
+                                         max_length = 200,
+                                         value_to_show = "median",
+                                         ndensity=T,
+                                         title=F)
+
+
+} # }
+```

@@ -1,0 +1,248 @@
+# Create Ninetails output tables for Dorado DRS pipeline
+
+This function integrates Dorado poly(A) tail summaries, non-adenosine
+predictions from CNN models, and poly(A) chunk information to generate
+two main outputs: per-read classifications and non-adenosine residue
+predictions with estimated positions along the poly(A) tail.
+
+## Usage
+
+``` r
+create_outputs_dorado(
+  dorado_summary_dir,
+  nonA_temp_dir,
+  polya_chunks_dir,
+  num_cores = 1,
+  qc = TRUE,
+  original_summary
+)
+```
+
+## Arguments
+
+- dorado_summary_dir:
+
+  Character string. Path to a directory containing Dorado summary files
+  (.txt, .tsv, or .csv) with per-read poly(A) tail information for reads
+  that passed Ninetails quality control filtering. These files should
+  contain only reads meeting the four QC criteria: (I) mapped to
+  reference, (II) MAPQ \> 0, (III) valid poly(A) coordinates
+  (poly_tail_start != 0), and (IV) poly(A) tail length \>= 10 nt.
+
+- nonA_temp_dir:
+
+  Character string. Path to a directory containing non-adenosine
+  prediction RDS files generated from CNN models. Each RDS file contains
+  predictions for signal chunks, stored as either named vectors or lists
+  with 'chunkname' and 'prediction' elements.
+
+- polya_chunks_dir:
+
+  Character string. Path to a directory containing poly(A) chunk RDS
+  files. These files contain segmented signal chunks with positional
+  information (chunk_start_pos, chunk_end_pos) used for calculating
+  estimated positions of non-A residues along the poly(A) tail.
+
+- num_cores:
+
+  Integer. Number of cores to use for parallelized file loading and
+  processing. Must be a positive integer. Default is 1. Parallel
+  processing uses foreach with doSNOW backend and displays progress bars
+  during file loading operations.
+
+- qc:
+
+  Logical. Whether to apply quality control filtering of terminal
+  predictions. When `TRUE` (default), predictions within 2 nt of either
+  end of the poly(A) tail are removed to reduce false positives from
+  adapter-tail boundary artifacts. Reads with only terminal predictions
+  are reclassified as blank (MPU).
+
+- original_summary:
+
+  Character string or data frame. Path to the original unfiltered Dorado
+  summary file, or the data frame itself. This file should contain ALL
+  reads from the sequencing run, including those that failed QC
+  filtering. Required for complete read accounting - the function will
+  classify all reads, including those filtered during preprocessing.
+  Must contain columns: filename, read_id, poly_tail_length,
+  poly_tail_start, poly_tail_end, alignment_genome, alignment_direction,
+  alignment_mapq.
+
+## Value
+
+A named list with two data frames:
+
+- read_classes:
+
+  Data frame with per-read classification results for ALL reads in
+  original_summary. Includes columns: readname, contig, polya_length,
+  qc_tag (MAPQ), class (decorated/blank/unclassified), and comments
+  (classification code).
+
+- nonadenosine_residues:
+
+  Data frame with per-chunk predictions of non-adenosine residues for
+  decorated reads only. Includes columns: readname, contig, prediction
+  (C/G/U), est_nonA_pos (estimated position from 3' end), polya_length,
+  qc_tag (MAPQ). Empty dataframe if no non-A residues detected.
+
+## Details
+
+The function implements a complete read accounting system that
+classifies ALL reads from the original summary file into biologically
+meaningful categories based on both quality control metrics and
+modification detection results.
+
+This function is not intended to be used outside the pipeline wrapper
+(as standalone function).
+
+## Read Classification System
+
+The function classifies reads into three main categories with specific
+biological interpretations:
+
+**1. decorated** - Reads with detected non-adenosine modifications
+
+- Comment code: YAY (Yes, A modification was detected - Yeah!)
+
+- Criteria: Read passed all QC filters AND CNN detected at least one
+  non-A residue (C, G, or U) that survived terminal filtering
+
+- Biological meaning: Poly(A) tail contains non-adenosine residues,
+  indicating potential guanylation, uridylation, or cytidylation
+
+**2. blank** - Reads without detected modifications
+
+- MAU (Move transition Absent, Unmodified): No signal deviations
+  detected; tail appears to be pure poly(A)
+
+- MPU (Move transition Present, Unmodified): Signal deviations detected
+  but CNN predicted only A residues, or predictions were filtered as
+  terminal artifacts
+
+- IRL (Insufficient Read Length): Poly(A) tail \< 10 nt; too short for
+  reliable modification detection
+
+- Biological meaning: Poly(A) tail contains only adenosine residues or
+  is too short/ambiguous for modification calling
+
+**3. unclassified** - Reads that failed quality control
+
+- UNM (UnMapped): Read unmapped to reference (alignment_direction = "\*"
+  AND alignment_mapq = 0); cannot determine tail context
+
+- BAC (BAd Coordinates): Invalid poly(A) tail coordinates
+  (poly_tail_start = 0); indicates segmentation failure
+
+- Biological meaning: Technical failures preventing reliable
+  modification analysis; excluded from biological interpretation
+
+## Position Estimation
+
+Non-adenosine residue positions are estimated using the formula:
+
+`est_nonA_pos = round(poly_tail_length - ((poly_tail_length * centr_signal_pos) / signal_length), 0)`
+
+Where:
+
+- `centr_signal_pos`: Mean of chunk start and end positions in signal
+  space
+
+- `signal_length`: 0.2 Ã— (poly_tail_end - poly_tail_start) converts
+  signal coordinates to nucleotide space
+
+- `poly_tail_length`: Total poly(A) tail length from Dorado
+
+Positions are reported as distance from the 3' end of the tail (position
+1 = most 3' nucleotide). In Dorado pipeline, all position calculations
+are rounded to integers, unlike the Guppy legacy pipeline which uses
+decimal precision.
+
+## Quality Control Criteria
+
+Reads in `dorado_summary_dir` must meet four criteria to be processed by
+the neural network:
+
+1.  **Mapped**: alignment_direction is "+" or "-", not "\*"
+
+2.  **High mapping quality**: alignment_mapq \> 0
+
+3.  **Valid coordinates**: poly_tail_start != 0 (in DRS, adapter passes
+    through pore first, so poly(A) cannot start at position 0)
+
+4.  **Sufficient length**: poly_tail_length \>= 10 nt
+
+Reads failing any criterion are marked with appropriate comment codes
+(UNM, BAC, IRL) but are still included in the output for complete read
+accounting.
+
+## Output Format Details
+
+**read_classes columns:**
+
+- readname:
+
+  Read identifier (UUID)
+
+- contig:
+
+  Reference contig/transcript name
+
+- polya_length:
+
+  Poly(A) tail length in nucleotides
+
+- qc_tag:
+
+  Mapping quality score (MAPQ)
+
+- class:
+
+  Read classification: decorated, blank, or unclassified
+
+- comments:
+
+  3-letter code: YAY, MAU, MPU, IRL, UNM, or BAC
+
+**nonadenosine_residues columns:**
+
+- readname:
+
+  Read identifier (UUID)
+
+- contig:
+
+  Reference contig/transcript name
+
+- prediction:
+
+  Predicted nucleotide: C, G, or U (A excluded)
+
+- est_nonA_pos:
+
+  Estimated position from 3' end (integer, 1-based)
+
+- polya_length:
+
+  Total poly(A) tail length in nucleotides
+
+- qc_tag:
+
+  Mapping quality score (MAPQ)
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Basic usage with complete read accounting
+results <- create_outputs_dorado(
+  dorado_summary_dir = "data/filtered_summaries",
+  nonA_temp_dir = "data/cnn_predictions",
+  polya_chunks_dir = "data/signal_chunks",
+  num_cores = 8,
+  qc = TRUE,
+  original_summary = "data/original_dorado_summary.tsv"
+)
+} # }
+```

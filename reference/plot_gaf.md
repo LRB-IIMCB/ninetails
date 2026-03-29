@@ -1,0 +1,69 @@
+# Creates a visual representation of gramian angular field corresponding to the given poly(A) tail fragment (chunk).
+
+The function uses a rainbow palette from grDevices, which makes the
+matrix more visually pleasing than greyscale (however this is just a
+visual sugar for human user, as the computer "sees" the data in
+greyscale (each of 2 dimensions as single-channel matrix).
+
+## Usage
+
+``` r
+plot_gaf(gaf_name, gaf_list, save_file = FALSE)
+```
+
+## Arguments
+
+- gaf_name:
+
+  character string. Name of the given read segment (chunk) for which the
+  gaf is meant to be plotted. This is the name of the given gaf within
+  the gaf_list produced by the
+  [`create_gaf_list`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md)
+  function.
+
+- gaf_list:
+
+  A list of gaf matrices organized by the read ID_index.
+
+- save_file:
+
+  logical \[TRUE/FALSE\]. If TRUE, the gaf plot 100x100 (pixels) would
+  be saved in the current workng directory. If FALSE, the plot would be
+  displayed only in the window. This parameter is set to FALSE by
+  default.
+
+## Value
+
+gramian angular field representing given fragment of nanopore read
+signal.
+
+## Details
+
+IMPORTANT NOTE! Please keep in mind that the matrices produced by
+ninetails pipeline are originally two-dimensional arrays (GASF & GADF
+combined). Each of the dimensions are plotted alltogether (collapsed) as
+a single depiction. However, they can be splitted, but this requires
+additional processing steps. For the purpose of ONT signal
+classification, this combined GASF + GADF approach turned out to be the
+most suitable, thus the single-dimension extraction is currently not
+implemented within ninetails plotting functions (which does not mean it
+would not be).
+
+User can control the size of the plot by defining the dimensions within
+the code chunk in R/RStudio. However, please keep in mind that the
+ninetails' default built-in model was trained on 100x100 gasfs.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+
+example_gaf <- ninetails::plot_gaf(
+ gaf_name = "5c2386e6-32e9-4e15-a5c7-2831f4750b2b_1",
+ gaf_list = gl,
+ save_file = TRUE)
+
+print(example_gaf)
+
+} # }
+```

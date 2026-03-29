@@ -1,0 +1,43 @@
+# Publications
+
+This page lists publications that use or describe **ninetails** for
+poly(A) tail analysis in Oxford Nanopore sequencing data.
+
+------------------------------------------------------------------------
+
+## Main publication
+
+> **Please cite this paper when using ninetails in your research.**
+
+**Gumińska N, Matylla-Kulińska K, Krawczyk PS, et al. Direct profiling
+of non-adenosines in poly(A) tails of endogenous and therapeutic mRNAs
+with Ninetails. *Nat Commun* 16, 2664 (2025). doi:
+[10.1038/s41467-025-57787-6](https://doi.org/10.1038/s41467-025-57787-6)**
+
+------------------------------------------------------------------------
+
+## Related publications
+
+Gumińska N, Czarnocka-Cieciura A, Zakryś B, Milanowski R. Poly(A)
+Profiling for Euglenozoans Using Oxford Nanopore Direct RNA Sequencing,
+Illustrated by the Example of *Euglena gracilis*. *Methods Mol Biol.*
+2026;3013:91-108. doi:
+[10.1007/978-1-0716-5142-1_6](https://doi.org/10.1007/978-1-0716-5142-1_6).
+PMID: 41627732.
+
+Maździarz MA, Krawczyk K, Lepiarczyk E, et al. Poly(A) tail dynamics,
+non-adenine incorporation and alternative polyadenylation shape the host
+transcriptome in COVID-19 pathogenesis. *Sci Rep* 15, 37986 (2025). doi:
+[10.1038/s41598-025-21969-5](https://doi.org/10.1038/s41598-025-21969-5)
+
+Gumińska N, Pauzin FP, Kuźniewska B, Miłek J, Wardaszka-Pianka P,
+Krawczyk PS, Mroczek S, Jeleń S, Pagenhart PU, Bramham CR, Dziembowski
+A, Dziembowska M. Polyadenylation landscape of in vivo long-term
+potentiation in the rat brain. *RNA.* 2025 Nov 17;31(12):1712-1734. doi:
+[10.1261/rna.080485.125](https://doi.org/10.1261/rna.080485.125). PMID:
+40962679; PMCID: PMC12621599.
+
+Czarnocka-Cieciura A, Brouze M, Gumińska N, et al. Comprehensive
+analysis of poly(A) tails in mouse testes and ovaries using Nanopore
+Direct RNA Sequencing. *Sci Data* 12, 43 (2025). doi:
+[10.1038/s41597-024-04226-8](https://doi.org/10.1038/s41597-024-04226-8)

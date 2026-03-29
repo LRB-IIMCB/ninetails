@@ -1,0 +1,622 @@
+# ninetails
+
+[![Codecov test
+coverage](https://codecov.io/gh/LRB-IIMCB/ninetails/graph/badge.svg)](https://app.codecov.io/gh/LRB-IIMCB/ninetails)
+
+**An R package for finding non-adenosine residues in poly(A) tails of
+Oxford Nanopore sequencing reads**
+
+## Introduction
+
+**Ninetails** detects and characterises non-adenosine nucleotides
+embedded within poly(A) tails of Oxford Nanopore sequencing reads. It
+currently supports three pipelines:
+
+**WARNING! cDNA pipeline under construction! Please do not use it for
+now!**
+
+| Pipeline       | Basecaller     | Input format         | Function                                                                                                  |
+|----------------|----------------|----------------------|-----------------------------------------------------------------------------------------------------------|
+| Dorado DRS     | Dorado ≥ 1.0.0 | POD5 + summary       | [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md)   |
+| Dorado cDNA    | Dorado ≥ 1.0.0 | POD5 + BAM + summary | [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md) |
+| Guppy (legacy) | Guppy ≤ 6.0.0  | fast5 + Nanopolish   | [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)             |
+
+**Ninetails** can distinguish characteristic signal signatures of four
+nucleotide types: adenosines (A), cytosines (C), guanosines (G), and
+uridines (U).
+
+![](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
+
+> **Note**
+>
+> **For detailed documentation including explanation of additional data
+> processing and visualisation features see the [Ninetails
+> Wiki](https://github.com/LRB-IIMCB/ninetails/wiki)**
+
+The software is still under active development. All suggestions for
+improvement are welcome. Please note that the code may change
+frequently, so use it with caution.
+
+**Ninetails** has been tested on Linux Mint 20.3, Ubuntu 20.04.3 and
+Windows 11 with R 4.1.2, R 4.2.0 and R 4.2.1.
+
+## Installation
+
+**Ninetails** is not currently available on CRAN or Bioconductor.
+Install it using `devtools`:
+
+``` r
+install.packages("devtools")
+devtools::install_github('LRB-IIMCB/ninetails')
+library(ninetails)
+```
+
+> **Note for Windows users**
+>
+> Before installing `devtools` on Windows, install `Rtools` so packages
+> compile correctly: <https://cran.r-project.org/bin/windows/Rtools/>
+
+Installation takes approximately 20 seconds on a typical PC. Additional
+time is required to install and configure third-party components
+(Dorado, POD5 Python module, Keras).
+
+**Ninetails requires additional components to operate. See the
+[Wiki](https://github.com/LRB-IIMCB/ninetails/wiki) for full
+installation instructions.**
+
+## General usage
+
+All pipeline wrappers share the `check_tails` prefix. Choose the
+appropriate function for your data type.
+
+------------------------------------------------------------------------
+
+### Dorado DRS pipeline — `check_tails_dorado_DRS()`
+
+The recommended pipeline for direct RNA sequencing (DRS) data basecalled
+with Dorado ≥ 1.0.0 using POD5 format.
+
+``` r
+results <- ninetails::check_tails_dorado_DRS(
+  dorado_summary = "path/to/dorado_alignment_summary.txt",
+  pod5_dir       = "path/to/pod5_dir/",
+  num_cores      = 2,
+  qc             = TRUE,
+  save_dir       = "~/output/",
+  prefix         = "experiment1",
+  part_size      = 40000,
+  cleanup        = FALSE
+)
+```
+
+**Parameters:**
+
+| parameter        | description                                                                                                                                      |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `dorado_summary` | Path to Dorado summary file or in-memory data frame. Must contain `read_id`, `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end`. |
+| `pod5_dir`       | Path to directory containing POD5 files.                                                                                                         |
+| `num_cores`      | Number of CPU cores for parallel processing.                                                                                                     |
+| `qc`             | Logical. Apply quality control filtering (recommended).                                                                                          |
+| `save_dir`       | Output directory. Created if it does not exist.                                                                                                  |
+| `prefix`         | Optional prefix for output file names.                                                                                                           |
+| `part_size`      | Number of reads per processing chunk. Reduce if memory is limited.                                                                               |
+| `cleanup`        | Logical. Remove intermediate files after completion.                                                                                             |
+
+------------------------------------------------------------------------
+
+### Dorado cDNA pipeline — `check_tails_dorado_cDNA()`
+
+For complementary DNA (cDNA) sequencing data. Extends the DRS pipeline
+with BAM file processing for sequence extraction and automatic read
+orientation classification (polyA vs polyT).
+
+``` r
+results <- ninetails::check_tails_dorado_cDNA(
+  bam_file       = "path/to/aligned_cdna.bam",
+  dorado_summary = "path/to/dorado_summary.txt",
+  pod5_dir       = "path/to/pod5_dir/",
+  num_cores      = 2,
+  qc             = TRUE,
+  save_dir       = "~/output/",
+  prefix         = "experiment1",
+  part_size      = 40000,
+  cleanup        = FALSE
+)
+```
+
+**Additional parameter vs DRS:**
+
+| parameter  | description                                                                                                             |
+|------------|-------------------------------------------------------------------------------------------------------------------------|
+| `bam_file` | Path to BAM file containing aligned cDNA reads with basecalled sequences. Required for read orientation classification. |
+
+The cDNA pipeline classifies each read as `polyA`, `polyT`, or
+`unidentified` using Dorado-style SSP/VNP primer matching before
+processing. Output tables include an additional `tail_type` column.
+
+------------------------------------------------------------------------
+
+### Guppy legacy pipeline — `check_tails_guppy()`
+
+For DRS data basecalled with Guppy ≤ 6.0.0 using fast5 format and
+Nanopolish poly(A) coordinates. **This pipeline is no longer actively
+developed** (critical bug fixes only).
+
+> **Warning**
+>
+> **Current pre-release versions of the package work with Guppy
+> basecaller 6.0.0 and lower. Please be aware to use a compatible
+> version of basecaller.**
+
+``` r
+results <- ninetails::check_tails_guppy(
+  polya_data = system.file('extdata', 'test_data',
+                            'nanopolish_output.tsv',
+                            package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 'test_data',
+                                    'sequencing_summary.txt',
+                                    package = 'ninetails'),
+  workspace = system.file('extdata', 'test_data',
+                           'basecalled_fast5',
+                           package = 'ninetails'),
+  num_cores      = 2,
+  basecall_group = 'Basecall_1D_000',
+  pass_only      = TRUE,
+  save_dir       = '~/output/')
+```
+
+Before running, ensure that the Nanopolish output file, sequencing
+summary, and fast5 directory all correspond to the same set of reads.
+Complete discrepancies will cause an error; partial mismatches will
+produce a warning and the affected reads will be omitted.
+
+> **Note**
+>
+> Ninetails does not support single fast5 files. Convert them to
+> multi-fast5 format with `ont-fast5-api` before using this pipeline.
+
+**Legacy classification codes** (Guppy pipeline only — these differ from
+the Dorado pipelines):
+
+| class          | comments | explanation                                       |
+|----------------|----------|---------------------------------------------------|
+| `modified`     | `YAY`    | Move transition present, non-A residue detected   |
+| `unmodified`   | `MAU`    | Move transition absent, non-A residue undetected  |
+| `unmodified`   | `MPU`    | Move transition present, non-A residue undetected |
+| `unclassified` | `QCF`    | Nanopolish QC failed                              |
+| `unclassified` | `NIN`    | Not included in the analysis (`pass_only = TRUE`) |
+| `unclassified` | `IRL`    | Insufficient read length                          |
+
+------------------------------------------------------------------------
+
+## Output
+
+All pipelines return a named list with two data frames and save them as
+tab-delimited text files in `save_dir`. A log file is also written for
+each run.
+
+### `read_classes`
+
+Complete accounting of all reads in the analysis. Each read is assigned
+one class and one comment code.
+
+| column         | content                                                         |
+|----------------|-----------------------------------------------------------------|
+| `readname`     | Unique read identifier                                          |
+| `contig`       | Reference sequence/transcript the read mapped to                |
+| `polya_length` | Estimated poly(A) tail length (nt)                              |
+| `qc_tag`       | Mapping quality score                                           |
+| `class`        | Classification result: `decorated`, `blank`, or `unclassified`  |
+| `comments`     | 3-letter code explaining the classification outcome (see below) |
+| `tail_type`    | `polyA` or `polyT` — cDNA pipeline only                         |
+
+**Classification codes:**
+
+| class          | comments | explanation                                              |
+|----------------|----------|----------------------------------------------------------|
+| `decorated`    | `YAY`    | Non-adenosine residue detected                           |
+| `blank`        | `MAU`    | No signal deviation detected; pure poly(A) signal        |
+| `blank`        | `MPU`    | Signal deviation present but predicted as adenosine only |
+| `unclassified` | `IRL`    | Poly(A) tail too short (\< 10 nt) for reliable analysis  |
+| `unclassified` | `UNM`    | Read unmapped to reference                               |
+| `unclassified` | `BAC`    | Invalid poly(A) coordinates (`poly_tail_start = 0`)      |
+
+### `nonadenosine_residues`
+
+Modification-level detail for `decorated` reads only. Each row is one
+predicted non-adenosine residue. A read may have multiple rows if
+multiple modifications were detected.
+
+| column         | content                                                                                |
+|----------------|----------------------------------------------------------------------------------------|
+| `readname`     | Unique read identifier                                                                 |
+| `contig`       | Reference sequence/transcript                                                          |
+| `prediction`   | Predicted nucleotide type: `C`, `G`, or `U`                                            |
+| `est_nonA_pos` | Estimated position within the poly(A) tail from the 3’ end (integer, Dorado pipelines) |
+| `polya_length` | Total poly(A) tail length (nt)                                                         |
+| `qc_tag`       | Mapping quality score                                                                  |
+| `tail_type`    | `polyA` or `polyT` — cDNA pipeline only                                                |
+
+## Important notes
+
+- Signal transformations can place a heavy load on memory, especially
+  for full sequencing runs. Adjust `part_size` to manage memory usage.
+- Ninetails relies on external poly(A) boundary detection (Dorado /
+  Nanopolish / tailfindr) and may underestimate terminal modifications
+  at the last 1–2 nucleotides of the tail.
+- Since version 1.0.2, Ninetails is compatible with tailfindr output via
+  `tailfindr_compatibility()`.
+
+## Citation
+
+Please cite **Ninetails** as:
+
+Gumińska, N., Matylla-Kulińska, K., Krawczyk, P.S. et al. Direct
+profiling of non-adenosines in poly(A) tails of endogenous and
+therapeutic mRNAs with Ninetails. *Nat Commun* **16**, 2664 (2025).
+<https://doi.org/10.1038/s41467-025-57787-6>
+
+## Troubleshooting
+
+If you encounter a bug, please open an issue on GitHub. To help diagnose
+the problem, provide a minimal reproducible example (5–10 reads with
+corresponding Dorado summary / Nanopolish output / sequencing summary),
+so the error can be reproduced and fixed.
+
+## Maintainer
+
+Any issues regarding **Ninetails** should be addressed to Natalia
+Gumińska (nguminska (at) iimcb.gov.pl).
+
+**Ninetails** was developed in the [Laboratory of RNA
+Biology](https://www.iimcb.gov.pl/en/research/41-laboratory-of-rna-biology-era-chairs-group)
+(Dziembowski Lab) at the [International Institute of Molecular and Cell
+Biology](https://www.iimcb.gov.pl/en/) in Warsaw.
+
+# Package index
+
+## Pipeline wrappers
+
+Top-level functions for running the complete analysis pipeline. Choose
+the appropriate wrapper based on your basecaller and data type.
+
+- [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md)
+  : Complete Oxford Nanopore poly(A) tail analysis pipeline for Dorado
+  DRS data.
+- [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md)
+  : Complete Oxford Nanopore poly(A)/poly(T) tail analysis pipeline for
+  Dorado cDNA data.
+- [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)
+  : Wrapper function for complete DRS processing by ninetails package
+  (legacy mode).
+
+## Dorado DRS pipeline
+
+Functions for processing direct RNA sequencing (DRS) data basecalled
+with Dorado ≥ 1.0.0 in POD5 format.
+
+- [`preprocess_inputs()`](https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs.md)
+  : Preprocess Dorado inputs for ninetails analysis (no BAM processing)
+- [`process_dorado_summary()`](https://LRB-IIMCB.github.io/ninetails/reference/process_dorado_summary.md)
+  : Process and split Dorado summary file into smaller parts
+- [`filter_dorado_summary()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_dorado_summary.md)
+  : Filter Dorado summary for reads fulfilling ninetails quality
+  criteria
+- [`extract_tails_from_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tails_from_pod5.md)
+  : Extract poly(A) tail signal segments from POD5 files using parallel
+  Python processing
+- [`create_tail_features_list_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_features_list_dorado.md)
+  : Creates a nested list of Dorado tail features (raw signal +
+  pseudomoves).
+- [`create_tail_chunk_list_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list_dorado.md)
+  : Creates list of poly(A) tail chunks (Dorado mode) centered on
+  significant signal deviations.
+- [`split_tail_centered_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/split_tail_centered_dorado.md)
+  : Extracts fragments of poly(A) tail signal (Dorado mode) containing
+  potential modifications along with their delimitation (positional
+  indices; coordinates) within the tail.
+- [`process_dorado_signal_files()`](https://LRB-IIMCB.github.io/ninetails/reference/process_dorado_signal_files.md)
+  : Process Dorado poly(A) signal files for non-A prediction and tail
+  chunk extraction
+- [`create_outputs_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado.md)
+  : Create Ninetails output tables for Dorado DRS pipeline
+
+## Dorado cDNA pipeline
+
+Functions for processing cDNA sequencing data, including BAM file
+processing, basecalled sequence extraction, and read orientation
+classification (polyA vs polyT).
+
+- [`preprocess_inputs_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs_cdna.md)
+  : Preprocess Dorado inputs for ninetails cDNA analysis
+- [`split_bam_file_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/split_bam_file_cdna.md)
+  : Split BAM file into parts based on read IDs from summary file
+- [`extract_data_from_bam()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_data_from_bam.md)
+  : Extract data from BAM file for cDNA analysis
+- [`detect_orientation_single()`](https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.md)
+  : Detect poly tail type for a single sequence using Dorado-style
+  algorithm
+- [`detect_orientation_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.md)
+  : Classify multiple cDNA read orientations using Dorado-style poly
+  tail detection
+- [`process_polya_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_reads_cdna.md)
+  : Process polyA reads using standard ninetails pipeline
+- [`process_polyt_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polyt_reads_cdna.md)
+  : Process polyT reads using ninetails pipeline
+- [`create_outputs_dorado_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado_cdna.md)
+  : Create Ninetails output tables for Dorado cDNA pipeline
+- [`merge_cdna_results()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.md)
+  : Merge polyA and polyT processing results for cDNA analysis
+- [`save_cdna_outputs()`](https://LRB-IIMCB.github.io/ninetails/reference/save_cdna_outputs.md)
+  : Save cDNA pipeline outputs in standard ninetails format
+
+## Guppy legacy pipeline
+
+Functions for processing DRS data basecalled with Guppy ≤ 6.0.0 using
+fast5 format and Nanopolish poly(A) coordinates. This pipeline is no
+longer actively developed.
+
+- [`extract_polya_data()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_polya_data.md)
+  : Extract poly(A) data from nanopolish output and sequencing summary
+- [`extract_tail_data()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data.md)
+  : Extract tail features of a single RNA read from a multi-Fast5 file
+- [`create_tail_feature_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list.md)
+  : Create list of poly(A) tail features from multi-Fast5 files
+- [`create_tail_chunk_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list.md)
+  : Create list of poly(A) tail chunks centered on significant signal
+  deviations
+- [`split_tail_centered()`](https://LRB-IIMCB.github.io/ninetails/reference/split_tail_centered.md)
+  : Extract modification-centered signal fragments from a poly(A) tail
+- [`create_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf.md)
+  : Convert ONT signal to Gramian Angular Field
+- [`create_gaf_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md)
+  : Create list of Gramian Angular Field matrices from tail chunks
+- [`process_polya_complete()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_complete.md)
+  : Process a single (unsplit) poly(A) data file through the Guppy
+  pipeline.
+- [`process_polya_parts()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_parts.md)
+  : Process poly(A) data split into multiple parts through the Guppy
+  pipeline.
+- [`split_polya_data()`](https://LRB-IIMCB.github.io/ninetails/reference/split_polya_data.md)
+  : Split large poly(A) data file into smaller parts.
+- [`create_outputs()`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs.md)
+  : Create ninetails output tables (Guppy legacy pipeline)
+- [`save_outputs()`](https://LRB-IIMCB.github.io/ninetails/reference/save_outputs.md)
+  : Save pipeline outputs to files.
+
+## Training dataset production
+
+Functions for preparing training and validation datasets for the
+convolutional neural network (CNN) model.
+
+- [`prepare_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset.md)
+  : Filters out signals of a given nucleotide type for neural network
+  training-set preparation.
+- [`extract_tail_data_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data_trainingset.md)
+  : Extracts tail features of single RNA read from respective basecalled
+  multi-fast5 file.
+- [`create_tail_feature_list_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset.md)
+  : Extracts features of poly(A) tails of ONT RNA reads required for
+  finding non-A nucleotides within the given tails.
+- [`create_tail_feature_list_A()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_A.md)
+  : Extracts features of poly(A) tails containing only A nucleotides for
+  training-set preparation.
+- [`create_tail_chunk_list_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list_trainingset.md)
+  : Extracts decoration-centered fragments of poly(A) tails for all
+  reads and appends positional data to a nested list.
+- [`create_tail_chunk_list_A()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list_A.md)
+  : Creates list of tail chunks containing only A nucleotides.
+- [`split_tail_centered_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/split_tail_centered_trainingset.md)
+  : Extracts decoration-centered fragments of poly(A) tail signal along
+  with positional coordinates.
+- [`split_with_overlaps()`](https://LRB-IIMCB.github.io/ninetails/reference/split_with_overlaps.md)
+  : Splits signal to overlapping fragments of equal length.
+- [`filter_nonA_chunks_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_nonA_chunks_trainingset.md)
+  : Filters read chunks containing non-adenosine nucleotides of interest
+  for neural network training-set preparation.
+- [`filter_signal_by_threshold_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_signal_by_threshold_trainingset.md)
+  : Detection of outliers (peaks & valleys) in ONT signal using
+  z-scores.
+- [`create_gaf_list_A()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list_A.md)
+  : Produces list of GAFs containing exclusively A-nucleotides for
+  neural network training.
+
+## Data postprocessing
+
+Functions for correcting, reclassifying, and reshaping ninetails output
+tables after the pipeline has run.
+
+- [`correct_class_data()`](https://LRB-IIMCB.github.io/ninetails/reference/correct_class_data.md)
+  : Corrects the classification of reads contained in the class_data
+  table.
+- [`correct_residue_data()`](https://LRB-IIMCB.github.io/ninetails/reference/correct_residue_data.md)
+  : Marks uncertain positions of non-A residues in ninetails output
+  data.
+- [`correct_labels()`](https://LRB-IIMCB.github.io/ninetails/reference/correct_labels.md)
+  : Correct read class labels for backward compatibility
+- [`reclassify_ninetails_data()`](https://LRB-IIMCB.github.io/ninetails/reference/reclassify_ninetails_data.md)
+  : Reclassifies ambiguous non-A residues to mitigate potential errors
+  inherited from nanopolish segmentation.
+- [`read_class_single()`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_single.md)
+  : Reads ninetails read_classes data frame from file.
+- [`read_class_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_multiple.md)
+  : Reads multiple ninetails read_classes outputs at once.
+- [`read_residue_single()`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_single.md)
+  : Reads ninetails nonadenosine_residues data from file.
+- [`read_residue_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_multiple.md)
+  : Reads multiple ninetails nonadenosine_residues outputs at once.
+- [`merge_nonA_tables()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_nonA_tables.md)
+  : Merges ninetails tabular outputs (read classes and nonadenosine
+  residue data) to produce one concise table.
+- [`spread_nonA_residues()`](https://LRB-IIMCB.github.io/ninetails/reference/spread_nonA_residues.md)
+  : Reshapes nonadenosine_residues data frame to wide format.
+
+## Annotation
+
+Functions for biological annotation of ninetails results using external
+databases.
+
+- [`annotate_with_biomart()`](https://LRB-IIMCB.github.io/ninetails/reference/annotate_with_biomart.md)
+  : Annotate ninetails output data with biomaRt
+
+## Statistics
+
+Functions for statistical analysis and quantification of non-adenosine
+residues across reads and conditions.
+
+- [`calculate_fisher()`](https://LRB-IIMCB.github.io/ninetails/reference/calculate_fisher.md)
+  : Perform Fisher's exact test per transcript with BH p-value
+  adjustment
+- [`nonA_fisher()`](https://LRB-IIMCB.github.io/ninetails/reference/nonA_fisher.md)
+  : Perform Fisher's exact test on a single transcript in ninetails
+  output
+- [`count_class()`](https://LRB-IIMCB.github.io/ninetails/reference/count_class.md)
+  : Counts read classes found in a read_classes data frame produced by
+  the ninetails pipeline.
+- [`count_nonA_abundance()`](https://LRB-IIMCB.github.io/ninetails/reference/count_nonA_abundance.md)
+  : Counts reads by number of non-A occurrence instances.
+- [`count_residues()`](https://LRB-IIMCB.github.io/ninetails/reference/count_residues.md)
+  : Counts non-A residues found in a nonadenosine_residues data frame
+  produced by the ninetails pipeline.
+- [`summarize_nonA()`](https://LRB-IIMCB.github.io/ninetails/reference/summarize_nonA.md)
+  : Produces summary table of non-A occurrences within an analyzed
+  dataset.
+- [`nanopolish_qc()`](https://LRB-IIMCB.github.io/ninetails/reference/nanopolish_qc.md)
+  : Aggregates nanopolish polya quality control information.
+
+## Visualisation
+
+Plotting functions for inspection of raw signals, GAF images,
+classification results, and statistical summaries.
+
+- [`plot_class_counts()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_class_counts.md)
+  : Plotting read classes data per category assigned to the analyzed
+  reads.
+- [`plot_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_gaf.md)
+  : Creates a visual representation of gramian angular field
+  corresponding to the given poly(A) tail fragment (chunk).
+- [`plot_multiple_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_multiple_gaf.md)
+  : Creates a visual representation of multiple gramian angular fields
+  based on provided gaf_list (plots all gafs from the given list).
+- [`plot_nanopolish_qc()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_nanopolish_qc.md)
+  : Plots qc data (qc_tag) inherited from nanopolish polya function.
+- [`plot_nonA_abundance()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_nonA_abundance.md)
+  : Plot abundances of reads with given amount of non-A residues per
+  read
+- [`plot_panel_characteristics()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_panel_characteristics.md)
+  : Plot panel characteristics of ninetails output
+- [`plot_residue_counts()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_residue_counts.md)
+  : Plot counts of nonadenosine residues found in ninetails output data
+- [`plot_rug_density()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_rug_density.md)
+  : Scatterplot of nonA residue positions within poly(A) tail
+- [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md)
+  : Draws an entire squiggle for given read.
+- [`plot_tail_chunk()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.md)
+  : Draws a portion of poly(A) tail squiggle (chunk) for given read.
+- [`plot_tail_distribution()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_distribution.md)
+  : Plots poly(A) tail length (or estimated non-A position) distribution
+  in analyzed sample(s).
+- [`plot_tail_range_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.md)
+  : Draws tail range squiggle for given read.
+
+## tailfindr compatibility
+
+Functions for converting tailfindr output into a format compatible with
+the ninetails Guppy legacy pipeline.
+
+- [`convert_tailfindr_output()`](https://LRB-IIMCB.github.io/ninetails/reference/convert_tailfindr_output.md)
+  : Converts tailfindr results to format compatible with ninetails
+- [`check_polya_length_filetype()`](https://LRB-IIMCB.github.io/ninetails/reference/check_polya_length_filetype.md)
+  : Check and convert poly(A) length file format
+
+## Signal processing
+
+Core signal processing utilities and CNN-related helpers used internally
+by the pipeline functions.
+
+- [`filter_signal_by_threshold()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_signal_by_threshold.md)
+  : Detect outliers (peaks and valleys) in ONT signal using z-scores
+- [`winsorize_signal()`](https://LRB-IIMCB.github.io/ninetails/reference/winsorize_signal.md)
+  : Winsorize nanopore signal
+- [`substitute_gaps()`](https://LRB-IIMCB.github.io/ninetails/reference/substitute_gaps.md)
+  : Substitute short zero-gaps surrounded by nonzero pseudomoves
+- [`combine_gafs()`](https://LRB-IIMCB.github.io/ninetails/reference/combine_gafs.md)
+  : Combine GASF and GADF into a two-channel array
+- [`predict_gaf_classes()`](https://LRB-IIMCB.github.io/ninetails/reference/predict_gaf_classes.md)
+  : Classify Gramian Angular Field matrices with a pretrained CNN
+- [`load_keras_model()`](https://LRB-IIMCB.github.io/ninetails/reference/load_keras_model.md)
+  : Load Keras model for multiclass signal prediction
+
+## Sequence helpers
+
+Helper functions for primer matching and DNA sequence manipulation used
+by the cDNA orientation classification step.
+
+- [`reverse_complement()`](https://LRB-IIMCB.github.io/ninetails/reference/reverse_complement.md)
+  : Generate reverse complement of a DNA sequence
+- [`edit_distance_hw()`](https://LRB-IIMCB.github.io/ninetails/reference/edit_distance_hw.md)
+  : Calculate edit distance with sliding window (HW mode)
+- [`count_trailing_chars()`](https://LRB-IIMCB.github.io/ninetails/reference/count_trailing_chars.md)
+  : Count trailing occurrences of a character in a string
+
+## Input validation
+
+Internal assertion and type-checking utilities used throughout the
+package for input validation.
+
+- [`assert_condition()`](https://LRB-IIMCB.github.io/ninetails/reference/assert_condition.md)
+  : Assert condition is TRUE, stop with message if FALSE
+- [`assert_dir_exists()`](https://LRB-IIMCB.github.io/ninetails/reference/assert_dir_exists.md)
+  : Assert directory exists with informative error
+- [`assert_file_exists()`](https://LRB-IIMCB.github.io/ninetails/reference/assert_file_exists.md)
+  : Assert file exists with informative error
+- [`check_fast5_filetype()`](https://LRB-IIMCB.github.io/ninetails/reference/check_fast5_filetype.md)
+  : Check if the provided directory contains Fast5 files in the correct
+  format
+- [`check_output_directory()`](https://LRB-IIMCB.github.io/ninetails/reference/check_output_directory.md)
+  : Check and handle existing output directory for ninetails analysis
+- [`is_RNA()`](https://LRB-IIMCB.github.io/ninetails/reference/is_RNA.md)
+  : Check if fast5 file contains RNA reads
+- [`is_multifast5()`](https://LRB-IIMCB.github.io/ninetails/reference/is_multifast5.md)
+  : Check if fast5 file is multi-read format
+- [`is_string()`](https://LRB-IIMCB.github.io/ninetails/reference/is_string.md)
+  : Test if x is a single non-empty character string
+- [`no_na()`](https://LRB-IIMCB.github.io/ninetails/reference/no_na.md)
+  : Check for no NA values
+- [`get_mode()`](https://LRB-IIMCB.github.io/ninetails/reference/get_mode.md)
+  : Calculate the statistical mode of a numeric vector
+
+## Package
+
+- [`ninetails`](https://LRB-IIMCB.github.io/ninetails/reference/ninetails-package.md)
+  [`ninetails-package`](https://LRB-IIMCB.github.io/ninetails/reference/ninetails-package.md)
+  : ninetails: Nonadenosine Nucleotides in Poly(A) Tails
+- [`` `%>%` ``](https://LRB-IIMCB.github.io/ninetails/reference/pipe.md)
+  : Pipe operator
+
+# Articles
+
+### Getting started
+
+- [Get started with
+  ninetails](https://LRB-IIMCB.github.io/ninetails/articles/ninetails.md):
+
+### Core workflows
+
+- [Detection of
+  non-adenosines](https://LRB-IIMCB.github.io/ninetails/articles/detection.md):
+- [Data
+  postprocessing](https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.md):
+- [Plotting ninetails
+  data](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md):
+
+### Guppy pipeline (legacy)
+
+- [Visual inspection of
+  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal-inspection.md):
+- [TailfindR
+  compatibility](https://LRB-IIMCB.github.io/ninetails/articles/tailfindr.md):
+
+### Publications
+
+- [Publications](https://LRB-IIMCB.github.io/ninetails/articles/publications.md):
