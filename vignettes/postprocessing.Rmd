@@ -1,0 +1,255 @@
+---
+title: "Data postprocessing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Data postprocessing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette describes functions for loading, processing, and analyzing **ninetails** output data.
+
+## Reading files into R
+
+Data postprocessing requires output from the main ninetails pipelines (`check_tails_dorado_DRS()`, `check_tails_dorado_cDNA()`, or `check_tails_guppy()`).
+
+### Reading single files
+
+```{r read-single}
+# Read read_classes output
+class_path <- "/path/to/read_classes.tsv"
+class_data <- ninetails::read_class_single(class_path)
+
+# Read nonadenosine_residues output
+residue_path <- "/path/to/nonadenosine_residues.tsv"
+residue_data <- ninetails::read_residue_single(residue_path)
+```
+
+### Reading multiple files
+
+For experiments with multiple samples, use `read_class_multiple()` and `read_residue_multiple()` with a metadata table:
+
+```{r read-multiple}
+# Define metadata table
+samples_table <- data.frame(
+  sample_name = c("sample_1", "sample_2", "sample_3", "sample_4"),
+  group = c("control", "control", "treatment", "treatment"),
+  class_path = c(
+    "/path/to/sample_1/read_classes.tsv",
+    "/path/to/sample_2/read_classes.tsv",
+    "/path/to/sample_3/read_classes.tsv",
+    "/path/to/sample_4/read_classes.tsv"
+  ),
+  residue_path = c(
+    "/path/to/sample_1/nonadenosine_residues.tsv",
+    "/path/to/sample_2/nonadenosine_residues.tsv",
+    "/path/to/sample_3/nonadenosine_residues.tsv",
+    "/path/to/sample_4/nonadenosine_residues.tsv"
+  )
+)
+
+# Read all files at once
+class_data <- ninetails::read_class_multiple(samples_table)
+residue_data <- ninetails::read_residue_multiple(samples_table)
+```
+
+> **Note:** Required metadata columns: `sample_name`, `group`, `class_path`, `residue_path`
+
+### Using a YAML configuration file
+
+Alternatively, provide metadata in a configuration file:
+
+```{r read-yaml}
+config <- yaml::yaml.load_file("config.yml")
+samples_table <- data.frame(t(sapply(config$samples, unlist)))
+rownames(samples_table) <- NULL
+
+class_data <- ninetails::read_class_multiple(samples_table)
+residue_data <- ninetails::read_residue_multiple(samples_table)
+```
+
+Example `config.yml`:
+
+```yaml
+samples:
+  sample_1:
+    sample_name: sample_1
+    group: control
+    class_path: /path/to/sample_1/read_classes.tsv
+    residue_path: /path/to/sample_1/nonadenosine_residues.tsv
+  sample_2:
+    sample_name: sample_2
+    group: treatment
+    class_path: /path/to/sample_2/read_classes.tsv
+    residue_path: /path/to/sample_2/nonadenosine_residues.tsv
+```
+
+---
+
+## Correcting classification
+
+Sometimes nucleotides from AT-rich transcript ends are misidentified as poly(A) tails. Use `reclassify_ninetails_data()` to minimize segmentation artifacts:
+
+```{r reclassify}
+ninetails_data <- ninetails::reclassify_ninetails_data(
+  residue_data = residue_data,
+  class_data = class_data,
+  grouping_factor = "sample_name",
+  transcript_column = "ensembl_transcript_id_short",
+  ref = "mmusculus"
+)
+
+# Retrieve corrected data frames
+class_data <- ninetails_data[[1]]
+residue_data <- ninetails_data[[2]]
+```
+
+> **Note:** Apply this function before further analysis.
+
+### Supported species
+
+- *Arabidopsis thaliana*
+- *Homo sapiens*
+- *Mus musculus*
+- *Saccharomyces cerevisiae*
+- *Caenorhabditis elegans*
+- *Trypanosoma brucei*
+
+See function documentation for other species.
+
+---
+
+## Counting and summarizing
+
+### Count by class
+
+```{r count-class}
+# Simple counts
+class_counts <- ninetails::count_class(class_data)
+
+# Grouped by sample
+class_counts <- ninetails::count_class(
+  class_data,
+  grouping_factor = "sample_name"
+)
+
+# Detailed (by comments code) vs simplified (by class)
+counts_detailed <- ninetails::count_class(class_data, detailed = TRUE)
+counts_simple <- ninetails::count_class(class_data, detailed = FALSE)
+```
+
+### Count residues
+
+```{r count-residues}
+residue_counts <- ninetails::count_residues(
+  residue_data,
+  grouping_factor = "sample_name"
+)
+```
+
+---
+
+## Merging results
+
+Combine class and residue data into a single table (one row per read):
+
+```{r merge}
+merged_tables <- ninetails::merge_nonA_tables(
+  class_data = class_data,
+  residue_data = residue_data,
+  pass_only = TRUE
+)
+```
+
+The output includes a `nonA_residues` column summarizing all non-A positions per read (5' to 3', separated by ":").
+
+---
+
+## Summarizing by transcript
+
+Generate summary statistics per transcript:
+
+```{r summarize}
+summarized <- ninetails::summarize_nonA(
+  merged_nonA_tables = merged_tables,
+  summary_factors = "group",
+  transcript_id_column = "ensembl_transcript_id_short"
+)
+```
+
+Output includes:
+
+- **counts**: Number of reads (total and by non-A type)
+- **hits**: Number of non-A occurrences (a read may have multiple)
+- Mean and median poly(A) tail length by transcript
+
+---
+
+## Statistical analysis
+
+### Fisher's exact test
+
+Compare non-adenosine frequencies between conditions:
+
+```{r fisher}
+fisher_results <- ninetails::calculate_fisher(
+  ninetails_data,
+  grouping_factor = "condition",
+  comparison = c("control", "treatment")
+)
+```
+
+---
+
+## Typical workflow
+
+```{r workflow}
+library(ninetails)
+
+# 1. Load data from multiple samples
+samples <- data.frame(
+  sample_name = c("WT_1", "WT_2", "KO_1", "KO_2"),
+  group = c("WT", "WT", "KO", "KO"),
+  class_path = c("WT_1_classes.tsv", "WT_2_classes.tsv",
+                 "KO_1_classes.tsv", "KO_2_classes.tsv"),
+  residue_path = c("WT_1_residues.tsv", "WT_2_residues.tsv",
+                   "KO_1_residues.tsv", "KO_2_residues.tsv")
+)
+
+class_data <- ninetails::read_class_multiple(samples)
+residue_data <- ninetails::read_residue_multiple(samples)
+
+# 2. Reclassify to remove artifacts
+ninetails_data <- ninetails::reclassify_ninetails_data(
+  residue_data = residue_data,
+  class_data = class_data,
+  grouping_factor = "sample_name",
+  transcript_column = "ensembl_transcript_id_short",
+  ref = "mmusculus"
+)
+
+class_data <- ninetails_data[[1]]
+residue_data <- ninetails_data[[2]]
+
+# 3. Count classifications
+class_counts <- ninetails::count_class(class_data, grouping_factor = "group")
+
+# 4. Merge and summarize
+merged <- ninetails::merge_nonA_tables(class_data, residue_data)
+summary <- ninetails::summarize_nonA(merged, summary_factors = "group")
+
+# 5. Statistical comparison
+fisher <- ninetails::calculate_fisher(
+  class_data,
+  grouping_factor = "group",
+  comparison = c("WT", "KO")
+)
+```

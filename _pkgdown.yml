@@ -8,6 +8,16 @@ template:
   includes:
     in_header: |
       <style>
+      /* Fix dropdown menu header visibility */
+      .dropdown-menu .dropdown-header {
+        color: #ffffff !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding-top: 0.75rem;
+      }
+
       /* Unify fonts: system font stack throughout */
       body, .contents, .contents p, .contents li,
       .contents table, .contents th, .contents td {
@@ -62,6 +72,20 @@ navbar:
     articles:
       text: Articles
       menu:
+        - text: "Core workflows"
+        - text: Detection of non-adenosines
+          href: articles/detection.html
+        - text: Data postprocessing
+          href: articles/postprocessing.html
+        - text: Plotting ninetails data
+          href: articles/plotting.html
+        - text: "---"
+        - text: "Guppy pipeline (legacy)"
+        - text: Visual inspection of signals
+          href: articles/signal-inspection.html
+        - text: TailfindR compatibility
+          href: articles/tailfindr.html
+        - text: "---"
         - text: Publications
           href: articles/publications.html
     wiki:
@@ -85,6 +109,17 @@ articles:
     navbar: ~
     contents:
       - ninetails
+  - title: Core workflows
+    navbar: Core workflows
+    contents:
+      - detection
+      - postprocessing
+      - plotting
+  - title: Guppy pipeline (legacy)
+    navbar: Guppy pipeline
+    contents:
+      - signal-inspection
+      - tailfindr
   - title: Publications
     navbar: Publications
     contents:

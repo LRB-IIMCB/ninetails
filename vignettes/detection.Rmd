@@ -1,0 +1,207 @@
+---
+title: "Detection of non-adenosines"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Detection of non-adenosines}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette describes the three analysis pipelines available in **ninetails** for detecting non-adenosine residues in poly(A) tails.
+
+## Dorado DRS Pipeline (Recommended)
+ 
+`check_tails_dorado_DRS()` is the recommended function for direct RNA sequencing (DRS) data basecalled with Dorado ≥ 1.0.0 using POD5 format.
+
+```{r dorado-drs}
+results <- ninetails::check_tails_dorado_DRS(
+  dorado_summary = "path/to/dorado_alignment_summary.txt",
+  pod5_dir       = "path/to/pod5_dir/",
+  num_cores      = 2,
+  qc             = TRUE,
+  save_dir       = "~/output/",
+  prefix         = "experiment1",
+  part_size      = 40000,
+  cleanup        = FALSE
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `dorado_summary` | character/data.frame | *required* | Path to Dorado summary file. Must contain: `read_id`, `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end` |
+| `pod5_dir` | character | *required* | Path to directory containing POD5 files |
+| `num_cores` | integer | 1 | Number of CPU cores for parallel processing |
+| `qc` | logical | TRUE | Apply quality control filtering |
+| `save_dir` | character | *required* | Output directory |
+| `prefix` | character | "" | Optional prefix for output filenames |
+| `part_size` | integer | 40000 | Reads per processing chunk (reduce if memory limited) |
+| `cleanup` | logical | FALSE | Remove intermediate files after completion |
+
+### Pipeline steps
+
+1. **Input Validation**: Validates Dorado summary files and POD5 directories
+2. **Data Preprocessing**: Splits large datasets and applies quality filters
+3. **Signal Extraction**: Extracts poly(A) tail signals from POD5 files
+4. **Feature Engineering**: Computes pseudomoves and signal characteristics
+5. **Segmentation**: Identifies candidate modification regions
+6. **GAF Creation**: Creates Gramian Angular Fields for CNN input
+7. **Classification**: Applies trained neural networks for prediction
+8. **Output Creation**: Produces comprehensive results and statistics
+
+---
+
+## Dorado cDNA Pipeline (Under Development)
+
+> **Warning**
+>
+> This pipeline is currently under construction. Please do not use it for production analyses.
+
+`check_tails_dorado_cDNA()` extends the DRS pipeline for complementary DNA (cDNA) sequencing data with BAM file processing and automatic read orientation classification.
+
+```{r dorado-cdna}
+results <- ninetails::check_tails_dorado_cDNA(
+  bam_file       = "path/to/aligned_cdna.bam",
+  dorado_summary = "path/to/dorado_summary.txt",
+  pod5_dir       = "path/to/pod5_dir/",
+  num_cores      = 2,
+  qc             = TRUE,
+  save_dir       = "~/output/",
+  prefix         = "experiment1",
+  part_size      = 40000,
+  cleanup        = FALSE
+)
+```
+
+### Additional parameter (vs DRS)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `bam_file` | character | Path to BAM file containing aligned cDNA reads with basecalled sequences |
+
+The cDNA pipeline classifies each read as `polyA`, `polyT`, or `unidentified` using Dorado-style SSP/VNP primer matching. Output tables include an additional `tail_type` column.
+
+---
+
+## Guppy Legacy Pipeline
+
+> **Warning**
+>
+> This pipeline works with Guppy basecaller 6.0.0 and lower only. It is maintained for backward compatibility and will not be further optimised. For new analyses, use the Dorado DRS pipeline.
+
+`check_tails_guppy()` is the legacy function for DRS data basecalled with Guppy using fast5 format and Nanopolish poly(A) coordinates.
+
+```{r guppy-legacy}
+results <- ninetails::check_tails_guppy(
+  polya_data = system.file('extdata', 'test_data',
+                           'nanopolish_output.tsv',
+                           package = 'ninetails'),
+  sequencing_summary = system.file('extdata', 'test_data',
+                                   'sequencing_summary.txt',
+                                   package = 'ninetails'),
+  workspace = system.file('extdata', 'test_data',
+                          'basecalled_fast5',
+                          package = 'ninetails'),
+  num_cores = 2,
+  basecall_group = 'Basecall_1D_000',
+  pass_only = TRUE,
+  save_dir = '~/output/')
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `polya_data` | character/data.frame | *required* | Path to Nanopolish polya output or tailfindr output |
+| `sequencing_summary` | character/data.frame | *required* | Path to sequencing summary file |
+| `workspace` | character | *required* | Path to directory with multi-fast5 files |
+| `num_cores` | integer | 1 | Number of CPU cores |
+| `basecall_group` | character | "Basecall_1D_000" | Fast5 hierarchy level |
+| `pass_only` | logical | TRUE | Include only "PASS" reads |
+| `qc` | logical | TRUE | Label terminal positions with "-WARN" |
+| `save_dir` | character | *required* | Output directory |
+| `part_size` | integer | 1000000 | Max rows per chunk |
+
+---
+
+## Output structure
+
+All pipelines return a named list with two data frames:
+
+### read_classes
+
+Complete accounting of all reads in the analysis.
+
+| Column | Description |
+|---|---|
+| `readname` | Unique read identifier |
+| `contig` | Reference sequence/transcript |
+| `polya_length` | Estimated poly(A) tail length (nt) |
+| `qc_tag` | Quality tag |
+| `class` | Classification: `decorated`, `blank`, or `unclassified` |
+| `comments` | 3-letter code explaining the classification |
+| `tail_type` | `polyA` or `polyT` (cDNA pipeline only) |
+
+### nonadenosine_residues
+
+Modification-level detail for `decorated` reads only.
+
+| Column | Description |
+|---|---|
+| `readname` | Unique read identifier |
+| `contig` | Reference sequence/transcript |
+| `prediction` | Predicted nucleotide: `C`, `G`, or `U` |
+| `est_nonA_pos` | Position within poly(A) tail |
+| `polya_length` | Total tail length (nt) |
+| `qc_tag` | Quality tag |
+| `tail_type` | `polyA` or `polyT` (cDNA pipeline only) |
+
+---
+
+## Classification codes
+
+### Dorado pipelines (DRS and cDNA)
+
+| Class | Code | Explanation |
+|---|---|---|
+| `decorated` | `YAY` | Non-adenosine residue detected |
+| `blank` | `MAU` | No signal deviation; pure poly(A) |
+| `blank` | `MPU` | Signal deviation present but predicted as adenosine |
+| `unclassified` | `IRL` | Poly(A) tail too short (< 10 nt) |
+| `unclassified` | `UNM` | Read unmapped |
+| `unclassified` | `BAC` | Invalid coordinates (`poly_tail_start = 0`) |
+
+### Guppy legacy pipeline
+
+| Class | Code | Explanation |
+|---|---|---|
+| `decorated` | `YAY` | Move transition present, non-A detected |
+| `blank` | `MAU` | Move transition absent, non-A undetected |
+| `blank` | `MPU` | Move transition present, non-A undetected |
+| `unclassified` | `QCF` | Nanopolish QC failed |
+| `unclassified` | `NIN` | Not included (`pass_only = TRUE`) |
+| `unclassified` | `IRL` | Insufficient read length |
+
+---
+
+## Memory considerations
+
+> **Warning**
+>
+> Signal transformations can place a heavy load on memory, especially for full sequencing runs.
+
+To manage memory:
+
+- Adjust `part_size` to control reads per chunk
+- Default is 40,000 (Dorado) or 1,000,000 (Guppy)
+- Reduce if experiencing memory issues
+- Use `cleanup = TRUE` to remove intermediate files
