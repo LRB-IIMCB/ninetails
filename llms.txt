@@ -27,18 +27,19 @@ uridines (U).
 
 ![](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
 
-> **Note**
->
-> **For detailed documentation including explanation of additional data
-> processing and visualisation features see the [Ninetails
-> Wiki](https://github.com/LRB-IIMCB/ninetails/wiki)**
-
 The software is still under active development. All suggestions for
 improvement are welcome. Please note that the code may change
 frequently, so use it with caution.
 
 **Ninetails** has been tested on Linux Mint 20.3, Ubuntu 20.04.3 and
 Windows 11 with R 4.1.2, R 4.2.0 and R 4.2.1.
+
+## Documentation
+
+📘 **Full documentation:** <https://LRB-IIMCB.github.io/ninetails/>
+
+📖 **Wiki (tutorials & guides):**
+<https://github.com/LRB-IIMCB/ninetails/wiki>
 
 ## Installation
 
