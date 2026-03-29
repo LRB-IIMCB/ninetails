@@ -5,6 +5,7 @@
 <a href="https://www.linux.org/" title="Go to Linux homepage"><img src="https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white" alt="OS - Linux"></a>
 <a href="https://www.microsoft.com/" title="Go to Microsoft homepage"><img src="https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white" alt="OS - Windows"></a>
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13309819.svg)](https://doi.org/10.5281/zenodo.13309819)
+[![pkgdown](https://img.shields.io/badge/docs-pkgdown-blue)](https://LRB-IIMCB.github.io/ninetails/)
 
 [![Codecov test coverage](https://codecov.io/gh/LRB-IIMCB/ninetails/graph/badge.svg)](https://app.codecov.io/gh/LRB-IIMCB/ninetails)
 <!-- badges: end -->
@@ -30,13 +31,16 @@
 
 <img src="https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172" alt="" />
 
-> **Note**
->
-> **For detailed documentation including explanation of additional data processing and visualisation features see the [Ninetails Wiki](https://github.com/LRB-IIMCB/ninetails/wiki)**
-
 The software is still under active development. All suggestions for improvement are welcome. Please note that the code may change frequently, so use it with caution.
 
 **Ninetails** has been tested on Linux Mint 20.3, Ubuntu 20.04.3 and Windows 11 with R 4.1.2, R 4.2.0 and R 4.2.1.
+
+
+## Documentation
+
+📘 **Full documentation:** https://LRB-IIMCB.github.io/ninetails/
+
+📖 **Wiki (tutorials & guides):** https://github.com/LRB-IIMCB/ninetails/wiki
 
 
 ## Installation
