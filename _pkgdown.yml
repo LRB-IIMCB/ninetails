@@ -1,0 +1,277 @@
+url: https://LRB-IIMCB.github.io/ninetails/
+
+template:
+  bootstrap: 5
+  bootswatch: yeti
+  bslib:
+    primary: "#2C7BB6"
+  includes:
+    in_header: |
+      <style>
+      /* Unify fonts: system font stack throughout */
+      body, .contents, .contents p, .contents li,
+      .contents table, .contents th, .contents td {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                     "Helvetica Neue", Arial, sans-serif;
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+
+      /* Consistent table styling */
+      .contents table {
+        font-size: 0.95rem;
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+
+      .contents th, .contents td {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #dee2e6;
+        vertical-align: top;
+      }
+
+      .contents th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+      }
+
+      /* Consistent code styling */
+      .contents code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas,
+                     "Liberation Mono", "Courier New", monospace;
+        font-size: 0.875em;
+        padding: 0.125rem 0.25rem;
+        background-color: #f8f9fa;
+        border-radius: 0.25rem;
+      }
+      </style>
+
+home:
+  sidebar:
+    structure: [links, license, citation, authors, dev]
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, wiki, github]
+  components:
+    intro:
+      text: Get started
+      href: articles/ninetails.html
+    articles:
+      text: Articles
+      menu:
+        - text: Publications
+          href: articles/publications.html
+    wiki:
+      icon: fa-book
+      href: https://github.com/LRB-IIMCB/ninetails/wiki
+      aria-label: Wiki
+    github:
+      icon: fab fa-github
+      href: https://github.com/LRB-IIMCB/ninetails
+      aria-label: GitHub
+
+footer:
+  left: >
+    Developed by [Natalia Gumińska](mailto:nguminska@iimcb.gov.pl),
+    [Laboratory of RNA Biology](https://www.iimcb.gov.pl/en/research/41-laboratory-of-rna-biology-era-chairs-group),
+    IIMCB Warsaw.
+  right: Built with [pkgdown](https://pkgdown.r-lib.org/).
+
+articles:
+  - title: Getting started
+    navbar: ~
+    contents:
+      - ninetails
+  - title: Publications
+    navbar: Publications
+    contents:
+      - publications
+
+reference:
+  - title: "Pipeline wrappers"
+    desc: >
+      Top-level functions for running the complete analysis pipeline.
+      Choose the appropriate wrapper based on your basecaller and data type.
+    contents:
+      - check_tails_dorado_DRS
+      - check_tails_dorado_cDNA
+      - check_tails_guppy
+
+  - title: "Dorado DRS pipeline"
+    desc: >
+      Functions for processing direct RNA sequencing (DRS) data
+      basecalled with Dorado ≥ 1.0.0 in POD5 format.
+    contents:
+      - preprocess_inputs
+      - process_dorado_summary
+      - filter_dorado_summary
+      - extract_tails_from_pod5
+      - create_tail_features_list_dorado
+      - create_tail_chunk_list_dorado
+      - split_tail_centered_dorado
+      - process_dorado_signal_files
+      - create_outputs_dorado
+
+  - title: "Dorado cDNA pipeline"
+    desc: >
+      Functions for processing cDNA sequencing data, including BAM file
+      processing, basecalled sequence extraction, and read orientation
+      classification (polyA vs polyT).
+    contents:
+      - preprocess_inputs_cdna
+      - split_bam_file_cdna
+      - extract_data_from_bam
+      - detect_orientation_single
+      - detect_orientation_multiple
+      - process_polya_reads_cdna
+      - process_polyt_reads_cdna
+      - create_outputs_dorado_cdna
+      - merge_cdna_results
+      - save_cdna_outputs
+
+  - title: "Guppy legacy pipeline"
+    desc: >
+      Functions for processing DRS data basecalled with Guppy ≤ 6.0.0
+      using fast5 format and Nanopolish poly(A) coordinates.
+      This pipeline is no longer actively developed.
+    contents:
+      - extract_polya_data
+      - extract_tail_data
+      - create_tail_feature_list
+      - create_tail_chunk_list
+      - split_tail_centered
+      - create_gaf
+      - create_gaf_list
+      - process_polya_complete
+      - process_polya_parts
+      - split_polya_data
+      - create_outputs
+      - save_outputs
+
+  - title: "Training dataset production"
+    desc: >
+      Functions for preparing training and validation datasets for the
+      convolutional neural network (CNN) model.
+    contents:
+      - prepare_trainingset
+      - extract_tail_data_trainingset
+      - create_tail_feature_list_trainingset
+      - create_tail_feature_list_A
+      - create_tail_chunk_list_trainingset
+      - create_tail_chunk_list_A
+      - split_tail_centered_trainingset
+      - split_with_overlaps
+      - filter_nonA_chunks_trainingset
+      - filter_signal_by_threshold_trainingset
+      - create_gaf_list_A
+
+  - title: "Data postprocessing"
+    desc: >
+      Functions for correcting, reclassifying, and reshaping ninetails
+      output tables after the pipeline has run.
+    contents:
+      - correct_class_data
+      - correct_residue_data
+      - correct_labels
+      - reclassify_ninetails_data
+      - read_class_single
+      - read_class_multiple
+      - read_residue_single
+      - read_residue_multiple
+      - merge_nonA_tables
+      - spread_nonA_residues
+
+  - title: "Annotation"
+    desc: >
+      Functions for biological annotation of ninetails results using
+      external databases.
+    contents:
+      - annotate_with_biomart
+
+  - title: "Statistics"
+    desc: >
+      Functions for statistical analysis and quantification of
+      non-adenosine residues across reads and conditions.
+    contents:
+      - calculate_fisher
+      - nonA_fisher
+      - count_class
+      - count_nonA_abundance
+      - count_residues
+      - summarize_nonA
+      - nanopolish_qc
+
+  - title: "Visualisation"
+    desc: >
+      Plotting functions for inspection of raw signals, GAF images,
+      classification results, and statistical summaries.
+    contents:
+      - plot_class_counts
+      - plot_gaf
+      - plot_multiple_gaf
+      - plot_nanopolish_qc
+      - plot_nonA_abundance
+      - plot_panel_characteristics
+      - plot_residue_counts
+      - plot_rug_density
+      - plot_squiggle_fast5
+      - plot_tail_chunk
+      - plot_tail_distribution
+      - plot_tail_range_fast5
+
+  - title: "tailfindr compatibility"
+    desc: >
+      Functions for converting tailfindr output into a format compatible
+      with the ninetails Guppy legacy pipeline.
+    contents:
+      - convert_tailfindr_output
+      - check_polya_length_filetype
+
+  - title: "Signal processing"
+    desc: >
+      Core signal processing utilities and CNN-related helpers used
+      internally by the pipeline functions.
+    contents:
+      - filter_signal_by_threshold
+      - winsorize_signal
+      - substitute_gaps
+      - combine_gafs
+      - predict_gaf_classes
+      - load_keras_model
+
+  - title: "Sequence helpers"
+    desc: >
+      Helper functions for primer matching and DNA sequence manipulation
+      used by the cDNA orientation classification step.
+    contents:
+      - reverse_complement
+      - edit_distance_hw
+      - count_trailing_chars
+
+  - title: "Input validation"
+    desc: >
+      Internal assertion and type-checking utilities used throughout
+      the package for input validation.
+    contents:
+      - assert_condition
+      - assert_dir_exists
+      - assert_file_exists
+      - check_fast5_filetype
+      - check_output_directory
+      - is_RNA
+      - is_multifast5
+      - is_string
+      - no_na
+      - get_mode
+
+  - title: "Package"
+    contents:
+      - ninetails-package
+      - "%>%"
+
+news:
+  one_page: true
+  cran_dates: false

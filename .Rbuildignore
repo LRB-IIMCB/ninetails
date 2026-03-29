@@ -4,3 +4,6 @@
 ^__pycache__/
 ^__autograph_generated_.*\.py$
 ^\.github$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

@@ -6,7 +6,17 @@
 \alias{ninetails-package}
 \title{ninetails: Nonadenosine Nucleotides in Poly(A) Tails}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Finds noncanonical (nonadenosine) nucleotides in poly(A) tails of Oxford Nanopore direct RNA sequencing reads using convolutional neural network based on raw current signal.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://LRB-IIMCB.github.io/ninetails/}
+  \item \url{https://github.com/LRB-IIMCB/ninetails}
+}
+
 }
 \author{
 \strong{Maintainer}: Natalia Gumińska \email{nguminska@iimcb.gov.pl} (\href{https://orcid.org/0000-0002-4599-2897}{ORCID})
