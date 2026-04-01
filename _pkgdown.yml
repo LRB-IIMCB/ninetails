@@ -79,10 +79,10 @@ navbar:
           href: articles/postprocessing.html
         - text: Plotting ninetails data
           href: articles/plotting.html
-        - text: "---"
-        - text: "Guppy pipeline (legacy)"
         - text: Visual inspection of signals
           href: articles/signal-inspection.html
+        - text: "---"
+        - text: "Guppy pipeline (legacy)"
         - text: TailfindR compatibility
           href: articles/tailfindr.html
         - text: "---"
@@ -115,10 +115,10 @@ articles:
       - detection
       - postprocessing
       - plotting
+      - signal-inspection
   - title: Guppy pipeline (legacy)
     navbar: Guppy pipeline
     contents:
-      - signal-inspection
       - tailfindr
   - title: Publications
     navbar: Publications
@@ -253,9 +253,11 @@ reference:
       - plot_residue_counts
       - plot_rug_density
       - plot_squiggle_fast5
+      - plot_squiggle_pod5
       - plot_tail_chunk
       - plot_tail_distribution
       - plot_tail_range_fast5
+      - plot_tail_range_pod5
 
   - title: "tailfindr compatibility"
     desc: >

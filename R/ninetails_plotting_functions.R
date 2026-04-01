@@ -2773,3 +2773,621 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 
   return(tp)
 }
+
+
+
+################################################################################
+# VISUAL INSPECTION OF SIGNALS - POD5-BASED (Dorado)
+################################################################################
+
+#' Find POD5 file in directory based on filename
+#'
+#' Internal helper function to locate a POD5 file within a directory.
+#' Searches recursively and matches by filename if provided.
+#'
+#' @param filename Character string. Filename from dorado summary (optional).
+#' @param pod5_dir Character string. Directory containing POD5 files.
+#'
+#' @return Full path to POD5 file or NULL if not found.
+#' @keywords internal
+#'
+.find_pod5_file <- function(filename, pod5_dir) {
+  if (is.null(pod5_dir) || pod5_dir == "" || !dir.exists(pod5_dir)) {
+    return(NULL)
+  }
+
+  # List all POD5 files
+
+  pod5_files <- list.files(
+    pod5_dir,
+    pattern = "\\.pod5$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+
+  if (length(pod5_files) == 0) {
+    return(NULL)
+  }
+
+  # Try to match by filename if provided
+  if (!is.null(filename) && filename != "" && !is.na(filename)) {
+    match_idx <- grep(basename(filename), basename(pod5_files), fixed = TRUE)
+    if (length(match_idx) > 0) {
+      return(pod5_files[match_idx[1]])
+    }
+  }
+
+  # Return first POD5 file if no specific match
+  return(pod5_files[1])
+}
+
+
+#' Extract full signal from POD5 file using Python script
+#'
+#' Internal helper function that calls the Python extraction script
+#' to retrieve raw signal and calibration data from a POD5 file.
+#'
+#' @param read_id Character string. Read ID to extract.
+#' @param pod5_file Character string. Path to POD5 file.
+#' @param winsorize Logical. If TRUE, apply winsorization to signal.
+#'
+#' @return List with signal data, calibration parameters, and sample_rate,
+#'   or NULL on error.
+#' @keywords internal
+#'
+.extract_signal_pod5 <- function(read_id, pod5_file, winsorize = TRUE) {
+
+  # Assertions
+  assert_condition(
+    is_string(read_id),
+    "read_id must be a character string"
+  )
+  assert_file_exists(pod5_file, "pod5_file")
+
+  # Locate Python extraction script in package
+  script_path <- system.file(
+    "extdata",
+    "extract_full_signal_pod5.py",
+    package = "ninetails"
+  )
+
+  if (script_path == "" || !file.exists(script_path)) {
+    stop(
+      "Python extraction script not found in package. ",
+      "Expected at inst/extdata/extract_full_signal_pod5.py",
+      call. = FALSE
+    )
+  }
+
+  # Create temp output file
+  temp_output <- tempfile(fileext = ".pkl")
+  on.exit(if (file.exists(temp_output)) unlink(temp_output), add = TRUE)
+
+  # Get Python path from reticulate if available
+  python_path <- tryCatch({
+    reticulate::py_config()$python
+  }, error = function(e) {
+    "python3"
+  })
+
+  # Build Python command
+  winsorize_flag <- if (winsorize) "--winsorize" else ""
+
+  python_cmd <- sprintf(
+    '"%s" "%s" --read_id "%s" --pod5_file "%s" --output "%s" %s',
+    python_path,
+    script_path,
+    read_id,
+    pod5_file,
+    temp_output,
+    winsorize_flag
+  )
+
+  # Execute command
+  exit_code <- system(python_cmd, intern = FALSE, ignore.stderr = FALSE)
+
+  if (exit_code != 0 || !file.exists(temp_output)) {
+    warning("Signal extraction failed for read: ", read_id)
+    return(NULL)
+  }
+
+  # Load results using reticulate
+  tryCatch({
+    pkl <- reticulate::import("pickle", convert = FALSE)
+    py_builtin <- reticulate::import_builtins()
+    f <- py_builtin$open(temp_output, "rb")
+    result <- reticulate::py_to_r(pkl$load(f))
+    f$close()
+
+    # Convert signal to numeric vector
+    result$signal <- as.numeric(result$signal)
+
+    return(result)
+  }, error = function(e) {
+    warning("Error loading pickle result: ", e$message)
+    return(NULL)
+  })
+}
+
+
+#' Draws an entire squiggle for given read from POD5 file.
+#'
+#' Creates segmented plot of raw or rescaled ONT RNA signal from Dorado
+#' basecalled POD5 files. A standalone function; depends solely on Dorado
+#' summary output and POD5 files.
+#'
+#' The output plot includes an entire squiggle corresponding to the given ONT
+#' read. Vertical lines mark the 5' (red) and 3' (navy blue) termini of polyA
+#' tail according to the Dorado poly(A) estimation. In order to maintain
+#' readability of the graph (and to avoid plotting high cliffs - e.g. jets
+#' of the signal caused by a sudden surge of current in the sensor)
+#' the signal is winsorized.
+#'
+#' @param readname Character string. Name of the given read (read_id) within
+#' the analyzed dataset.
+#'
+#' @param dorado_summary Character string or data frame. Either the full path
+#' to the Dorado summary file (.txt), or a pre-loaded data frame containing
+#' at minimum the columns: read_id, poly_tail_start, poly_tail_end, filename.
+#'
+#' @param workspace Character string. Full path of the directory containing
+#' POD5 files.
+#'
+#' @param rescale Logical [TRUE/FALSE]. If TRUE, the signal will be rescaled
+#' to picoamps (pA) per second (s). If FALSE, raw signal per position will
+#' be plotted. Default is FALSE.
+#'
+#' @return ggplot2 object with squiggle plot depicting nanopore read signal.
+#'
+#' @seealso \code{\link{plot_squiggle_fast5}} for the fast5 equivalent,
+#'   \code{\link{plot_tail_range_pod5}} for zoomed tail region plot
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' plot <- ninetails::plot_squiggle_pod5(
+#'   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
+#'   dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
+#'                                'aligned_summary.txt',
+#'                                package = 'ninetails'),
+#'   workspace = system.file('extdata', 'test_data', 'pod5_DRS',
+#'                           package = 'ninetails'),
+#'   rescale = FALSE)
+#'
+#' print(plot)
+#'
+#' }
+#'
+plot_squiggle_pod5 <- function(readname,
+                               dorado_summary,
+                               workspace,
+                               rescale = FALSE) {
+
+  # Assertions
+  if (missing(readname)) {
+    stop(
+      "Readname [string] is missing. Please provide a valid readname argument.",
+      call. = FALSE
+    )
+  }
+
+  if (missing(workspace)) {
+    stop(
+      "Directory [string] with POD5 files is missing. ",
+      "Please provide a valid workspace argument.",
+      call. = FALSE
+    )
+  }
+
+  if (missing(dorado_summary)) {
+    stop(
+      "Dorado summary [string or data.frame] is missing. ",
+      "Please provide a valid dorado_summary argument.",
+      call. = FALSE
+    )
+  }
+
+  assert_dir_exists(workspace, "workspace")
+
+  # Handle dorado_summary - can be file path or data frame
+  if (is_string(dorado_summary)) {
+    assert_file_exists(dorado_summary)
+    dorado_summary <- vroom::vroom(
+      dorado_summary,
+      col_select = c(read_id, poly_tail_start, poly_tail_end, filename),
+      show_col_types = FALSE
+    )
+  }
+
+  if (!is.data.frame(dorado_summary) || nrow(dorado_summary) == 0) {
+    stop(
+      "Empty data frame provided as input (dorado_summary). ",
+      "Please provide valid input.",
+      call. = FALSE
+    )
+  }
+
+  # Filter for requested read
+  read_info <- dorado_summary[dorado_summary$read_id == readname, ]
+
+  if (nrow(read_info) == 0) {
+    stop(
+      "Read '", readname, "' not found in dorado_summary.",
+      call. = FALSE
+    )
+  }
+
+  read_info <- read_info[1, ]
+
+  # Get poly(A) positions
+  polya_start_position <- read_info$poly_tail_start
+  polya_end_position <- read_info$poly_tail_end
+
+  if (is.na(polya_start_position) || is.na(polya_end_position)) {
+    stop(
+      "Invalid poly(A) coordinates for read '", readname, "'.",
+      call. = FALSE
+    )
+  }
+
+  # Find POD5 file
+  pod5_file <- .find_pod5_file(read_info$filename, workspace)
+
+  if (is.null(pod5_file)) {
+    stop(
+      "No POD5 file found in workspace for read '", readname, "'.",
+      call. = FALSE
+    )
+  }
+
+  # Extract signal from POD5
+  signal_data <- .extract_signal_pod5(
+    read_id = readname,
+    pod5_file = pod5_file,
+    winsorize = TRUE
+  )
+
+  if (is.null(signal_data)) {
+    stop(
+      "Failed to extract signal for read '", readname, "'.",
+      call. = FALSE
+    )
+  }
+
+  signal <- signal_data$signal
+  signal_length <- length(signal)
+
+  # Create signal dataframe
+  signal_df <- data.frame(
+    position = seq_len(signal_length),
+    signal = signal
+  )
+
+  # Signal segmentation factor
+  # adapter sequence (before poly(A) start)
+  signal_df$segment <- "adapter"
+  # transcript sequence (after poly(A) end)
+  signal_df$segment[signal_df$position > polya_end_position] <- "transcript"
+  # poly(A) sequence
+  signal_df$segment[
+    signal_df$position >= polya_start_position &
+      signal_df$position <= polya_end_position
+  ] <- "poly(A)"
+  signal_df$segment <- as.factor(signal_df$segment)
+
+  # Plotting squiggle
+  if (rescale == TRUE) {
+    # Extract calibration parameters
+    calibration_offset <- signal_data$calibration_offset
+    calibration_scale <- signal_data$calibration_scale
+    sampling_rate <- signal_data$sample_rate
+
+    # Additional columns for rescaling
+    # time = position / sampling_rate
+    # pA = (signal + offset) * scale
+    signal_df <- dplyr::mutate(
+      signal_df,
+      time = position / sampling_rate
+    )
+    signal_df <- dplyr::mutate(
+      signal_df,
+      pA = (signal + calibration_offset) * calibration_scale
+    )
+
+    # Plotting signal rescaled to picoamps per second
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time)) +
+      ggplot2::geom_line(ggplot2::aes(y = pA, color = segment)) +
+      ggplot2::theme_bw() +
+      ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
+
+    g.line <- ggplot2::geom_vline(
+      xintercept = polya_start_position / sampling_rate,
+      color = "#700f25"
+    )
+    g.line2 <- ggplot2::geom_vline(
+      xintercept = polya_end_position / sampling_rate,
+      color = "#0f3473"
+    )
+    g.labs <- ggplot2::labs(
+      title = paste0("Read ", readname),
+      x = "time [s]",
+      y = "signal [pA]"
+    )
+
+  } else {
+    # Plotting raw signal
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position)) +
+      ggplot2::geom_line(ggplot2::aes(y = signal, color = segment)) +
+      ggplot2::theme_bw() +
+      ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
+
+    g.line <- ggplot2::geom_vline(
+      xintercept = polya_start_position,
+      color = "#700f25"
+    )
+    g.line2 <- ggplot2::geom_vline(
+      xintercept = polya_end_position,
+      color = "#0f3473"
+    )
+    g.labs <- ggplot2::labs(
+      title = paste0("Read ", readname),
+      x = "position",
+      y = "signal [raw]"
+    )
+  }
+
+  plot_squiggle <- squiggle + g.line + g.line2 + g.labs
+
+  return(plot_squiggle)
+}
+
+
+#' Draws tail range squiggle for given read from POD5 file.
+#'
+#' Creates segmented plot of raw or rescaled ONT RNA signal from Dorado
+#' basecalled POD5 files, focused on the poly(A) tail region with flanking
+#' sequences.
+#'
+#' The output plot includes the tail region (orange) and user-defined flanks
+#' of adapter (blue) and transcript body (black) regions. Vertical lines
+#' mark the 5' (red) and 3' (navy blue) termini of polyA tail according to
+#' the Dorado poly(A) estimation. In order to maintain readability of the
+#' graph (and to avoid plotting high cliffs - e.g. jets of the signal caused
+#' by a sudden surge of current in the sensor) the signal is winsorized.
+#'
+#' @param readname Character string. Name of the given read (read_id) within
+#'   the analyzed dataset.
+#'
+#' @param dorado_summary Character string or data frame. Either the full path
+#'   to the Dorado summary file (.txt), or a pre-loaded data frame containing
+#'   at minimum the columns: read_id, poly_tail_start, poly_tail_end, filename.
+#'
+#' @param workspace Character string. Full path of the directory containing
+#'   the POD5 files.
+#'
+#' @param flank Numeric. Number of positions to include on each side of the
+#'   poly(A) region. Default is 150.
+#'
+#' @param rescale Logical [TRUE/FALSE]. If TRUE, the signal will be rescaled
+#'   to picoamps (pA) per second (s). If FALSE, raw signal per position will
+#'   be plotted. Default is FALSE.
+#'
+#' @return ggplot2 object with squiggle plot centered on tail range.
+#'
+#' @seealso \code{\link{plot_tail_range_fast5}} for the fast5 equivalent,
+#'   \code{\link{plot_squiggle_pod5}} for full signal plot
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'
+#' plot <- ninetails::plot_tail_range_pod5(
+#'   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
+#'   dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
+#'                                'aligned_summary.txt',
+#'                                package = 'ninetails'),
+#'   workspace = system.file('extdata', 'test_data', 'pod5_DRS',
+#'                           package = 'ninetails'),
+#'   rescale = FALSE)
+#'
+#' print(plot)
+#'
+#' }
+#'
+plot_tail_range_pod5 <- function(readname,
+                                 dorado_summary,
+                                 workspace,
+                                 flank = 150,
+                                 rescale = FALSE) {
+
+  # Assertions
+  if (missing(readname)) {
+    stop(
+      "Readname [string] is missing. Please provide a valid readname argument.",
+      call. = FALSE
+    )
+  }
+
+  if (missing(workspace)) {
+    stop(
+      "Directory [string] with POD5 files is missing. ",
+      "Please provide a valid workspace argument.",
+      call. = FALSE
+    )
+  }
+
+  if (missing(dorado_summary)) {
+    stop(
+      "Dorado summary [string or data.frame] is missing. ",
+      "Please provide a valid dorado_summary argument.",
+      call. = FALSE
+    )
+  }
+
+  assert_dir_exists(workspace, "workspace")
+
+  assert_condition(
+    is.numeric(flank) && length(flank) == 1 && flank > 0,
+    "flank must be a positive numeric value"
+  )
+
+  # Handle dorado_summary - can be file path or data frame
+  if (is_string(dorado_summary)) {
+    assert_file_exists(dorado_summary)
+    dorado_summary <- vroom::vroom(
+      dorado_summary,
+      col_select = c(read_id, poly_tail_start, poly_tail_end, filename),
+      show_col_types = FALSE
+    )
+  }
+
+  if (!is.data.frame(dorado_summary) || nrow(dorado_summary) == 0) {
+    stop(
+      "Empty data frame provided as input (dorado_summary). ",
+      "Please provide valid input.",
+      call. = FALSE
+    )
+  }
+
+  # Filter for requested read
+  read_info <- dorado_summary[dorado_summary$read_id == readname, ]
+
+  if (nrow(read_info) == 0) {
+    stop(
+      "Read '", readname, "' not found in dorado_summary.",
+      call. = FALSE
+    )
+  }
+
+  read_info <- read_info[1, ]
+
+  # Get poly(A) positions
+  polya_start_position <- read_info$poly_tail_start
+  polya_end_position <- read_info$poly_tail_end
+
+  if (is.na(polya_start_position) || is.na(polya_end_position)) {
+    stop(
+      "Invalid poly(A) coordinates for read '", readname, "'.",
+      call. = FALSE
+    )
+  }
+
+  # Find POD5 file
+  pod5_file <- .find_pod5_file(read_info$filename, workspace)
+
+  if (is.null(pod5_file)) {
+    stop(
+      "No POD5 file found in workspace for read '", readname, "'.",
+      call. = FALSE
+    )
+  }
+
+  # Extract signal from POD5
+  signal_data <- .extract_signal_pod5(
+    read_id = readname,
+    pod5_file = pod5_file,
+    winsorize = TRUE
+  )
+
+  if (is.null(signal_data)) {
+    stop(
+      "Failed to extract signal for read '", readname, "'.",
+      call. = FALSE
+    )
+  }
+
+  signal <- signal_data$signal
+  signal_length <- length(signal)
+
+  # Create signal dataframe
+  signal_df <- data.frame(
+    position = seq_len(signal_length),
+    signal = signal
+  )
+
+  # Signal segmentation factor
+  # adapter sequence (before poly(A) start)
+  signal_df$segment <- "adapter"
+  # transcript sequence (after poly(A) end)
+  signal_df$segment[signal_df$position > polya_end_position] <- "transcript"
+  # poly(A) sequence
+  signal_df$segment[
+    signal_df$position >= polya_start_position &
+      signal_df$position <= polya_end_position
+  ] <- "poly(A)"
+  signal_df$segment <- as.factor(signal_df$segment)
+
+  # Trim to tail region with flanks
+  trim_position_upstream <- max(1, polya_start_position - flank)
+  trim_position_downstream <- min(signal_length, polya_end_position + flank)
+
+  signal_df <- signal_df[trim_position_upstream:trim_position_downstream, ]
+
+  # Plotting squiggle
+  if (rescale == TRUE) {
+    # Extract calibration parameters
+    calibration_offset <- signal_data$calibration_offset
+    calibration_scale <- signal_data$calibration_scale
+    sampling_rate <- signal_data$sample_rate
+
+    # Additional columns for rescaling
+    # time = position / sampling_rate
+    # pA = (signal + offset) * scale
+    signal_df <- dplyr::mutate(
+      signal_df,
+      time = position / sampling_rate
+    )
+    signal_df <- dplyr::mutate(
+      signal_df,
+      pA = (signal + calibration_offset) * calibration_scale
+    )
+
+    # Plotting signal rescaled to picoamps per second
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time)) +
+      ggplot2::geom_line(ggplot2::aes(y = pA, color = segment)) +
+      ggplot2::theme_bw() +
+      ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
+
+    g.line <- ggplot2::geom_vline(
+      xintercept = polya_start_position / sampling_rate,
+      color = "#700f25"
+    )
+    g.line2 <- ggplot2::geom_vline(
+      xintercept = polya_end_position / sampling_rate,
+      color = "#0f3473"
+    )
+    g.labs <- ggplot2::labs(
+      title = paste0("Read ", readname),
+      x = "time [s]",
+      y = "signal [pA]"
+    )
+
+  } else {
+    # Plotting raw signal
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position)) +
+      ggplot2::geom_line(ggplot2::aes(y = signal, color = segment)) +
+      ggplot2::theme_bw() +
+      ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
+
+    g.line <- ggplot2::geom_vline(
+      xintercept = polya_start_position,
+      color = "#700f25"
+    )
+    g.line2 <- ggplot2::geom_vline(
+      xintercept = polya_end_position,
+      color = "#0f3473"
+    )
+    g.labs <- ggplot2::labs(
+      title = paste0("Read ", readname),
+      x = "position",
+      y = "signal [raw]"
+    )
+  }
+
+  plot_squiggle <- squiggle + g.line + g.line2 + g.labs
+
+  return(plot_squiggle)
+}

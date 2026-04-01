@@ -110,7 +110,7 @@ make_class_data_qcf <- function(grouped = FALSE) {
                      polya_length = c(50, 30, 8, 45, 20, 55),
                      qc_tag = c("PASS", "PASS", "PASS", "PASS", "PASS", "ADAPTER"),
                      class = c("decorated", "blank", "unclassified", "blank",
-                              "unclassified", "unclassified"),
+                               "unclassified", "unclassified"),
                      comments = c("YAY", "MAU", "IRL", "MPU", "MPU", "QCF"),
                      stringsAsFactors = FALSE)
 
@@ -169,7 +169,7 @@ make_class_data_unm_qcf <- function(grouped = FALSE) {
                      polya_length = c(50, 30, 8, 45, 20, 55, 0),
                      qc_tag = c("PASS", "PASS", "PASS", "PASS", "PASS", "ADAPTER", "PASS"),
                      class = c("decorated", "blank", "unclassified", "blank",
-                              "unclassified", "unclassified", "unclassified"),
+                               "unclassified", "unclassified", "unclassified"),
                      comments = c("YAY", "MAU", "IRL", "MPU", "MPU", "QCF", "UNM"),stringsAsFactors = FALSE)
 
   if (grouped) {
@@ -198,10 +198,10 @@ make_class_data_unm_bac <- function(grouped = FALSE) {
                      polya_length = c(50, 30, 8, 45, 20, 55, 0),
                      qc_tag = c(60L, 60L, 60L, 60L, 60L, 60L, 0L),
                      class = c("decorated", "blank", "unclassified",
-                              "blank","unclassified", "unclassified",
-                              "unclassified"),
+                               "blank","unclassified", "unclassified",
+                               "unclassified"),
                      comments = c("YAY", "MAU", "IRL", "MPU", "MPU",
-                                 "BAC", "UNM"),
+                                  "BAC", "UNM"),
                      stringsAsFactors = FALSE)
 
   if (grouped) {
@@ -229,10 +229,10 @@ make_class_data_decorated <- function(grouped = FALSE) {
                      polya_length = c(50, 30, 8, 45, 20, 55, 60, 35, 70),
                      qc_tag = rep("PASS", 9),
                      class = c("decorated", "decorated", "decorated",
-                              "blank", "blank", "blank","unclassified",
-                              "unclassified", "unclassified"),
+                               "blank", "blank", "blank","unclassified",
+                               "unclassified", "unclassified"),
                      comments = c("YAY", "YAY", "YAY","MAU", "MAU",
-                                 "MPU","IRL", "QCF", "IRL"),
+                                  "MPU","IRL", "QCF", "IRL"),
                      stringsAsFactors = FALSE)
 
   if (grouped) {
@@ -345,7 +345,7 @@ test_that("plot_squiggle_fast5 returns ggplot with rescale=FALSE, moves=FALSE ",
                         basecall_group = "Basecall_1D_000",
                         moves = FALSE,
                         rescale = FALSE)
-    )
+  )
   expect_s3_class(result, "gg")
 })
 
@@ -411,7 +411,7 @@ test_that("plot_squiggle_fast5 returns ggplot with rescale=TRUE, moves=TRUE (lin
 ################################################################################
 
 
-test_that("plot_squiggle_fast5 errors when readname is missing", {
+test_that("plot_tail_range_fast5 errors when readname is missing", {
   nanopolish<- system.file('extdata', 'test_data', 'legacy','nanopolish_output.tsv', package = 'ninetails')
   sequencing_summary <- system.file('extdata', 'test_data', 'legacy','sequencing_summary.txt', package = 'ninetails')
   workspace<- system.file('extdata', 'test_data', 'legacy','basecalled_fast5', package = 'ninetails')
@@ -422,7 +422,7 @@ test_that("plot_squiggle_fast5 errors when readname is missing", {
                "Readname \\[string\\] is missing")
 })
 
-test_that("plot_squiggle_fast5 errors when workspace is missing", {
+test_that("plot_tail_range_fast5 errors when workspace is missing", {
   nanopolish <- system.file('extdata', 'test_data', 'legacy','nanopolish_output.tsv', package = 'ninetails')
   sequencing_summary <- system.file('extdata', 'test_data', 'legacy','sequencing_summary.txt', package = 'ninetails')
   expect_error(plot_tail_range_fast5(readname = "9c11d71e-eaaa-413f-958e-4ca1254e0369",
@@ -545,7 +545,7 @@ test_that("plot_tail_range_fast5 returns ggplot with rescale=FALSE, moves=TRUE",
                           workspace = workspace,
                           basecall_group = "Basecall_1D_000",
                           moves = TRUE,
-      rescale= FALSE
+                          rescale= FALSE
     )
   )
   expect_s3_class(result, "gg")
@@ -600,15 +600,15 @@ test_that("plot_tail_range_fast5 returns ggplot with rescale=TRUE, moves=TRUE", 
 test_that("plot_tail_chunk validates required arguments", {
   # wrong tail chunk list
   expect_error(plot_tail_chunk(chunk_name = "test_chunk"),
-    "List of tail chunks is missing")
+               "List of tail chunks is missing")
 
   # wrong chunkname
   expect_error(plot_tail_chunk(tail_chunk_list = list()),
-    "Chunk_name is missing")
+               "Chunk_name is missing")
 
   # wrong input
   expect_error( plot_tail_chunk(chunk_name = "test", tail_chunk_list = "not_a_list"),
-    "not a list")
+                "not a list")
 })
 
 
@@ -853,7 +853,7 @@ test_that("plot_class_counts type='A' ungrouped returns ggplot", {
 
   result <- suppress_plot_warnings(
     plot_class_counts(class_data = make_class_data_decorated(),
-      type= "A"))
+                      type= "A"))
 
   expect_s3_class(result, "gg")
 })
@@ -1387,7 +1387,7 @@ test_that("plot_panel_characteristics errors on unknown type ", {
     input_residue_data = single_res,
     input_class_data = single_class,
     type = "unknown_type")
-    ),"Unknown type of data defined")
+  ),"Unknown type of data defined")
 })
 
 
@@ -1456,5 +1456,232 @@ test_that("plot_nonA_abundance errors when residue_data is missing", {
 test_that("plot_nonA_abundance errors on empty residue_data data frame", {
   expect_error(plot_nonA_abundance(residue_data = data.frame()),
                "Empty data frame provided as an input \\(residue_data\\)"
+  )
+})
+
+
+################################################################################
+# plot_squiggle_pod5
+################################################################################
+
+#' Create a minimal valid Dorado summary data frame for pod5 plotting tests
+#' @keywords internal
+make_dorado_summary_pod5 <- function(read_id = "test-read-001",
+                                     poly_tail_start = 100L,
+                                     poly_tail_end = 600L,
+                                     filename = "file1.pod5") {
+  return(data.frame(
+    read_id = read_id,
+    poly_tail_start = poly_tail_start,
+    poly_tail_end = poly_tail_end,
+    filename = filename,
+    stringsAsFactors = FALSE
+  ))
+}
+
+
+test_that("plot_squiggle_pod5 errors when readname is missing", {
+  expect_error(
+    plot_squiggle_pod5(dorado_summary = make_dorado_summary_pod5(),
+                       workspace = tempdir()),
+    "Readname \\[string\\] is missing"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when workspace is missing", {
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = make_dorado_summary_pod5()),
+    "Directory \\[string\\] with POD5 files is missing"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when dorado_summary is missing", {
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       workspace = tempdir()),
+    "Dorado summary \\[string or data.frame\\] is missing"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when workspace does not exist", {
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = make_dorado_summary_pod5(),
+                       workspace = "/nonexistent/pod5/dir"),
+    "workspace.*directory does not exist"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors on empty dorado_summary data frame", {
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = data.frame(),
+                       workspace = tempdir()),
+    "Empty data frame provided as input \\(dorado_summary\\)"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when readname not found in dorado_summary", {
+  summary_df <- make_dorado_summary_pod5(read_id = "other-read-001")
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = summary_df,
+                       workspace = tempdir()),
+    "not found in dorado_summary"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when poly_tail_start is NA", {
+  summary_df <- make_dorado_summary_pod5(poly_tail_start = NA_integer_)
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = summary_df,
+                       workspace = tempdir()),
+    "Invalid poly\\(A\\) coordinates"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when poly_tail_end is NA", {
+  summary_df <- make_dorado_summary_pod5(poly_tail_end = NA_integer_)
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = summary_df,
+                       workspace = tempdir()),
+    "Invalid poly\\(A\\) coordinates"
+  )
+})
+
+test_that("plot_squiggle_pod5 errors when no POD5 files found in workspace", {
+  # Create a temp dir with no .pod5 files — .find_pod5_file returns NULL
+  empty_dir <- file.path(tempdir(), paste0("pod5_empty_", Sys.getpid()))
+  dir.create(empty_dir, showWarnings = FALSE)
+  on.exit(unlink(empty_dir, recursive = TRUE), add = TRUE)
+
+  expect_error(
+    plot_squiggle_pod5(readname = "test-read-001",
+                       dorado_summary = make_dorado_summary_pod5(),
+                       workspace = empty_dir),
+    "No POD5 file found in workspace"
+  )
+})
+
+
+################################################################################
+# plot_tail_range_pod5
+################################################################################
+
+test_that("plot_tail_range_pod5 errors when readname is missing", {
+  expect_error(
+    plot_tail_range_pod5(dorado_summary = make_dorado_summary_pod5(),
+                         workspace = tempdir()),
+    "Readname \\[string\\] is missing"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when workspace is missing", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = make_dorado_summary_pod5()),
+    "Directory \\[string\\] with POD5 files is missing"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when dorado_summary is missing", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         workspace = tempdir()),
+    "Dorado summary \\[string or data.frame\\] is missing"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when workspace does not exist", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = make_dorado_summary_pod5(),
+                         workspace = "/nonexistent/pod5/dir"),
+    "workspace.*directory does not exist"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors on non-numeric flank", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = make_dorado_summary_pod5(),
+                         workspace = tempdir(),
+                         flank = "wide"),
+    "flank must be a positive numeric value"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors on zero flank", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = make_dorado_summary_pod5(),
+                         workspace = tempdir(),
+                         flank = 0),
+    "flank must be a positive numeric value"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors on negative flank", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = make_dorado_summary_pod5(),
+                         workspace = tempdir(),
+                         flank = -50),
+    "flank must be a positive numeric value"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors on empty dorado_summary data frame", {
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = data.frame(),
+                         workspace = tempdir()),
+    "Empty data frame provided as input \\(dorado_summary\\)"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when readname not found in dorado_summary", {
+  summary_df <- make_dorado_summary_pod5(read_id = "other-read-001")
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = summary_df,
+                         workspace = tempdir()),
+    "not found in dorado_summary"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when poly_tail_start is NA", {
+  summary_df <- make_dorado_summary_pod5(poly_tail_start = NA_integer_)
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = summary_df,
+                         workspace = tempdir()),
+    "Invalid poly\\(A\\) coordinates"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when poly_tail_end is NA", {
+  summary_df <- make_dorado_summary_pod5(poly_tail_end = NA_integer_)
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = summary_df,
+                         workspace = tempdir()),
+    "Invalid poly\\(A\\) coordinates"
+  )
+})
+
+test_that("plot_tail_range_pod5 errors when no POD5 files found in workspace", {
+  empty_dir <- file.path(tempdir(), paste0("pod5_range_empty_", Sys.getpid()))
+  dir.create(empty_dir, showWarnings = FALSE)
+  on.exit(unlink(empty_dir, recursive = TRUE), add = TRUE)
+
+  expect_error(
+    plot_tail_range_pod5(readname = "test-read-001",
+                         dorado_summary = make_dorado_summary_pod5(),
+                         workspace = empty_dir),
+    "No POD5 file found in workspace"
   )
 })
