@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.74</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,9 +92,9 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
+    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/publications.html">Publications</a></li>
@@ -129,9 +129,12 @@ body, .contents, .contents p, .contents li,
     
     
 <blockquote>
-<p><strong>Note:</strong> The signal visualization functions described
-in this vignette work with <strong>fast5 files from the Guppy legacy
-pipeline</strong> (<code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code>) only.</p>
+<p><strong>Note:</strong> Signal visualization functions are available
+for both the <strong>Guppy legacy pipeline</strong> (fast5-based:
+<code><a href="../reference/plot_squiggle_fast5.html">plot_squiggle_fast5()</a></code>,
+<code><a href="../reference/plot_tail_range_fast5.html">plot_tail_range_fast5()</a></code>) and the <strong>Dorado DRS
+pipeline</strong> (POD5-based: <code><a href="../reference/plot_squiggle_pod5.html">plot_squiggle_pod5()</a></code>,
+<code><a href="../reference/plot_tail_range_pod5.html">plot_tail_range_pod5()</a></code>).</p>
 </blockquote>
 <p>This vignette describes functions for visual inspection of raw
 nanopore signals.</p>
@@ -189,6 +192,54 @@ background</li>
 <p><img src="../reference/figures/signal_move_false.png" alt="Signal plotted with moves=FALSE"><img src="../reference/figures/signal_move_true.png" alt="Signal plotted with moves=TRUE"></p>
 <hr>
 </div>
+<div class="section level3">
+<h3 id="plot_squiggle_pod5">plot_squiggle_pod5()<a class="anchor" aria-label="anchor" href="#plot_squiggle_pod5"></a>
+</h3>
+<p>Draw the entire signal (squiggle) for a given read from POD5 files
+(Dorado DRS pipeline):</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plot</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_squiggle_pod5.html">plot_squiggle_pod5</a></span><span class="op">(</span></span>
+<span>  readname <span class="op">=</span> <span class="st">"0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9"</span>,</span>
+<span>  dorado_summary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_DRS'</span>,</span>
+<span>                               <span class="st">'aligned_summary.txt'</span>,</span>
+<span>                               package <span class="op">=</span> <span class="st">'ninetails'</span><span class="op">)</span>,</span>
+<span>  workspace <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_DRS'</span>,</span>
+<span>                          package <span class="op">=</span> <span class="st">'ninetails'</span><span class="op">)</span>,</span>
+<span>  rescale <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plot</span><span class="op">)</span></span></code></pre></div>
+<p>Parameters:</p>
+<ul>
+<li>
+<code>readname</code>: Read identifier</li>
+<li>
+<code>dorado_summary</code>: Path to Dorado summary file, or a
+pre-loaded data frame containing at minimum <code>read_id</code>,
+<code>poly_tail_start</code>, <code>poly_tail_end</code>, and
+<code>filename</code> columns</li>
+<li>
+<code>workspace</code>: Path to directory containing POD5 files</li>
+<li>
+<code>rescale</code>: If TRUE, scale signal to picoamperes (pA)</li>
+</ul>
+<blockquote>
+<p><strong>Note:</strong> The <code>moves</code> parameter is not
+available for POD5-based functions. Move data is not stored in POD5
+files in a format accessible without the Dorado basecaller
+internals.</p>
+</blockquote>
+<p>The plot shows vertical lines marking poly(A) tail boundaries:</p>
+<ul>
+<li>
+<strong>Red</strong>: 5’ end (poly(A) start)</li>
+<li>
+<strong>Navy blue</strong>: 3’ end (poly(A) end)</li>
+</ul>
+<div class="float">
+<img src="../reference/figures/signal_pod5_rescaled.png" alt="Full read signal from POD5, rescaled to pA"><div class="figcaption">Full read signal from POD5, rescaled to pA</div>
+</div>
+<hr>
+</div>
 </div>
 <div class="section level2">
 <h2 id="plotting-tail-range">Plotting tail range<a class="anchor" aria-label="anchor" href="#plotting-tail-range"></a>
@@ -197,7 +248,7 @@ background</li>
 <h3 id="plot_tail_range_fast5">plot_tail_range_fast5()<a class="anchor" aria-label="anchor" href="#plot_tail_range_fast5"></a>
 </h3>
 <p>Plot only the poly(A) tail region:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">plot</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_tail_range_fast5.html">plot_tail_range_fast5</a></span><span class="op">(</span></span>
 <span>  readname <span class="op">=</span> <span class="st">"0226b5df-f9e5-4774-bbee-7719676f2ceb"</span>,</span>
 <span>  nanopolish <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>,</span>
@@ -225,6 +276,44 @@ background</li>
 <h2 id="tail-region-plotted-with-movesfalse">
 <img src="../reference/figures/tail_move_true.png" alt="Tail region plotted with moves=FALSE"><a class="anchor" aria-label="anchor" href="#tail-region-plotted-with-movesfalse"></a>
 </h2>
+<div class="section level3">
+<h3 id="plot_tail_range_pod5">plot_tail_range_pod5()<a class="anchor" aria-label="anchor" href="#plot_tail_range_pod5"></a>
+</h3>
+<p>Plot only the poly(A) tail region from POD5 files (Dorado DRS
+pipeline):</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plot</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_tail_range_pod5.html">plot_tail_range_pod5</a></span><span class="op">(</span></span>
+<span>  readname <span class="op">=</span> <span class="st">"0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9"</span>,</span>
+<span>  dorado_summary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_DRS'</span>,</span>
+<span>                               <span class="st">'aligned_summary.txt'</span>,</span>
+<span>                               package <span class="op">=</span> <span class="st">'ninetails'</span><span class="op">)</span>,</span>
+<span>  workspace <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_DRS'</span>,</span>
+<span>                          package <span class="op">=</span> <span class="st">'ninetails'</span><span class="op">)</span>,</span>
+<span>  flank <span class="op">=</span> <span class="fl">150</span>,</span>
+<span>  rescale <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plot</span><span class="op">)</span></span></code></pre></div>
+<p>Parameters:</p>
+<ul>
+<li>
+<code>readname</code>: Read identifier</li>
+<li>
+<code>dorado_summary</code>: Path to Dorado summary file, or a
+pre-loaded data frame (same as <code><a href="../reference/plot_squiggle_pod5.html">plot_squiggle_pod5()</a></code>)</li>
+<li>
+<code>workspace</code>: Path to directory containing POD5 files</li>
+<li>
+<code>flank</code>: Number of positions to include on each side of
+the poly(A) region (default: 150)</li>
+<li>
+<code>rescale</code>: If TRUE, scale signal to picoamperes (pA)</li>
+</ul>
+<div class="float">
+<img src="../reference/figures/tail_pod5_rescaled.png" alt="Poly(A) tail region from POD5, rescaled to pA"><div class="figcaption">Poly(A) tail region from POD5, rescaled to
+pA</div>
+</div>
+<hr>
+</div>
 </div>
 <div class="section level2">
 <h2 id="plotting-tail-segments">Plotting tail segments<a class="anchor" aria-label="anchor" href="#plotting-tail-segments"></a>
@@ -233,7 +322,7 @@ background</li>
 <h3 id="plot_tail_chunk">plot_tail_chunk()<a class="anchor" aria-label="anchor" href="#plot_tail_chunk"></a>
 </h3>
 <p>Visualize a specific signal chunk from the segmentation step:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># First, create tail chunk list using pipeline functions</span></span>
 <span><span class="va">tfl</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/create_tail_feature_list.html">create_tail_feature_list</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
 <span><span class="va">tcl</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/create_tail_chunk_list.html">create_tail_chunk_list</a></span><span class="op">(</span>tail_feature_list <span class="op">=</span> <span class="va">tfl</span>, num_cores <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
@@ -262,7 +351,7 @@ scaling to picoamperes.</p>
 <h3 id="plot_gaf">plot_gaf()<a class="anchor" aria-label="anchor" href="#plot_gaf"></a>
 </h3>
 <p>Visualize a single GAF matrix used for CNN classification:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># First, create GAF list using pipeline functions</span></span>
 <span><span class="va">gl</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/create_gaf_list.html">create_gaf_list</a></span><span class="op">(</span>tail_chunk_list <span class="op">=</span> <span class="va">tcl</span>, num_cores <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span></span>
@@ -289,7 +378,7 @@ scaling to picoamperes.</p>
 <h3 id="plot_multiple_gaf">plot_multiple_gaf()<a class="anchor" aria-label="anchor" href="#plot_multiple_gaf"></a>
 </h3>
 <p>Plot all GAFs in a list (saves to working directory):</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_multiple_gaf.html">plot_multiple_gaf</a></span><span class="op">(</span></span>
 <span>  gaf_list <span class="op">=</span> <span class="va">gl</span>,</span>
 <span>  num_cores <span class="op">=</span> <span class="fl">10</span></span>
@@ -308,26 +397,41 @@ large, and plotting all at once may overload the system.</p>
 <h2 id="signal-visualization-options">Signal visualization options<a class="anchor" aria-label="anchor" href="#signal-visualization-options"></a>
 </h2>
 <table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
 <thead><tr class="header">
 <th>Option</th>
 <th>Description</th>
+<th>Applies to</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td><code>rescale = FALSE</code></td>
 <td>Raw signal per position</td>
+<td>Fast5, POD5</td>
 </tr>
 <tr class="even">
 <td><code>rescale = TRUE</code></td>
 <td>Signal scaled to picoamperes (pA) per second</td>
+<td>Fast5, POD5</td>
 </tr>
 <tr class="odd">
 <td><code>moves = FALSE</code></td>
 <td>Signal only</td>
+<td>Fast5 only</td>
 </tr>
 <tr class="even">
 <td><code>moves = TRUE</code></td>
 <td>Signal with move transitions in background</td>
+<td>Fast5 only</td>
+</tr>
+<tr class="odd">
+<td><code>flank</code></td>
+<td>Positions flanking tail region (default: 150)</td>
+<td>POD5 tail range only</td>
 </tr>
 </tbody>
 </table>
@@ -369,9 +473,19 @@ plots</li>
 <td>Fast5 files</td>
 </tr>
 <tr class="even">
+<td><code><a href="../reference/plot_squiggle_pod5.html">plot_squiggle_pod5()</a></code></td>
+<td>Full read signal</td>
+<td>POD5 files</td>
+</tr>
+<tr class="odd">
 <td><code><a href="../reference/plot_tail_range_fast5.html">plot_tail_range_fast5()</a></code></td>
 <td>Poly(A) tail signal only</td>
 <td>Fast5 files</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_tail_range_pod5.html">plot_tail_range_pod5()</a></code></td>
+<td>Poly(A) tail signal only</td>
+<td>POD5 files</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/plot_tail_chunk.html">plot_tail_chunk()</a></code></td>

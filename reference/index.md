@@ -236,6 +236,8 @@ classification results, and statistical summaries.
   : Scatterplot of nonA residue positions within poly(A) tail
 - [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md)
   : Draws an entire squiggle for given read.
+- [`plot_squiggle_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.md)
+  : Draws an entire squiggle for given read from POD5 file.
 - [`plot_tail_chunk()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.md)
   : Draws a portion of poly(A) tail squiggle (chunk) for given read.
 - [`plot_tail_distribution()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_distribution.md)
@@ -243,6 +245,8 @@ classification results, and statistical summaries.
   in analyzed sample(s).
 - [`plot_tail_range_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.md)
   : Draws tail range squiggle for given read.
+- [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md)
+  : Draws tail range squiggle for given read from POD5 file.
 
 ## tailfindr compatibility
 

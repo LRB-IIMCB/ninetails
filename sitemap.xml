@@ -48,6 +48,8 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_features_list_dorado.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-extract_signal_pod5.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-find_pod5_file.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/edit_distance_hw.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_data_from_bam.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_polya_data.html</loc></url>
@@ -80,9 +82,11 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_residue_counts.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_rug_density.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_distribution.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/predict_gaf_classes.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs.html</loc></url>

@@ -11,13 +11,13 @@ Source:
 [`DESCRIPTION`](https://github.com/LRB-IIMCB/ninetails/blob/main/DESCRIPTION)
 
 Gumińska N (2026). *ninetails: Nonadenosine Nucleotides in Poly(A)
-Tails*. R package version 1.0.74,
+Tails*. R package version 1.0.75,
 <https://LRB-IIMCB.github.io/ninetails/>.
 
     @Manual{,
       title = {ninetails: Nonadenosine Nucleotides in Poly(A) Tails},
       author = {Natalia Gumińska},
       year = {2026},
-      note = {R package version 1.0.74},
+      note = {R package version 1.0.75},
       url = {https://LRB-IIMCB.github.io/ninetails/},
     }

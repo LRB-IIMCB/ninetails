@@ -13,11 +13,11 @@
   postprocessing](https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.md):
 - [Plotting ninetails
   data](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md):
+- [Visual inspection of
+  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal-inspection.md):
 
 ### Guppy pipeline (legacy)
 
-- [Visual inspection of
-  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal-inspection.md):
 - [TailfindR
   compatibility](https://LRB-IIMCB.github.io/ninetails/articles/tailfindr.md):
 

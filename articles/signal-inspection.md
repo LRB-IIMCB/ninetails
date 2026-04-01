@@ -1,9 +1,12 @@
 # Visual inspection of signals
 
-> **Note:** The signal visualization functions described in this
-> vignette work with **fast5 files from the Guppy legacy pipeline**
-> ([`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md))
-> only.
+> **Note:** Signal visualization functions are available for both the
+> **Guppy legacy pipeline** (fast5-based:
+> [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md),
+> [`plot_tail_range_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.md))
+> and the **Dorado DRS pipeline** (POD5-based:
+> [`plot_squiggle_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.md),
+> [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md)).
 
 This vignette describes functions for visual inspection of raw nanopore
 signals.
@@ -54,6 +57,49 @@ with moves=TRUE](../reference/figures/signal_move_true.png)
 
 ------------------------------------------------------------------------
 
+### plot_squiggle_pod5()
+
+Draw the entire signal (squiggle) for a given read from POD5 files
+(Dorado DRS pipeline):
+
+``` r
+plot <- ninetails::plot_squiggle_pod5(
+  readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
+  dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
+                               'aligned_summary.txt',
+                               package = 'ninetails'),
+  workspace = system.file('extdata', 'test_data', 'pod5_DRS',
+                          package = 'ninetails'),
+  rescale = TRUE
+)
+print(plot)
+```
+
+Parameters:
+
+- `readname`: Read identifier
+- `dorado_summary`: Path to Dorado summary file, or a pre-loaded data
+  frame containing at minimum `read_id`, `poly_tail_start`,
+  `poly_tail_end`, and `filename` columns
+- `workspace`: Path to directory containing POD5 files
+- `rescale`: If TRUE, scale signal to picoamperes (pA)
+
+> **Note:** The `moves` parameter is not available for POD5-based
+> functions. Move data is not stored in POD5 files in a format
+> accessible without the Dorado basecaller internals.
+
+The plot shows vertical lines marking poly(A) tail boundaries:
+
+- **Red**: 5’ end (poly(A) start)
+- **Navy blue**: 3’ end (poly(A) end)
+
+![Full read signal from POD5, rescaled to
+pA](../reference/figures/signal_pod5_rescaled.png)
+
+Full read signal from POD5, rescaled to pA
+
+------------------------------------------------------------------------
+
 ## Plotting tail range
 
 ### plot_tail_range_fast5()
@@ -88,6 +134,42 @@ moves=FALSE](../reference/figures/tail_move_false.png)
 Tail region plotted with moves=FALSE
 
 ## ![Tail region plotted with moves=FALSE](../reference/figures/tail_move_true.png)
+
+### plot_tail_range_pod5()
+
+Plot only the poly(A) tail region from POD5 files (Dorado DRS pipeline):
+
+``` r
+plot <- ninetails::plot_tail_range_pod5(
+  readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
+  dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
+                               'aligned_summary.txt',
+                               package = 'ninetails'),
+  workspace = system.file('extdata', 'test_data', 'pod5_DRS',
+                          package = 'ninetails'),
+  flank = 150,
+  rescale = TRUE
+)
+print(plot)
+```
+
+Parameters:
+
+- `readname`: Read identifier
+- `dorado_summary`: Path to Dorado summary file, or a pre-loaded data
+  frame (same as
+  [`plot_squiggle_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.md))
+- `workspace`: Path to directory containing POD5 files
+- `flank`: Number of positions to include on each side of the poly(A)
+  region (default: 150)
+- `rescale`: If TRUE, scale signal to picoamperes (pA)
+
+![Poly(A) tail region from POD5, rescaled to
+pA](../reference/figures/tail_pod5_rescaled.png)
+
+Poly(A) tail region from POD5, rescaled to pA
+
+------------------------------------------------------------------------
 
 ## Plotting tail segments
 
@@ -162,12 +244,13 @@ Multiple Gramian angular fields
 
 ## Signal visualization options
 
-| Option            | Description                                  |
-|-------------------|----------------------------------------------|
-| `rescale = FALSE` | Raw signal per position                      |
-| `rescale = TRUE`  | Signal scaled to picoamperes (pA) per second |
-| `moves = FALSE`   | Signal only                                  |
-| `moves = TRUE`    | Signal with move transitions in background   |
+| Option            | Description                                   | Applies to           |
+|-------------------|-----------------------------------------------|----------------------|
+| `rescale = FALSE` | Raw signal per position                       | Fast5, POD5          |
+| `rescale = TRUE`  | Signal scaled to picoamperes (pA) per second  | Fast5, POD5          |
+| `moves = FALSE`   | Signal only                                   | Fast5 only           |
+| `moves = TRUE`    | Signal with move transitions in background    | Fast5 only           |
+| `flank`           | Positions flanking tail region (default: 150) | POD5 tail range only |
 
 ------------------------------------------------------------------------
 
@@ -189,7 +272,9 @@ Signal visualization is useful for:
 | Function                                                                                              | Description              | Input             |
 |-------------------------------------------------------------------------------------------------------|--------------------------|-------------------|
 | [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md)     | Full read signal         | Fast5 files       |
+| [`plot_squiggle_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.md)       | Full read signal         | POD5 files        |
 | [`plot_tail_range_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.md) | Poly(A) tail signal only | Fast5 files       |
+| [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md)   | Poly(A) tail signal only | POD5 files        |
 | [`plot_tail_chunk()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.md)             | Signal segment           | Intermediate data |
 | [`plot_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_gaf.md)                           | Single GAF image         | Intermediate data |
 | [`plot_multiple_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_multiple_gaf.md)         | Multiple GAF images      | Intermediate data |
