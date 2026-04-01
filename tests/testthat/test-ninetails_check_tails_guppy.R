@@ -120,7 +120,8 @@ test_that("check_tails_guppy runs with valid test data", {
   skip_if(workspace_path == "" || !dir.exists(workspace_path),
           "Legacy Fast5 workspace not available")
 
-  temp_output <- file.path(tempdir(), paste0("ninetails_test_", format(Sys.time(), "%Y%m%d%H%M%S")))
+  temp_output <- file.path(tempdir(), paste0("ninetails_test_",
+                                             format(Sys.time(), "%Y%m%d%H%M%S")))
   dir.create(temp_output, showWarnings = FALSE)
   on.exit(unlink(temp_output, recursive = TRUE), add = TRUE)
 
@@ -143,6 +144,9 @@ test_that("check_tails_guppy runs with valid test data", {
     skip(paste("Pipeline failed:", e$message))
   })
 
+  # If we get here, verify the result structure.
+  # Source fix in check_tails_guppy guarantees return is either a named list
+  # or invisible(NULL) — never an atomic vector.
   if (!is.null(result)) {
     expect_type(result, "list")
     expect_true("read_classes" %in% names(result))

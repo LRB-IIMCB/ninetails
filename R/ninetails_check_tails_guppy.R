@@ -388,6 +388,7 @@ check_tails_guppy <- function(polya_data,
   }, error = function(e) {
     cli::cli_alert_danger("Error: {e$message}")
     cli::cli_alert_danger("Ninetails aborted")
+    return(invisible(NULL)) # fix preventing cli char vec to be returned
   })
 }
 
