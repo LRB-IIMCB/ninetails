@@ -48,6 +48,10 @@ The plot shows vertical lines marking poly(A) tail boundaries:
 - **Navy blue**: 5’ end
 - **Red**: 3’ end
 
+![Signal plotted with
+moves=FALSE](../reference/figures/signal_move_false.png)![Signal plotted
+with moves=TRUE](../reference/figures/signal_move_true.png)
+
 ------------------------------------------------------------------------
 
 ## Plotting tail range
@@ -78,7 +82,12 @@ print(plot)
 Accepts the same parameters as
 [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md).
 
-------------------------------------------------------------------------
+![Tail region plotted with
+moves=FALSE](../reference/figures/tail_move_false.png)
+
+Tail region plotted with moves=FALSE
+
+## ![Tail region plotted with moves=FALSE](../reference/figures/tail_move_true.png)
 
 ## Plotting tail segments
 
@@ -102,7 +111,7 @@ print(plot)
 > **Note:** This function shows raw signal only; no scaling to
 > picoamperes.
 
-------------------------------------------------------------------------
+## ![Selected tail chunk](../reference/figures/chunk.png)
 
 ## Plotting Gramian Angular Fields
 
@@ -127,6 +136,10 @@ The plot shows a 2-channel image:
 - **Channel 1**: Gramian Angular Summation Field (GASF)
 - **Channel 2**: Gramian Angular Difference Field (GADF)
 
+![Gramian angular field](../reference/figures/gasf.png)
+
+Gramian angular field
+
 ### plot_multiple_gaf()
 
 Plot all GAFs in a list (saves to working directory):
@@ -137,6 +150,10 @@ ninetails::plot_multiple_gaf(
   num_cores = 10
 )
 ```
+
+![Multiple Gramian angular fields](../reference/figures/multi_gasf.png)
+
+Multiple Gramian angular fields
 
 > **Warning:** Use with caution. GAF lists can be very large, and
 > plotting all at once may overload the system.

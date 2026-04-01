@@ -186,6 +186,7 @@ background</li>
 <li>
 <strong>Red</strong>: 3’ end</li>
 </ul>
+<p><img src="../reference/figures/signal_move_false.png" alt="Signal plotted with moves=FALSE"><img src="../reference/figures/signal_move_true.png" alt="Signal plotted with moves=TRUE"></p>
 <hr>
 </div>
 </div>
@@ -215,8 +216,15 @@ background</li>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plot</span><span class="op">)</span></span></code></pre></div>
 <p>Accepts the same parameters as
 <code><a href="../reference/plot_squiggle_fast5.html">plot_squiggle_fast5()</a></code>.</p>
-<hr>
+<div class="float">
+<img src="../reference/figures/tail_move_false.png" alt="Tail region plotted with moves=FALSE"><div class="figcaption">Tail region plotted with moves=FALSE</div>
 </div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="tail-region-plotted-with-movesfalse">
+<img src="../reference/figures/tail_move_true.png" alt="Tail region plotted with moves=FALSE"><a class="anchor" aria-label="anchor" href="#tail-region-plotted-with-movesfalse"></a>
+</h2>
 </div>
 <div class="section level2">
 <h2 id="plotting-tail-segments">Plotting tail segments<a class="anchor" aria-label="anchor" href="#plotting-tail-segments"></a>
@@ -240,8 +248,12 @@ background</li>
 <p><strong>Note:</strong> This function shows raw signal only; no
 scaling to picoamperes.</p>
 </blockquote>
-<hr>
 </div>
+</div>
+<div class="section level2">
+<h2 id="selected-tail-chunk">
+<img src="../reference/figures/chunk.png" alt="Selected tail chunk"><a class="anchor" aria-label="anchor" href="#selected-tail-chunk"></a>
+</h2>
 </div>
 <div class="section level2">
 <h2 id="plotting-gramian-angular-fields">Plotting Gramian Angular Fields<a class="anchor" aria-label="anchor" href="#plotting-gramian-angular-fields"></a>
@@ -269,6 +281,9 @@ scaling to picoamperes.</p>
 <strong>Channel 2</strong>: Gramian Angular Difference Field
 (GADF)</li>
 </ul>
+<div class="float">
+<img src="../reference/figures/gasf.png" alt="Gramian angular field"><div class="figcaption">Gramian angular field</div>
+</div>
 </div>
 <div class="section level3">
 <h3 id="plot_multiple_gaf">plot_multiple_gaf()<a class="anchor" aria-label="anchor" href="#plot_multiple_gaf"></a>
@@ -279,6 +294,9 @@ scaling to picoamperes.</p>
 <span>  gaf_list <span class="op">=</span> <span class="va">gl</span>,</span>
 <span>  num_cores <span class="op">=</span> <span class="fl">10</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="../reference/figures/multi_gasf.png" alt="Multiple Gramian angular fields"><div class="figcaption">Multiple Gramian angular fields</div>
+</div>
 <blockquote>
 <p><strong>Warning:</strong> Use with caution. GAF lists can be very
 large, and plotting all at once may overload the system.</p>
