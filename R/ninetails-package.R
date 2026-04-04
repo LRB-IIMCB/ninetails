@@ -30,6 +30,7 @@ utils::globalVariables(c(
   "tail_end",
   "tail_length", # tailfindr compatibility
   "poly_tail_start",
+  "poly_tail_end",
   "poly_tail_length", # dorado-specific
 
   # Non-A position and prediction data

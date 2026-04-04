@@ -2910,6 +2910,206 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 }
 
 
+#' Convert estimated non-A position to raw signal coordinate
+#'
+#' Reverses the position estimation formula used in
+#' \code{\link{create_outputs_dorado}} to map \code{est_nonA_pos} (nucleotide
+#' distance from the 3' end of the poly(A) tail) back to a position in the
+#' raw signal vector.
+#'
+#' The original estimation:
+#' \code{est_nonA_pos = poly_tail_length - (poly_tail_length * centr_signal_pos / signal_length)}
+#'
+#' where \code{signal_length = 0.2 * (poly_tail_end - poly_tail_start)}.
+#'
+#' The 0.2x interpolation and 5x rescale cancel algebraically, yielding:
+#' \code{raw_pos = poly_tail_start + (poly_tail_length - est_nonA_pos) *
+#' (poly_tail_end - poly_tail_start) / poly_tail_length}
+#'
+#' @param est_nonA_pos Numeric vector. Estimated non-A position(s) from 3' end
+#'   (as reported in \code{nonadenosine_residues} table).
+#' @param poly_tail_length Numeric. Total poly(A) tail length (nt).
+#' @param poly_tail_start Numeric. Poly(A) start coordinate in raw signal.
+#' @param poly_tail_end Numeric. Poly(A) end coordinate in raw signal.
+#'
+#' @return Numeric vector of raw signal positions (rounded to integer).
+#' @keywords internal
+#'
+.estimate_nonA_signal_pos <- function(est_nonA_pos,
+                                      poly_tail_length,
+                                      poly_tail_start,
+                                      poly_tail_end) {
+
+  raw_tail_length <- poly_tail_end - poly_tail_start
+  pos_from_5prime <- poly_tail_length - est_nonA_pos
+
+  raw_signal_pos <- poly_tail_start +
+    pos_from_5prime * raw_tail_length / poly_tail_length
+
+  return(round(raw_signal_pos))
+} # .estimate_nonA_signal_pos
+
+
+#' Build ggplot2 annotation layers for non-A residue highlights
+#'
+#' Creates a list of \code{ggplot2::annotate()} layers (semi-transparent
+#' rectangles + residue labels) for each non-A modification in a single
+#' read. The rectangles are drawn behind the signal line to highlight the
+#' estimated modification position with a flank.
+#'
+#' Residue colors match the package defaults used in
+#' \code{\link{plot_residue_counts}} and \code{\link{plot_panel_characteristics}}:
+#' C = \code{"#3a424f"}, G = \code{"#50a675"}, U = \code{"#b0bdd4"}.
+#'
+#' @param read_nonA_data Data frame. Rows from the \code{nonadenosine_residues}
+#'   table for a single read. Required columns: \code{prediction} (C/G/U),
+#'   \code{est_nonA_pos}, \code{polya_length}.
+#' @param poly_tail_start Numeric. Poly(A) start coordinate in raw signal.
+#' @param poly_tail_end Numeric. Poly(A) end coordinate in raw signal.
+#' @param nonA_flank Numeric. Number of raw signal positions to highlight
+#'   on each side of the estimated modification center. Default 250 (matching
+#'   the ~500-point raw signal extent of a 100-point interpolated chunk).
+#' @param x_scale_factor Numeric. Scaling factor for x-axis coordinates.
+#'   Use 1 for raw position plots, \code{1 / sampling_rate} for time-rescaled
+#'   plots. Default 1.
+#' @param alpha Numeric. Transparency of the highlight rectangles [0, 1].
+#'   Default 0.15.
+#'
+#' @return A list of ggplot2 annotation layers (can be added to a ggplot
+#'   with \code{+}). Returns an empty list if \code{read_nonA_data} has
+#'   zero rows or is NULL.
+#' @keywords internal
+#'
+.build_nonA_overlay <- function(read_nonA_data,
+                                poly_tail_start,
+                                poly_tail_end,
+                                nonA_flank = 250,
+                                x_scale_factor = 1,
+                                alpha = 0.15) {
+
+  if (is.null(read_nonA_data) || nrow(read_nonA_data) == 0) {
+    return(list())
+  }
+
+  # Residue color palette (matching package defaults from plot_residue_counts)
+  residue_colors <- c(
+    "C" = "#3a424f",
+    "G" = "#50a675",
+    "U" = "#b0bdd4"
+  )
+
+  # Compute raw signal positions for each modification
+  raw_positions <- .estimate_nonA_signal_pos(
+    est_nonA_pos = read_nonA_data$est_nonA_pos,
+    poly_tail_length = read_nonA_data$polya_length[1],
+    poly_tail_start = poly_tail_start,
+    poly_tail_end = poly_tail_end
+  )
+
+  # Build layers: one rectangle + one label per modification
+  layers <- list()
+
+  for (i in seq_len(nrow(read_nonA_data))) {
+    center <- raw_positions[i] * x_scale_factor
+    flank  <- nonA_flank * x_scale_factor
+    residue <- as.character(read_nonA_data$prediction[i])
+    fill_color <- residue_colors[residue]
+
+    # Fall back to gray if residue type is unexpected
+    if (is.na(fill_color)) fill_color <- "#999999"
+
+    # Semi-transparent rectangle behind signal
+    layers <- c(layers, list(
+      ggplot2::annotate(
+        "rect",
+        xmin = center - flank,
+        xmax = center + flank,
+        ymin = -Inf,
+        ymax = Inf,
+        fill = fill_color,
+        alpha = alpha
+      )
+    ))
+
+    # Residue label at top of rectangle
+    layers <- c(layers, list(
+      ggplot2::annotate(
+        "text",
+        x = center,
+        y = Inf,
+        label = residue,
+        vjust = 1.5,
+        fontface = "bold",
+        size = 3.5,
+        color = fill_color
+      )
+    ))
+  } # for each modification
+
+  return(layers)
+} # .build_nonA_overlay
+
+
+#' Prepare non-A data for overlay on signal plots
+#'
+#' Loads and filters the nonadenosine_residues table for a single read.
+#' Handles both file paths and data frames, and normalizes the read ID
+#' column name (\code{read_id} vs \code{readname}).
+#'
+#' @param residue_data Character string (file path) or data frame.
+#'   The nonadenosine_residues table.
+#' @param readname Character string. The read ID to filter for.
+#'
+#' @return Data frame with non-A data for the specified read, or NULL
+#'   if no matching rows found.
+#' @keywords internal
+#'
+.prepare_nonA_data <- function(residue_data, readname) {
+
+  if (is.null(residue_data)) {
+    return(NULL)
+  }
+
+  # Load from file if string path provided
+  if (is_string(residue_data)) {
+    assert_file_exists(residue_data)
+    residue_data <- vroom::vroom(residue_data, show_col_types = FALSE)
+  }
+
+  if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
+    return(NULL)
+  }
+
+  # Normalize column name: readname -> read_id
+  if (!"read_id" %in% names(residue_data) && "readname" %in% names(residue_data)) {
+    residue_data <- dplyr::rename(residue_data, read_id = readname)
+  }
+
+  # Check required columns
+  required <- c("read_id", "prediction", "est_nonA_pos", "polya_length")
+  missing_cols <- setdiff(required, names(residue_data))
+
+  if (length(missing_cols) > 0) {
+    warning(
+      "residue_data is missing required columns: ",
+      paste(missing_cols, collapse = ", "),
+      ". Non-A overlay will be skipped.",
+      call. = FALSE
+    )
+    return(NULL)
+  }
+
+  # Filter for this read
+  read_data <- residue_data[residue_data$read_id == readname, , drop = FALSE]
+
+  if (nrow(read_data) == 0) {
+    return(NULL)
+  }
+
+  return(read_data)
+} # .prepare_nonA_data
+
+
 #' Draws an entire squiggle for given read from POD5 file.
 #'
 #' Creates segmented plot of raw or rescaled ONT RNA signal from Dorado
@@ -2922,6 +3122,12 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 #' readability of the graph (and to avoid plotting high cliffs - e.g. jets
 #' of the signal caused by a sudden surge of current in the sensor)
 #' the signal is winsorized.
+#'
+#' When \code{residue_data} is provided, semi-transparent rectangles highlight
+#' estimated non-adenosine residue positions within the poly(A) tail.
+#' Each rectangle spans \code{+/- nonA_flank} raw signal positions around
+#' the estimated modification center, matching the approximate extent of
+#' the 100-point interpolated chunk analyzed by the CNN.
 #'
 #' @param readname Character string. Name of the given read (read_id) within
 #' the analyzed dataset.
@@ -2937,6 +3143,15 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 #' to picoamps (pA) per second (s). If FALSE, raw signal per position will
 #' be plotted. Default is FALSE.
 #'
+#' @param residue_data Character string, data frame, or NULL. Either the full
+#'   path to the nonadenosine_residues output file, or a pre-loaded data frame.
+#'   Required columns: read_id (or readname), prediction (C/G/U),
+#'   est_nonA_pos, polya_length. If NULL (default), no overlay is drawn.
+#'
+#' @param nonA_flank Numeric. Number of raw signal positions to highlight on
+#'   each side of the estimated non-A center. Default 250, matching the
+#'   approximate extent of the 100-point interpolated chunk (~500 raw positions).
+#'
 #' @return ggplot2 object with squiggle plot depicting nanopore read signal.
 #'
 #' @seealso \code{\link{plot_squiggle_fast5}} for the fast5 equivalent,
@@ -2947,6 +3162,7 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 #' @examples
 #' \dontrun{
 #'
+#' # Basic usage (no non-A overlay)
 #' plot <- ninetails::plot_squiggle_pod5(
 #'   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
 #'   dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
@@ -2956,6 +3172,13 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 #'                           package = 'ninetails'),
 #'   rescale = FALSE)
 #'
+#' # With non-A overlay
+#' plot <- ninetails::plot_squiggle_pod5(
+#'   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
+#'   dorado_summary = "dorado_summary.txt",
+#'   workspace = "/path/to/pod5/",
+#'   residue_data = "nonadenosine_residues.txt")
+#'
 #' print(plot)
 #'
 #' }
@@ -2963,7 +3186,9 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 plot_squiggle_pod5 <- function(readname,
                                dorado_summary,
                                workspace,
-                               rescale = FALSE) {
+                               rescale = FALSE,
+                               residue_data = NULL,
+                               nonA_flank = 250) {
 
   # Assertions
   if (missing(readname)) {
@@ -3077,6 +3302,16 @@ plot_squiggle_pod5 <- function(readname,
   ] <- "poly(A)"
   signal_df$segment <- as.factor(signal_df$segment)
 
+  # Prepare non-A overlay layers (empty list when residue_data is NULL)
+  read_nonA <- .prepare_nonA_data(residue_data, readname)
+  nonA_overlay <- .build_nonA_overlay(
+    read_nonA_data = read_nonA,
+    poly_tail_start = polya_start_position,
+    poly_tail_end = polya_end_position,
+    nonA_flank = nonA_flank,
+    x_scale_factor = 1
+  )
+
   # Plotting squiggle
   if (rescale == TRUE) {
     # Extract calibration parameters
@@ -3096,8 +3331,25 @@ plot_squiggle_pod5 <- function(readname,
       pA = (signal + calibration_offset) * calibration_scale
     )
 
-    # Plotting signal rescaled to picoamps per second
-    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time)) +
+    # Rebuild overlay with time-scaled x coordinates
+    nonA_overlay <- .build_nonA_overlay(
+      read_nonA_data = read_nonA,
+      poly_tail_start = polya_start_position,
+      poly_tail_end = polya_end_position,
+      nonA_flank = nonA_flank,
+      x_scale_factor = 1 / sampling_rate
+    )
+
+    # Base ggplot (data + aesthetics only)
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time))
+
+    # Add non-A overlay BEHIND signal line
+    for (layer in nonA_overlay) {
+      squiggle <- squiggle + layer
+    }
+
+    # Signal line and theme on top
+    squiggle <- squiggle +
       ggplot2::geom_line(ggplot2::aes(y = pA, color = segment)) +
       ggplot2::theme_bw() +
       ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
@@ -3117,8 +3369,16 @@ plot_squiggle_pod5 <- function(readname,
     )
 
   } else {
-    # Plotting raw signal
-    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position)) +
+    # Base ggplot (data + aesthetics only)
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position))
+
+    # Add non-A overlay BEHIND signal line
+    for (layer in nonA_overlay) {
+      squiggle <- squiggle + layer
+    }
+
+    # Signal line and theme on top
+    squiggle <- squiggle +
       ggplot2::geom_line(ggplot2::aes(y = signal, color = segment)) +
       ggplot2::theme_bw() +
       ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
@@ -3157,6 +3417,12 @@ plot_squiggle_pod5 <- function(readname,
 #' graph (and to avoid plotting high cliffs - e.g. jets of the signal caused
 #' by a sudden surge of current in the sensor) the signal is winsorized.
 #'
+#' When \code{residue_data} is provided, semi-transparent rectangles highlight
+#' estimated non-adenosine residue positions within the poly(A) tail.
+#' Each rectangle spans \code{+/- nonA_flank} raw signal positions around
+#' the estimated modification center, matching the approximate extent of
+#' the 100-point interpolated chunk analyzed by the CNN.
+#'
 #' @param readname Character string. Name of the given read (read_id) within
 #'   the analyzed dataset.
 #'
@@ -3174,6 +3440,15 @@ plot_squiggle_pod5 <- function(readname,
 #'   to picoamps (pA) per second (s). If FALSE, raw signal per position will
 #'   be plotted. Default is FALSE.
 #'
+#' @param residue_data Character string, data frame, or NULL. Either the full
+#'   path to the nonadenosine_residues output file, or a pre-loaded data frame.
+#'   Required columns: read_id (or readname), prediction (C/G/U),
+#'   est_nonA_pos, polya_length. If NULL (default), no overlay is drawn.
+#'
+#' @param nonA_flank Numeric. Number of raw signal positions to highlight on
+#'   each side of the estimated non-A center. Default 250, matching the
+#'   approximate extent of the 100-point interpolated chunk (~500 raw positions).
+#'
 #' @return ggplot2 object with squiggle plot centered on tail range.
 #'
 #' @seealso \code{\link{plot_tail_range_fast5}} for the fast5 equivalent,
@@ -3184,6 +3459,7 @@ plot_squiggle_pod5 <- function(readname,
 #' @examples
 #' \dontrun{
 #'
+#' # Basic usage (no non-A overlay)
 #' plot <- ninetails::plot_tail_range_pod5(
 #'   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
 #'   dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
@@ -3193,6 +3469,14 @@ plot_squiggle_pod5 <- function(readname,
 #'                           package = 'ninetails'),
 #'   rescale = FALSE)
 #'
+#' # With non-A overlay
+#' plot <- ninetails::plot_tail_range_pod5(
+#'   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
+#'   dorado_summary = "dorado_summary.txt",
+#'   workspace = "/path/to/pod5/",
+#'   residue_data = "nonadenosine_residues.txt",
+#'   nonA_flank = 250)
+#'
 #' print(plot)
 #'
 #' }
@@ -3201,7 +3485,9 @@ plot_tail_range_pod5 <- function(readname,
                                  dorado_summary,
                                  workspace,
                                  flank = 150,
-                                 rescale = FALSE) {
+                                 rescale = FALSE,
+                                 residue_data = NULL,
+                                 nonA_flank = 250) {
 
   # Assertions
   if (missing(readname)) {
@@ -3326,6 +3612,16 @@ plot_tail_range_pod5 <- function(readname,
 
   signal_df <- signal_df[trim_position_upstream:trim_position_downstream, ]
 
+  # Prepare non-A overlay layers (empty list when residue_data is NULL)
+  read_nonA <- .prepare_nonA_data(residue_data, readname)
+  nonA_overlay <- .build_nonA_overlay(
+    read_nonA_data = read_nonA,
+    poly_tail_start = polya_start_position,
+    poly_tail_end = polya_end_position,
+    nonA_flank = nonA_flank,
+    x_scale_factor = 1
+  )
+
   # Plotting squiggle
   if (rescale == TRUE) {
     # Extract calibration parameters
@@ -3345,8 +3641,25 @@ plot_tail_range_pod5 <- function(readname,
       pA = (signal + calibration_offset) * calibration_scale
     )
 
-    # Plotting signal rescaled to picoamps per second
-    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time)) +
+    # Rebuild overlay with time-scaled x coordinates
+    nonA_overlay <- .build_nonA_overlay(
+      read_nonA_data = read_nonA,
+      poly_tail_start = polya_start_position,
+      poly_tail_end = polya_end_position,
+      nonA_flank = nonA_flank,
+      x_scale_factor = 1 / sampling_rate
+    )
+
+    # Base ggplot
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = time))
+
+    # Add non-A overlay BEHIND signal line
+    for (layer in nonA_overlay) {
+      squiggle <- squiggle + layer
+    }
+
+    # Signal line and theme on top
+    squiggle <- squiggle +
       ggplot2::geom_line(ggplot2::aes(y = pA, color = segment)) +
       ggplot2::theme_bw() +
       ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
@@ -3366,8 +3679,16 @@ plot_tail_range_pod5 <- function(readname,
     )
 
   } else {
-    # Plotting raw signal
-    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position)) +
+    # Base ggplot
+    squiggle <- ggplot2::ggplot(data = signal_df, ggplot2::aes(x = position))
+
+    # Add non-A overlay BEHIND signal line
+    for (layer in nonA_overlay) {
+      squiggle <- squiggle + layer
+    }
+
+    # Signal line and theme on top
+    squiggle <- squiggle +
       ggplot2::geom_line(ggplot2::aes(y = signal, color = segment)) +
       ggplot2::theme_bw() +
       ggplot2::scale_colour_manual(values = c("#089bcc", "#f56042", "#3a414d"))
