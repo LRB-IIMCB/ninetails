@@ -490,7 +490,7 @@ ui <- shiny::fluidPage(
                                                                                        ))
                                                                             ) # div plot-desc
                                                     ) # conditionalPanel
-                                         ) # div card
+                                         ), # div card
                                          shiny::div(class = "card",
                                                     shiny::h4("Poly(A) Length Summary"),
                                                     DT::DTOutput("polya_summary_table"))
