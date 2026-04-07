@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.78</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -644,6 +644,71 @@ About tab)</li>
 </ul>
 </div>
 <div class="section level2">
+<h2 id="deploying-to-shiny-server">Deploying to Shiny Server<a class="anchor" aria-label="anchor" href="#deploying-to-shiny-server"></a>
+</h2>
+<p>The dashboard can be deployed to Shiny Server (Open Source or Pro)
+for shared access over a network. A deployment wrapper is included in
+the package that handles data loading from a YAML configuration file and
+delegates rendering to the installed ninetails app.</p>
+<div class="section level3">
+<h3 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
+</h3>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1. Copy the deployment wrapper to the Shiny Server app directory</span></span>
+<span><span class="va">deploy_dir</span> <span class="op">&lt;-</span> <span class="st">"/srv/shiny-server/ninetails"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">deploy_dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"deployment"</span>, <span class="st">"app.R"</span>, package <span class="op">=</span> <span class="st">"ninetails"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">deploy_dir</span>, <span class="st">"app.R"</span><span class="op">)</span>,</span>
+<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Copy your YAML configuration</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span><span class="st">"config.yml"</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">deploy_dir</span>, <span class="st">"config.yml"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Symlink static assets from the installed package</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.symlink</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"app"</span>, <span class="st">"www"</span>, package <span class="op">=</span> <span class="st">"ninetails"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">deploy_dir</span>, <span class="st">"www"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="directory-structure">Directory structure<a class="anchor" aria-label="anchor" href="#directory-structure"></a>
+</h3>
+<pre><code>/srv/shiny-server/ninetails/
+├── app.R          # deployment wrapper (from inst/deployment/)
+├── config.yml     # your YAML configuration
+└── www/           # symlink to inst/app/www/ in the installed package
+    ├── logo.png
+    ├── favicon.ico
+    └── IIMCB_logo.png</code></pre>
+</div>
+<div class="section level3">
+<h3 id="requirements-1">Requirements<a class="anchor" aria-label="anchor" href="#requirements-1"></a>
+</h3>
+<ul>
+<li>ninetails and all Suggests dependencies must be installed
+system-wide (accessible to the <code>shiny</code> user)</li>
+<li>All data file paths in <code>config.yml</code> must be readable by
+the <code>shiny</code> user</li>
+<li>For the Signal Viewer tab, the <code>shiny</code> user must have
+access to the POD5 files and a working Python environment with the
+<code>pod5</code> module</li>
+</ul>
+<p>After placing the files, restart Shiny Server:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart shiny-server</span></code></pre></div>
+<p>The dashboard will be accessible at
+<code>http://your-server:3838/ninetails/</code>.</p>
+<blockquote>
+<p><strong>Note:</strong> When you update the ninetails package, the
+deployed app picks up changes automatically (it sources from the
+installed package at runtime). To change the dataset, edit
+<code>config.yml</code> and restart Shiny Server.</p>
+</blockquote>
+</div>
+</div>
+<div class="section level2">
 <h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
 </h2>
 <p><strong>Rug density plots are empty or show an error</strong>
@@ -659,7 +724,7 @@ recursively within that directory.</p>
 <p><strong>Signal Viewer shows “Extraction failed”</strong> The Python
 <code>pod5</code> package must be installed and accessible via
 <code>reticulate</code>. Check with:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">reticulate</span><span class="fu">::</span><span class="fu"><a href="https://rstudio.github.io/reticulate/reference/py_module_available.html" class="external-link">py_module_available</a></span><span class="op">(</span><span class="st">"pod5"</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Classification or Residue plots are blank</strong> If using
 single-sample mode, make sure you provided <code>class_file</code>
