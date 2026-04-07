@@ -398,6 +398,71 @@ The dashboard expects three image files in `inst/app/www/`:
 - `IIMCB_logo.png` — IIMCB institute logo (displayed in the About tab)
 
 
+## Deploying to Shiny Server
+
+The dashboard can be deployed to Shiny Server (Open Source or Pro) for
+shared access over a network. A deployment wrapper is included in the
+package that handles data loading from a YAML configuration file and
+delegates rendering to the installed ninetails app.
+
+### Setup
+
+```{r deploy, eval = FALSE}
+# 1. Copy the deployment wrapper to the Shiny Server app directory
+deploy_dir <- "/srv/shiny-server/ninetails"
+dir.create(deploy_dir, recursive = TRUE, showWarnings = FALSE)
+
+file.copy(
+  system.file("deployment", "app.R", package = "ninetails"),
+  file.path(deploy_dir, "app.R"),
+  overwrite = TRUE
+)
+
+# 2. Copy your YAML configuration
+file.copy("config.yml", file.path(deploy_dir, "config.yml"))
+
+# 3. Symlink static assets from the installed package
+file.symlink(
+  system.file("app", "www", package = "ninetails"),
+  file.path(deploy_dir, "www")
+)
+```
+
+### Directory structure
+
+```
+/srv/shiny-server/ninetails/
+├── app.R          # deployment wrapper (from inst/deployment/)
+├── config.yml     # your YAML configuration
+└── www/           # symlink to inst/app/www/ in the installed package
+    ├── logo.png
+    ├── favicon.ico
+    └── IIMCB_logo.png
+```
+
+### Requirements
+
+- ninetails and all Suggests dependencies must be installed system-wide
+  (accessible to the `shiny` user)
+- All data file paths in `config.yml` must be readable by the `shiny`
+  user
+- For the Signal Viewer tab, the `shiny` user must have access to the
+  POD5 files and a working Python environment with the `pod5` module
+
+After placing the files, restart Shiny Server:
+
+```bash
+sudo systemctl restart shiny-server
+```
+
+The dashboard will be accessible at `http://your-server:3838/ninetails/`.
+
+> **Note:** When you update the ninetails package, the deployed app
+> picks up changes automatically (it sources from the installed package
+> at runtime). To change the dataset, edit `config.yml` and restart
+> Shiny Server.
+
+
 ## Troubleshooting
 
 **Rug density plots are empty or show an error**

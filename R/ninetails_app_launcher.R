@@ -113,6 +113,10 @@
 #' Static assets (\code{logo.png}, \code{favicon.ico},
 #' \code{IIMCB_logo.png}) should be placed in \code{inst/app/www/}.
 #'
+#' For deployment to Shiny Server, a wrapper script is included at
+#' \code{system.file("deployment", "app.R", package = "ninetails")}.
+#' See \code{vignette("shiny_app")} for deployment instructions.
+#'
 #' @return Launches a Shiny application (does not return a value).
 #'
 #' @seealso
