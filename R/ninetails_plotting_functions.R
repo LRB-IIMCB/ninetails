@@ -2708,7 +2708,6 @@ plot_rug_density <- function(residue_data,
 #' plt
 #' }
 plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
-
   #assertions
   if (missing(residue_data)) {
     stop(
@@ -2716,27 +2715,32 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
       call. = FALSE
     )
   }
-
   if (!is.data.frame(residue_data) || nrow(residue_data) == 0) {
     stop(
       "Empty data frame provided as an input (residue_data). Please provide valid input"
     )
   }
-
   if (!is.na(grouping_factor)) {
     assert_condition(
       grouping_factor %in% colnames(residue_data),
       paste0(grouping_factor, " is not a column of input dataset")
     )
   }
-
   nonA_counts <- ninetails::count_nonA_abundance(
     residue_data = residue_data,
     grouping_factor = grouping_factor
   )
+  nonA_counts <- nonA_counts %>%
+    tidyr::pivot_wider(names_from = instances, values_from = count)
+
+  # Ensure all expected columns exist after pivot
+  # (a column is missing when no reads have that count of non-A residues;
+  #  e.g. small datasets may lack reads with 2 or 3+ modifications)
+  for (col in c("single", "two", "more")) {
+    if (!col %in% names(nonA_counts)) nonA_counts[[col]] <- 0L
+  }
 
   nonA_counts <- nonA_counts %>%
-    tidyr::pivot_wider(names_from = instances, values_from = count) %>%
     dplyr::mutate(dplyr::across(c(single, two, more), ~ tidyr::replace_na(., 0))) %>%
     dplyr::mutate(total = single + two + more) %>%
     dplyr::group_by(!!rlang::sym(grouping_factor)) %>%
@@ -2754,12 +2758,10 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
       values_to = "value"
     ) %>%
     dplyr::distinct()
-
   nonA_counts$instances <- factor(
     nonA_counts$instances,
     levels = c("single", "two", "more")
   )
-
   tp <- ggplot2::ggplot(
     nonA_counts,
     ggplot2::aes(x = !!rlang::sym(grouping_factor), y = value, fill = instances)

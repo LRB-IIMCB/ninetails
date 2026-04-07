@@ -200,6 +200,25 @@ launch_signal_browser <- function(config = NULL,
         pod5_dir = pod5_dir
       )
     }
+
+    # Add default sample_name and group columns if missing
+    # (required by merge_nonA_tables and downstream plotting functions)
+    if (!is.null(class_data)) {
+      if (!"sample_name" %in% names(class_data)) {
+        class_data$sample_name <- as.factor("sample_1")
+      }
+      if (!"group" %in% names(class_data)) {
+        class_data$group <- as.factor("ungrouped")
+      }
+    }
+    if (!is.null(residue_data)) {
+      if (!"sample_name" %in% names(residue_data)) {
+        residue_data$sample_name <- as.factor("sample_1")
+      }
+      if (!"group" %in% names(residue_data)) {
+        residue_data$group <- as.factor("ungrouped")
+      }
+    }
   }
 
   # Attempt merged table

@@ -43,6 +43,18 @@ has_merged  <- !is.null(merged_data) && nrow(merged_data) > 0
 has_signal  <- length(signal_config) > 0 ||
   nzchar(default_summary) || nzchar(default_pod5)
 
+# Startup diagnostics (visible in R console)
+cat("--- Ninetails Dashboard Startup ---\n")
+cat("  class_data:    ", if (has_class) paste(nrow(class_data), "rows,",
+                                              ncol(class_data), "cols") else "NULL", "\n")
+cat("  residue_data:  ", if (has_residue) paste(nrow(residue_data), "rows")
+    else "NULL", "\n")
+cat("  merged_data:   ", if (has_merged) paste(nrow(merged_data), "rows")
+    else "NULL", "\n")
+cat("  signal_config: ", length(signal_config), "sample(s)\n")
+if (has_class) cat("  columns:       ",
+                   paste(names(class_data), collapse = ", "), "\n")
+
 # Dynamic grouping variables
 available_groups <- character(0)
 if (has_class) {
@@ -226,11 +238,11 @@ ui <- shiny::fluidPage(
                         shiny::mainPanel(width = 10,
                                          shiny::div(class = "card",
                                                     shiny::h4("Read Classification"),
-                                                    plotly::plotlyOutput("class_plot", height = "450px")),
+                                                    shiny::plotOutput("class_plot", height = "450px")),
                                          if (has_residue) {
                                            shiny::div(class = "card",
                                                       shiny::h4("Non-A Abundance (reads with 1, 2, 3+ non-As)"),
-                                                      plotly::plotlyOutput("nonA_abundance_plot", height = "400px"))
+                                                      shiny::plotOutput("nonA_abundance_plot", height = "400px"))
                                          }
                         ) # mainPanel
                       ) # sidebarLayout
@@ -261,7 +273,7 @@ ui <- shiny::fluidPage(
                         shiny::mainPanel(width = 10,
                                          shiny::div(class = "card",
                                                     shiny::h4("Residue Counts"),
-                                                    plotly::plotlyOutput("residue_plot", height = "450px")),
+                                                    shiny::plotOutput("residue_plot", height = "450px")),
                                          if (has_merged) {
                                            shiny::div(class = "card",
                                                       shiny::h4("Summary Table"),
@@ -301,7 +313,7 @@ ui <- shiny::fluidPage(
                         shiny::mainPanel(width = 10,
                                          shiny::div(class = "card",
                                                     shiny::h4("Poly(A) Tail Length Distribution"),
-                                                    plotly::plotlyOutput("polya_dist_plot", height = "500px"))
+                                                    shiny::plotOutput("polya_dist_plot", height = "500px"))
                         ) # mainPanel
                       ) # sidebarLayout
                     } else {
@@ -323,31 +335,13 @@ ui <- shiny::fluidPage(
                                     shiny::div(class = "card",
                                                shiny::h4("Data"),
                                                if (length(signal_config) > 0 && names(signal_config)[1] != "single") {
-                                                 # Multi mode: sample dropdown
+                                                 # Multi mode: sample dropdown only (paths pre-loaded)
                                                  shiny::div(class = "paths-section",
                                                             shiny::selectInput("signal_sample", "Select sample",
                                                                                choices = names(signal_config),
-                                                                               selected = names(signal_config)[1]),
-                                                            shiny::textInput("signal_residue_file",
-                                                                             "Non-A residues file (optional)",
-                                                                             value = default_residue,
-                                                                             placeholder = "/path/to/nonadenosine_residues.txt"))
-                                               } else if (length(signal_config) > 0 &&
-                                                          names(signal_config)[1] == "single") {
-                                                 # Single mode with paths from launcher
-                                                 shiny::div(class = "paths-section",
-                                                            shiny::textInput("signal_summary_file", "Summary file",
-                                                                             value = default_summary),
-                                                            shiny::textInput("signal_pod5_dir", "POD5 directory",
-                                                                             value = default_pod5),
-                                                            shiny::textInput("signal_residue_file",
-                                                                             "Non-A residues file (optional)",
-                                                                             value = default_residue),
-                                                            shiny::actionButton("load_signal_data", "Load data",
-                                                                                class = "btn-primary btn-sm",
-                                                                                icon = shiny::icon("folder-open")))
-                                               } else {
-                                                 # No signal data at all
+                                                                               selected = names(signal_config)[1]))
+                                               } else if (length(signal_config) == 0) {
+                                                 # No pre-loaded data: manual path entry
                                                  shiny::div(class = "paths-section",
                                                             shiny::textInput("signal_summary_file", "Summary file",
                                                                              value = "", placeholder = "/path/to/dorado_summary.txt"),
@@ -360,6 +354,7 @@ ui <- shiny::fluidPage(
                                                                                 class = "btn-primary btn-sm",
                                                                                 icon = shiny::icon("folder-open")))
                                                },
+                                               # Single pre-loaded: no paths shown, auto-loads in server
                                                shiny::uiOutput("signal_data_status")
                                     ), # div card data
 
@@ -489,23 +484,31 @@ server <- function(input, output, session) {
       .filter_by_contig(class_data, input$class_contig_filter)
     })
 
-    output$class_plot <- plotly::renderPlotly({
+    output$class_plot <- shiny::renderPlot({
       cd <- class_data_filtered(); shiny::req(nrow(cd) > 0)
+      shiny::req(input$class_grouping, input$class_plot_type, !is.null(input$class_frequency))
       gf <- if (input$class_grouping %in% names(cd)) input$class_grouping else NA
-      p <- ninetails::plot_class_counts(class_data = cd,
-                                        grouping_factor = gf, frequency = input$class_frequency,
-                                        type = input$class_plot_type)
-      plotly::ggplotly(p)
+      ninetails::plot_class_counts(class_data = cd,
+                                   grouping_factor = gf, frequency = input$class_frequency,
+                                   type = input$class_plot_type)
     })
 
     if (has_residue) {
-      output$nonA_abundance_plot <- plotly::renderPlotly({
+      output$nonA_abundance_plot <- shiny::renderPlot({
         rd <- .filter_by_contig(residue_data, input$class_contig_filter)
-        shiny::req(nrow(rd) > 0)
+        shiny::req(nrow(rd) > 0, input$class_grouping)
         gf <- if (input$class_grouping %in% names(rd)) input$class_grouping else NA
-        p <- ninetails::plot_nonA_abundance(residue_data = rd,
-                                            grouping_factor = gf)
-        plotly::ggplotly(p)
+        tryCatch(
+          ninetails::plot_nonA_abundance(residue_data = rd,
+                                         grouping_factor = gf),
+          error = function(e) {
+            ggplot2::ggplot() +
+              ggplot2::annotate("text", x = 0.5, y = 0.5,
+                                label = paste("plot_nonA_abundance:", e$message),
+                                size = 4, color = "#cc0000") +
+              ggplot2::theme_void()
+          }
+        )
       })
     }
   }
@@ -520,17 +523,18 @@ server <- function(input, output, session) {
       .filter_by_contig(residue_data, input$residue_contig_filter)
     })
 
-    output$residue_plot <- plotly::renderPlotly({
+    output$residue_plot <- shiny::renderPlot({
       rd <- residue_data_filtered(); shiny::req(nrow(rd) > 0)
+      shiny::req(input$residue_grouping, !is.null(input$residue_frequency), !is.null(input$residue_by_read))
       gf <- if (input$residue_grouping %in% names(rd)) input$residue_grouping else NA
-      p <- ninetails::plot_residue_counts(residue_data = rd,
-                                          grouping_factor = gf, frequency = input$residue_frequency,
-                                          by_read = input$residue_by_read)
-      plotly::ggplotly(p)
+      ninetails::plot_residue_counts(residue_data = rd,
+                                     grouping_factor = gf, frequency = input$residue_frequency,
+                                     by_read = input$residue_by_read)
     })
 
     if (has_merged) {
       output$residue_summary_table <- DT::renderDT({
+        shiny::req(input$residue_grouping)
         md <- .filter_by_contig(merged_data, input$residue_contig_filter)
         shiny::req(nrow(md) > 0)
         tid_col <- if ("ensembl_transcript_id_short" %in% names(md)) {
@@ -562,16 +566,16 @@ server <- function(input, output, session) {
       .filter_by_contig(base, input$polya_contig_filter)
     })
 
-    output$polya_dist_plot <- plotly::renderPlotly({
+    output$polya_dist_plot <- shiny::renderPlot({
       pd <- polya_data_filtered(); shiny::req(nrow(pd) > 0)
+      shiny::req(input$polya_grouping, input$polya_center, input$polya_palette)
       center_val <- if (input$polya_center == "none") NA else input$polya_center
       gf <- if (input$polya_grouping %in% names(pd)) input$polya_grouping else NA
       p <- ninetails::plot_tail_distribution(input_data = pd,
                                              grouping_factor = gf, max_length = input$polya_max_length,
                                              value_to_show = center_val, ndensity = input$polya_ndensity)
       pal_colors <- palettes[[input$polya_palette]]
-      p <- p + ggplot2::scale_color_manual(values = pal_colors)
-      plotly::ggplotly(p)
+      p + ggplot2::scale_color_manual(values = pal_colors)
     })
   }
 
@@ -604,15 +608,9 @@ server <- function(input, output, session) {
         signal_error(paste("Error:", e$message)); loaded_signal_data(NULL)
       })
 
-      # Residue overlay
-      rf <- trimws(input$signal_residue_file %||% "")
-      if (nzchar(rf) && file.exists(rf)) {
-        tryCatch({
-          rd <- vroom::vroom(rf, show_col_types = FALSE)
-          if (!"read_id" %in% names(rd) && "readname" %in% names(rd))
-            rd <- dplyr::rename(rd, read_id = readname)
-          loaded_signal_residue(rd)
-        }, error = function(e) { loaded_signal_residue(NULL) })
+      # Residue overlay: use pre-loaded residue_data from config
+      if (has_residue) {
+        loaded_signal_residue(residue_data)
       } else { loaded_signal_residue(NULL) }
     }, ignoreNULL = FALSE)
 
@@ -633,7 +631,7 @@ server <- function(input, output, session) {
         signal_error(paste("Error:", e$message)); loaded_signal_data(NULL)
       })
 
-      rf <- trimws(input$signal_residue_file %||% default_residue)
+      rf <- trimws(default_residue)
       if (nzchar(rf) && file.exists(rf)) {
         tryCatch({
           rd <- vroom::vroom(rf, show_col_types = FALSE)
@@ -730,8 +728,12 @@ server <- function(input, output, session) {
       data <- dplyr::filter(data, alignment_mapq >= input$mapq_filter[1], alignment_mapq <= input$mapq_filter[2])
     rt <- loaded_signal_residue()
     if (!is.null(input$sig_residue_filter) && input$sig_residue_filter != "All" && !is.null(rt)) {
-      rids <- unique(rt$read_id[rt$prediction == input$sig_residue_filter])
-      data <- dplyr::filter(data, read_id %in% rids)
+      # Normalize column name
+      id_col <- if ("read_id" %in% names(rt)) "read_id" else if ("readname" %in% names(rt)) "readname" else NULL
+      if (!is.null(id_col)) {
+        rids <- unique(rt[[id_col]][rt$prediction == input$sig_residue_filter])
+        data <- dplyr::filter(data, read_id %in% rids)
+      }
     }
     dplyr::filter(data, !is.na(poly_tail_start), !is.na(poly_tail_end),
                   poly_tail_start > 0, poly_tail_end > poly_tail_start)
@@ -798,6 +800,11 @@ server <- function(input, output, session) {
   selected_residue <- shiny::reactive({
     rd <- loaded_signal_residue(); shiny::req(input$selected_read_id)
     if (is.null(rd)) return(NULL)
+    # Normalize column name (ninetails output uses readname, dorado uses read_id)
+    if (!"read_id" %in% names(rd) && "readname" %in% names(rd)) {
+      rd <- dplyr::rename(rd, read_id = readname)
+    }
+    if (!"read_id" %in% names(rd)) return(NULL)
     rr <- rd[rd$read_id == input$selected_read_id, , drop = FALSE]
     if (nrow(rr) == 0) NULL else rr
   })
