@@ -55,7 +55,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,7 +71,10 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
+    <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
@@ -712,6 +715,22 @@ body, .contents, .contents p, .contents li,
 
         </dt>
         <dd>Draws tail range squiggle for given read from POD5 file.</dd>
+      </dl></div><div class="section level2">
+      <h2 id="analysis-dashboard">Analysis dashboard<a class="anchor" aria-label="anchor" href="#analysis-dashboard"></a></h2>
+
+      <div class="section-desc"><p>Interactive Shiny application for exploring ninetails results. Supports single-sample and multi-sample analysis via YAML configuration, including read classification, residue composition, poly(A) distributions, and raw signal visualization with non-A modification overlay.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="launch_signal_browser.html">launch_signal_browser()</a></code>
+
+        </dt>
+        <dd>Launch the Ninetails Analysis Dashboard</dd>
       </dl></div><div class="section level2">
       <h2 id="tailfindr-compatibility">tailfindr compatibility<a class="anchor" aria-label="anchor" href="#tailfindr-compatibility"></a></h2>
 

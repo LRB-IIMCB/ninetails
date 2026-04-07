@@ -8,7 +8,7 @@ overflow when processing large datasets.
 ## Usage
 
 ``` r
-split_polya_data(polya_data, part_size = 1e+05, save_dir)
+split_polya_data(polya_data, part_size = 100000, save_dir)
 ```
 
 ## Arguments

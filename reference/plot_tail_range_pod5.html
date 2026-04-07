@@ -59,7 +59,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,7 +75,10 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
+    <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
@@ -111,7 +114,9 @@ sequences.</p>
 <span>  <span class="va">dorado_summary</span>,</span>
 <span>  <span class="va">workspace</span>,</span>
 <span>  flank <span class="op">=</span> <span class="fl">150</span>,</span>
-<span>  rescale <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  rescale <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  residue_data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nonA_flank <span class="op">=</span> <span class="fl">250</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -145,6 +150,19 @@ poly(A) region. Default is 150.</p></dd>
 to picoamps (pA) per second (s). If FALSE, raw signal per position will
 be plotted. Default is FALSE.</p></dd>
 
+
+<dt id="arg-residue-data">residue_data<a class="anchor" aria-label="anchor" href="#arg-residue-data"></a></dt>
+<dd><p>Character string, data frame, or NULL. Either the full
+path to the nonadenosine_residues output file, or a pre-loaded data frame.
+Required columns: read_id (or readname), prediction (C/G/U),
+est_nonA_pos, polya_length. If NULL (default), no overlay is drawn.</p></dd>
+
+
+<dt id="arg-nona-flank">nonA_flank<a class="anchor" aria-label="anchor" href="#arg-nona-flank"></a></dt>
+<dd><p>Numeric. Number of raw signal positions to highlight on
+each side of the estimated non-A center. Default 250, matching the
+approximate extent of the 100-point interpolated chunk (~500 raw positions).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -158,6 +176,11 @@ mark the 5' (red) and 3' (navy blue) termini of polyA tail according to
 the Dorado poly(A) estimation. In order to maintain readability of the
 graph (and to avoid plotting high cliffs - e.g. jets of the signal caused
 by a sudden surge of current in the sensor) the signal is winsorized.</p>
+<p>When <code>residue_data</code> is provided, semi-transparent rectangles highlight
+estimated non-adenosine residue positions within the poly(A) tail.
+Each rectangle spans <code>+/- nonA_flank</code> raw signal positions around
+the estimated modification center, matching the approximate extent of
+the 100-point interpolated chunk analyzed by the CNN.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -169,6 +192,7 @@ by a sudden surge of current in the sensor) the signal is winsorized.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Basic usage (no non-A overlay)</span></span></span>
 <span class="r-in"><span><span class="va">plot</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu">plot_tail_range_pod5</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  readname <span class="op">=</span> <span class="st">"0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9"</span>,</span></span>
 <span class="r-in"><span>  dorado_summary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_DRS'</span>,</span></span>
@@ -177,6 +201,14 @@ by a sudden surge of current in the sensor) the signal is winsorized.</p>
 <span class="r-in"><span>  workspace <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_DRS'</span>,</span></span>
 <span class="r-in"><span>                          package <span class="op">=</span> <span class="st">'ninetails'</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  rescale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># With non-A overlay</span></span></span>
+<span class="r-in"><span><span class="va">plot</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu">plot_tail_range_pod5</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  readname <span class="op">=</span> <span class="st">"0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9"</span>,</span></span>
+<span class="r-in"><span>  dorado_summary <span class="op">=</span> <span class="st">"dorado_summary.txt"</span>,</span></span>
+<span class="r-in"><span>  workspace <span class="op">=</span> <span class="st">"/path/to/pod5/"</span>,</span></span>
+<span class="r-in"><span>  residue_data <span class="op">=</span> <span class="st">"nonadenosine_residues.txt"</span>,</span></span>
+<span class="r-in"><span>  nonA_flank <span class="op">=</span> <span class="fl">250</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plot</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>

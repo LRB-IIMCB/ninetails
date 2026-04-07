@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,7 +92,10 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
+    <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
@@ -128,15 +131,26 @@ body, .contents, .contents p, .contents li,
 
     
     
-<p>This vignette describes functions for loading, processing, and
-analyzing <strong>ninetails</strong> output data.</p>
+<p>This vignette describes functions for loading, processing,
+annotating, and analyzing <strong>ninetails</strong> output data. All
+functions documented here operate on the two output tables produced by
+the main pipelines (<code><a href="../reference/check_tails_dorado_DRS.html">check_tails_dorado_DRS()</a></code>,
+<code><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code>, or
+<code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code>):</p>
+<ul>
+<li>
+<strong>read_classes</strong>: Per-read classification
+(decorated/blank/unclassified)</li>
+<li>
+<strong>nonadenosine_residues</strong>: Modification-level detail
+for decorated reads</li>
+</ul>
+<p>For visualization of these data, see
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code> and
+<code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code>.</p>
 <div class="section level2">
 <h2 id="reading-files-into-r">Reading files into R<a class="anchor" aria-label="anchor" href="#reading-files-into-r"></a>
 </h2>
-<p>Data postprocessing requires output from the main ninetails pipelines
-(<code><a href="../reference/check_tails_dorado_DRS.html">check_tails_dorado_DRS()</a></code>,
-<code><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code>, or
-<code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code>).</p>
 <div class="section level3">
 <h3 id="reading-single-files">Reading single files<a class="anchor" aria-label="anchor" href="#reading-single-files"></a>
 </h3>
@@ -148,13 +162,45 @@ analyzing <strong>ninetails</strong> output data.</p>
 <span><span class="co"># Read nonadenosine_residues output</span></span>
 <span><span class="va">residue_path</span> <span class="op">&lt;-</span> <span class="st">"/path/to/nonadenosine_residues.tsv"</span></span>
 <span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_residue_single.html">read_residue_single</a></span><span class="op">(</span><span class="va">residue_path</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Function</th>
+<th>Input</th>
+<th>Output</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/read_class_single.html">read_class_single()</a></code></td>
+<td>Path to a single <code>read_classes</code> file</td>
+<td>Data frame with <code>readname</code>, <code>contig</code>,
+<code>polya_length</code>, <code>qc_tag</code>, <code>class</code>,
+<code>comments</code>
+</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/read_residue_single.html">read_residue_single()</a></code></td>
+<td>Path to a single <code>nonadenosine_residues</code> file</td>
+<td>Data frame with <code>readname</code>, <code>contig</code>,
+<code>prediction</code>, <code>est_nonA_pos</code>,
+<code>polya_length</code>, <code>qc_tag</code>
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level3">
 <h3 id="reading-multiple-files">Reading multiple files<a class="anchor" aria-label="anchor" href="#reading-multiple-files"></a>
 </h3>
 <p>For experiments with multiple samples, use
 <code><a href="../reference/read_class_multiple.html">read_class_multiple()</a></code> and
-<code><a href="../reference/read_residue_multiple.html">read_residue_multiple()</a></code> with a metadata table:</p>
+<code><a href="../reference/read_residue_multiple.html">read_residue_multiple()</a></code> with a metadata table. The metadata
+table must contain columns <code>sample_name</code>, <code>group</code>,
+<code>class_path</code>, and <code>residue_path</code>.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define metadata table</span></span>
 <span><span class="va">samples_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -177,16 +223,16 @@ analyzing <strong>ninetails</strong> output data.</p>
 <span><span class="co"># Read all files at once</span></span>
 <span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_class_multiple.html">read_class_multiple</a></span><span class="op">(</span><span class="va">samples_table</span><span class="op">)</span></span>
 <span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_residue_multiple.html">read_residue_multiple</a></span><span class="op">(</span><span class="va">samples_table</span><span class="op">)</span></span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> Required metadata columns:
-<code>sample_name</code>, <code>group</code>, <code>class_path</code>,
-<code>residue_path</code></p>
-</blockquote>
+<p>The output data frames include additional <code>sample_name</code>
+and <code>group</code> columns (as factors), which are used as grouping
+variables in downstream analysis and plotting.</p>
 </div>
 <div class="section level3">
 <h3 id="using-a-yaml-configuration-file">Using a YAML configuration file<a class="anchor" aria-label="anchor" href="#using-a-yaml-configuration-file"></a>
 </h3>
-<p>Alternatively, provide metadata in a configuration file:</p>
+<p>Alternatively, provide metadata in a YAML configuration file. This is
+the same format used by the Shiny dashboard (see
+<code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code>):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">config</span> <span class="op">&lt;-</span> <span class="fu">yaml</span><span class="fu">::</span><span class="fu"><a href="https://yaml.r-lib.org/reference/yaml.load.html" class="external-link">yaml.load_file</a></span><span class="op">(</span><span class="st">"config.yml"</span><span class="op">)</span></span>
 <span><span class="va">samples_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">config</span><span class="op">$</span><span class="va">samples</span>, <span class="va">unlist</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
@@ -210,39 +256,276 @@ analyzing <strong>ninetails</strong> output data.</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="annotation-with-biomart">Annotation with biomaRt<a class="anchor" aria-label="anchor" href="#annotation-with-biomart"></a>
+</h2>
+<p><code><a href="../reference/annotate_with_biomart.html">annotate_with_biomart()</a></code> adds gene symbols and Ensembl
+transcript IDs to ninetails output tables by querying biomaRt. This
+enables transcript-level filtering by human-readable gene names instead
+of raw contig identifiers.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Annotate class data</span></span>
+<span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span></span>
+<span>  <span class="va">class_data</span>,</span>
+<span>  species <span class="op">=</span> <span class="st">"mmusculus"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Annotate residue data</span></span>
+<span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span></span>
+<span>  <span class="va">residue_data</span>,</span>
+<span>  species <span class="op">=</span> <span class="st">"mmusculus"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters">Parameters<a class="anchor" aria-label="anchor" href="#parameters"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Ninetails output table with a <code>contig</code> column</td>
+</tr>
+<tr class="even">
+<td><code>species</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Species identifier (see below)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="supported-species">Supported species<a class="anchor" aria-label="anchor" href="#supported-species"></a>
+</h3>
+<table class="table">
+<thead><tr class="header">
+<th>Identifier</th>
+<th>Species</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>"mmusculus"</code></td>
+<td><em>Mus musculus</em></td>
+</tr>
+<tr class="even">
+<td><code>"hsapiens"</code></td>
+<td><em>Homo sapiens</em></td>
+</tr>
+<tr class="odd">
+<td><code>"athaliana"</code></td>
+<td><em>Arabidopsis thaliana</em></td>
+</tr>
+<tr class="even">
+<td><code>"scerevisiae"</code></td>
+<td><em>Saccharomyces cerevisiae</em></td>
+</tr>
+<tr class="odd">
+<td><code>"celegans"</code></td>
+<td><em>Caenorhabditis elegans</em></td>
+</tr>
+<tr class="even">
+<td><code>"tbrucei"</code></td>
+<td><em>Trypanosoma brucei</em></td>
+</tr>
+</tbody>
+</table>
+<p>See function documentation for other species and custom biomaRt
+datasets.</p>
+</div>
+<div class="section level3">
+<h3 id="output-columns-added">Output columns added<a class="anchor" aria-label="anchor" href="#output-columns-added"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Column</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>symbol</code></td>
+<td>Gene symbol (e.g., <code>Actb</code>, <code>Gapdh</code>)</td>
+</tr>
+<tr class="even">
+<td><code>ensembl_transcript_id_short</code></td>
+<td>Ensembl transcript ID without version suffix</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> Annotation should be performed before merging,
+summarizing, or launching the dashboard, since downstream functions and
+the dashboard use the <code>symbol</code> column for transcript labels
+when available.</p>
+</blockquote>
+<hr>
+</div>
+</div>
+<div class="section level2">
 <h2 id="correcting-classification">Correcting classification<a class="anchor" aria-label="anchor" href="#correcting-classification"></a>
 </h2>
 <p>Sometimes nucleotides from AT-rich transcript ends are misidentified
 as poly(A) tails. Use <code><a href="../reference/reclassify_ninetails_data.html">reclassify_ninetails_data()</a></code> to
-minimize segmentation artifacts:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+minimize segmentation artifacts by comparing detected residue positions
+against known transcript sequences:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ninetails_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/reclassify_ninetails_data.html">reclassify_ninetails_data</a></span><span class="op">(</span></span>
-<span>  residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
-<span>  class_data <span class="op">=</span> <span class="va">class_data</span>,</span>
-<span>  grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
+<span>  residue_data      <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  class_data        <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  grouping_factor   <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
 <span>  transcript_column <span class="op">=</span> <span class="st">"ensembl_transcript_id_short"</span>,</span>
-<span>  ref <span class="op">=</span> <span class="st">"mmusculus"</span></span>
+<span>  ref               <span class="op">=</span> <span class="st">"mmusculus"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Retrieve corrected data frames</span></span>
 <span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="va">ninetails_data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="va">ninetails_data</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> Apply this function before further
-analysis.</p>
-</blockquote>
 <div class="section level3">
-<h3 id="supported-species">Supported species<a class="anchor" aria-label="anchor" href="#supported-species"></a>
+<h3 id="parameters-1">Parameters<a class="anchor" aria-label="anchor" href="#parameters-1"></a>
 </h3>
-<ul>
-<li><em>Arabidopsis thaliana</em></li>
-<li><em>Homo sapiens</em></li>
-<li><em>Mus musculus</em></li>
-<li><em>Saccharomyces cerevisiae</em></li>
-<li><em>Caenorhabditis elegans</em></li>
-<li><em>Trypanosoma brucei</em></li>
-</ul>
-<p>See function documentation for other species.</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>residue_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Non-A residue table</td>
+</tr>
+<tr class="even">
+<td><code>class_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Read classification table</td>
+</tr>
+<tr class="odd">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Grouping column (e.g., <code>"sample_name"</code>)</td>
+</tr>
+<tr class="even">
+<td><code>transcript_column</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Column with transcript IDs</td>
+</tr>
+<tr class="odd">
+<td><code>ref</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Reference species (same identifiers as
+<code><a href="../reference/annotate_with_biomart.html">annotate_with_biomart()</a></code>)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> Apply this function before further analysis.
+It requires annotated data (i.e., run
+<code><a href="../reference/annotate_with_biomart.html">annotate_with_biomart()</a></code> first).</p>
+</blockquote>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="merging-results">Merging results<a class="anchor" aria-label="anchor" href="#merging-results"></a>
+</h2>
+<p>Combine class and residue data into a single table with one row per
+read. Decorated reads gain a <code>nonA_residues</code> column
+summarizing all detected positions.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">merged_tables</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/merge_nonA_tables.html">merge_nonA_tables</a></span><span class="op">(</span></span>
+<span>  class_data  <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  pass_only   <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-2">Parameters<a class="anchor" aria-label="anchor" href="#parameters-2"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>class_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Read classification table</td>
+</tr>
+<tr class="even">
+<td><code>residue_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Non-A residue table</td>
+</tr>
+<tr class="odd">
+<td><code>pass_only</code></td>
+<td>logical</td>
+<td><code>TRUE</code></td>
+<td>If <code>TRUE</code>, include only QC-passed reads</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="output">Output<a class="anchor" aria-label="anchor" href="#output"></a>
+</h3>
+<p>The merged table contains all columns from <code>class_data</code>
+plus a <code>nonA_residues</code> column. For decorated reads, this
+column contains all non-A positions from 5’ to 3’ separated by
+<code>:</code> (e.g., <code>"C:G"</code> for a read with a cytidine and
+a guanosine). For blank and unclassified reads, the column is
+<code>NA</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="spreading-residue-columns">Spreading residue columns<a class="anchor" aria-label="anchor" href="#spreading-residue-columns"></a>
+</h3>
+<p><code><a href="../reference/spread_nonA_residues.html">spread_nonA_residues()</a></code> reshapes the merged table to
+create separate columns for each non-A position, which can be useful for
+per-position analysis:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">spread_table</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/spread_nonA_residues.html">spread_nonA_residues</a></span><span class="op">(</span></span>
+<span>  merged_nonA_tables <span class="op">=</span> <span class="va">merged_tables</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The output adds columns <code>nonA_1</code>, <code>nonA_2</code>,
+etc., each containing the residue type at that position (or
+<code>NA</code> if the read has fewer modifications).</p>
 <hr>
 </div>
 </div>
@@ -252,7 +535,7 @@ analysis.</p>
 <div class="section level3">
 <h3 id="count-by-class">Count by class<a class="anchor" aria-label="anchor" href="#count-by-class"></a>
 </h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simple counts</span></span>
 <span><span class="va">class_counts</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/count_class.html">count_class</a></span><span class="op">(</span><span class="va">class_data</span><span class="op">)</span></span>
 <span></span>
@@ -267,10 +550,60 @@ analysis.</p>
 <span><span class="va">counts_simple</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/count_class.html">count_class</a></span><span class="op">(</span><span class="va">class_data</span>, detailed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="parameters-3">Parameters<a class="anchor" aria-label="anchor" href="#parameters-3"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>class_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Read classification table</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Grouping column</td>
+</tr>
+<tr class="odd">
+<td><code>detailed</code></td>
+<td>logical</td>
+<td><code>TRUE</code></td>
+<td>If <code>TRUE</code>, count by comment code; if <code>FALSE</code>,
+count by class</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
 <h3 id="count-residues">Count residues<a class="anchor" aria-label="anchor" href="#count-residues"></a>
 </h3>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">residue_counts</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/count_residues.html">count_residues</a></span><span class="op">(</span></span>
+<span>  <span class="va">residue_data</span>,</span>
+<span>  grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="count-non-a-abundance">Count non-A abundance<a class="anchor" aria-label="anchor" href="#count-non-a-abundance"></a>
+</h3>
+<p>Count how many reads have one, two, or three or more non-A
+residues:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">abundance</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/count_nonA_abundance.html">count_nonA_abundance</a></span><span class="op">(</span></span>
 <span>  <span class="va">residue_data</span>,</span>
 <span>  grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -278,41 +611,115 @@ analysis.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="merging-results">Merging results<a class="anchor" aria-label="anchor" href="#merging-results"></a>
-</h2>
-<p>Combine class and residue data into a single table (one row per
-read):</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">merged_tables</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/merge_nonA_tables.html">merge_nonA_tables</a></span><span class="op">(</span></span>
-<span>  class_data <span class="op">=</span> <span class="va">class_data</span>,</span>
-<span>  residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
-<span>  pass_only <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>The output includes a <code>nonA_residues</code> column summarizing
-all non-A positions per read (5’ to 3’, separated by “:”).</p>
-<hr>
-</div>
-<div class="section level2">
 <h2 id="summarizing-by-transcript">Summarizing by transcript<a class="anchor" aria-label="anchor" href="#summarizing-by-transcript"></a>
 </h2>
-<p>Generate summary statistics per transcript:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<p>Generate comprehensive summary statistics per transcript:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">summarized</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/summarize_nonA.html">summarize_nonA</a></span><span class="op">(</span></span>
-<span>  merged_nonA_tables <span class="op">=</span> <span class="va">merged_tables</span>,</span>
-<span>  summary_factors <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>  transcript_id_column <span class="op">=</span> <span class="st">"ensembl_transcript_id_short"</span></span>
+<span>  merged_nonA_tables    <span class="op">=</span> <span class="va">merged_tables</span>,</span>
+<span>  summary_factors       <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span>  transcript_id_column  <span class="op">=</span> <span class="st">"ensembl_transcript_id_short"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Output includes:</p>
-<ul>
-<li>
-<strong>counts</strong>: Number of reads (total and by non-A
-type)</li>
-<li>
-<strong>hits</strong>: Number of non-A occurrences (a read may have
-multiple)</li>
-<li>Mean and median poly(A) tail length by transcript</li>
-</ul>
+<div class="section level3">
+<h3 id="parameters-4">Parameters<a class="anchor" aria-label="anchor" href="#parameters-4"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>merged_nonA_tables</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Output from <code><a href="../reference/merge_nonA_tables.html">merge_nonA_tables()</a></code>
+</td>
+</tr>
+<tr class="even">
+<td><code>summary_factors</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Grouping column(s) for the summary</td>
+</tr>
+<tr class="odd">
+<td><code>transcript_id_column</code></td>
+<td>character</td>
+<td><code>NULL</code></td>
+<td>Column with transcript IDs (optional)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="output-columns">Output columns<a class="anchor" aria-label="anchor" href="#output-columns"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Column</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Grouping columns</td>
+<td>As specified by <code>summary_factors</code>
+</td>
+</tr>
+<tr class="even">
+<td>
+<code>contig</code> / transcript ID</td>
+<td>Transcript identifier</td>
+</tr>
+<tr class="odd">
+<td><code>n_reads</code></td>
+<td>Total reads mapping to the transcript</td>
+</tr>
+<tr class="even">
+<td><code>n_decorated</code></td>
+<td>Number of decorated reads</td>
+</tr>
+<tr class="odd">
+<td><code>n_blank</code></td>
+<td>Number of blank reads</td>
+</tr>
+<tr class="even">
+<td>
+<code>n_C_counts</code> / <code>n_G_counts</code> /
+<code>n_U_counts</code>
+</td>
+<td>Reads containing C, G, or U residues</td>
+</tr>
+<tr class="odd">
+<td>
+<code>n_C_hits</code> / <code>n_G_hits</code> /
+<code>n_U_hits</code>
+</td>
+<td>Total C, G, or U residue occurrences</td>
+</tr>
+<tr class="even">
+<td><code>mean_polya_length</code></td>
+<td>Mean poly(A) tail length</td>
+</tr>
+<tr class="odd">
+<td><code>median_polya_length</code></td>
+<td>Median poly(A) tail length</td>
+</tr>
+</tbody>
+</table>
 <hr>
+</div>
 </div>
 <div class="section level2">
 <h2 id="statistical-analysis">Statistical analysis<a class="anchor" aria-label="anchor" href="#statistical-analysis"></a>
@@ -320,20 +727,50 @@ multiple)</li>
 <div class="section level3">
 <h3 id="fishers-exact-test">Fisher’s exact test<a class="anchor" aria-label="anchor" href="#fishers-exact-test"></a>
 </h3>
-<p>Compare non-adenosine frequencies between conditions:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<p>Compare non-adenosine frequencies between two conditions:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fisher_results</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/calculate_fisher.html">calculate_fisher</a></span><span class="op">(</span></span>
 <span>  <span class="va">ninetails_data</span>,</span>
 <span>  grouping_factor <span class="op">=</span> <span class="st">"condition"</span>,</span>
 <span>  comparison <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="parameters-5">Parameters<a class="anchor" aria-label="anchor" href="#parameters-5"></a>
+</h3>
+<table class="table">
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>ninetails_data</code></td>
+<td>data.frame</td>
+<td>Class data or merged table</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td>Column defining conditions</td>
+</tr>
+<tr class="odd">
+<td><code>comparison</code></td>
+<td>character(2)</td>
+<td>Two condition names to compare</td>
+</tr>
+</tbody>
+</table>
+<p>The function returns a data frame with Fisher’s exact test results
+(p-value, odds ratio, confidence interval) per transcript.</p>
 <hr>
 </div>
 </div>
 <div class="section level2">
 <h2 id="typical-workflow">Typical workflow<a class="anchor" aria-label="anchor" href="#typical-workflow"></a>
 </h2>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://LRB-IIMCB.github.io/ninetails/">ninetails</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 1. Load data from multiple samples</span></span>
@@ -349,7 +786,11 @@ multiple)</li>
 <span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_class_multiple.html">read_class_multiple</a></span><span class="op">(</span><span class="va">samples</span><span class="op">)</span></span>
 <span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_residue_multiple.html">read_residue_multiple</a></span><span class="op">(</span><span class="va">samples</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 2. Reclassify to remove artifacts</span></span>
+<span><span class="co"># 2. Annotate with gene symbols</span></span>
+<span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span><span class="va">class_data</span>, species <span class="op">=</span> <span class="st">"mmusculus"</span><span class="op">)</span></span>
+<span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span><span class="va">residue_data</span>, species <span class="op">=</span> <span class="st">"mmusculus"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Reclassify to remove artifacts</span></span>
 <span><span class="va">ninetails_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/reclassify_ninetails_data.html">reclassify_ninetails_data</a></span><span class="op">(</span></span>
 <span>  residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
 <span>  class_data <span class="op">=</span> <span class="va">class_data</span>,</span>
@@ -361,19 +802,105 @@ multiple)</li>
 <span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="va">ninetails_data</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="va">ninetails_data</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span></span>
 <span></span>
-<span><span class="co"># 3. Count classifications</span></span>
+<span><span class="co"># 4. Count classifications</span></span>
 <span><span class="va">class_counts</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/count_class.html">count_class</a></span><span class="op">(</span><span class="va">class_data</span>, grouping_factor <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 4. Merge and summarize</span></span>
+<span><span class="co"># 5. Merge and summarize</span></span>
 <span><span class="va">merged</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/merge_nonA_tables.html">merge_nonA_tables</a></span><span class="op">(</span><span class="va">class_data</span>, <span class="va">residue_data</span><span class="op">)</span></span>
 <span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/summarize_nonA.html">summarize_nonA</a></span><span class="op">(</span><span class="va">merged</span>, summary_factors <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 5. Statistical comparison</span></span>
+<span><span class="co"># 6. Statistical comparison</span></span>
 <span><span class="va">fisher</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/calculate_fisher.html">calculate_fisher</a></span><span class="op">(</span></span>
 <span>  <span class="va">class_data</span>,</span>
 <span>  grouping_factor <span class="op">=</span> <span class="st">"group"</span>,</span>
 <span>  comparison <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"WT"</span>, <span class="st">"KO"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 7. Explore interactively</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
+<span>  config <span class="op">=</span> <span class="st">"config.yml"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="summary-of-postprocessing-functions">Summary of postprocessing functions<a class="anchor" aria-label="anchor" href="#summary-of-postprocessing-functions"></a>
+</h2>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/read_class_single.html">read_class_single()</a></code></td>
+<td>Load a single read_classes file</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/read_class_multiple.html">read_class_multiple()</a></code></td>
+<td>Load multiple read_classes files with metadata</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/read_residue_single.html">read_residue_single()</a></code></td>
+<td>Load a single nonadenosine_residues file</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/read_residue_multiple.html">read_residue_multiple()</a></code></td>
+<td>Load multiple nonadenosine_residues files with metadata</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/annotate_with_biomart.html">annotate_with_biomart()</a></code></td>
+<td>Add gene symbols and transcript IDs via biomaRt</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/reclassify_ninetails_data.html">reclassify_ninetails_data()</a></code></td>
+<td>Correct misclassifications from AT-rich ends</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/correct_class_data.html">correct_class_data()</a></code></td>
+<td>Apply corrections to class table</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/correct_residue_data.html">correct_residue_data()</a></code></td>
+<td>Apply corrections to residue table</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/correct_labels.html">correct_labels()</a></code></td>
+<td>Fix label inconsistencies</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/merge_nonA_tables.html">merge_nonA_tables()</a></code></td>
+<td>Combine class and residue data (one row per read)</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/spread_nonA_residues.html">spread_nonA_residues()</a></code></td>
+<td>Reshape merged table with per-position columns</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/count_class.html">count_class()</a></code></td>
+<td>Count reads by class or comment code</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/count_residues.html">count_residues()</a></code></td>
+<td>Count residues by type</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/count_nonA_abundance.html">count_nonA_abundance()</a></code></td>
+<td>Count reads with 1, 2, 3+ non-A residues</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/summarize_nonA.html">summarize_nonA()</a></code></td>
+<td>Per-transcript summary statistics</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/calculate_fisher.html">calculate_fisher()</a></code></td>
+<td>Fisher’s exact test between conditions</td>
+</tr>
+</tbody>
+</table>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

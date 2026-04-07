@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,7 +92,10 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
+    <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
@@ -128,175 +131,687 @@ body, .contents, .contents p, .contents li,
 
     
     
+<p>This vignette documents all plotting functions provided by
+<strong>ninetails</strong> for visualizing classification results,
+residue composition, poly(A) tail distributions, and positional
+patterns. For interactive exploration of these plots, see
+<code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code>.</p>
+<p>All plotting functions return <code>ggplot2</code> objects and can be
+further customized with standard ggplot2 layers (themes, scales,
+labels).</p>
 <div class="section level2">
 <h2 id="read-classification">Read classification<a class="anchor" aria-label="anchor" href="#read-classification"></a>
 </h2>
-<p><strong>Ninetails</strong> provides insights into the non-adenosine
-landscape of sequenced samples. The <code><a href="../reference/plot_class_counts.html">plot_class_counts()</a></code>
-function produces graphical representations of read classification
-results. The <code>type</code> argument controls the level of
-detail:</p>
-<ul>
-<li>
-<code>type = "R"</code> — detailed view: all comment codes shown
-(YAY, MAU, MPU, IRL, UNM, BAC)</li>
-<li>
-<code>type = "N"</code> — coarser view: three classes only
-(decorated, blank, unclassified)</li>
-<li>
-<code>type = "A"</code> — decorated reads only</li>
-</ul>
-<div class="section level3">
-<h3 id="detailed-classification">Detailed classification<a class="anchor" aria-label="anchor" href="#detailed-classification"></a>
-</h3>
-<p>All reads — decorated, blank, and those that could not be classified
-— are included and colour-coded by their comment code.</p>
+<p><code><a href="../reference/plot_class_counts.html">plot_class_counts()</a></code> produces bar charts of read
+classification results. The <code>type</code> argument controls the
+level of detail.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt1</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_class_counts.html">plot_class_counts</a></span><span class="op">(</span>class_data <span class="op">=</span> <span class="va">class_data</span>,</span>
-<span>                                     grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
-<span>                                     frequency <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>                                     type <span class="op">=</span> <span class="st">"R"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt1</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="../reference/figures/read_classes_1.png" alt="Bar chart showing all read classes broken down by comment code (YAY, MAU, MPU, IRL, UNM/BAC)"><div class="figcaption">Bar chart showing all read classes broken down
-by comment code (YAY, MAU, MPU, IRL, UNM/BAC)</div>
-</div>
+<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_class_counts.html">plot_class_counts</a></span><span class="op">(</span></span>
+<span>  class_data       <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  grouping_factor  <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
+<span>  frequency        <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  type             <span class="op">=</span> <span class="st">"N"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters">Parameters<a class="anchor" aria-label="anchor" href="#parameters"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>class_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Read classification table from ninetails</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Column name to group by (e.g., <code>"sample_name"</code>,
+<code>"group"</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>frequency</code></td>
+<td>logical</td>
+<td><code>FALSE</code></td>
+<td>If <code>TRUE</code>, show proportions instead of raw counts</td>
+</tr>
+<tr class="even">
+<td><code>type</code></td>
+<td>character</td>
+<td><code>"N"</code></td>
+<td>Level of detail (see below)</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level3">
-<h3 id="less-detailed-classification">Less detailed classification<a class="anchor" aria-label="anchor" href="#less-detailed-classification"></a>
+<h3 id="classification-views">Classification views<a class="anchor" aria-label="anchor" href="#classification-views"></a>
 </h3>
-<p>With <code>type = "N"</code>, only the three top-level classes are
-shown, making it easier to compare the proportion of decorated reads
-across samples.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt1</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_class_counts.html">plot_class_counts</a></span><span class="op">(</span>class_data <span class="op">=</span> <span class="va">class_data</span>,</span>
-<span>                                     grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
-<span>                                     frequency <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>                                     type <span class="op">=</span> <span class="st">"N"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt1</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th>Type</th>
+<th>Description</th>
+<th>Categories shown</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>"N"</code></td>
+<td>Summary</td>
+<td>decorated, blank, unclassified</td>
+</tr>
+<tr class="even">
+<td><code>"R"</code></td>
+<td>Detailed</td>
+<td>All comment codes (YAY, MAU, MPU, IRL, UNM, BAC)</td>
+</tr>
+<tr class="odd">
+<td><code>"A"</code></td>
+<td>Decorated only</td>
+<td>Only decorated reads</td>
+</tr>
+</tbody>
+</table>
 <div class="float">
 <img src="../reference/figures/read_classes_2.png" alt="Bar chart showing read classes at the decorated/blank/unclassified level"><div class="figcaption">Bar chart showing read classes at the
 decorated/blank/unclassified level</div>
 </div>
 </div>
-</div>
-<div class="section level2">
-<h2 id="residue-classification">Residue classification<a class="anchor" aria-label="anchor" href="#residue-classification"></a>
-</h2>
-<p>The <code><a href="../reference/plot_residue_counts.html">plot_residue_counts()</a></code> function plots the frequency
-or counts of each predicted non-adenosine residue type (C, G, U).</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt1</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_residue_counts.html">plot_residue_counts</a></span><span class="op">(</span>residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
-<span>                                       grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt1</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="../reference/figures/residues_1.png" alt="Bar chart showing counts or frequencies of C, G, and U residues per sample"><div class="figcaption">Bar chart showing counts or frequencies of C, G,
-and U residues per sample</div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="plot-panel-characteristics">Plot panel characteristics<a class="anchor" aria-label="anchor" href="#plot-panel-characteristics"></a>
-</h2>
-<p>The <code><a href="../reference/plot_panel_characteristics.html">plot_panel_characteristics()</a></code> function produces a
-multi-panel summary of the full tail composition for a dataset or subset
-(e.g. a single sample, group, or transcript). The resulting plot can be
-aligned from either the 5’ or 3’ end of the tail.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_panel_characteristics.html">plot_panel_characteristics</a></span><span class="op">(</span></span>
-<span>  input_residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
-<span>  input_class_data <span class="op">=</span> <span class="va">class_data</span>,</span>
-<span>  input_merged_nonA_tables_data <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"default"</span>,</span>
-<span>  max_length <span class="op">=</span> <span class="fl">100</span>,</span>
-<span>  direction_5_prime <span class="op">=</span> <span class="cn">TRUE</span></span>
+<div class="section level3">
+<h3 id="detailed-classification">Detailed classification<a class="anchor" aria-label="anchor" href="#detailed-classification"></a>
+</h3>
+<p>All reads — decorated, blank, and unclassified — are included and
+colour-coded by their comment code.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_class_counts.html">plot_class_counts</a></span><span class="op">(</span></span>
+<span>  class_data       <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  grouping_factor  <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
+<span>  frequency        <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  type             <span class="op">=</span> <span class="st">"R"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt</span><span class="op">)</span></span></code></pre></div>
-<p>The panel contains the following subplots:</p>
-<ul>
-<li>
-<strong>A</strong> — read counts</li>
-<li>
-<strong>B</strong> — frequency of non-adenosine residues</li>
-<li>
-<strong>C</strong> — poly(A) tail length distribution</li>
-<li>
-<strong>D</strong> — normalised distribution of non-adenosines
-(binned and normalised by length)</li>
-<li>
-<strong>E</strong> — raw distribution of non-adenosines</li>
-</ul>
 <div class="float">
-<img src="../reference/figures/plot_panel.png" alt="Multi-panel plot showing read counts, residue frequencies, tail length distribution, and positional distributions of non-adenosines"><div class="figcaption">Multi-panel plot showing read counts, residue
-frequencies, tail length distribution, and positional distributions of
-non-adenosines</div>
+<img src="../reference/figures/read_classes_1.png" alt="Bar chart showing all read classes broken down by comment code"><div class="figcaption">Bar chart showing all read classes broken down
+by comment code</div>
+</div>
+<hr>
 </div>
 </div>
 <div class="section level2">
-<h2 id="position-scatterplot">Position scatterplot<a class="anchor" aria-label="anchor" href="#position-scatterplot"></a>
+<h2 id="residue-counts">Residue counts<a class="anchor" aria-label="anchor" href="#residue-counts"></a>
 </h2>
-<p>The <code><a href="../reference/plot_rug_density.html">plot_rug_density()</a></code> function visualises non-adenosine
-positions relative to tail lengths, combining a scatterplot, density
-plot, and rug in one figure. Call the function once per nucleotide
-type.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_rug_density.html">plot_rug_density</a></span><span class="op">(</span>residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
-<span>                                   base <span class="op">=</span> <span class="st">"C"</span>,</span>
-<span>                                   max_length <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
+<p><code><a href="../reference/plot_residue_counts.html">plot_residue_counts()</a></code> shows the distribution of
+non-adenosine residue types (C, G, U) across samples or conditions. Two
+counting modes are available:</p>
+<ul>
+<li>
+<strong>By residue</strong> (default): Counts every individual non-A
+residue occurrence. A read with two C residues contributes 2 to the C
+count.</li>
+<li>
+<strong>By read</strong> (<code>by_read = TRUE</code>): Counts each
+read once per residue type. A read with two C residues contributes 1 to
+the C count.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_residue_counts.html">plot_residue_counts</a></span><span class="op">(</span></span>
+<span>  residue_data     <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  grouping_factor  <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
+<span>  frequency        <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  by_read          <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-1">Parameters<a class="anchor" aria-label="anchor" href="#parameters-1"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>residue_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Non-A residue table from ninetails</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Grouping column</td>
+</tr>
+<tr class="odd">
+<td><code>frequency</code></td>
+<td>logical</td>
+<td><code>FALSE</code></td>
+<td>Show proportions instead of counts</td>
+</tr>
+<tr class="even">
+<td><code>by_read</code></td>
+<td>logical</td>
+<td><code>FALSE</code></td>
+<td>Count by read instead of by individual residue</td>
+</tr>
+</tbody>
+</table>
 <div class="float">
-<img src="../reference/figures/rug_plot.png" alt="Scatterplot with rug and density overlay showing positions of C residues along poly(A) tails"><div class="figcaption">Scatterplot with rug and density overlay showing
-positions of C residues along poly(A) tails</div>
+<img src="../reference/figures/residues_1.png" alt="Bar chart showing counts of C, G, and U residues per sample"><div class="figcaption">Bar chart showing counts of C, G, and U residues
+per sample</div>
+</div>
+<hr>
 </div>
 </div>
 <div class="section level2">
 <h2 id="non-a-abundance">Non-A abundance<a class="anchor" aria-label="anchor" href="#non-a-abundance"></a>
 </h2>
-<p>The <code><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance()</a></code> function visualises the
-overall abundance of non-adenosine residues across samples.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance</a></span><span class="op">(</span>residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
-<span>                                      grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<p><code><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance()</a></code> shows the frequency of reads
+containing one, two, or three or more separate non-adenosine residues
+per read. Frequencies are computed relative to the total number of
+decorated reads in each sample.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance</a></span><span class="op">(</span></span>
+<span>  residue_data     <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  grouping_factor  <span class="op">=</span> <span class="st">"sample_name"</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-2">Parameters<a class="anchor" aria-label="anchor" href="#parameters-2"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>residue_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Non-A residue table from ninetails</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Grouping column</td>
+</tr>
+</tbody>
+</table>
+<p>The legend shows three categories: <strong>single</strong> (one non-A
+per read), <strong>two</strong> (exactly two), and <strong>more</strong>
+(three or more).</p>
+<hr>
+</div>
 </div>
 <div class="section level2">
-<h2 id="tail-length-distribution">Tail length distribution<a class="anchor" aria-label="anchor" href="#tail-length-distribution"></a>
+<h2 id="polya-tail-length-distribution">Poly(A) tail length distribution<a class="anchor" aria-label="anchor" href="#polya-tail-length-distribution"></a>
 </h2>
-<p>The <code><a href="../reference/plot_tail_distribution.html">plot_tail_distribution()</a></code> function plots the
-distribution of poly(A) tail lengths across samples.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_tail_distribution.html">plot_tail_distribution</a></span><span class="op">(</span>input_data <span class="op">=</span> <span class="va">class_data</span>,</span>
-<span>                                         grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<p><code><a href="../reference/plot_tail_distribution.html">plot_tail_distribution()</a></code> plots density distributions of
+poly(A) tail lengths across samples or conditions. Central tendency
+lines can be overlaid.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_tail_distribution.html">plot_tail_distribution</a></span><span class="op">(</span></span>
+<span>  input_data       <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  grouping_factor  <span class="op">=</span> <span class="st">"sample_name"</span>,</span>
+<span>  max_length       <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>  value_to_show    <span class="op">=</span> <span class="st">"median"</span>,</span>
+<span>  ndensity         <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-3">Parameters<a class="anchor" aria-label="anchor" href="#parameters-3"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>input_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Data frame with <code>polya_length</code> column (class data or
+merged table)</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Grouping column</td>
+</tr>
+<tr class="odd">
+<td><code>max_length</code></td>
+<td>numeric</td>
+<td><code>200</code></td>
+<td>Upper limit of the x-axis</td>
+</tr>
+<tr class="even">
+<td><code>value_to_show</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Central tendency line: <code>"mean"</code>, <code>"median"</code>,
+<code>"mode"</code>, or <code>NA</code> (none)</td>
+</tr>
+<tr class="odd">
+<td><code>ndensity</code></td>
+<td>logical</td>
+<td><code>TRUE</code></td>
+<td>If <code>TRUE</code>, normalize density so the peak equals 1 across
+groups</td>
+</tr>
+</tbody>
+</table>
+<p>Custom color palettes can be applied:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Apply a custom palette</span></span>
+<span><span class="va">plt</span> <span class="op">+</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_color_manual</a></span><span class="op">(</span></span>
+<span>  values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"#D7191C"</span>, <span class="st">"#2C7BB6"</span>, <span class="st">"#FDAE61"</span>, <span class="st">"#ABD9E9"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="non-a-position-distribution-rug-density">Non-A position distribution (rug density)<a class="anchor" aria-label="anchor" href="#non-a-position-distribution-rug-density"></a>
+</h2>
+<p><code><a href="../reference/plot_rug_density.html">plot_rug_density()</a></code> visualizes the positional
+distribution of non-adenosine residues along poly(A) tails. Each point
+represents one detected modification, plotted against its estimated
+position from the 3’ end (x-axis) and the total tail length of the read
+(y-axis). Marginal density curves on both axes show the overall
+distribution shape. Call the function once per nucleotide type.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plt_C</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_rug_density.html">plot_rug_density</a></span><span class="op">(</span></span>
+<span>  residue_data <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  base         <span class="op">=</span> <span class="st">"C"</span>,</span>
+<span>  max_length   <span class="op">=</span> <span class="fl">100</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt_C</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-4">Parameters<a class="anchor" aria-label="anchor" href="#parameters-4"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>residue_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Non-A residue table</td>
+</tr>
+<tr class="even">
+<td><code>base</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Nucleotide type: <code>"C"</code>, <code>"G"</code>, or
+<code>"U"</code>
+</td>
+</tr>
+<tr class="odd">
+<td><code>max_length</code></td>
+<td>numeric</td>
+<td><em>required</em></td>
+<td>Maximum tail length for axis limits</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> This function requires the
+<code>cowplot</code> package. Install with
+<code>install.packages("cowplot")</code>.</p>
+</blockquote>
+<p>For large datasets, consider subsampling before plotting to keep the
+scatter readable:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Subsample to 1000 points per base type</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">rd_sub</span> <span class="op">&lt;-</span> <span class="va">residue_data</span><span class="op">[</span><span class="va">residue_data</span><span class="op">$</span><span class="va">prediction</span> <span class="op">==</span> <span class="st">"C"</span>, <span class="op">]</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">rd_sub</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1000</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">keep</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">rd_sub</span><span class="op">)</span>, <span class="fl">1000</span>, replace <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  <span class="va">rd_sub</span> <span class="op">&lt;-</span> <span class="va">rd_sub</span><span class="op">[</span><span class="va">keep</span>, <span class="op">]</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_rug_density.html">plot_rug_density</a></span><span class="op">(</span><span class="va">rd_sub</span>, base <span class="op">=</span> <span class="st">"C"</span>, max_length <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="../reference/figures/rug_plot.png" alt="Scatterplot with rug and density overlay showing positions of C residues"><div class="figcaption">Scatterplot with rug and density overlay showing
+positions of C residues</div>
+</div>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="panel-characteristics">Panel characteristics<a class="anchor" aria-label="anchor" href="#panel-characteristics"></a>
+</h2>
+<p><code><a href="../reference/plot_panel_characteristics.html">plot_panel_characteristics()</a></code> produces a multi-panel
+summary of the full tail composition for a dataset or subset (e.g., a
+single sample, group, or transcript). The resulting plot can be aligned
+from either the 5’ or 3’ end of the tail.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plt</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_panel_characteristics.html">plot_panel_characteristics</a></span><span class="op">(</span></span>
+<span>  input_residue_data            <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  input_class_data              <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  input_merged_nonA_tables_data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  type                          <span class="op">=</span> <span class="st">"default"</span>,</span>
+<span>  max_length                    <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  direction_5_prime             <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-5">Parameters<a class="anchor" aria-label="anchor" href="#parameters-5"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>input_residue_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Non-A residue table</td>
+</tr>
+<tr class="even">
+<td><code>input_class_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Read classification table</td>
+</tr>
+<tr class="odd">
+<td><code>input_merged_nonA_tables_data</code></td>
+<td>data.frame</td>
+<td><code>NULL</code></td>
+<td>Merged table (optional)</td>
+</tr>
+<tr class="even">
+<td><code>type</code></td>
+<td>character</td>
+<td><code>"default"</code></td>
+<td>Panel layout type</td>
+</tr>
+<tr class="odd">
+<td><code>max_length</code></td>
+<td>numeric</td>
+<td><code>100</code></td>
+<td>Maximum tail length</td>
+</tr>
+<tr class="even">
+<td><code>direction_5_prime</code></td>
+<td>logical</td>
+<td><code>TRUE</code></td>
+<td>Align from 5’ end (<code>TRUE</code>) or 3’ end
+(<code>FALSE</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The panel contains the following subplots:</p>
+<ul>
+<li>
+<strong>A</strong> — Read counts</li>
+<li>
+<strong>B</strong> — Frequency of non-adenosine residues</li>
+<li>
+<strong>C</strong> — Poly(A) tail length distribution</li>
+<li>
+<strong>D</strong> — Normalised distribution of non-adenosines
+(binned by length)</li>
+<li>
+<strong>E</strong> — Raw distribution of non-adenosines</li>
+</ul>
+<div class="float">
+<img src="../reference/figures/plot_panel.png" alt="Multi-panel plot"><div class="figcaption">Multi-panel plot</div>
+</div>
+<hr>
+</div>
 </div>
 <div class="section level2">
 <h2 id="nanopolish-qc-tags">Nanopolish QC tags<a class="anchor" aria-label="anchor" href="#nanopolish-qc-tags"></a>
 </h2>
 <blockquote>
-<p><strong>Note</strong></p>
-<p>This section applies only to the Guppy legacy pipeline
-(<code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code>).</p>
+<p><strong>Note:</strong> This section applies only to the Guppy legacy
+pipeline (<code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code>).</p>
 </blockquote>
 <p>The <code><a href="../reference/nanopolish_qc.html">nanopolish_qc()</a></code> and
-<code><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc()</a></code> functions allow visualisation of QC
-tags assigned by the Nanopolish polya function, either by read count or
-by frequency.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc()</a></code> functions allow visualization of QC
+tags assigned by the Nanopolish polya function.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Summarise QC tags per sample</span></span>
-<span><span class="va">qc_summary</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/nanopolish_qc.html">nanopolish_qc</a></span><span class="op">(</span><span class="va">class_data</span>,</span>
-<span>                                       grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<span><span class="va">qc_summary</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/nanopolish_qc.html">nanopolish_qc</a></span><span class="op">(</span></span>
+<span>  <span class="va">class_data</span>,</span>
+<span>  grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot by read count</span></span>
-<span><span class="va">plt1</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc</a></span><span class="op">(</span><span class="va">qc_summary</span>, frequency <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">plt_count</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc</a></span><span class="op">(</span><span class="va">qc_summary</span>, frequency <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot by frequency</span></span>
-<span><span class="va">plt2</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc</a></span><span class="op">(</span><span class="va">qc_summary</span>, frequency <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">plt_freq</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc</a></span><span class="op">(</span><span class="va">qc_summary</span>, frequency <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt2</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="../reference/figures/nanopolish_QC.png" alt="Bar charts showing Nanopolish QC tag distribution by count and by frequency"><div class="figcaption">Bar charts showing Nanopolish QC tag
-distribution by count and by frequency</div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt_count</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">plt_freq</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="parameters-nanopolish_qc">Parameters (nanopolish_qc)<a class="anchor" aria-label="anchor" href="#parameters-nanopolish_qc"></a>
+</h3>
+<table class="table">
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>class_data</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Read classification table</td>
+</tr>
+<tr class="even">
+<td><code>grouping_factor</code></td>
+<td>character</td>
+<td><code>NA</code></td>
+<td>Grouping column</td>
+</tr>
+</tbody>
+</table>
 </div>
+<div class="section level3">
+<h3 id="parameters-plot_nanopolish_qc">Parameters (plot_nanopolish_qc)<a class="anchor" aria-label="anchor" href="#parameters-plot_nanopolish_qc"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>processing_info</code></td>
+<td>data.frame</td>
+<td><em>required</em></td>
+<td>Output from <code><a href="../reference/nanopolish_qc.html">nanopolish_qc()</a></code>
+</td>
+</tr>
+<tr class="even">
+<td><code>frequency</code></td>
+<td>logical</td>
+<td><code>FALSE</code></td>
+<td>Show proportions instead of counts</td>
+</tr>
+</tbody>
+</table>
+<div class="float">
+<img src="../reference/figures/nanopolish_QC.png" alt="Bar charts showing Nanopolish QC tag distribution"><div class="figcaption">Bar charts showing Nanopolish QC tag
+distribution</div>
+</div>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="interactive-dashboard">Interactive dashboard<a class="anchor" aria-label="anchor" href="#interactive-dashboard"></a>
+</h2>
+<p>For interactive exploration of all plots described above, ninetails
+provides a Shiny dashboard. See <code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code> for
+details.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
+<span>  class_file   <span class="op">=</span> <span class="st">"/path/to/read_classes.txt"</span>,</span>
+<span>  residue_file <span class="op">=</span> <span class="st">"/path/to/nonadenosine_residues.txt"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="summary-of-plotting-functions">Summary of plotting functions<a class="anchor" aria-label="anchor" href="#summary-of-plotting-functions"></a>
+</h2>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Function</th>
+<th>Description</th>
+<th>Required data</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/plot_class_counts.html">plot_class_counts()</a></code></td>
+<td>Read classification bar chart</td>
+<td><code>class_data</code></td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_residue_counts.html">plot_residue_counts()</a></code></td>
+<td>Residue type distribution (C/G/U)</td>
+<td><code>residue_data</code></td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance()</a></code></td>
+<td>Reads with 1, 2, 3+ non-A residues</td>
+<td><code>residue_data</code></td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_tail_distribution.html">plot_tail_distribution()</a></code></td>
+<td>Poly(A) tail length density</td>
+<td>
+<code>class_data</code> or merged table</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/plot_rug_density.html">plot_rug_density()</a></code></td>
+<td>Non-A position scatterplot with density</td>
+<td><code>residue_data</code></td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_panel_characteristics.html">plot_panel_characteristics()</a></code></td>
+<td>Multi-panel composition summary</td>
+<td>
+<code>class_data</code> + <code>residue_data</code>
+</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc()</a></code></td>
+<td>Nanopolish QC tag distribution</td>
+<td>
+<code><a href="../reference/nanopolish_qc.html">nanopolish_qc()</a></code> output</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_squiggle_fast5.html">plot_squiggle_fast5()</a></code></td>
+<td>Full read signal (fast5)</td>
+<td>Fast5 files</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/plot_squiggle_pod5.html">plot_squiggle_pod5()</a></code></td>
+<td>Full read signal (POD5)</td>
+<td>POD5 files</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_tail_range_fast5.html">plot_tail_range_fast5()</a></code></td>
+<td>Poly(A) tail signal (fast5)</td>
+<td>Fast5 files</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/plot_tail_range_pod5.html">plot_tail_range_pod5()</a></code></td>
+<td>Poly(A) tail signal (POD5)</td>
+<td>POD5 files</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/plot_tail_chunk.html">plot_tail_chunk()</a></code></td>
+<td>Signal segment</td>
+<td>Intermediate data</td>
+</tr>
+<tr class="odd">
+<td>
+<code><a href="../reference/plot_gaf.html">plot_gaf()</a></code> / <code><a href="../reference/plot_multiple_gaf.html">plot_multiple_gaf()</a></code>
+</td>
+<td>Gramian Angular Fields</td>
+<td>Intermediate data</td>
+</tr>
+</tbody>
+</table>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

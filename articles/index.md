@@ -14,7 +14,12 @@
 - [Plotting ninetails
   data](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md):
 - [Visual inspection of
-  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal-inspection.md):
+  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal_inspection.md):
+
+### Dorado tools
+
+- [Analysis dashboard
+  (Shiny)](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md):
 
 ### Guppy pipeline (legacy)
 

@@ -12,7 +12,7 @@ and creates appropriately sized output files.
 split_bam_file_cdna(
   bam_file,
   dorado_summary,
-  part_size = 1e+05,
+  part_size = 100000,
   save_dir,
   part_number,
   cli_log = message

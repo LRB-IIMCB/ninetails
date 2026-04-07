@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,7 +92,10 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
+    <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
@@ -130,7 +133,10 @@ body, .contents, .contents p, .contents li,
     
 <p>This vignette describes the three analysis pipelines available in
 <strong>ninetails</strong> for detecting non-adenosine residues in
-poly(A) tails.</p>
+poly(A) tails. For working with the output data, see
+<code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code>. For visualization, see
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code> and
+<code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code>.</p>
 <div class="section level2">
 <h2 id="dorado-drs-pipeline-recommended">Dorado DRS Pipeline (Recommended)<a class="anchor" aria-label="anchor" href="#dorado-drs-pipeline-recommended"></a>
 </h2>
@@ -183,71 +189,130 @@ POD5 format.</p>
 <tr class="odd">
 <td><code>num_cores</code></td>
 <td>integer</td>
-<td>1</td>
+<td><code>1</code></td>
 <td>Number of CPU cores for parallel processing</td>
 </tr>
 <tr class="even">
 <td><code>qc</code></td>
 <td>logical</td>
-<td>TRUE</td>
-<td>Apply quality control filtering</td>
+<td><code>TRUE</code></td>
+<td>Apply quality control filtering (see below)</td>
 </tr>
 <tr class="odd">
 <td><code>save_dir</code></td>
 <td>character</td>
 <td><em>required</em></td>
-<td>Output directory</td>
+<td>Output directory for results files</td>
 </tr>
 <tr class="even">
 <td><code>prefix</code></td>
 <td>character</td>
-<td>“”</td>
-<td>Optional prefix for output filenames</td>
+<td><code>""</code></td>
+<td>Optional prefix for output filenames (e.g.,
+<code>"experiment1_"</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>part_size</code></td>
 <td>integer</td>
-<td>40000</td>
-<td>Reads per processing chunk (reduce if memory limited)</td>
+<td><code>40000</code></td>
+<td>Maximum reads per processing chunk (reduce if memory limited)</td>
 </tr>
 <tr class="even">
 <td><code>cleanup</code></td>
 <td>logical</td>
-<td>FALSE</td>
+<td><code>FALSE</code></td>
 <td>Remove intermediate files after completion</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level3">
+<h3 id="quality-control-qc-true">Quality control (<code>qc = TRUE</code>)<a class="anchor" aria-label="anchor" href="#quality-control-qc-true"></a>
+</h3>
+<p>When <code>qc = TRUE</code>, the pipeline applies the following
+filters before signal analysis:</p>
+<ul>
+<li>Reads with <code>poly_tail_start = 0</code> are classified as
+<code>BAC</code> (bad coordinates) and excluded from signal
+processing</li>
+<li>Reads with <code>poly_tail_length &lt; 10</code> are classified as
+<code>IRL</code> (insufficient read length)</li>
+<li>Unmapped reads (no <code>contig</code> assignment) are classified as
+<code>UNM</code>
+</li>
+</ul>
+<p>These reads are still included in the output
+<code>read_classes</code> table but are marked as
+<code>unclassified</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="generating-the-dorado-summary-file">Generating the Dorado summary file<a class="anchor" aria-label="anchor" href="#generating-the-dorado-summary-file"></a>
+</h3>
+<p>The Dorado summary file is produced by running
+<code>dorado summary</code> on your aligned BAM file:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">dorado</span> summary aligned_reads.bam <span class="op">&gt;</span> dorado_summary.txt</span></code></pre></div>
+<p>The summary must include poly(A) tail estimates. Ensure that Dorado
+was run with <code>--estimate-poly-a</code> during basecalling.</p>
+</div>
+<div class="section level3">
 <h3 id="pipeline-steps">Pipeline steps<a class="anchor" aria-label="anchor" href="#pipeline-steps"></a>
 </h3>
+<p>The pipeline executes the following steps in order:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Input Validation</strong>: Validates Dorado summary files
-and POD5 directories</li>
+<strong>Input validation</strong>
+(<code><a href="../reference/preprocess_inputs.html">preprocess_inputs()</a></code>): Validates file paths, checks
+required columns, verifies POD5 directory structure</li>
 <li>
-<strong>Data Preprocessing</strong>: Splits large datasets and
-applies quality filters</li>
+<strong>Summary processing</strong>
+(<code><a href="../reference/process_dorado_summary.html">process_dorado_summary()</a></code>): Reads and standardizes the
+Dorado summary file</li>
 <li>
-<strong>Signal Extraction</strong>: Extracts poly(A) tail signals
-from POD5 files</li>
+<strong>Quality filtering</strong>
+(<code><a href="../reference/filter_dorado_summary.html">filter_dorado_summary()</a></code>): Applies QC filters and assigns
+preliminary classifications</li>
 <li>
-<strong>Feature Engineering</strong>: Computes pseudomoves and
-signal characteristics</li>
+<strong>Signal extraction</strong>
+(<code><a href="../reference/extract_tails_from_pod5.html">extract_tails_from_pod5()</a></code>): Extracts raw poly(A) tail
+signals from POD5 files via the Python <code>pod5</code> module</li>
 <li>
-<strong>Segmentation</strong>: Identifies candidate modification
-regions</li>
+<strong>Feature engineering</strong>
+(<code><a href="../reference/create_tail_features_list_dorado.html">create_tail_features_list_dorado()</a></code>): Computes pseudomoves,
+signal statistics, and identifies candidate modification positions</li>
 <li>
-<strong>GAF Creation</strong>: Creates Gramian Angular Fields for
-CNN input</li>
+<strong>Segmentation</strong>
+(<code><a href="../reference/create_tail_chunk_list_dorado.html">create_tail_chunk_list_dorado()</a></code>): Splits tail signals into
+100-point segments centered on candidate positions</li>
 <li>
-<strong>Classification</strong>: Applies trained neural networks for
-prediction</li>
+<strong>GAF creation</strong>
+(<code><a href="../reference/process_dorado_signal_files.html">process_dorado_signal_files()</a></code>): Converts segments to
+Gramian Angular Fields (GASF + GADF two-channel images)</li>
 <li>
-<strong>Output Creation</strong>: Produces comprehensive results and
-statistics</li>
+<strong>CNN classification</strong>
+(<code><a href="../reference/predict_gaf_classes.html">predict_gaf_classes()</a></code>): Applies the trained convolutional
+neural network to classify each segment as A, C, G, or U</li>
+<li>
+<strong>Output creation</strong>
+(<code><a href="../reference/create_outputs_dorado.html">create_outputs_dorado()</a></code>): Aggregates per-segment
+predictions into per-read classifications and produces final output
+tables</li>
 </ol>
+</div>
+<div class="section level3">
+<h3 id="output-files">Output files<a class="anchor" aria-label="anchor" href="#output-files"></a>
+</h3>
+<p>Two tab-separated files are saved in <code>save_dir</code>:</p>
+<ul>
+<li>
+<code>{prefix}read_classes.txt</code> — one row per read</li>
+<li>
+<code>{prefix}nonadenosine_residues.txt</code> — one row per
+detected non-A residue (decorated reads only)</li>
+</ul>
+<p>The function also returns both tables as a named list:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">read_classes</span></span>
+<span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">nonadenosine_residues</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -262,7 +327,7 @@ for production analyses.</p>
 <p><code><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code> extends the DRS pipeline for
 complementary DNA (cDNA) sequencing data with BAM file processing and
 automatic read orientation classification.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA</a></span><span class="op">(</span></span>
 <span>  bam_file       <span class="op">=</span> <span class="st">"path/to/aligned_cdna.bam"</span>,</span>
 <span>  dorado_summary <span class="op">=</span> <span class="st">"path/to/dorado_summary.txt"</span>,</span>
@@ -295,10 +360,43 @@ automatic read orientation classification.</p>
 sequences</td>
 </tr></tbody>
 </table>
-<p>The cDNA pipeline classifies each read as <code>polyA</code>,
-<code>polyT</code>, or <code>unidentified</code> using Dorado-style
-SSP/VNP primer matching. Output tables include an additional
-<code>tail_type</code> column.</p>
+<p>All other parameters are identical to
+<code><a href="../reference/check_tails_dorado_DRS.html">check_tails_dorado_DRS()</a></code>.</p>
+</div>
+<div class="section level3">
+<h3 id="cdna-specific-processing">cDNA-specific processing<a class="anchor" aria-label="anchor" href="#cdna-specific-processing"></a>
+</h3>
+<p>The cDNA pipeline includes additional steps not present in the DRS
+pipeline:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>BAM splitting</strong> (<code><a href="../reference/split_bam_file_cdna.html">split_bam_file_cdna()</a></code>):
+Splits the BAM file into manageable chunks</li>
+<li>
+<strong>Sequence extraction</strong>
+(<code><a href="../reference/extract_data_from_bam.html">extract_data_from_bam()</a></code>): Extracts basecalled sequences
+from BAM records</li>
+<li>
+<strong>Orientation detection</strong>
+(<code><a href="../reference/detect_orientation_single.html">detect_orientation_single()</a></code> /
+<code><a href="../reference/detect_orientation_multiple.html">detect_orientation_multiple()</a></code>): Classifies each read as
+<code>polyA</code>, <code>polyT</code>, or <code>unidentified</code>
+using Dorado-style SSP/VNP primer matching against basecalled
+sequences</li>
+<li>
+<strong>Separate processing</strong>: Poly(A) and poly(T) reads are
+processed independently through the signal analysis pipeline</li>
+<li>
+<strong>Result merging</strong> (<code><a href="../reference/merge_cdna_results.html">merge_cdna_results()</a></code>):
+Combines poly(A) and poly(T) results into unified output tables</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="output">Output<a class="anchor" aria-label="anchor" href="#output"></a>
+</h3>
+<p>Output tables include an additional <code>tail_type</code> column
+(<code>polyA</code> or <code>polyT</code>) indicating the read
+orientation.</p>
 <hr>
 </div>
 </div>
@@ -314,7 +412,7 @@ For new analyses, use the Dorado DRS pipeline.</p>
 <p><code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code> is the legacy function for DRS data
 basecalled with Guppy using fast5 format and Nanopolish poly(A)
 coordinates.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/check_tails_guppy.html">check_tails_guppy</a></span><span class="op">(</span></span>
 <span>  polya_data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>,</span>
 <span>                           <span class="st">'nanopolish_output.tsv'</span>,</span>
@@ -328,7 +426,8 @@ coordinates.</p>
 <span>  num_cores <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  basecall_group <span class="op">=</span> <span class="st">'Basecall_1D_000'</span>,</span>
 <span>  pass_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  save_dir <span class="op">=</span> <span class="st">'~/output/'</span><span class="op">)</span></span></code></pre></div>
+<span>  save_dir <span class="op">=</span> <span class="st">'~/output/'</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="parameters-1">Parameters<a class="anchor" aria-label="anchor" href="#parameters-1"></a>
 </h3>
@@ -367,26 +466,26 @@ coordinates.</p>
 <tr class="even">
 <td><code>num_cores</code></td>
 <td>integer</td>
-<td>1</td>
+<td><code>1</code></td>
 <td>Number of CPU cores</td>
 </tr>
 <tr class="odd">
 <td><code>basecall_group</code></td>
 <td>character</td>
-<td>“Basecall_1D_000”</td>
+<td><code>"Basecall_1D_000"</code></td>
 <td>Fast5 hierarchy level</td>
 </tr>
 <tr class="even">
 <td><code>pass_only</code></td>
 <td>logical</td>
-<td>TRUE</td>
-<td>Include only “PASS” reads</td>
+<td><code>TRUE</code></td>
+<td>Include only “PASS” reads from Nanopolish QC</td>
 </tr>
 <tr class="odd">
 <td><code>qc</code></td>
 <td>logical</td>
-<td>TRUE</td>
-<td>Label terminal positions with “-WARN”</td>
+<td><code>TRUE</code></td>
+<td>Label terminal positions with “-WARN” suffix</td>
 </tr>
 <tr class="even">
 <td><code>save_dir</code></td>
@@ -397,11 +496,15 @@ coordinates.</p>
 <tr class="odd">
 <td><code>part_size</code></td>
 <td>integer</td>
-<td>1000000</td>
-<td>Max rows per chunk</td>
+<td><code>1000000</code></td>
+<td>Max rows per processing chunk</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Note:</strong> For tailfindR compatibility, see
+<code><a href="../articles/tailfindr.html">vignette("tailfindr")</a></code>.</p>
+</blockquote>
 <hr>
 </div>
 </div>
@@ -433,7 +536,7 @@ coordinates.</p>
 </tr>
 <tr class="even">
 <td><code>qc_tag</code></td>
-<td>Quality tag</td>
+<td>Quality tag from basecaller QC</td>
 </tr>
 <tr class="odd">
 <td><code>class</code></td>
@@ -443,7 +546,7 @@ coordinates.</p>
 </tr>
 <tr class="even">
 <td><code>comments</code></td>
-<td>3-letter code explaining the classification</td>
+<td>3-letter code explaining the classification (see below)</td>
 </tr>
 <tr class="odd">
 <td><code>tail_type</code></td>
@@ -456,8 +559,13 @@ coordinates.</p>
 <div class="section level3">
 <h3 id="nonadenosine_residues">nonadenosine_residues<a class="anchor" aria-label="anchor" href="#nonadenosine_residues"></a>
 </h3>
-<p>Modification-level detail for <code>decorated</code> reads only.</p>
+<p>Modification-level detail for <code>decorated</code> reads only. Each
+row represents one detected non-adenosine residue.</p>
 <table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
 <thead><tr class="header">
 <th>Column</th>
 <th>Description</th>
@@ -479,7 +587,8 @@ coordinates.</p>
 </tr>
 <tr class="even">
 <td><code>est_nonA_pos</code></td>
-<td>Position within poly(A) tail</td>
+<td>Estimated position within the poly(A) tail (nucleotides from the 3’
+end)</td>
 </tr>
 <tr class="odd">
 <td><code>polya_length</code></td>
@@ -496,6 +605,11 @@ coordinates.</p>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Note:</strong> A single read can have multiple rows in
+<code>nonadenosine_residues</code> if it contains more than one non-A
+residue.</p>
+</blockquote>
 <hr>
 </div>
 </div>
@@ -525,7 +639,7 @@ coordinates.</p>
 <tr class="even">
 <td><code>blank</code></td>
 <td><code>MAU</code></td>
-<td>No signal deviation; pure poly(A)</td>
+<td>No signal deviation; pure poly(A) tail</td>
 </tr>
 <tr class="odd">
 <td><code>blank</code></td>
@@ -601,15 +715,69 @@ coordinates.</p>
 <blockquote>
 <p><strong>Warning</strong></p>
 <p>Signal transformations can place a heavy load on memory, especially
-for full sequencing runs.</p>
+for full sequencing runs with millions of reads.</p>
 </blockquote>
 <p>To manage memory:</p>
 <ul>
-<li>Adjust <code>part_size</code> to control reads per chunk</li>
-<li>Default is 40,000 (Dorado) or 1,000,000 (Guppy)</li>
-<li>Reduce if experiencing memory issues</li>
-<li>Use <code>cleanup = TRUE</code> to remove intermediate files</li>
+<li>Adjust <code>part_size</code> to control reads per chunk. Default is
+40,000 (Dorado) or 1,000,000 (Guppy). Reduce to 10,000–20,000 if
+experiencing memory issues.</li>
+<li>Use <code>cleanup = TRUE</code> to remove intermediate files after
+processing completes.</li>
+<li>Monitor system memory during the GAF creation and CNN prediction
+steps, which are the most memory-intensive.</li>
+<li>For very large runs (&gt;1M reads), consider splitting input files
+manually and processing in batches.</li>
 </ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="performance-tips">Performance tips<a class="anchor" aria-label="anchor" href="#performance-tips"></a>
+</h2>
+<ul>
+<li>
+<strong>Parallelization</strong>: Set <code>num_cores</code> to the
+number of available CPU cores minus one. The pipeline parallelizes
+signal extraction, feature engineering, and GAF creation across
+chunks.</li>
+<li>
+<strong>Disk space</strong>: Intermediate files (signal data,
+feature lists, GAF matrices) can be large. Ensure sufficient free disk
+space in <code>save_dir</code>. Use <code>cleanup = TRUE</code> to
+remove intermediates automatically.</li>
+<li>
+<strong>GPU acceleration</strong>: If TensorFlow is configured with
+GPU support, the CNN classification step benefits from GPU acceleration.
+This is the single largest speedup available.</li>
+<li>
+<strong>SSD storage</strong>: Using SSD storage for
+<code>pod5_dir</code> and <code>save_dir</code> significantly reduces
+I/O bottlenecks during signal extraction.</li>
+</ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
+</h2>
+<p>After running the pipeline:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Postprocess</strong>: Load, annotate, merge, and summarize
+results — <code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code>
+</li>
+<li>
+<strong>Visualize</strong>: Generate static plots —
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code>
+</li>
+<li>
+<strong>Inspect signals</strong>: Examine raw squiggles —
+<code><a href="../articles/signal_inspection.html">vignette("signal_inspection")</a></code>
+</li>
+<li>
+<strong>Explore interactively</strong>: Launch the Shiny dashboard —
+<code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code>
+</li>
+</ol>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

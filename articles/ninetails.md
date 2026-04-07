@@ -1,9 +1,11 @@
 # Get started with ninetails
 
 **Ninetails** detects and characterises non-adenosine nucleotides
-embedded within poly(A) tails of Oxford Nanopore sequencing reads. This
-vignette provides a quick introduction to installation and running the
-main analysis pipelines.
+embedded within poly(A) tails of Oxford Nanopore sequencing reads. It
+uses convolutional neural networks applied to Gramian Angular Field
+representations of raw current signals to identify cytidine (C),
+guanosine (G), and uridine (U) residues within otherwise pure poly(A)
+tails.
 
 For complete documentation, see the [Ninetails
 Wiki](https://github.com/LRB-IIMCB/ninetails/wiki).
@@ -32,12 +34,19 @@ Depending on which pipeline you use, additional components are required:
 - Python with `pod5` module: `pip install pod5`
 - Keras/TensorFlow for R:
   [`keras::install_keras()`](https://rdrr.io/pkg/keras/man/install_keras.html)
+- The `reticulate` R package for Python interoperability
 
 **For Guppy legacy pipeline:**
 
 - `rhdf5` from Bioconductor: `BiocManager::install("rhdf5")`
 - Keras/TensorFlow for R
 - VBZ compression plugin (for newer MinKNOW data)
+
+**For the interactive dashboard** (optional):
+
+- `shiny`, `plotly`, `htmltools`, `DT`, `base64enc`, `cowplot`
+- Install with:
+  `install.packages(c("shiny", "plotly", "htmltools", "DT", "base64enc", "cowplot"))`
 
 See the
 [Wiki](https://github.com/LRB-IIMCB/ninetails/wiki/3.-Additional-requirements)
@@ -52,6 +61,9 @@ Ninetails provides three analysis pipelines:
 | **Dorado DRS**  | Dorado ≥ 1.0.0 | POD5 + summary       | [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md)   | Recommended       |
 | **Dorado cDNA** | Dorado ≥ 1.0.0 | POD5 + BAM + summary | [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md) | Under development |
 | **Guppy**       | Guppy ≤ 6.0.0  | fast5 + Nanopolish   | [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)             | Legacy            |
+
+Choose the pipeline that matches your basecaller and sequencing
+protocol. The Dorado DRS pipeline is recommended for all new analyses.
 
 ## Quick start: Dorado DRS pipeline
 
@@ -71,30 +83,140 @@ results <- ninetails::check_tails_dorado_DRS(
 ### Required inputs
 
 - **dorado_summary**: Dorado summary file with columns `read_id`,
-  `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end`
-- **pod5_dir**: Directory containing POD5 files
+  `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end`.
+  Generate this with `dorado summary` on your aligned BAM file.
+- **pod5_dir**: Directory containing POD5 files from the sequencing run.
 
 ### Output
 
-The function returns a list with two data frames:
+The function returns a named list with two data frames:
 
-- **read_classes**: Per-read classification
-  (decorated/blank/unclassified)
+- **read_classes**: Per-read classification (decorated, blank, or
+  unclassified) with columns `readname`, `contig`, `polya_length`,
+  `qc_tag`, `class`, and `comments`.
 - **nonadenosine_residues**: Detailed non-A positions for decorated
-  reads
+  reads with columns `readname`, `contig`, `prediction` (C/G/U),
+  `est_nonA_pos`, `polya_length`, and `qc_tag`.
 
-Results are also saved as TSV files in `save_dir`.
+Results are also saved as tab-separated files in `save_dir`.
+
+### Classification codes
+
+| Class          | Code  | Meaning                                             |
+|----------------|-------|-----------------------------------------------------|
+| `decorated`    | `YAY` | Non-adenosine residue detected                      |
+| `blank`        | `MAU` | No signal deviation; pure poly(A)                   |
+| `blank`        | `MPU` | Signal deviation present but predicted as adenosine |
+| `unclassified` | `IRL` | Poly(A) tail too short (\< 10 nt)                   |
+| `unclassified` | `UNM` | Read unmapped                                       |
+| `unclassified` | `BAC` | Invalid coordinates                                 |
+
+## Working with results
+
+After running the pipeline, use the postprocessing functions to load,
+merge, annotate, and summarize the data:
+
+``` r
+# Load multiple samples
+class_data <- ninetails::read_class_multiple(samples_table)
+residue_data <- ninetails::read_residue_multiple(samples_table)
+
+# Merge into one table
+merged <- ninetails::merge_nonA_tables(class_data, residue_data)
+
+# Annotate with gene symbols (requires biomaRt)
+class_data <- ninetails::annotate_with_biomart(class_data, species = "mmusculus")
+residue_data <- ninetails::annotate_with_biomart(residue_data, species = "mmusculus")
+
+# Summarize per transcript
+summary <- ninetails::summarize_nonA(merged, summary_factors = "group")
+```
+
+See
+[`vignette("postprocessing")`](https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.md)
+for the complete workflow.
+
+## Visualization
+
+Ninetails provides both static plotting functions and an interactive
+Shiny dashboard.
+
+### Static plots
+
+``` r
+# Read classification
+ninetails::plot_class_counts(class_data, grouping_factor = "sample_name")
+
+# Residue frequency
+ninetails::plot_residue_counts(residue_data, grouping_factor = "sample_name")
+
+# Non-A abundance per read
+ninetails::plot_nonA_abundance(residue_data, grouping_factor = "sample_name")
+
+# Poly(A) tail length
+ninetails::plot_tail_distribution(class_data, grouping_factor = "sample_name")
+
+# Non-A position distribution
+ninetails::plot_rug_density(residue_data, base = "C", max_length = 200)
+```
+
+See
+[`vignette("plotting")`](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md)
+for all plotting functions and parameters.
+
+### Interactive dashboard
+
+Launch the Shiny dashboard for interactive exploration of results with
+configurable filters, per-sample rug plots, signal visualization, and
+downloadable reports:
+
+``` r
+ninetails::launch_signal_browser(
+  class_file   = "/path/to/read_classes.txt",
+  residue_file = "/path/to/nonadenosine_residues.txt",
+  summary_file = "/path/to/dorado_summary.txt",
+  pod5_dir     = "/path/to/pod5/"
+)
+```
+
+See
+[`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md)
+for complete dashboard documentation.
 
 ## Next steps
 
 - [`vignette("detection")`](https://LRB-IIMCB.github.io/ninetails/articles/detection.md)
-  — Detailed pipeline documentation
+  — Detailed pipeline documentation and parameters
 - [`vignette("postprocessing")`](https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.md)
-  — Working with results
+  — Loading, merging, correcting, and summarizing results
 - [`vignette("plotting")`](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md)
-  — Visualization functions
+  — All visualization functions with parameter tables
+- [`vignette("signal_inspection")`](https://LRB-IIMCB.github.io/ninetails/articles/signal_inspection.md)
+  — Raw signal visualization from fast5 and POD5 files
+- [`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md)
+  — Interactive analysis dashboard
 - [Ninetails Wiki](https://github.com/LRB-IIMCB/ninetails/wiki) —
   Complete documentation
+
+## Troubleshooting
+
+**Keras/TensorFlow not found** Run
+[`keras::install_keras()`](https://rdrr.io/pkg/keras/man/install_keras.html)
+to install the Python backend. Ninetails requires a working Keras
+installation for the CNN classification step.
+
+**POD5 module not available** Install the Python pod5 package:
+`pip install pod5`. Verify with
+`reticulate::py_module_available("pod5")`.
+
+**Memory issues during processing** Reduce the `part_size` parameter
+(default: 40,000 reads per chunk). Use `cleanup = TRUE` to remove
+intermediate files automatically.
+
+**Empty results** Check that your Dorado summary file contains the
+required columns: `read_id`, `filename`, `poly_tail_length`,
+`poly_tail_start`, `poly_tail_end`. Reads with `poly_tail_start = 0` are
+classified as `BAC` (bad coordinates).
 
 ## Citation
 

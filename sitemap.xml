@@ -8,7 +8,8 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/articles/plotting.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/articles/publications.html</loc></url>
-<url><loc>https://LRB-IIMCB.github.io/ninetails/articles/signal-inspection.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/articles/signal_inspection.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/articles/tailfindr.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/authors.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/index.html</loc></url>
@@ -48,8 +49,11 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_features_list_dorado.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-build_nonA_overlay.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-estimate_nonA_signal_pos.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-extract_signal_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-find_pod5_file.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-prepare_nonA_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/edit_distance_hw.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_data_from_bam.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_polya_data.html</loc></url>
@@ -65,6 +69,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/is_RNA.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/is_multifast5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/is_string.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/load_keras_model.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/merge_nonA_tables.html</loc></url>

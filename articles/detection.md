@@ -1,7 +1,13 @@
 # Detection of non-adenosines
 
 This vignette describes the three analysis pipelines available in
-**ninetails** for detecting non-adenosine residues in poly(A) tails.
+**ninetails** for detecting non-adenosine residues in poly(A) tails. For
+working with the output data, see
+[`vignette("postprocessing")`](https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.md).
+For visualization, see
+[`vignette("plotting")`](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md)
+and
+[`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md).
 
 ## Dorado DRS Pipeline (Recommended)
 
@@ -28,26 +34,92 @@ results <- ninetails::check_tails_dorado_DRS(
 |------------------|----------------------|------------|--------------------------------------------------------------------------------------------------------------------------|
 | `dorado_summary` | character/data.frame | *required* | Path to Dorado summary file. Must contain: `read_id`, `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end` |
 | `pod5_dir`       | character            | *required* | Path to directory containing POD5 files                                                                                  |
-| `num_cores`      | integer              | 1          | Number of CPU cores for parallel processing                                                                              |
-| `qc`             | logical              | TRUE       | Apply quality control filtering                                                                                          |
-| `save_dir`       | character            | *required* | Output directory                                                                                                         |
-| `prefix`         | character            | “”         | Optional prefix for output filenames                                                                                     |
-| `part_size`      | integer              | 40000      | Reads per processing chunk (reduce if memory limited)                                                                    |
-| `cleanup`        | logical              | FALSE      | Remove intermediate files after completion                                                                               |
+| `num_cores`      | integer              | `1`        | Number of CPU cores for parallel processing                                                                              |
+| `qc`             | logical              | `TRUE`     | Apply quality control filtering (see below)                                                                              |
+| `save_dir`       | character            | *required* | Output directory for results files                                                                                       |
+| `prefix`         | character            | `""`       | Optional prefix for output filenames (e.g., `"experiment1_"`)                                                            |
+| `part_size`      | integer              | `40000`    | Maximum reads per processing chunk (reduce if memory limited)                                                            |
+| `cleanup`        | logical              | `FALSE`    | Remove intermediate files after completion                                                                               |
+
+### Quality control (`qc = TRUE`)
+
+When `qc = TRUE`, the pipeline applies the following filters before
+signal analysis:
+
+- Reads with `poly_tail_start = 0` are classified as `BAC` (bad
+  coordinates) and excluded from signal processing
+- Reads with `poly_tail_length < 10` are classified as `IRL`
+  (insufficient read length)
+- Unmapped reads (no `contig` assignment) are classified as `UNM`
+
+These reads are still included in the output `read_classes` table but
+are marked as `unclassified`.
+
+### Generating the Dorado summary file
+
+The Dorado summary file is produced by running `dorado summary` on your
+aligned BAM file:
+
+``` bash
+dorado summary aligned_reads.bam > dorado_summary.txt
+```
+
+The summary must include poly(A) tail estimates. Ensure that Dorado was
+run with `--estimate-poly-a` during basecalling.
 
 ### Pipeline steps
 
-1.  **Input Validation**: Validates Dorado summary files and POD5
-    directories
-2.  **Data Preprocessing**: Splits large datasets and applies quality
-    filters
-3.  **Signal Extraction**: Extracts poly(A) tail signals from POD5 files
-4.  **Feature Engineering**: Computes pseudomoves and signal
-    characteristics
-5.  **Segmentation**: Identifies candidate modification regions
-6.  **GAF Creation**: Creates Gramian Angular Fields for CNN input
-7.  **Classification**: Applies trained neural networks for prediction
-8.  **Output Creation**: Produces comprehensive results and statistics
+The pipeline executes the following steps in order:
+
+1.  **Input validation**
+    ([`preprocess_inputs()`](https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs.md)):
+    Validates file paths, checks required columns, verifies POD5
+    directory structure
+2.  **Summary processing**
+    ([`process_dorado_summary()`](https://LRB-IIMCB.github.io/ninetails/reference/process_dorado_summary.md)):
+    Reads and standardizes the Dorado summary file
+3.  **Quality filtering**
+    ([`filter_dorado_summary()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_dorado_summary.md)):
+    Applies QC filters and assigns preliminary classifications
+4.  **Signal extraction**
+    ([`extract_tails_from_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tails_from_pod5.md)):
+    Extracts raw poly(A) tail signals from POD5 files via the Python
+    `pod5` module
+5.  **Feature engineering**
+    ([`create_tail_features_list_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_features_list_dorado.md)):
+    Computes pseudomoves, signal statistics, and identifies candidate
+    modification positions
+6.  **Segmentation**
+    ([`create_tail_chunk_list_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list_dorado.md)):
+    Splits tail signals into 100-point segments centered on candidate
+    positions
+7.  **GAF creation**
+    ([`process_dorado_signal_files()`](https://LRB-IIMCB.github.io/ninetails/reference/process_dorado_signal_files.md)):
+    Converts segments to Gramian Angular Fields (GASF + GADF two-channel
+    images)
+8.  **CNN classification**
+    ([`predict_gaf_classes()`](https://LRB-IIMCB.github.io/ninetails/reference/predict_gaf_classes.md)):
+    Applies the trained convolutional neural network to classify each
+    segment as A, C, G, or U
+9.  **Output creation**
+    ([`create_outputs_dorado()`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado.md)):
+    Aggregates per-segment predictions into per-read classifications and
+    produces final output tables
+
+### Output files
+
+Two tab-separated files are saved in `save_dir`:
+
+- `{prefix}read_classes.txt` — one row per read
+- `{prefix}nonadenosine_residues.txt` — one row per detected non-A
+  residue (decorated reads only)
+
+The function also returns both tables as a named list:
+
+``` r
+class_data <- results$read_classes
+residue_data <- results$nonadenosine_residues
+```
 
 ------------------------------------------------------------------------
 
@@ -82,9 +154,36 @@ results <- ninetails::check_tails_dorado_cDNA(
 |------------|-----------|--------------------------------------------------------------------------|
 | `bam_file` | character | Path to BAM file containing aligned cDNA reads with basecalled sequences |
 
-The cDNA pipeline classifies each read as `polyA`, `polyT`, or
-`unidentified` using Dorado-style SSP/VNP primer matching. Output tables
-include an additional `tail_type` column.
+All other parameters are identical to
+[`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md).
+
+### cDNA-specific processing
+
+The cDNA pipeline includes additional steps not present in the DRS
+pipeline:
+
+1.  **BAM splitting**
+    ([`split_bam_file_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/split_bam_file_cdna.md)):
+    Splits the BAM file into manageable chunks
+2.  **Sequence extraction**
+    ([`extract_data_from_bam()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_data_from_bam.md)):
+    Extracts basecalled sequences from BAM records
+3.  **Orientation detection**
+    ([`detect_orientation_single()`](https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.md)
+    /
+    [`detect_orientation_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.md)):
+    Classifies each read as `polyA`, `polyT`, or `unidentified` using
+    Dorado-style SSP/VNP primer matching against basecalled sequences
+4.  **Separate processing**: Poly(A) and poly(T) reads are processed
+    independently through the signal analysis pipeline
+5.  **Result merging**
+    ([`merge_cdna_results()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.md)):
+    Combines poly(A) and poly(T) results into unified output tables
+
+### Output
+
+Output tables include an additional `tail_type` column (`polyA` or
+`polyT`) indicating the read orientation.
 
 ------------------------------------------------------------------------
 
@@ -114,22 +213,26 @@ results <- ninetails::check_tails_guppy(
   num_cores = 2,
   basecall_group = 'Basecall_1D_000',
   pass_only = TRUE,
-  save_dir = '~/output/')
+  save_dir = '~/output/'
+)
 ```
 
 ### Parameters
 
-| Parameter            | Type                 | Default           | Description                                         |
-|----------------------|----------------------|-------------------|-----------------------------------------------------|
-| `polya_data`         | character/data.frame | *required*        | Path to Nanopolish polya output or tailfindr output |
-| `sequencing_summary` | character/data.frame | *required*        | Path to sequencing summary file                     |
-| `workspace`          | character            | *required*        | Path to directory with multi-fast5 files            |
-| `num_cores`          | integer              | 1                 | Number of CPU cores                                 |
-| `basecall_group`     | character            | “Basecall_1D_000” | Fast5 hierarchy level                               |
-| `pass_only`          | logical              | TRUE              | Include only “PASS” reads                           |
-| `qc`                 | logical              | TRUE              | Label terminal positions with “-WARN”               |
-| `save_dir`           | character            | *required*        | Output directory                                    |
-| `part_size`          | integer              | 1000000           | Max rows per chunk                                  |
+| Parameter            | Type                 | Default             | Description                                         |
+|----------------------|----------------------|---------------------|-----------------------------------------------------|
+| `polya_data`         | character/data.frame | *required*          | Path to Nanopolish polya output or tailfindr output |
+| `sequencing_summary` | character/data.frame | *required*          | Path to sequencing summary file                     |
+| `workspace`          | character            | *required*          | Path to directory with multi-fast5 files            |
+| `num_cores`          | integer              | `1`                 | Number of CPU cores                                 |
+| `basecall_group`     | character            | `"Basecall_1D_000"` | Fast5 hierarchy level                               |
+| `pass_only`          | logical              | `TRUE`              | Include only “PASS” reads from Nanopolish QC        |
+| `qc`                 | logical              | `TRUE`              | Label terminal positions with “-WARN” suffix        |
+| `save_dir`           | character            | *required*          | Output directory                                    |
+| `part_size`          | integer              | `1000000`           | Max rows per processing chunk                       |
+
+> **Note:** For tailfindR compatibility, see
+> [`vignette("tailfindr")`](https://LRB-IIMCB.github.io/ninetails/articles/tailfindr.md).
 
 ------------------------------------------------------------------------
 
@@ -146,24 +249,28 @@ Complete accounting of all reads in the analysis.
 | `readname`     | Unique read identifier                                  |
 | `contig`       | Reference sequence/transcript                           |
 | `polya_length` | Estimated poly(A) tail length (nt)                      |
-| `qc_tag`       | Quality tag                                             |
+| `qc_tag`       | Quality tag from basecaller QC                          |
 | `class`        | Classification: `decorated`, `blank`, or `unclassified` |
-| `comments`     | 3-letter code explaining the classification             |
+| `comments`     | 3-letter code explaining the classification (see below) |
 | `tail_type`    | `polyA` or `polyT` (cDNA pipeline only)                 |
 
 ### nonadenosine_residues
 
-Modification-level detail for `decorated` reads only.
+Modification-level detail for `decorated` reads only. Each row
+represents one detected non-adenosine residue.
 
-| Column         | Description                             |
-|----------------|-----------------------------------------|
-| `readname`     | Unique read identifier                  |
-| `contig`       | Reference sequence/transcript           |
-| `prediction`   | Predicted nucleotide: `C`, `G`, or `U`  |
-| `est_nonA_pos` | Position within poly(A) tail            |
-| `polya_length` | Total tail length (nt)                  |
-| `qc_tag`       | Quality tag                             |
-| `tail_type`    | `polyA` or `polyT` (cDNA pipeline only) |
+| Column         | Description                                                              |
+|----------------|--------------------------------------------------------------------------|
+| `readname`     | Unique read identifier                                                   |
+| `contig`       | Reference sequence/transcript                                            |
+| `prediction`   | Predicted nucleotide: `C`, `G`, or `U`                                   |
+| `est_nonA_pos` | Estimated position within the poly(A) tail (nucleotides from the 3’ end) |
+| `polya_length` | Total tail length (nt)                                                   |
+| `qc_tag`       | Quality tag                                                              |
+| `tail_type`    | `polyA` or `polyT` (cDNA pipeline only)                                  |
+
+> **Note:** A single read can have multiple rows in
+> `nonadenosine_residues` if it contains more than one non-A residue.
 
 ------------------------------------------------------------------------
 
@@ -174,7 +281,7 @@ Modification-level detail for `decorated` reads only.
 | Class          | Code  | Explanation                                         |
 |----------------|-------|-----------------------------------------------------|
 | `decorated`    | `YAY` | Non-adenosine residue detected                      |
-| `blank`        | `MAU` | No signal deviation; pure poly(A)                   |
+| `blank`        | `MAU` | No signal deviation; pure poly(A) tail              |
 | `blank`        | `MPU` | Signal deviation present but predicted as adenosine |
 | `unclassified` | `IRL` | Poly(A) tail too short (\< 10 nt)                   |
 | `unclassified` | `UNM` | Read unmapped                                       |
@@ -198,11 +305,48 @@ Modification-level detail for `decorated` reads only.
 > **Warning**
 >
 > Signal transformations can place a heavy load on memory, especially
-> for full sequencing runs.
+> for full sequencing runs with millions of reads.
 
 To manage memory:
 
-- Adjust `part_size` to control reads per chunk
-- Default is 40,000 (Dorado) or 1,000,000 (Guppy)
-- Reduce if experiencing memory issues
-- Use `cleanup = TRUE` to remove intermediate files
+- Adjust `part_size` to control reads per chunk. Default is 40,000
+  (Dorado) or 1,000,000 (Guppy). Reduce to 10,000–20,000 if experiencing
+  memory issues.
+- Use `cleanup = TRUE` to remove intermediate files after processing
+  completes.
+- Monitor system memory during the GAF creation and CNN prediction
+  steps, which are the most memory-intensive.
+- For very large runs (\>1M reads), consider splitting input files
+  manually and processing in batches.
+
+------------------------------------------------------------------------
+
+## Performance tips
+
+- **Parallelization**: Set `num_cores` to the number of available CPU
+  cores minus one. The pipeline parallelizes signal extraction, feature
+  engineering, and GAF creation across chunks.
+- **Disk space**: Intermediate files (signal data, feature lists, GAF
+  matrices) can be large. Ensure sufficient free disk space in
+  `save_dir`. Use `cleanup = TRUE` to remove intermediates
+  automatically.
+- **GPU acceleration**: If TensorFlow is configured with GPU support,
+  the CNN classification step benefits from GPU acceleration. This is
+  the single largest speedup available.
+- **SSD storage**: Using SSD storage for `pod5_dir` and `save_dir`
+  significantly reduces I/O bottlenecks during signal extraction.
+
+------------------------------------------------------------------------
+
+## Next steps
+
+After running the pipeline:
+
+1.  **Postprocess**: Load, annotate, merge, and summarize results —
+    [`vignette("postprocessing")`](https://LRB-IIMCB.github.io/ninetails/articles/postprocessing.md)
+2.  **Visualize**: Generate static plots —
+    [`vignette("plotting")`](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md)
+3.  **Inspect signals**: Examine raw squiggles —
+    [`vignette("signal_inspection")`](https://LRB-IIMCB.github.io/ninetails/articles/signal_inspection.md)
+4.  **Explore interactively**: Launch the Shiny dashboard —
+    [`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md)

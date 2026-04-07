@@ -1,15 +1,24 @@
 # Data postprocessing
 
-This vignette describes functions for loading, processing, and analyzing
-**ninetails** output data.
-
-## Reading files into R
-
-Data postprocessing requires output from the main ninetails pipelines
+This vignette describes functions for loading, processing, annotating,
+and analyzing **ninetails** output data. All functions documented here
+operate on the two output tables produced by the main pipelines
 ([`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md),
 [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md),
 or
-[`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)).
+[`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)):
+
+- **read_classes**: Per-read classification
+  (decorated/blank/unclassified)
+- **nonadenosine_residues**: Modification-level detail for decorated
+  reads
+
+For visualization of these data, see
+[`vignette("plotting")`](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md)
+and
+[`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md).
+
+## Reading files into R
 
 ### Reading single files
 
@@ -23,13 +32,19 @@ residue_path <- "/path/to/nonadenosine_residues.tsv"
 residue_data <- ninetails::read_residue_single(residue_path)
 ```
 
+| Function                                                                                          | Input                                         | Output                                                                                       |
+|---------------------------------------------------------------------------------------------------|-----------------------------------------------|----------------------------------------------------------------------------------------------|
+| [`read_class_single()`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_single.md)     | Path to a single `read_classes` file          | Data frame with `readname`, `contig`, `polya_length`, `qc_tag`, `class`, `comments`          |
+| [`read_residue_single()`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_single.md) | Path to a single `nonadenosine_residues` file | Data frame with `readname`, `contig`, `prediction`, `est_nonA_pos`, `polya_length`, `qc_tag` |
+
 ### Reading multiple files
 
 For experiments with multiple samples, use
 [`read_class_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_multiple.md)
 and
 [`read_residue_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_multiple.md)
-with a metadata table:
+with a metadata table. The metadata table must contain columns
+`sample_name`, `group`, `class_path`, and `residue_path`.
 
 ``` r
 # Define metadata table
@@ -55,12 +70,15 @@ class_data <- ninetails::read_class_multiple(samples_table)
 residue_data <- ninetails::read_residue_multiple(samples_table)
 ```
 
-> **Note:** Required metadata columns: `sample_name`, `group`,
-> `class_path`, `residue_path`
+The output data frames include additional `sample_name` and `group`
+columns (as factors), which are used as grouping variables in downstream
+analysis and plotting.
 
 ### Using a YAML configuration file
 
-Alternatively, provide metadata in a configuration file:
+Alternatively, provide metadata in a YAML configuration file. This is
+the same format used by the Shiny dashboard (see
+[`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md)):
 
 ``` r
 config <- yaml::yaml.load_file("config.yml")
@@ -89,20 +107,77 @@ samples:
 
 ------------------------------------------------------------------------
 
+## Annotation with biomaRt
+
+[`annotate_with_biomart()`](https://LRB-IIMCB.github.io/ninetails/reference/annotate_with_biomart.md)
+adds gene symbols and Ensembl transcript IDs to ninetails output tables
+by querying biomaRt. This enables transcript-level filtering by
+human-readable gene names instead of raw contig identifiers.
+
+``` r
+# Annotate class data
+class_data <- ninetails::annotate_with_biomart(
+  class_data,
+  species = "mmusculus"
+)
+
+# Annotate residue data
+residue_data <- ninetails::annotate_with_biomart(
+  residue_data,
+  species = "mmusculus"
+)
+```
+
+### Parameters
+
+| Parameter | Type       | Default    | Description                                   |
+|-----------|------------|------------|-----------------------------------------------|
+| `data`    | data.frame | *required* | Ninetails output table with a `contig` column |
+| `species` | character  | *required* | Species identifier (see below)                |
+
+### Supported species
+
+| Identifier      | Species                    |
+|-----------------|----------------------------|
+| `"mmusculus"`   | *Mus musculus*             |
+| `"hsapiens"`    | *Homo sapiens*             |
+| `"athaliana"`   | *Arabidopsis thaliana*     |
+| `"scerevisiae"` | *Saccharomyces cerevisiae* |
+| `"celegans"`    | *Caenorhabditis elegans*   |
+| `"tbrucei"`     | *Trypanosoma brucei*       |
+
+See function documentation for other species and custom biomaRt
+datasets.
+
+### Output columns added
+
+| Column                        | Description                                  |
+|-------------------------------|----------------------------------------------|
+| `symbol`                      | Gene symbol (e.g., `Actb`, `Gapdh`)          |
+| `ensembl_transcript_id_short` | Ensembl transcript ID without version suffix |
+
+> **Note:** Annotation should be performed before merging, summarizing,
+> or launching the dashboard, since downstream functions and the
+> dashboard use the `symbol` column for transcript labels when
+> available.
+
+------------------------------------------------------------------------
+
 ## Correcting classification
 
 Sometimes nucleotides from AT-rich transcript ends are misidentified as
 poly(A) tails. Use
 [`reclassify_ninetails_data()`](https://LRB-IIMCB.github.io/ninetails/reference/reclassify_ninetails_data.md)
-to minimize segmentation artifacts:
+to minimize segmentation artifacts by comparing detected residue
+positions against known transcript sequences:
 
 ``` r
 ninetails_data <- ninetails::reclassify_ninetails_data(
-  residue_data = residue_data,
-  class_data = class_data,
-  grouping_factor = "sample_name",
+  residue_data      = residue_data,
+  class_data        = class_data,
+  grouping_factor   = "sample_name",
   transcript_column = "ensembl_transcript_id_short",
-  ref = "mmusculus"
+  ref               = "mmusculus"
 )
 
 # Retrieve corrected data frames
@@ -110,18 +185,68 @@ class_data <- ninetails_data[[1]]
 residue_data <- ninetails_data[[2]]
 ```
 
-> **Note:** Apply this function before further analysis.
+### Parameters
 
-### Supported species
+| Parameter           | Type       | Default    | Description                                                                                                                                   |
+|---------------------|------------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `residue_data`      | data.frame | *required* | Non-A residue table                                                                                                                           |
+| `class_data`        | data.frame | *required* | Read classification table                                                                                                                     |
+| `grouping_factor`   | character  | *required* | Grouping column (e.g., `"sample_name"`)                                                                                                       |
+| `transcript_column` | character  | *required* | Column with transcript IDs                                                                                                                    |
+| `ref`               | character  | *required* | Reference species (same identifiers as [`annotate_with_biomart()`](https://LRB-IIMCB.github.io/ninetails/reference/annotate_with_biomart.md)) |
 
-- *Arabidopsis thaliana*
-- *Homo sapiens*
-- *Mus musculus*
-- *Saccharomyces cerevisiae*
-- *Caenorhabditis elegans*
-- *Trypanosoma brucei*
+> **Note:** Apply this function before further analysis. It requires
+> annotated data (i.e., run
+> [`annotate_with_biomart()`](https://LRB-IIMCB.github.io/ninetails/reference/annotate_with_biomart.md)
+> first).
 
-See function documentation for other species.
+------------------------------------------------------------------------
+
+## Merging results
+
+Combine class and residue data into a single table with one row per
+read. Decorated reads gain a `nonA_residues` column summarizing all
+detected positions.
+
+``` r
+merged_tables <- ninetails::merge_nonA_tables(
+  class_data  = class_data,
+  residue_data = residue_data,
+  pass_only   = TRUE
+)
+```
+
+### Parameters
+
+| Parameter      | Type       | Default    | Description                             |
+|----------------|------------|------------|-----------------------------------------|
+| `class_data`   | data.frame | *required* | Read classification table               |
+| `residue_data` | data.frame | *required* | Non-A residue table                     |
+| `pass_only`    | logical    | `TRUE`     | If `TRUE`, include only QC-passed reads |
+
+### Output
+
+The merged table contains all columns from `class_data` plus a
+`nonA_residues` column. For decorated reads, this column contains all
+non-A positions from 5’ to 3’ separated by `:` (e.g., `"C:G"` for a read
+with a cytidine and a guanosine). For blank and unclassified reads, the
+column is `NA`.
+
+### Spreading residue columns
+
+[`spread_nonA_residues()`](https://LRB-IIMCB.github.io/ninetails/reference/spread_nonA_residues.md)
+reshapes the merged table to create separate columns for each non-A
+position, which can be useful for per-position analysis:
+
+``` r
+spread_table <- ninetails::spread_nonA_residues(
+  merged_nonA_tables = merged_tables
+)
+```
+
+The output adds columns `nonA_1`, `nonA_2`, etc., each containing the
+residue type at that position (or `NA` if the read has fewer
+modifications).
 
 ------------------------------------------------------------------------
 
@@ -144,6 +269,14 @@ counts_detailed <- ninetails::count_class(class_data, detailed = TRUE)
 counts_simple <- ninetails::count_class(class_data, detailed = FALSE)
 ```
 
+### Parameters
+
+| Parameter         | Type       | Default    | Description                                                  |
+|-------------------|------------|------------|--------------------------------------------------------------|
+| `class_data`      | data.frame | *required* | Read classification table                                    |
+| `grouping_factor` | character  | `NA`       | Grouping column                                              |
+| `detailed`        | logical    | `TRUE`     | If `TRUE`, count by comment code; if `FALSE`, count by class |
+
 ### Count residues
 
 ``` r
@@ -153,42 +286,52 @@ residue_counts <- ninetails::count_residues(
 )
 ```
 
-------------------------------------------------------------------------
+### Count non-A abundance
 
-## Merging results
-
-Combine class and residue data into a single table (one row per read):
+Count how many reads have one, two, or three or more non-A residues:
 
 ``` r
-merged_tables <- ninetails::merge_nonA_tables(
-  class_data = class_data,
-  residue_data = residue_data,
-  pass_only = TRUE
+abundance <- ninetails::count_nonA_abundance(
+  residue_data,
+  grouping_factor = "sample_name"
 )
 ```
-
-The output includes a `nonA_residues` column summarizing all non-A
-positions per read (5’ to 3’, separated by “:”).
 
 ------------------------------------------------------------------------
 
 ## Summarizing by transcript
 
-Generate summary statistics per transcript:
+Generate comprehensive summary statistics per transcript:
 
 ``` r
 summarized <- ninetails::summarize_nonA(
-  merged_nonA_tables = merged_tables,
-  summary_factors = "group",
-  transcript_id_column = "ensembl_transcript_id_short"
+  merged_nonA_tables    = merged_tables,
+  summary_factors       = "group",
+  transcript_id_column  = "ensembl_transcript_id_short"
 )
 ```
 
-Output includes:
+### Parameters
 
-- **counts**: Number of reads (total and by non-A type)
-- **hits**: Number of non-A occurrences (a read may have multiple)
-- Mean and median poly(A) tail length by transcript
+| Parameter              | Type       | Default    | Description                                                                                               |
+|------------------------|------------|------------|-----------------------------------------------------------------------------------------------------------|
+| `merged_nonA_tables`   | data.frame | *required* | Output from [`merge_nonA_tables()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_nonA_tables.md) |
+| `summary_factors`      | character  | *required* | Grouping column(s) for the summary                                                                        |
+| `transcript_id_column` | character  | `NULL`     | Column with transcript IDs (optional)                                                                     |
+
+### Output columns
+
+| Column                                     | Description                           |
+|--------------------------------------------|---------------------------------------|
+| Grouping columns                           | As specified by `summary_factors`     |
+| `contig` / transcript ID                   | Transcript identifier                 |
+| `n_reads`                                  | Total reads mapping to the transcript |
+| `n_decorated`                              | Number of decorated reads             |
+| `n_blank`                                  | Number of blank reads                 |
+| `n_C_counts` / `n_G_counts` / `n_U_counts` | Reads containing C, G, or U residues  |
+| `n_C_hits` / `n_G_hits` / `n_U_hits`       | Total C, G, or U residue occurrences  |
+| `mean_polya_length`                        | Mean poly(A) tail length              |
+| `median_polya_length`                      | Median poly(A) tail length            |
 
 ------------------------------------------------------------------------
 
@@ -196,7 +339,7 @@ Output includes:
 
 ### Fisher’s exact test
 
-Compare non-adenosine frequencies between conditions:
+Compare non-adenosine frequencies between two conditions:
 
 ``` r
 fisher_results <- ninetails::calculate_fisher(
@@ -205,6 +348,17 @@ fisher_results <- ninetails::calculate_fisher(
   comparison = c("control", "treatment")
 )
 ```
+
+### Parameters
+
+| Parameter         | Type         | Description                    |
+|-------------------|--------------|--------------------------------|
+| `ninetails_data`  | data.frame   | Class data or merged table     |
+| `grouping_factor` | character    | Column defining conditions     |
+| `comparison`      | character(2) | Two condition names to compare |
+
+The function returns a data frame with Fisher’s exact test results
+(p-value, odds ratio, confidence interval) per transcript.
 
 ------------------------------------------------------------------------
 
@@ -226,7 +380,11 @@ samples <- data.frame(
 class_data <- ninetails::read_class_multiple(samples)
 residue_data <- ninetails::read_residue_multiple(samples)
 
-# 2. Reclassify to remove artifacts
+# 2. Annotate with gene symbols
+class_data <- ninetails::annotate_with_biomart(class_data, species = "mmusculus")
+residue_data <- ninetails::annotate_with_biomart(residue_data, species = "mmusculus")
+
+# 3. Reclassify to remove artifacts
 ninetails_data <- ninetails::reclassify_ninetails_data(
   residue_data = residue_data,
   class_data = class_data,
@@ -238,17 +396,45 @@ ninetails_data <- ninetails::reclassify_ninetails_data(
 class_data <- ninetails_data[[1]]
 residue_data <- ninetails_data[[2]]
 
-# 3. Count classifications
+# 4. Count classifications
 class_counts <- ninetails::count_class(class_data, grouping_factor = "group")
 
-# 4. Merge and summarize
+# 5. Merge and summarize
 merged <- ninetails::merge_nonA_tables(class_data, residue_data)
 summary <- ninetails::summarize_nonA(merged, summary_factors = "group")
 
-# 5. Statistical comparison
+# 6. Statistical comparison
 fisher <- ninetails::calculate_fisher(
   class_data,
   grouping_factor = "group",
   comparison = c("WT", "KO")
 )
+
+# 7. Explore interactively
+ninetails::launch_signal_browser(
+  config = "config.yml"
+)
 ```
+
+------------------------------------------------------------------------
+
+## Summary of postprocessing functions
+
+| Function                                                                                                      | Description                                             |
+|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| [`read_class_single()`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_single.md)                 | Load a single read_classes file                         |
+| [`read_class_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/read_class_multiple.md)             | Load multiple read_classes files with metadata          |
+| [`read_residue_single()`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_single.md)             | Load a single nonadenosine_residues file                |
+| [`read_residue_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/read_residue_multiple.md)         | Load multiple nonadenosine_residues files with metadata |
+| [`annotate_with_biomart()`](https://LRB-IIMCB.github.io/ninetails/reference/annotate_with_biomart.md)         | Add gene symbols and transcript IDs via biomaRt         |
+| [`reclassify_ninetails_data()`](https://LRB-IIMCB.github.io/ninetails/reference/reclassify_ninetails_data.md) | Correct misclassifications from AT-rich ends            |
+| [`correct_class_data()`](https://LRB-IIMCB.github.io/ninetails/reference/correct_class_data.md)               | Apply corrections to class table                        |
+| [`correct_residue_data()`](https://LRB-IIMCB.github.io/ninetails/reference/correct_residue_data.md)           | Apply corrections to residue table                      |
+| [`correct_labels()`](https://LRB-IIMCB.github.io/ninetails/reference/correct_labels.md)                       | Fix label inconsistencies                               |
+| [`merge_nonA_tables()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_nonA_tables.md)                 | Combine class and residue data (one row per read)       |
+| [`spread_nonA_residues()`](https://LRB-IIMCB.github.io/ninetails/reference/spread_nonA_residues.md)           | Reshape merged table with per-position columns          |
+| [`count_class()`](https://LRB-IIMCB.github.io/ninetails/reference/count_class.md)                             | Count reads by class or comment code                    |
+| [`count_residues()`](https://LRB-IIMCB.github.io/ninetails/reference/count_residues.md)                       | Count residues by type                                  |
+| [`count_nonA_abundance()`](https://LRB-IIMCB.github.io/ninetails/reference/count_nonA_abundance.md)           | Count reads with 1, 2, 3+ non-A residues                |
+| [`summarize_nonA()`](https://LRB-IIMCB.github.io/ninetails/reference/summarize_nonA.md)                       | Per-transcript summary statistics                       |
+| [`calculate_fisher()`](https://LRB-IIMCB.github.io/ninetails/reference/calculate_fisher.md)                   | Fisher’s exact test between conditions                  |

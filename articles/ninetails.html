@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.75</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.775</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -92,7 +92,10 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/detection.html">Detection of non-adenosines</a></li>
     <li><a class="dropdown-item" href="../articles/postprocessing.html">Data postprocessing</a></li>
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
-    <li><a class="dropdown-item" href="../articles/signal-inspection.html">Visual inspection of signals</a></li>
+    <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
     <li><a class="dropdown-item" href="../articles/tailfindr.html">TailfindR compatibility</a></li>
@@ -130,8 +133,10 @@ body, .contents, .contents p, .contents li,
     
 <p><strong>Ninetails</strong> detects and characterises non-adenosine
 nucleotides embedded within poly(A) tails of Oxford Nanopore sequencing
-reads. This vignette provides a quick introduction to installation and
-running the main analysis pipelines.</p>
+reads. It uses convolutional neural networks applied to Gramian Angular
+Field representations of raw current signals to identify cytidine (C),
+guanosine (G), and uridine (U) residues within otherwise pure poly(A)
+tails.</p>
 <p>For complete documentation, see the <a href="https://github.com/LRB-IIMCB/ninetails/wiki" class="external-link">Ninetails
 Wiki</a>.</p>
 <div class="section level2">
@@ -160,6 +165,8 @@ required:</p>
 </li>
 <li>Keras/TensorFlow for R: <code><a href="https://rdrr.io/pkg/keras/man/install_keras.html" class="external-link">keras::install_keras()</a></code>
 </li>
+<li>The <code>reticulate</code> R package for Python
+interoperability</li>
 </ul>
 <p><strong>For Guppy legacy pipeline:</strong></p>
 <ul>
@@ -169,6 +176,16 @@ required:</p>
 </li>
 <li>Keras/TensorFlow for R</li>
 <li>VBZ compression plugin (for newer MinKNOW data)</li>
+</ul>
+<p><strong>For the interactive dashboard</strong> (optional):</p>
+<ul>
+<li>
+<code>shiny</code>, <code>plotly</code>, <code>htmltools</code>,
+<code>DT</code>, <code>base64enc</code>, <code>cowplot</code>
+</li>
+<li>Install with:
+<code>install.packages(c("shiny", "plotly", "htmltools", "DT", "base64enc", "cowplot"))</code>
+</li>
 </ul>
 <p>See the <a href="https://github.com/LRB-IIMCB/ninetails/wiki/3.-Additional-requirements" class="external-link">Wiki</a>
 for detailed instructions.</p>
@@ -217,6 +234,9 @@ for detailed instructions.</p>
 </tr>
 </tbody>
 </table>
+<p>Choose the pipeline that matches your basecaller and sequencing
+protocol. The Dorado DRS pipeline is recommended for all new
+analyses.</p>
 </div>
 <div class="section level2">
 <h2 id="quick-start-dorado-drs-pipeline">Quick start: Dorado DRS pipeline<a class="anchor" aria-label="anchor" href="#quick-start-dorado-drs-pipeline"></a>
@@ -239,25 +259,144 @@ for detailed instructions.</p>
 <strong>dorado_summary</strong>: Dorado summary file with columns
 <code>read_id</code>, <code>filename</code>,
 <code>poly_tail_length</code>, <code>poly_tail_start</code>,
-<code>poly_tail_end</code>
-</li>
+<code>poly_tail_end</code>. Generate this with
+<code>dorado summary</code> on your aligned BAM file.</li>
 <li>
-<strong>pod5_dir</strong>: Directory containing POD5 files</li>
+<strong>pod5_dir</strong>: Directory containing POD5 files from the
+sequencing run.</li>
 </ul>
 </div>
 <div class="section level3">
 <h3 id="output">Output<a class="anchor" aria-label="anchor" href="#output"></a>
 </h3>
-<p>The function returns a list with two data frames:</p>
+<p>The function returns a named list with two data frames:</p>
 <ul>
 <li>
-<strong>read_classes</strong>: Per-read classification
-(decorated/blank/unclassified)</li>
+<strong>read_classes</strong>: Per-read classification (decorated,
+blank, or unclassified) with columns <code>readname</code>,
+<code>contig</code>, <code>polya_length</code>, <code>qc_tag</code>,
+<code>class</code>, and <code>comments</code>.</li>
 <li>
 <strong>nonadenosine_residues</strong>: Detailed non-A positions for
-decorated reads</li>
+decorated reads with columns <code>readname</code>, <code>contig</code>,
+<code>prediction</code> (C/G/U), <code>est_nonA_pos</code>,
+<code>polya_length</code>, and <code>qc_tag</code>.</li>
 </ul>
-<p>Results are also saved as TSV files in <code>save_dir</code>.</p>
+<p>Results are also saved as tab-separated files in
+<code>save_dir</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="classification-codes">Classification codes<a class="anchor" aria-label="anchor" href="#classification-codes"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Class</th>
+<th>Code</th>
+<th>Meaning</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>decorated</code></td>
+<td><code>YAY</code></td>
+<td>Non-adenosine residue detected</td>
+</tr>
+<tr class="even">
+<td><code>blank</code></td>
+<td><code>MAU</code></td>
+<td>No signal deviation; pure poly(A)</td>
+</tr>
+<tr class="odd">
+<td><code>blank</code></td>
+<td><code>MPU</code></td>
+<td>Signal deviation present but predicted as adenosine</td>
+</tr>
+<tr class="even">
+<td><code>unclassified</code></td>
+<td><code>IRL</code></td>
+<td>Poly(A) tail too short (&lt; 10 nt)</td>
+</tr>
+<tr class="odd">
+<td><code>unclassified</code></td>
+<td><code>UNM</code></td>
+<td>Read unmapped</td>
+</tr>
+<tr class="even">
+<td><code>unclassified</code></td>
+<td><code>BAC</code></td>
+<td>Invalid coordinates</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section level2">
+<h2 id="working-with-results">Working with results<a class="anchor" aria-label="anchor" href="#working-with-results"></a>
+</h2>
+<p>After running the pipeline, use the postprocessing functions to load,
+merge, annotate, and summarize the data:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Load multiple samples</span></span>
+<span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_class_multiple.html">read_class_multiple</a></span><span class="op">(</span><span class="va">samples_table</span><span class="op">)</span></span>
+<span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/read_residue_multiple.html">read_residue_multiple</a></span><span class="op">(</span><span class="va">samples_table</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Merge into one table</span></span>
+<span><span class="va">merged</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/merge_nonA_tables.html">merge_nonA_tables</a></span><span class="op">(</span><span class="va">class_data</span>, <span class="va">residue_data</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Annotate with gene symbols (requires biomaRt)</span></span>
+<span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span><span class="va">class_data</span>, species <span class="op">=</span> <span class="st">"mmusculus"</span><span class="op">)</span></span>
+<span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span><span class="va">residue_data</span>, species <span class="op">=</span> <span class="st">"mmusculus"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Summarize per transcript</span></span>
+<span><span class="va">summary</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/summarize_nonA.html">summarize_nonA</a></span><span class="op">(</span><span class="va">merged</span>, summary_factors <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span></span></code></pre></div>
+<p>See <code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code> for the complete
+workflow.</p>
+</div>
+<div class="section level2">
+<h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a>
+</h2>
+<p>Ninetails provides both static plotting functions and an interactive
+Shiny dashboard.</p>
+<div class="section level3">
+<h3 id="static-plots">Static plots<a class="anchor" aria-label="anchor" href="#static-plots"></a>
+</h3>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Read classification</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_class_counts.html">plot_class_counts</a></span><span class="op">(</span><span class="va">class_data</span>, grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Residue frequency</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_residue_counts.html">plot_residue_counts</a></span><span class="op">(</span><span class="va">residue_data</span>, grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Non-A abundance per read</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance</a></span><span class="op">(</span><span class="va">residue_data</span>, grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Poly(A) tail length</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_tail_distribution.html">plot_tail_distribution</a></span><span class="op">(</span><span class="va">class_data</span>, grouping_factor <span class="op">=</span> <span class="st">"sample_name"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Non-A position distribution</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/plot_rug_density.html">plot_rug_density</a></span><span class="op">(</span><span class="va">residue_data</span>, base <span class="op">=</span> <span class="st">"C"</span>, max_length <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span></code></pre></div>
+<p>See <code><a href="../articles/plotting.html">vignette("plotting")</a></code> for all plotting functions and
+parameters.</p>
+</div>
+<div class="section level3">
+<h3 id="interactive-dashboard">Interactive dashboard<a class="anchor" aria-label="anchor" href="#interactive-dashboard"></a>
+</h3>
+<p>Launch the Shiny dashboard for interactive exploration of results
+with configurable filters, per-sample rug plots, signal visualization,
+and downloadable reports:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
+<span>  class_file   <span class="op">=</span> <span class="st">"/path/to/read_classes.txt"</span>,</span>
+<span>  residue_file <span class="op">=</span> <span class="st">"/path/to/nonadenosine_residues.txt"</span>,</span>
+<span>  summary_file <span class="op">=</span> <span class="st">"/path/to/dorado_summary.txt"</span>,</span>
+<span>  pod5_dir     <span class="op">=</span> <span class="st">"/path/to/pod5/"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>See <code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code> for complete dashboard
+documentation.</p>
 </div>
 </div>
 <div class="section level2">
@@ -265,16 +404,45 @@ decorated reads</li>
 </h2>
 <ul>
 <li>
-<code><a href="../articles/detection.html">vignette("detection")</a></code> — Detailed pipeline
-documentation</li>
+<code><a href="../articles/detection.html">vignette("detection")</a></code> — Detailed pipeline documentation
+and parameters</li>
 <li>
-<code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code> — Working with results</li>
+<code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code> — Loading, merging,
+correcting, and summarizing results</li>
 <li>
-<code><a href="../articles/plotting.html">vignette("plotting")</a></code> — Visualization functions</li>
+<code><a href="../articles/plotting.html">vignette("plotting")</a></code> — All visualization functions with
+parameter tables</li>
+<li>
+<code><a href="../articles/signal_inspection.html">vignette("signal_inspection")</a></code> — Raw signal
+visualization from fast5 and POD5 files</li>
+<li>
+<code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code> — Interactive analysis
+dashboard</li>
 <li>
 <a href="https://github.com/LRB-IIMCB/ninetails/wiki" class="external-link">Ninetails
 Wiki</a> — Complete documentation</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
+</h2>
+<p><strong>Keras/TensorFlow not found</strong> Run
+<code><a href="https://rdrr.io/pkg/keras/man/install_keras.html" class="external-link">keras::install_keras()</a></code> to install the Python backend.
+Ninetails requires a working Keras installation for the CNN
+classification step.</p>
+<p><strong>POD5 module not available</strong> Install the Python pod5
+package: <code>pip install pod5</code>. Verify with
+<code>reticulate::py_module_available("pod5")</code>.</p>
+<p><strong>Memory issues during processing</strong> Reduce the
+<code>part_size</code> parameter (default: 40,000 reads per chunk). Use
+<code>cleanup = TRUE</code> to remove intermediate files
+automatically.</p>
+<p><strong>Empty results</strong> Check that your Dorado summary file
+contains the required columns: <code>read_id</code>,
+<code>filename</code>, <code>poly_tail_length</code>,
+<code>poly_tail_start</code>, <code>poly_tail_end</code>. Reads with
+<code>poly_tail_start = 0</code> are classified as <code>BAC</code> (bad
+coordinates).</p>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>

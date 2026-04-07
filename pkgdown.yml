@@ -7,9 +7,10 @@ articles:
   plotting: plotting.html
   postprocessing: postprocessing.html
   publications: publications.html
-  signal-inspection: signal-inspection.html
+  shiny_app: shiny_app.html
+  signal_inspection: signal_inspection.html
   tailfindr: tailfindr.html
-last_built: 2026-04-01T19:57Z
+last_built: 2026-04-07T19:09Z
 urls:
   reference: https://LRB-IIMCB.github.io/ninetails/reference
   article: https://LRB-IIMCB.github.io/ninetails/articles

@@ -248,6 +248,17 @@ classification results, and statistical summaries.
 - [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md)
   : Draws tail range squiggle for given read from POD5 file.
 
+## Analysis dashboard
+
+Interactive Shiny application for exploring ninetails results. Supports
+single-sample and multi-sample analysis via YAML configuration,
+including read classification, residue composition, poly(A)
+distributions, and raw signal visualization with non-A modification
+overlay.
+
+- [`launch_signal_browser()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser.md)
+  : Launch the Ninetails Analysis Dashboard
+
 ## tailfindr compatibility
 
 Functions for converting tailfindr output into a format compatible with

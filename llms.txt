@@ -524,6 +524,17 @@ classification results, and statistical summaries.
 - [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md)
   : Draws tail range squiggle for given read from POD5 file.
 
+## Analysis dashboard
+
+Interactive Shiny application for exploring ninetails results. Supports
+single-sample and multi-sample analysis via YAML configuration,
+including read classification, residue composition, poly(A)
+distributions, and raw signal visualization with non-A modification
+overlay.
+
+- [`launch_signal_browser()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser.md)
+  : Launch the Ninetails Analysis Dashboard
+
 ## tailfindr compatibility
 
 Functions for converting tailfindr output into a format compatible with
@@ -615,7 +626,12 @@ package for input validation.
 - [Plotting ninetails
   data](https://LRB-IIMCB.github.io/ninetails/articles/plotting.md):
 - [Visual inspection of
-  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal-inspection.md):
+  signals](https://LRB-IIMCB.github.io/ninetails/articles/signal_inspection.md):
+
+### Dorado tools
+
+- [Analysis dashboard
+  (Shiny)](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md):
 
 ### Guppy pipeline (legacy)
 
