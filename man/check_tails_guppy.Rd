@@ -15,7 +15,7 @@ check_tails_guppy(
   qc = TRUE,
   save_dir,
   prefix = "",
-  part_size = 1e+06
+  part_size = 1000000
 )
 }
 \arguments{

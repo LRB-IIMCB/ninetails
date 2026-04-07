@@ -1,0 +1,49 @@
+# Ninetails Analysis Dashboard - Configuration Template
+#
+# This file defines samples for the ninetails analysis dashboard.
+# Launch with: ninetails::launch_signal_browser(config = "config.yml")
+#
+# Required fields per sample:
+#   sample_name  - Display name for grouping and legends
+#   group        - Experimental group / condition
+#   class_path   - Path to read_classes.txt from ninetails pipeline
+#   residue_path - Path to nonadenosine_residues.txt from ninetails pipeline
+#
+# Optional fields (for Signal Viewer tab):
+#   dorado_summary - Path to dorado summary file
+#   pod5_dir       - Path to directory containing POD5 files
+#
+# Example:
+
+samples:
+  KO_rep1:
+    sample_name: KO_rep1
+    group: KO
+    class_path: /path/to/KO_rep1/read_classes.txt
+    residue_path: /path/to/KO_rep1/nonadenosine_residues.txt
+    dorado_summary: /path/to/KO_rep1/dorado_summary.txt
+    pod5_dir: /path/to/KO_rep1/pod5/
+
+  KO_rep2:
+    sample_name: KO_rep2
+    group: KO
+    class_path: /path/to/KO_rep2/read_classes.txt
+    residue_path: /path/to/KO_rep2/nonadenosine_residues.txt
+    dorado_summary: /path/to/KO_rep2/dorado_summary.txt
+    pod5_dir: /path/to/KO_rep2/pod5/
+
+  WT_rep1:
+    sample_name: WT_rep1
+    group: WT
+    class_path: /path/to/WT_rep1/read_classes.txt
+    residue_path: /path/to/WT_rep1/nonadenosine_residues.txt
+    dorado_summary: /path/to/WT_rep1/dorado_summary.txt
+    pod5_dir: /path/to/WT_rep1/pod5/
+
+  WT_rep2:
+    sample_name: WT_rep2
+    group: WT
+    class_path: /path/to/WT_rep2/read_classes.txt
+    residue_path: /path/to/WT_rep2/nonadenosine_residues.txt
+    dorado_summary: /path/to/WT_rep2/dorado_summary.txt
+    pod5_dir: /path/to/WT_rep2/pod5/

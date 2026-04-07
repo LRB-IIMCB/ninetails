@@ -2767,7 +2767,7 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
     ggplot2::aes(x = !!rlang::sym(grouping_factor), y = value, fill = instances)
   ) +
     ggplot2::geom_bar(stat = "identity", position = "dodge") +
-    ggplot2::labs(y = "frequency", fill = "number of occurrences per read") +
+    ggplot2::labs(y = "frequency", fill = "Non-A occurr/read") +
     ggplot2::scale_fill_manual(
       values = c("single" = "#91b7db", "two" = "#0978e3", "more" = "#0f304f")
     ) +

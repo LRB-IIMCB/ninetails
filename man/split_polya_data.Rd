@@ -4,7 +4,7 @@
 \alias{split_polya_data}
 \title{Split large poly(A) data file into smaller parts.}
 \usage{
-split_polya_data(polya_data, part_size = 1e+05, save_dir)
+split_polya_data(polya_data, part_size = 100000, save_dir)
 }
 \arguments{
 \item{polya_data}{Character string or data frame. Full path of the

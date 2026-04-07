@@ -80,7 +80,11 @@ navbar:
         - text: Plotting ninetails data
           href: articles/plotting.html
         - text: Visual inspection of signals
-          href: articles/signal-inspection.html
+          href: articles/signal_inspection.html
+        - text: "---"
+        - text: "Dorado tools"
+        - text: Analysis dashboard (Shiny)
+          href: articles/shiny_app.html
         - text: "---"
         - text: "Guppy pipeline (legacy)"
         - text: TailfindR compatibility
@@ -115,7 +119,11 @@ articles:
       - detection
       - postprocessing
       - plotting
-      - signal-inspection
+      - signal_inspection
+  - title: Dorado tools
+    navbar: Dorado tools
+    contents:
+      - shiny_app
   - title: Guppy pipeline (legacy)
     navbar: Guppy pipeline
     contents:
@@ -258,6 +266,16 @@ reference:
       - plot_tail_distribution
       - plot_tail_range_fast5
       - plot_tail_range_pod5
+
+  - title: "Analysis dashboard"
+    desc: >
+      Interactive Shiny application for exploring ninetails results.
+      Supports single-sample and multi-sample analysis via YAML
+      configuration, including read classification, residue composition,
+      poly(A) distributions, and raw signal visualization with non-A
+      modification overlay.
+    contents:
+      - launch_signal_browser
 
   - title: "tailfindr compatibility"
     desc: >

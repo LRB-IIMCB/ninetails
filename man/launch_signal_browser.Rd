@@ -15,36 +15,91 @@ launch_signal_browser(
 }
 \arguments{
 \item{config}{Character string (optional). Path to a YAML configuration
-file. When provided, single-sample arguments are ignored.}
+file defining multiple samples with file paths and experimental
+groups. When provided, single-sample arguments are ignored.
+See Details for the expected format.}
 
-\item{summary_file}{Character string (optional). Path to a dorado summary
-file. Required for Signal Viewer tab in single-sample mode.}
+\item{summary_file}{Character string (optional). Path to a Dorado
+summary file (tab-separated, with columns \code{read_id},
+\code{filename}, \code{poly_tail_start}, \code{poly_tail_end}).
+Required for the Signal Viewer tab in single-sample mode.}
 
-\item{pod5_dir}{Character string (optional). Path to the directory containing
-POD5 files. Required for Signal Viewer tab in single-sample mode.}
+\item{pod5_dir}{Character string (optional). Path to the directory
+containing POD5 files from the sequencing run. Required for the
+Signal Viewer tab in single-sample mode.}
 
-\item{class_file}{Character string (optional). Path to the read_classes
-output file from ninetails. Enables analysis tabs in single-sample mode.}
+\item{class_file}{Character string (optional). Path to the
+\code{read_classes} output file from a ninetails pipeline
+(\code{check_tails_dorado_DRS}, \code{check_tails_dorado_cDNA}, or
+\code{check_tails_guppy}). Enables the Classification, Residues,
+Poly(A) length, and Download tabs.}
 
-\item{residue_file}{Character string (optional). Path to a nonadenosine_residues
-output file from ninetails.}
+\item{residue_file}{Character string (optional). Path to a
+\code{nonadenosine_residues} output file from ninetails. Enables
+residue-specific plots (abundance, residue counts, rug density)
+and non-A overlay on signal plots.}
 
-\item{...}{Additional arguments passed to \code{\link[shiny]{runApp}}.}
+\item{...}{Additional arguments passed to \code{\link[shiny]{runApp}},
+such as \code{port}, \code{host}, or \code{launch.browser}.}
 }
 \value{
 Launches a Shiny application (does not return a value).
 }
 \description{
-Opens an interactive Shiny application for exploring ninetails results.
-Supports two modes:
+Opens an interactive Shiny application for exploring and visualizing
+ninetails poly(A) tail composition analysis results. The dashboard
+provides a comprehensive overview of read classification, non-adenosine
+residue composition, poly(A) tail length distributions, and raw nanopore
+signal inspection — all in a single interface with interactive filters,
+per-sample breakdowns, and a configurable report generator.
 }
 \details{
-\strong{Multi-sample mode} (\code{config}): Loads a YAML configuration file
-pointing to multiple samples with class and residue data.
+The dashboard is organized into six tabs:
 
-\strong{Single-sample mode}: Provide individual file paths. All tabs are
-available when \code{class_file} and \code{residue_file} are supplied.
-The Signal Viewer tab requires \code{summary_file} and \code{pod5_dir}.
+\describe{
+  \item{\strong{Classification}}{Summary value boxes (samples,
+    transcripts, total/blank/decorated reads) and bar charts showing
+    read classification and non-A abundance per sample or condition.
+    Three classification views are available: summary, detailed (by
+    comment code), and decorated-only.}
+  \item{\strong{Residues}}{Distribution of non-adenosine residue types
+    (C, G, U) with per-sample rug density plots showing positional
+    distribution along poly(A) tails (subsampled to 1,000 points per
+    residue type per sample), and a searchable summary table when
+    merged data is available.}
+  \item{\strong{Poly(A) length}}{Density distributions of poly(A)
+    tail lengths with condition filtering, central tendency overlays,
+    8 color palettes, and a summary statistics table (n, mean, median,
+    SD, SEM) that updates with all filters.}
+  \item{\strong{Signal Viewer}}{Raw nanopore signal visualization from
+    POD5 files with two sub-tabs: Static Viewer (ggplot2 full signal
+    and zoomed poly(A) region) and Dynamic Explorer (interactive Plotly
+    with zoom/pan). Includes non-A residue overlay highlighting,
+    filterable read lists, and Previous/Next navigation.}
+  \item{\strong{Download}}{Configurable report generator producing a
+    self-contained HTML file. Users select which sections to include
+    (classification, abundance, residue frequency, rug density, poly(A)
+    distribution, example signal plots) and configure plot settings.
+    Supports per-transcript sub-reports for up to 3 selected
+    transcripts. All plots include descriptive annotations.}
+  \item{\strong{About}}{Package version, citation (Nat Commun 2025),
+    links to GitHub, Wiki, pkgdown site, Zenodo DOI, laboratory and
+    developer contact information.}
+}
+
+The dashboard supports two usage modes:
+
+\strong{Multi-sample mode} (\code{config}): Loads a YAML configuration
+file pointing to multiple samples with class and residue data. Enables
+comparative analysis across samples and experimental groups. All
+plotting functions use \code{sample_name} and \code{group} columns for
+grouping.
+
+\strong{Single-sample mode}: Provide individual file paths. All
+analysis tabs are available when \code{class_file} and
+\code{residue_file} are supplied. The Signal Viewer tab requires
+\code{summary_file} and \code{pod5_dir}. Default \code{sample_name}
+and \code{group} columns are added automatically if missing.
 
 
 The YAML configuration file should have the following structure:
@@ -59,14 +114,31 @@ samples:
     dorado_summary: /path/to/dorado_summary.txt   # optional
     pod5_dir: /path/to/pod5/                      # optional
 }
+
+Required fields per sample: \code{sample_name}, \code{group},
+\code{class_path}, \code{residue_path}. The \code{dorado_summary} and
+\code{pod5_dir} fields are optional and only needed for the Signal
+Viewer tab.
+
+A template configuration file is included in the package:
+\code{system.file("extdata", "config_template.yml", package = "ninetails")}
+
+The dashboard requires the following packages (listed in Suggests):
+\code{shiny}, \code{plotly}, \code{htmltools}, \code{DT},
+\code{base64enc}, \code{cowplot}. For multi-sample mode: \code{yaml}.
+For the Signal Viewer: a Python environment with the \code{pod5}
+package, accessible via \code{reticulate}.
+
+Static assets (\code{logo.png}, \code{favicon.ico},
+\code{IIMCB_logo.png}) should be placed in \code{inst/app/www/}.
 }
 \examples{
 \dontrun{
 
-# Multi-sample mode
+# Multi-sample mode (recommended for comparative analysis)
 ninetails::launch_signal_browser(config = "/path/to/config.yml")
 
-# Single-sample: all tabs
+# Single-sample: all tabs (classification + residues + signal viewer)
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
   pod5_dir     = "/path/to/pod5/",
@@ -74,12 +146,26 @@ ninetails::launch_signal_browser(
   residue_file = "/path/to/nonadenosine_residues.txt"
 )
 
-# Single-sample: signal viewer only
+# Single-sample: signal viewer only (no analysis tabs)
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
   pod5_dir     = "/path/to/pod5/"
 )
 
+# Custom port and host for remote access
+ninetails::launch_signal_browser(
+  config = "config.yml",
+  port = 8080,
+  host = "0.0.0.0"
+)
+
 }
 
+}
+\seealso{
+\code{\link{check_tails_dorado_DRS}} for the main analysis pipeline,
+\code{\link{merge_nonA_tables}} for merging output tables,
+\code{\link{annotate_with_biomart}} for adding gene symbols,
+\code{\link{plot_class_counts}} and other plotting functions for
+static equivalents of dashboard plots.
 }
