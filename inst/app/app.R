@@ -1635,7 +1635,7 @@ server <- function(input, output, session) {
     data <- loaded_signal_data(); shiny::req(data)
     if ("alignment_genome" %in% names(data)) {
       genomes <- sort(as.character(unique(stats::na.omit(data$alignment_genome))))
-      shiny::selectInput("genome_filter", "Alignment genome",
+      shiny::selectInput("genome_filter", "Aligned transcript",
                          choices = c("All", genomes), selected = "All")
     }
   })
@@ -1863,8 +1863,9 @@ server <- function(input, output, session) {
     df <- signal_data(); shiny::req(df)
     ps <- attr(df, "polya_start"); pe <- attr(df, "polya_end")
     dp <- if (nrow(df) > 20000) df[round(seq(1, nrow(df), length.out = 20000)), ] else df
+    res_data <- selected_residue()
     ov <- tryCatch(
-      .safe_nonA_overlay(read_nonA_data = selected_residue(),
+      .safe_nonA_overlay(read_nonA_data = res_data,
                          poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250),
       error = function(e) list()
     )
@@ -1886,8 +1887,9 @@ server <- function(input, output, session) {
     ps <- attr(df, "polya_start"); pe <- attr(df, "polya_end")
     zs <- max(1, ps - 250); ze <- min(nrow(df), pe + 250)
     dz <- dplyr::filter(df, position >= zs, position <= ze)
+    res_data <- selected_residue()
     ov <- tryCatch(
-      .safe_nonA_overlay(read_nonA_data = selected_residue(),
+      .safe_nonA_overlay(read_nonA_data = res_data,
                          poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250),
       error = function(e) list()
     )
