@@ -538,8 +538,9 @@ ui <- shiny::fluidPage(
                                     shiny::div(class = "card",
                                                shiny::h4("Filters"),
                                                shiny::div(class = "filter-section",
-                                                          shiny::numericInput("min_polya_length",
-                                                                              "Minimum poly(A) length", value = 10, min = 0, step = 1),
+                                                          shiny::sliderInput("polya_length_range",
+                                                                             "Poly(A) tail length range",
+                                                                             min = 0, max = 500, value = c(10, 500), step = 1),
                                                           shiny::selectInput("comments_filter", "Decoration status",
                                                                              choices = c("All", "YAY", "MPU", "MAU", "UNM", "IRL", "BAC"),
                                                                              selected = "All"),
@@ -1650,8 +1651,10 @@ server <- function(input, output, session) {
   # ---- Filtered reads ----
   sig_filtered_data <- shiny::reactive({
     data <- loaded_signal_data(); shiny::req(data)
-    if (!is.null(input$min_polya_length) && "poly_tail_length" %in% names(data))
-      data <- dplyr::filter(data, poly_tail_length >= input$min_polya_length)
+    if (!is.null(input$polya_length_range) && "poly_tail_length" %in% names(data))
+      data <- dplyr::filter(data,
+                            poly_tail_length >= input$polya_length_range[1],
+                            poly_tail_length <= input$polya_length_range[2])
     if (!is.null(input$comments_filter) && input$comments_filter != "All" && "comments" %in% names(data))
       data <- dplyr::filter(data, comments == input$comments_filter)
     if (!is.null(input$genome_filter) && input$genome_filter != "All" && "alignment_genome" %in% names(data))
