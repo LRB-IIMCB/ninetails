@@ -674,6 +674,54 @@ delegates rendering to the installed ninetails app.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="configuring-the-deployment-wrapper">Configuring the deployment wrapper<a class="anchor" aria-label="anchor" href="#configuring-the-deployment-wrapper"></a>
+</h3>
+<p>Before launching, edit the top of the deployed <code>app.R</code> to
+set two variables:</p>
+<ul>
+<li>
+<strong><code>config_path</code></strong> — path to the YAML
+configuration file (default: <code>config.yml</code> in the same
+directory as <code>app.R</code>)</li>
+<li>
+<strong><code>PYTHON_PATH</code></strong> — path to the Python
+binary that has the <code>pod5</code> module installed. Required for the
+Signal Viewer tab. Set to <code>NULL</code> if signal visualization is
+not needed.</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># In /srv/shiny-server/ninetails/app.R:</span></span>
+<span><span class="va">config_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"config.yml"</span><span class="op">)</span></span>
+<span><span class="va">PYTHON_PATH</span> <span class="op">&lt;-</span> <span class="st">"/home/user/miniconda3/envs/r-reticulate/bin/python"</span></span></code></pre></div>
+<p>Common Python path examples:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Environment</th>
+<th>Typical path</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>System Python</td>
+<td><code>/usr/bin/python3</code></td>
+</tr>
+<tr class="even">
+<td>Conda env</td>
+<td><code>/home/user/miniconda3/envs/r-reticulate/bin/python</code></td>
+</tr>
+<tr class="odd">
+<td>virtualenv</td>
+<td><code>/home/user/.virtualenvs/ninetails/bin/python</code></td>
+</tr>
+<tr class="even">
+<td>pyenv</td>
+<td><code>/home/user/.pyenv/versions/3.11.0/bin/python</code></td>
+</tr>
+</tbody>
+</table>
+<p>You can find the correct path by running <code>which python</code> in
+the environment where <code>pod5</code> is installed.</p>
+</div>
+<div class="section level3">
 <h3 id="directory-structure">Directory structure<a class="anchor" aria-label="anchor" href="#directory-structure"></a>
 </h3>
 <pre><code>/srv/shiny-server/ninetails/
@@ -692,19 +740,28 @@ delegates rendering to the installed ninetails app.</p>
 system-wide (accessible to the <code>shiny</code> user)</li>
 <li>All data file paths in <code>config.yml</code> must be readable by
 the <code>shiny</code> user</li>
-<li>For the Signal Viewer tab, the <code>shiny</code> user must have
-access to the POD5 files and a working Python environment with the
-<code>pod5</code> module</li>
+<li>For the Signal Viewer tab:
+<ul>
+<li>
+<code>PYTHON_PATH</code> must be set in the deployment wrapper</li>
+<li>The specified Python environment must have the <code>pod5</code>
+module installed (<code>pip install pod5</code>)</li>
+<li>The <code>shiny</code> user must have execute permissions on the
+Python binary and read access to the POD5 files</li>
+</ul>
+</li>
 </ul>
 <p>After placing the files, restart Shiny Server:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart shiny-server</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart shiny-server</span></code></pre></div>
 <p>The dashboard will be accessible at
 <code>http://your-server:3838/ninetails/</code>.</p>
 <blockquote>
 <p><strong>Note:</strong> When you update the ninetails package, the
 deployed app picks up changes automatically (it sources from the
 installed package at runtime). To change the dataset, edit
-<code>config.yml</code> and restart Shiny Server.</p>
+<code>config.yml</code> and restart Shiny Server. To change the Python
+environment, edit <code>PYTHON_PATH</code> in <code>app.R</code> and
+restart.</p>
 </blockquote>
 </div>
 </div>
@@ -724,7 +781,7 @@ recursively within that directory.</p>
 <p><strong>Signal Viewer shows “Extraction failed”</strong> The Python
 <code>pod5</code> package must be installed and accessible via
 <code>reticulate</code>. Check with:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">reticulate</span><span class="fu">::</span><span class="fu"><a href="https://rstudio.github.io/reticulate/reference/py_module_available.html" class="external-link">py_module_available</a></span><span class="op">(</span><span class="st">"pod5"</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Classification or Residue plots are blank</strong> If using
 single-sample mode, make sure you provided <code>class_file</code>

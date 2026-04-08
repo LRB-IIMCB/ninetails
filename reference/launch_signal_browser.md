@@ -152,9 +152,12 @@ Static assets (`logo.png`, `favicon.ico`, `IIMCB_logo.png`) should be
 placed in `inst/app/www/`.
 
 For deployment to Shiny Server, a wrapper script is included at
-`system.file("deployment", "app.R", package = "ninetails")`. See
+`system.file("deployment", "app.R", package = "ninetails")`. The wrapper
+has two configuration variables at the top: `config_path` (path to YAML
+config) and `PYTHON_PATH` (path to Python binary with `pod5` module,
+required for the Signal Viewer tab). See
 [`vignette("shiny_app")`](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md)
-for deployment instructions.
+for full deployment instructions.
 
 ## See also
 

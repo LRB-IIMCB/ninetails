@@ -418,6 +418,35 @@ file.symlink(
 )
 ```
 
+### Configuring the deployment wrapper
+
+Before launching, edit the top of the deployed `app.R` to set two
+variables:
+
+- **`config_path`** — path to the YAML configuration file (default:
+  `config.yml` in the same directory as `app.R`)
+- **`PYTHON_PATH`** — path to the Python binary that has the `pod5`
+  module installed. Required for the Signal Viewer tab. Set to `NULL` if
+  signal visualization is not needed.
+
+``` r
+# In /srv/shiny-server/ninetails/app.R:
+config_path <- file.path(getwd(), "config.yml")
+PYTHON_PATH <- "/home/user/miniconda3/envs/r-reticulate/bin/python"
+```
+
+Common Python path examples:
+
+| Environment   | Typical path                                         |
+|---------------|------------------------------------------------------|
+| System Python | `/usr/bin/python3`                                   |
+| Conda env     | `/home/user/miniconda3/envs/r-reticulate/bin/python` |
+| virtualenv    | `/home/user/.virtualenvs/ninetails/bin/python`       |
+| pyenv         | `/home/user/.pyenv/versions/3.11.0/bin/python`       |
+
+You can find the correct path by running `which python` in the
+environment where `pod5` is installed.
+
 ### Directory structure
 
     /srv/shiny-server/ninetails/
@@ -434,8 +463,12 @@ file.symlink(
   (accessible to the `shiny` user)
 - All data file paths in `config.yml` must be readable by the `shiny`
   user
-- For the Signal Viewer tab, the `shiny` user must have access to the
-  POD5 files and a working Python environment with the `pod5` module
+- For the Signal Viewer tab:
+  - `PYTHON_PATH` must be set in the deployment wrapper
+  - The specified Python environment must have the `pod5` module
+    installed (`pip install pod5`)
+  - The `shiny` user must have execute permissions on the Python binary
+    and read access to the POD5 files
 
 After placing the files, restart Shiny Server:
 
@@ -449,7 +482,8 @@ The dashboard will be accessible at
 > **Note:** When you update the ninetails package, the deployed app
 > picks up changes automatically (it sources from the installed package
 > at runtime). To change the dataset, edit `config.yml` and restart
-> Shiny Server.
+> Shiny Server. To change the Python environment, edit `PYTHON_PATH` in
+> `app.R` and restart.
 
 ## Troubleshooting
 
