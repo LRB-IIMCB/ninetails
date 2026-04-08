@@ -897,7 +897,7 @@ server <- function(input, output, session) {
                     ggplot2::ggplot() +
                       ggplot2::annotate("text", x = 0.5, y = 0.5,
                                         label = paste("No", local_base, "residues"),
-                                        size = 4, color = "#999") +
+                                        size = 4, color = "#999999") +
                       ggplot2::theme_void() +
                       ggplot2::ggtitle(local_base)
                   )
@@ -1815,12 +1815,56 @@ server <- function(input, output, session) {
     df <- signal_data(); shiny::req(df); .render_read_info(df, selected_residue()) })
 
   # ---- Static plots ----
+
+  # Helper: build non-A overlay layers without relying on internal function
+  # (avoids alpha/RGB issues on some server graphics devices)
+  .safe_nonA_overlay <- function(read_nonA_data, poly_tail_start,
+                                 poly_tail_end, nonA_flank = 250) {
+    layers <- list()
+    if (is.null(read_nonA_data) || nrow(read_nonA_data) == 0) return(layers)
+
+    rc <- c("C" = "#3a424f", "G" = "#50a675", "U" = "#b0bdd4")
+
+    # Get poly(A) length from residue data
+    pl <- if ("polya_length" %in% names(read_nonA_data)) {
+      read_nonA_data$polya_length[1]
+    } else { NULL }
+    if (is.null(pl) || is.na(pl) || pl <= 0) return(layers)
+
+    for (i in seq_len(nrow(read_nonA_data))) {
+      pred <- as.character(read_nonA_data$prediction[i])
+      pos  <- read_nonA_data$est_nonA_pos[i]
+      if (is.na(pos) || is.na(pred)) next
+
+      fc <- rc[pred]
+      if (is.na(fc)) next
+
+      # Convert nucleotide position to raw signal position
+      raw_pos <- poly_tail_start +
+        (pl - pos) * (poly_tail_end - poly_tail_start) / pl
+      x0 <- raw_pos - nonA_flank
+      x1 <- raw_pos + nonA_flank
+
+      layers <- c(layers, list(
+        ggplot2::annotate("rect", xmin = x0, xmax = x1,
+                          ymin = -Inf, ymax = Inf, fill = fc, alpha = 0.12),
+        ggplot2::annotate("text", x = (x0 + x1) / 2, y = Inf,
+                          label = pred, vjust = 1.5, size = 3.5, color = fc,
+                          fontface = "bold")
+      ))
+    }
+    layers
+  }
+
   output$full_signal_plot <- shiny::renderPlot({
     df <- signal_data(); shiny::req(df)
     ps <- attr(df, "polya_start"); pe <- attr(df, "polya_end")
     dp <- if (nrow(df) > 20000) df[round(seq(1, nrow(df), length.out = 20000)), ] else df
-    ov <- ninetails:::.build_nonA_overlay(read_nonA_data = selected_residue(),
-                                          poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250)
+    ov <- tryCatch(
+      .safe_nonA_overlay(read_nonA_data = selected_residue(),
+                         poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250),
+      error = function(e) list()
+    )
     p <- ggplot2::ggplot(dp, ggplot2::aes(x = position, y = signal, color = segment))
     for (l in ov) p <- p + l
     p + ggplot2::geom_line(size = 0.3) +
@@ -1839,8 +1883,11 @@ server <- function(input, output, session) {
     ps <- attr(df, "polya_start"); pe <- attr(df, "polya_end")
     zs <- max(1, ps - 250); ze <- min(nrow(df), pe + 250)
     dz <- dplyr::filter(df, position >= zs, position <= ze)
-    ov <- ninetails:::.build_nonA_overlay(read_nonA_data = selected_residue(),
-                                          poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250)
+    ov <- tryCatch(
+      .safe_nonA_overlay(read_nonA_data = selected_residue(),
+                         poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250),
+      error = function(e) list()
+    )
     p <- ggplot2::ggplot(dz, ggplot2::aes(x = position, y = signal, color = segment))
     for (l in ov) p <- p + l
     p + ggplot2::geom_line(size = 0.5) +
@@ -1853,7 +1900,7 @@ server <- function(input, output, session) {
       ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(
         legend.position = "bottom", plot.title = ggplot2::element_text(face = "bold", size = 14),
-        plot.subtitle = ggplot2::element_text(color = "#666", size = 11))
+        plot.subtitle = ggplot2::element_text(color = "#666666", size = 11))
   })
 
   # ---- Plotly explorer ----
@@ -1867,7 +1914,7 @@ server <- function(input, output, session) {
       rp <- ninetails:::.estimate_nonA_signal_pos(est_nonA_pos = rr$est_nonA_pos,
                                                   poly_tail_length = rr$polya_length[1], poly_tail_start = ps, poly_tail_end = pe)
       for (i in seq_len(nrow(rr))) {
-        fc <- rc[as.character(rr$prediction[i])]; if (is.na(fc)) fc <- "#999"
+        fc <- rc[as.character(rr$prediction[i])]; if (is.na(fc)) fc <- "#999999"
         ns <- c(ns, list(list(type = "rect", x0 = rp[i] - 250, x1 = rp[i] + 250,
                               y0 = 0, y1 = 1, yref = "paper", fillcolor = fc, opacity = 0.12,
                               line = list(width = 0))))
