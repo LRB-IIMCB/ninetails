@@ -1521,6 +1521,22 @@ server <- function(input, output, session) {
 
   # ---- Data loading ----
 
+  # Helper: enrich dorado summary with class and comments from class_data
+  # (dorado summary lacks these columns; needed for decoration status filter)
+  .enrich_signal_data <- function(data) {
+    if (!has_class) return(data)
+    if ("comments" %in% names(data)) return(data)  # already enriched
+
+    # Prepare join columns from class_data
+    cd_join <- class_data[, c("readname", "class", "comments"), drop = FALSE]
+    cd_join <- dplyr::distinct(cd_join, readname, .keep_all = TRUE)
+    cd_join <- dplyr::rename(cd_join, read_id = readname)
+
+    # Left join: keep all signal rows, add class + comments
+    data <- dplyr::left_join(data, cd_join, by = "read_id")
+    data
+  }
+
   if (length(signal_config) > 0 && names(signal_config)[1] != "single") {
     # Multi mode with named samples
     shiny::observeEvent(input$signal_sample, {
@@ -1534,6 +1550,7 @@ server <- function(input, output, session) {
         data <- vroom::vroom(s$dorado_summary, show_col_types = FALSE)
         if (!"read_id" %in% names(data) && "readname" %in% names(data))
           data <- dplyr::rename(data, read_id = readname)
+        data <- .enrich_signal_data(data)
         signal_error(NULL); loaded_signal_data(data)
       }, error = function(e) {
         signal_error(paste("Error:", e$message)); loaded_signal_data(NULL)
@@ -1557,6 +1574,7 @@ server <- function(input, output, session) {
         data <- vroom::vroom(s$dorado_summary, show_col_types = FALSE)
         if (!"read_id" %in% names(data) && "readname" %in% names(data))
           data <- dplyr::rename(data, read_id = readname)
+        data <- .enrich_signal_data(data)
         signal_error(NULL); loaded_signal_data(data)
       }, error = function(e) {
         signal_error(paste("Error:", e$message)); loaded_signal_data(NULL)
@@ -1591,6 +1609,7 @@ server <- function(input, output, session) {
         data <- vroom::vroom(sf, show_col_types = FALSE)
         if (!"read_id" %in% names(data) && "readname" %in% names(data))
           data <- dplyr::rename(data, read_id = readname)
+        data <- .enrich_signal_data(data)
         signal_error(NULL); loaded_signal_data(data)
       }, error = function(e) {
         signal_error(paste("Error:", e$message)); loaded_signal_data(NULL)
