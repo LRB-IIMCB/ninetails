@@ -66,7 +66,7 @@ if (!file.exists(config_path)) {
        call. = FALSE)
 }
 
-####### Load data (mirrors launch_signal_browser() logic)######
+####### Load data (mirrors launch_signal_browser() logic) ######
 
 cfg <- yaml::read_yaml(config_path)
 if (is.null(cfg$samples) || length(cfg$samples) == 0) {
@@ -81,8 +81,8 @@ cat(paste0("[", Sys.time(), "] Loading ", length(cfg$samples), " samples...\n"))
 
 for (sid in names(cfg$samples)) {
   s <- cfg$samples[[sid]]
-  sname <- s$sample_name %||% sid
-  grp   <- s$group %||% "ungrouped"
+  sname <- if (!is.null(s$sample_name)) s$sample_name else sid
+  grp   <- if (!is.null(s$group)) s$group else "ungrouped"
 
   if (!is.null(s$class_path) && file.exists(s$class_path)) {
     tryCatch({
@@ -157,7 +157,7 @@ shiny::shinyOptions(
   ninetails.residue_file  = ""
 )
 
-####### Source the app from the installed package ######
+####### Source the app from the installed package######
 
 app_dir <- system.file("app", package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {
