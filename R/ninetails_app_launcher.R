@@ -115,7 +115,11 @@
 #'
 #' For deployment to Shiny Server, a wrapper script is included at
 #' \code{system.file("deployment", "app.R", package = "ninetails")}.
-#' See \code{vignette("shiny_app")} for deployment instructions.
+#' The wrapper has two configuration variables at the top:
+#' \code{config_path} (path to YAML config) and \code{PYTHON_PATH}
+#' (path to Python binary with \code{pod5} module, required for the
+#' Signal Viewer tab). See \code{vignette("shiny_app")} for full
+#' deployment instructions.
 #'
 #' @return Launches a Shiny application (does not return a value).
 #'
@@ -177,7 +181,7 @@ launch_signal_browser <- function(config = NULL,
   merged_data   <- NULL
   signal_config <- list()
 
-  # ---- Multi-sample mode (YAML config) ----
+  ####### Multi-sample mode (YAML config) ######
   if (!is.null(config)) {
 
     if (!requireNamespace("yaml", quietly = TRUE)) {
@@ -250,7 +254,7 @@ launch_signal_browser <- function(config = NULL,
                length(unique(class_data$sample_name)), " samples.\n"))
 
   } else {
-    # ---- Single-sample mode ----
+    ####### Single-sample mode ######
 
     # Load class data if provided
     if (!is.null(class_file)) {

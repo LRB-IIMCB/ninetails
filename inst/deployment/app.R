@@ -17,10 +17,32 @@
 # Setup:
 #   1. Install ninetails and all Suggests on the server
 #   2. Copy this file + config.yml to the app directory
-#   3. Symlink or copy www/ assets:
+#   3. Edit PYTHON_PATH below (required for Signal Viewer tab)
+#   4. Symlink or copy www/ assets:
 #        ln -s $(Rscript -e "cat(system.file('app/www', package='ninetails'))") www
-#   4. Restart Shiny Server or let it auto-detect
+#   5. Restart Shiny Server or let it auto-detect
 #
+################################################################################
+
+
+################################################################################
+# DEPLOYMENT CONFIGURATION — edit these before launching
+################################################################################
+
+# Path to YAML config (relative to this app.R directory)
+config_path <- file.path(getwd(), "config.yml")
+
+# Python environment for signal extraction (Signal Viewer tab).
+# Set this to the Python binary that has the 'pod5' module installed.
+# If Signal Viewer is not needed, leave as NULL.
+#
+# Examples:
+#   PYTHON_PATH <- "/usr/bin/python3"
+#   PYTHON_PATH <- "/home/user/miniconda3/envs/r-reticulate/bin/python"
+#   PYTHON_PATH <- "/home/user/.virtualenvs/ninetails/bin/python"
+#
+PYTHON_PATH <- NULL
+
 ################################################################################
 
 library(ninetails)
@@ -30,9 +52,13 @@ library(dplyr)
 library(vroom)
 library(reticulate)
 
-# ---- Configuration ----
-# Path to YAML config (relative to this app.R directory)
-config_path <- file.path(getwd(), "config.yml")
+# Apply Python path if specified (must happen before any reticulate calls)
+if (!is.null(PYTHON_PATH) && nzchar(PYTHON_PATH)) {
+  Sys.setenv(RETICULATE_PYTHON = PYTHON_PATH)
+  cat(paste0("[", Sys.time(), "] Python path set to: ", PYTHON_PATH, "\n"))
+}
+
+####### Validate config ######
 
 if (!file.exists(config_path)) {
   stop("config.yml not found in app directory: ", getwd(),
@@ -40,7 +66,7 @@ if (!file.exists(config_path)) {
        call. = FALSE)
 }
 
-# ---- Load data (mirrors launch_signal_browser() logic) ----
+####### Load data (mirrors launch_signal_browser() logic)######
 
 cfg <- yaml::read_yaml(config_path)
 if (is.null(cfg$samples) || length(cfg$samples) == 0) {
@@ -119,7 +145,7 @@ cat(paste0("[", Sys.time(), "] Loaded ",
            format(nrow(class_data), big.mark = ","), " reads from ",
            length(unique(class_data$sample_name)), " samples.\n"))
 
-# ---- Pass data to app via shinyOptions ----
+####### Pass data to app via shinyOptions ######
 
 shiny::shinyOptions(
   ninetails.class_data    = class_data,
@@ -131,7 +157,7 @@ shiny::shinyOptions(
   ninetails.residue_file  = ""
 )
 
-# ---- Source the app from the installed package ----
+####### Source the app from the installed package ######
 
 app_dir <- system.file("app", package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {

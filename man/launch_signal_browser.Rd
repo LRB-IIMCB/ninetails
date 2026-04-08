@@ -134,7 +134,11 @@ Static assets (\code{logo.png}, \code{favicon.ico},
 
 For deployment to Shiny Server, a wrapper script is included at
 \code{system.file("deployment", "app.R", package = "ninetails")}.
-See \code{vignette("shiny_app")} for deployment instructions.
+The wrapper has two configuration variables at the top:
+\code{config_path} (path to YAML config) and \code{PYTHON_PATH}
+(path to Python binary with \code{pod5} module, required for the
+Signal Viewer tab). See \code{vignette("shiny_app")} for full
+deployment instructions.
 }
 \examples{
 \dontrun{
