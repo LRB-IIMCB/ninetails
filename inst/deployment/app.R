@@ -58,7 +58,7 @@ if (!is.null(PYTHON_PATH) && nzchar(PYTHON_PATH)) {
   cat(paste0("[", Sys.time(), "] Python path set to: ", PYTHON_PATH, "\n"))
 }
 
-####### Validate config ######
+# ---- Validate config ----
 
 if (!file.exists(config_path)) {
   stop("config.yml not found in app directory: ", getwd(),
@@ -66,7 +66,7 @@ if (!file.exists(config_path)) {
        call. = FALSE)
 }
 
-####### Load data (mirrors launch_signal_browser() logic) ######
+# ---- Load data (mirrors launch_signal_browser() logic) ----
 
 cfg <- yaml::read_yaml(config_path)
 if (is.null(cfg$samples) || length(cfg$samples) == 0) {
@@ -145,7 +145,7 @@ cat(paste0("[", Sys.time(), "] Loaded ",
            format(nrow(class_data), big.mark = ","), " reads from ",
            length(unique(class_data$sample_name)), " samples.\n"))
 
-####### Pass data to app via shinyOptions ######
+# ---- Pass data to app via shinyOptions ----
 
 shiny::shinyOptions(
   ninetails.class_data    = class_data,
@@ -157,7 +157,7 @@ shiny::shinyOptions(
   ninetails.residue_file  = ""
 )
 
-####### Source the app from the installed package######
+# ---- Source the app from the installed package ----
 
 app_dir <- system.file("app", package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {

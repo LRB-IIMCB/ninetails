@@ -1823,15 +1823,15 @@ server <- function(input, output, session) {
                                           poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250)
     p <- ggplot2::ggplot(dp, ggplot2::aes(x = position, y = signal, color = segment))
     for (l in ov) p <- p + l
-    p + ggplot2::geom_line(linewidth = 0.3) +
+    p + ggplot2::geom_line(size = 0.3) +
       ggplot2::scale_color_manual(values = c("Adapter" = "#089bcc", "Poly(A)" = "#f56042",
                                              "Transcript" = "#3a414d", "Other" = "#95a5a6"), name = "Region") +
-      ggplot2::geom_vline(xintercept = ps, color = "#700f25", linetype = "dashed", linewidth = 0.8) +
-      ggplot2::geom_vline(xintercept = pe, color = "#0f3473", linetype = "dashed", linewidth = 0.8) +
+      ggplot2::geom_vline(xintercept = ps, color = "#700f25", linetype = "dashed", size = 0.8) +
+      ggplot2::geom_vline(xintercept = pe, color = "#0f3473", linetype = "dashed", size = 0.8) +
       ggplot2::labs(x = "Position (samples)", y = "Signal (raw)", title = paste("Read:", attr(df, "read_id"))) +
       ggplot2::theme_minimal(base_size = 12) +
-      ggplot2::theme(text = ggplot2::element_text(family = "Open Sans"),
-                     legend.position = "bottom", plot.title = ggplot2::element_text(face = "bold", size = 14))
+      ggplot2::theme(
+        legend.position = "bottom", plot.title = ggplot2::element_text(face = "bold", size = 14))
   })
 
   output$polya_zoom_plot <- shiny::renderPlot({
@@ -1843,17 +1843,17 @@ server <- function(input, output, session) {
                                           poly_tail_start = ps, poly_tail_end = pe, nonA_flank = 250)
     p <- ggplot2::ggplot(dz, ggplot2::aes(x = position, y = signal, color = segment))
     for (l in ov) p <- p + l
-    p + ggplot2::geom_line(linewidth = 0.5) +
+    p + ggplot2::geom_line(size = 0.5) +
       ggplot2::scale_color_manual(values = c("Adapter" = "#089bcc", "Poly(A)" = "#f56042",
                                              "Transcript" = "#3a414d", "Other" = "#95a5a6"), name = "Region") +
-      ggplot2::geom_vline(xintercept = ps, color = "#700f25", linetype = "dashed", linewidth = 1) +
-      ggplot2::geom_vline(xintercept = pe, color = "#0f3473", linetype = "dashed", linewidth = 1) +
+      ggplot2::geom_vline(xintercept = ps, color = "#700f25", linetype = "dashed", size = 1) +
+      ggplot2::geom_vline(xintercept = pe, color = "#0f3473", linetype = "dashed", size = 1) +
       ggplot2::labs(x = "Position (samples)", y = "Signal (raw)",
                     title = paste("Poly(A) region:", ps, "-", pe), subtitle = paste("Positions", zs, "to", ze)) +
       ggplot2::theme_minimal(base_size = 12) +
-      ggplot2::theme(text = ggplot2::element_text(family = "Open Sans"),
-                     legend.position = "bottom", plot.title = ggplot2::element_text(face = "bold", size = 14),
-                     plot.subtitle = ggplot2::element_text(color = "#666", size = 11))
+      ggplot2::theme(
+        legend.position = "bottom", plot.title = ggplot2::element_text(face = "bold", size = 14),
+        plot.subtitle = ggplot2::element_text(color = "#666", size = 11))
   })
 
   # ---- Plotly explorer ----
