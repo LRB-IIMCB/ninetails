@@ -140,26 +140,26 @@ body, .contents, .contents p, .contents li,
 <col width="25%">
 <col width="25%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>Pipeline</th>
 <th>Basecaller</th>
 <th>Input format</th>
 <th>Function</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Dorado DRS</td>
 <td>Dorado ≥ 1.0.0</td>
 <td>POD5 + summary</td>
 <td><code><a href="reference/check_tails_dorado_DRS.html">check_tails_dorado_DRS()</a></code></td>
 </tr>
-<tr class="even">
+<tr>
 <td>Dorado cDNA</td>
 <td>Dorado ≥ 1.0.0</td>
 <td>POD5 + BAM + summary</td>
 <td><code><a href="reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code></td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Guppy (legacy)</td>
 <td>Guppy ≤ 6.0.0</td>
 <td>fast5 + Nanopolish</td>
@@ -220,40 +220,40 @@ body, .contents, .contents p, .contents li,
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>parameter</th>
 <th>description</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>dorado_summary</code></td>
 <td>Path to Dorado summary file or in-memory data frame. Must contain <code>read_id</code>, <code>filename</code>, <code>poly_tail_length</code>, <code>poly_tail_start</code>, <code>poly_tail_end</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>pod5_dir</code></td>
 <td>Path to directory containing POD5 files.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>num_cores</code></td>
 <td>Number of CPU cores for parallel processing.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>qc</code></td>
 <td>Logical. Apply quality control filtering (recommended).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>save_dir</code></td>
 <td>Output directory. Created if it does not exist.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>prefix</code></td>
 <td>Optional prefix for output file names.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>part_size</code></td>
 <td>Number of reads per processing chunk. Reduce if memory is limited.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>cleanup</code></td>
 <td>Logical. Remove intermediate files after completion.</td>
 </tr>
@@ -284,11 +284,11 @@ body, .contents, .contents p, .contents li,
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>parameter</th>
 <th>description</th>
 </tr></thead>
-<tbody><tr class="odd">
+<tbody><tr>
 <td><code>bam_file</code></td>
 <td>Path to BAM file containing aligned cDNA reads with basecalled sequences. Required for read orientation classification.</td>
 </tr></tbody>
@@ -332,38 +332,38 @@ body, .contents, .contents p, .contents li,
 <col width="33%">
 <col width="33%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>class</th>
 <th>comments</th>
 <th>explanation</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>modified</code></td>
 <td><code>YAY</code></td>
 <td>Move transition present, non-A residue detected</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>unmodified</code></td>
 <td><code>MAU</code></td>
 <td>Move transition absent, non-A residue undetected</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>unmodified</code></td>
 <td><code>MPU</code></td>
 <td>Move transition present, non-A residue undetected</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>unclassified</code></td>
 <td><code>QCF</code></td>
 <td>Nanopolish QC failed</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>unclassified</code></td>
 <td><code>NIN</code></td>
 <td>Not included in the analysis (<code>pass_only = TRUE</code>)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>unclassified</code></td>
 <td><code>IRL</code></td>
 <td>Insufficient read length</td>
@@ -387,37 +387,37 @@ body, .contents, .contents p, .contents li,
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>column</th>
 <th>content</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>readname</code></td>
 <td>Unique read identifier</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>contig</code></td>
 <td>Reference sequence/transcript the read mapped to</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>polya_length</code></td>
 <td>Estimated poly(A) tail length (nt)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>qc_tag</code></td>
 <td>Mapping quality score</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>class</code></td>
 <td>Classification result: <code>decorated</code>, <code>blank</code>, or <code>unclassified</code>
 </td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>comments</code></td>
 <td>3-letter code explaining the classification outcome (see below)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>tail_type</code></td>
 <td>
 <code>polyA</code> or <code>polyT</code> — cDNA pipeline only</td>
@@ -431,38 +431,38 @@ body, .contents, .contents p, .contents li,
 <col width="33%">
 <col width="33%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>class</th>
 <th>comments</th>
 <th>explanation</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>decorated</code></td>
 <td><code>YAY</code></td>
 <td>Non-adenosine residue detected</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>blank</code></td>
 <td><code>MAU</code></td>
 <td>No signal deviation detected; pure poly(A) signal</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>blank</code></td>
 <td><code>MPU</code></td>
 <td>Signal deviation present but predicted as adenosine only</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>unclassified</code></td>
 <td><code>IRL</code></td>
 <td>Poly(A) tail too short (&lt; 10 nt) for reliable analysis</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>unclassified</code></td>
 <td><code>UNM</code></td>
 <td>Read unmapped to reference</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>unclassified</code></td>
 <td><code>BAC</code></td>
 <td>Invalid poly(A) coordinates (<code>poly_tail_start = 0</code>)</td>
@@ -480,37 +480,37 @@ body, .contents, .contents p, .contents li,
 <col width="50%">
 <col width="50%">
 </colgroup>
-<thead><tr class="header">
+<thead><tr>
 <th>column</th>
 <th>content</th>
 </tr></thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>readname</code></td>
 <td>Unique read identifier</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>contig</code></td>
 <td>Reference sequence/transcript</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>prediction</code></td>
 <td>Predicted nucleotide type: <code>C</code>, <code>G</code>, or <code>U</code>
 </td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>est_nonA_pos</code></td>
 <td>Estimated position within the poly(A) tail from the 3’ end (integer, Dorado pipelines)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>polya_length</code></td>
 <td>Total poly(A) tail length (nt)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>qc_tag</code></td>
 <td>Mapping quality score</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>tail_type</code></td>
 <td>
 <code>polyA</code> or <code>polyT</code> — cDNA pipeline only</td>

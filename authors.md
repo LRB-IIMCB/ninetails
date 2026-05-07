@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/LRB-IIMCB/ninetails/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/LRB-IIMCB/ninetails/blob/v.1.0.78/DESCRIPTION)
 
 Gumińska N (2026). *ninetails: Nonadenosine Nucleotides in Poly(A)
 Tails*. R package version 1.0.78,

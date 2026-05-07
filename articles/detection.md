@@ -16,6 +16,7 @@ is the recommended function for direct RNA sequencing (DRS) data
 basecalled with Dorado ≥ 1.0.0 using POD5 format.
 
 ``` r
+
 results <- ninetails::check_tails_dorado_DRS(
   dorado_summary = "path/to/dorado_alignment_summary.txt",
   pod5_dir       = "path/to/pod5_dir/",
@@ -30,16 +31,16 @@ results <- ninetails::check_tails_dorado_DRS(
 
 ### Parameters
 
-| Parameter        | Type                 | Default    | Description                                                                                                              |
-|------------------|----------------------|------------|--------------------------------------------------------------------------------------------------------------------------|
+| Parameter | Type | Default | Description |
+|----|----|----|----|
 | `dorado_summary` | character/data.frame | *required* | Path to Dorado summary file. Must contain: `read_id`, `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end` |
-| `pod5_dir`       | character            | *required* | Path to directory containing POD5 files                                                                                  |
-| `num_cores`      | integer              | `1`        | Number of CPU cores for parallel processing                                                                              |
-| `qc`             | logical              | `TRUE`     | Apply quality control filtering (see below)                                                                              |
-| `save_dir`       | character            | *required* | Output directory for results files                                                                                       |
-| `prefix`         | character            | `""`       | Optional prefix for output filenames (e.g., `"experiment1_"`)                                                            |
-| `part_size`      | integer              | `40000`    | Maximum reads per processing chunk (reduce if memory limited)                                                            |
-| `cleanup`        | logical              | `FALSE`    | Remove intermediate files after completion                                                                               |
+| `pod5_dir` | character | *required* | Path to directory containing POD5 files |
+| `num_cores` | integer | `1` | Number of CPU cores for parallel processing |
+| `qc` | logical | `TRUE` | Apply quality control filtering (see below) |
+| `save_dir` | character | *required* | Output directory for results files |
+| `prefix` | character | `""` | Optional prefix for output filenames (e.g., `"experiment1_"`) |
+| `part_size` | integer | `40000` | Maximum reads per processing chunk (reduce if memory limited) |
+| `cleanup` | logical | `FALSE` | Remove intermediate files after completion |
 
 ### Quality control (`qc = TRUE`)
 
@@ -117,6 +118,7 @@ Two tab-separated files are saved in `save_dir`:
 The function also returns both tables as a named list:
 
 ``` r
+
 class_data <- results$read_classes
 residue_data <- results$nonadenosine_residues
 ```
@@ -135,6 +137,7 @@ extends the DRS pipeline for complementary DNA (cDNA) sequencing data
 with BAM file processing and automatic read orientation classification.
 
 ``` r
+
 results <- ninetails::check_tails_dorado_cDNA(
   bam_file       = "path/to/aligned_cdna.bam",
   dorado_summary = "path/to/dorado_summary.txt",
@@ -150,8 +153,8 @@ results <- ninetails::check_tails_dorado_cDNA(
 
 ### Additional parameter (vs DRS)
 
-| Parameter  | Type      | Description                                                              |
-|------------|-----------|--------------------------------------------------------------------------|
+| Parameter | Type | Description |
+|----|----|----|
 | `bam_file` | character | Path to BAM file containing aligned cDNA reads with basecalled sequences |
 
 All other parameters are identical to
@@ -200,6 +203,7 @@ is the legacy function for DRS data basecalled with Guppy using fast5
 format and Nanopolish poly(A) coordinates.
 
 ``` r
+
 results <- ninetails::check_tails_guppy(
   polya_data = system.file('extdata', 'test_data',
                            'nanopolish_output.tsv',
@@ -219,17 +223,17 @@ results <- ninetails::check_tails_guppy(
 
 ### Parameters
 
-| Parameter            | Type                 | Default             | Description                                         |
-|----------------------|----------------------|---------------------|-----------------------------------------------------|
-| `polya_data`         | character/data.frame | *required*          | Path to Nanopolish polya output or tailfindr output |
-| `sequencing_summary` | character/data.frame | *required*          | Path to sequencing summary file                     |
-| `workspace`          | character            | *required*          | Path to directory with multi-fast5 files            |
-| `num_cores`          | integer              | `1`                 | Number of CPU cores                                 |
-| `basecall_group`     | character            | `"Basecall_1D_000"` | Fast5 hierarchy level                               |
-| `pass_only`          | logical              | `TRUE`              | Include only “PASS” reads from Nanopolish QC        |
-| `qc`                 | logical              | `TRUE`              | Label terminal positions with “-WARN” suffix        |
-| `save_dir`           | character            | *required*          | Output directory                                    |
-| `part_size`          | integer              | `1000000`           | Max rows per processing chunk                       |
+| Parameter | Type | Default | Description |
+|----|----|----|----|
+| `polya_data` | character/data.frame | *required* | Path to Nanopolish polya output or tailfindr output |
+| `sequencing_summary` | character/data.frame | *required* | Path to sequencing summary file |
+| `workspace` | character | *required* | Path to directory with multi-fast5 files |
+| `num_cores` | integer | `1` | Number of CPU cores |
+| `basecall_group` | character | `"Basecall_1D_000"` | Fast5 hierarchy level |
+| `pass_only` | logical | `TRUE` | Include only “PASS” reads from Nanopolish QC |
+| `qc` | logical | `TRUE` | Label terminal positions with “-WARN” suffix |
+| `save_dir` | character | *required* | Output directory |
+| `part_size` | integer | `1000000` | Max rows per processing chunk |
 
 > **Note:** For tailfindR compatibility, see
 > [`vignette("tailfindr")`](https://LRB-IIMCB.github.io/ninetails/articles/tailfindr.md).
@@ -259,15 +263,15 @@ Complete accounting of all reads in the analysis.
 Modification-level detail for `decorated` reads only. Each row
 represents one detected non-adenosine residue.
 
-| Column         | Description                                                              |
-|----------------|--------------------------------------------------------------------------|
-| `readname`     | Unique read identifier                                                   |
-| `contig`       | Reference sequence/transcript                                            |
-| `prediction`   | Predicted nucleotide: `C`, `G`, or `U`                                   |
+| Column | Description |
+|----|----|
+| `readname` | Unique read identifier |
+| `contig` | Reference sequence/transcript |
+| `prediction` | Predicted nucleotide: `C`, `G`, or `U` |
 | `est_nonA_pos` | Estimated position within the poly(A) tail (nucleotides from the 3’ end) |
-| `polya_length` | Total tail length (nt)                                                   |
-| `qc_tag`       | Quality tag                                                              |
-| `tail_type`    | `polyA` or `polyT` (cDNA pipeline only)                                  |
+| `polya_length` | Total tail length (nt) |
+| `qc_tag` | Quality tag |
+| `tail_type` | `polyA` or `polyT` (cDNA pipeline only) |
 
 > **Note:** A single read can have multiple rows in
 > `nonadenosine_residues` if it contains more than one non-A residue.

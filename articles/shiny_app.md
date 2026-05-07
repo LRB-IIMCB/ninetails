@@ -21,6 +21,7 @@ The dashboard requires several optional packages. Install them before
 first use:
 
 ``` r
+
 install.packages(c("shiny", "plotly", "htmltools", "DT", "base64enc"))
 
 # For multi-sample mode (YAML config):
@@ -43,6 +44,7 @@ The simplest way to launch the dashboard with results from a single
 ninetails run:
 
 ``` r
+
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
   pod5_dir     = "/path/to/pod5/",
@@ -60,6 +62,7 @@ If only signal data paths are provided (no `class_file`), only the
 Signal Viewer tab is functional:
 
 ``` r
+
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
   pod5_dir     = "/path/to/pod5/"
@@ -72,6 +75,7 @@ For comparative analysis across multiple samples and experimental
 conditions, prepare a YAML configuration file and launch with:
 
 ``` r
+
 ninetails::launch_signal_browser(
   config = "/path/to/config.yml"
 )
@@ -114,18 +118,19 @@ samples:
 
 ### Field reference
 
-| Field            | Required | Description                                        |
-|------------------|----------|----------------------------------------------------|
-| `sample_name`    | Yes      | Display name used in plots and legends             |
-| `group`          | Yes      | Experimental condition for grouping                |
-| `class_path`     | Yes      | Path to `read_classes.txt` from ninetails          |
-| `residue_path`   | Yes      | Path to `nonadenosine_residues.txt` from ninetails |
-| `dorado_summary` | No       | Path to Dorado summary file (for Signal Viewer)    |
-| `pod5_dir`       | No       | Path to POD5 file directory (for Signal Viewer)    |
+| Field | Required | Description |
+|----|----|----|
+| `sample_name` | Yes | Display name used in plots and legends |
+| `group` | Yes | Experimental condition for grouping |
+| `class_path` | Yes | Path to `read_classes.txt` from ninetails |
+| `residue_path` | Yes | Path to `nonadenosine_residues.txt` from ninetails |
+| `dorado_summary` | No | Path to Dorado summary file (for Signal Viewer) |
+| `pod5_dir` | No | Path to POD5 file directory (for Signal Viewer) |
 
 A config template is included in the package:
 
 ``` r
+
 system.file("extdata", "config_template.yml", package = "ninetails")
 ```
 
@@ -328,6 +333,7 @@ This applies to both single-sample and multi-sample modes. Annotation
 should be performed before launching the dashboard:
 
 ``` r
+
 # After running the ninetails pipeline:
 class_data_annotated <- ninetails::annotate_with_biomart(
   class_data,
@@ -345,17 +351,18 @@ residue_data_annotated <- ninetails::annotate_with_biomart(
 ## Launcher reference
 
 ``` r
+
 ?ninetails::launch_signal_browser
 ```
 
-| Argument       | Type      | Description                                                                                   |
-|----------------|-----------|-----------------------------------------------------------------------------------------------|
-| `config`       | character | Path to YAML config (multi-sample mode)                                                       |
-| `summary_file` | character | Path to Dorado summary file                                                                   |
-| `pod5_dir`     | character | Path to POD5 directory                                                                        |
-| `class_file`   | character | Path to `read_classes.txt`                                                                    |
-| `residue_file` | character | Path to `nonadenosine_residues.txt`                                                           |
-| `...`          |           | Additional arguments passed to [`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html) |
+| Argument | Type | Description |
+|----|----|----|
+| `config` | character | Path to YAML config (multi-sample mode) |
+| `summary_file` | character | Path to Dorado summary file |
+| `pod5_dir` | character | Path to POD5 directory |
+| `class_file` | character | Path to `read_classes.txt` |
+| `residue_file` | character | Path to `nonadenosine_residues.txt` |
+| `...` |  | Additional arguments passed to [`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html) |
 
 When `config` is provided, single-sample arguments are ignored. All
 arguments are optional; the dashboard adapts its active tabs based on
@@ -366,6 +373,7 @@ Additional
 can be passed through `...`:
 
 ``` r
+
 # Custom port and host
 ninetails::launch_signal_browser(
   config = "config.yml",
@@ -398,6 +406,7 @@ delegates rendering to the installed ninetails app.
 ### Setup
 
 ``` r
+
 # 1. Copy the deployment wrapper to the Shiny Server app directory
 deploy_dir <- "/srv/shiny-server/ninetails"
 dir.create(deploy_dir, recursive = TRUE, showWarnings = FALSE)
@@ -430,6 +439,7 @@ variables:
   signal visualization is not needed.
 
 ``` r
+
 # In /srv/shiny-server/ninetails/app.R:
 config_path <- file.path(getwd(), "config.yml")
 PYTHON_PATH <- "/home/user/miniconda3/envs/r-reticulate/bin/python"
@@ -504,6 +514,7 @@ directory). The app searches recursively within that directory.
 must be installed and accessible via `reticulate`. Check with:
 
 ``` r
+
 reticulate::py_module_available("pod5")
 ```
 

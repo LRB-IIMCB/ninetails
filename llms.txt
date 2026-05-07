@@ -15,11 +15,11 @@ currently supports three pipelines:
 **WARNING! cDNA pipeline under construction! Please do not use it for
 now!**
 
-| Pipeline       | Basecaller     | Input format         | Function                                                                                                  |
-|----------------|----------------|----------------------|-----------------------------------------------------------------------------------------------------------|
-| Dorado DRS     | Dorado ≥ 1.0.0 | POD5 + summary       | [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md)   |
-| Dorado cDNA    | Dorado ≥ 1.0.0 | POD5 + BAM + summary | [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md) |
-| Guppy (legacy) | Guppy ≤ 6.0.0  | fast5 + Nanopolish   | [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)             |
+| Pipeline | Basecaller | Input format | Function |
+|----|----|----|----|
+| Dorado DRS | Dorado ≥ 1.0.0 | POD5 + summary | [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md) |
+| Dorado cDNA | Dorado ≥ 1.0.0 | POD5 + BAM + summary | [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md) |
+| Guppy (legacy) | Guppy ≤ 6.0.0 | fast5 + Nanopolish | [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md) |
 
 **Ninetails** can distinguish characteristic signal signatures of four
 nucleotide types: adenosines (A), cytosines (C), guanosines (G), and
@@ -47,6 +47,7 @@ Windows 11 with R 4.1.2, R 4.2.0 and R 4.2.1.
 Install it using `devtools`:
 
 ``` r
+
 install.packages("devtools")
 devtools::install_github('LRB-IIMCB/ninetails')
 library(ninetails)
@@ -78,6 +79,7 @@ The recommended pipeline for direct RNA sequencing (DRS) data basecalled
 with Dorado ≥ 1.0.0 using POD5 format.
 
 ``` r
+
 results <- ninetails::check_tails_dorado_DRS(
   dorado_summary = "path/to/dorado_alignment_summary.txt",
   pod5_dir       = "path/to/pod5_dir/",
@@ -92,16 +94,16 @@ results <- ninetails::check_tails_dorado_DRS(
 
 **Parameters:**
 
-| parameter        | description                                                                                                                                      |
-|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| parameter | description |
+|----|----|
 | `dorado_summary` | Path to Dorado summary file or in-memory data frame. Must contain `read_id`, `filename`, `poly_tail_length`, `poly_tail_start`, `poly_tail_end`. |
-| `pod5_dir`       | Path to directory containing POD5 files.                                                                                                         |
-| `num_cores`      | Number of CPU cores for parallel processing.                                                                                                     |
-| `qc`             | Logical. Apply quality control filtering (recommended).                                                                                          |
-| `save_dir`       | Output directory. Created if it does not exist.                                                                                                  |
-| `prefix`         | Optional prefix for output file names.                                                                                                           |
-| `part_size`      | Number of reads per processing chunk. Reduce if memory is limited.                                                                               |
-| `cleanup`        | Logical. Remove intermediate files after completion.                                                                                             |
+| `pod5_dir` | Path to directory containing POD5 files. |
+| `num_cores` | Number of CPU cores for parallel processing. |
+| `qc` | Logical. Apply quality control filtering (recommended). |
+| `save_dir` | Output directory. Created if it does not exist. |
+| `prefix` | Optional prefix for output file names. |
+| `part_size` | Number of reads per processing chunk. Reduce if memory is limited. |
+| `cleanup` | Logical. Remove intermediate files after completion. |
 
 ------------------------------------------------------------------------
 
@@ -112,6 +114,7 @@ with BAM file processing for sequence extraction and automatic read
 orientation classification (polyA vs polyT).
 
 ``` r
+
 results <- ninetails::check_tails_dorado_cDNA(
   bam_file       = "path/to/aligned_cdna.bam",
   dorado_summary = "path/to/dorado_summary.txt",
@@ -127,8 +130,8 @@ results <- ninetails::check_tails_dorado_cDNA(
 
 **Additional parameter vs DRS:**
 
-| parameter  | description                                                                                                             |
-|------------|-------------------------------------------------------------------------------------------------------------------------|
+| parameter | description |
+|----|----|
 | `bam_file` | Path to BAM file containing aligned cDNA reads with basecalled sequences. Required for read orientation classification. |
 
 The cDNA pipeline classifies each read as `polyA`, `polyT`, or
@@ -150,6 +153,7 @@ developed** (critical bug fixes only).
 > version of basecaller.**
 
 ``` r
+
 results <- ninetails::check_tails_guppy(
   polya_data = system.file('extdata', 'test_data',
                             'nanopolish_output.tsv',
@@ -201,26 +205,26 @@ each run.
 Complete accounting of all reads in the analysis. Each read is assigned
 one class and one comment code.
 
-| column         | content                                                         |
-|----------------|-----------------------------------------------------------------|
-| `readname`     | Unique read identifier                                          |
-| `contig`       | Reference sequence/transcript the read mapped to                |
-| `polya_length` | Estimated poly(A) tail length (nt)                              |
-| `qc_tag`       | Mapping quality score                                           |
-| `class`        | Classification result: `decorated`, `blank`, or `unclassified`  |
-| `comments`     | 3-letter code explaining the classification outcome (see below) |
-| `tail_type`    | `polyA` or `polyT` — cDNA pipeline only                         |
+| column | content |
+|----|----|
+| `readname` | Unique read identifier |
+| `contig` | Reference sequence/transcript the read mapped to |
+| `polya_length` | Estimated poly(A) tail length (nt) |
+| `qc_tag` | Mapping quality score |
+| `class` | Classification result: `decorated`, `blank`, or `unclassified` |
+| `comments` | 3-letter code explaining the classification outcome (see below) |
+| `tail_type` | `polyA` or `polyT` — cDNA pipeline only |
 
 **Classification codes:**
 
-| class          | comments | explanation                                              |
-|----------------|----------|----------------------------------------------------------|
-| `decorated`    | `YAY`    | Non-adenosine residue detected                           |
-| `blank`        | `MAU`    | No signal deviation detected; pure poly(A) signal        |
-| `blank`        | `MPU`    | Signal deviation present but predicted as adenosine only |
-| `unclassified` | `IRL`    | Poly(A) tail too short (\< 10 nt) for reliable analysis  |
-| `unclassified` | `UNM`    | Read unmapped to reference                               |
-| `unclassified` | `BAC`    | Invalid poly(A) coordinates (`poly_tail_start = 0`)      |
+| class | comments | explanation |
+|----|----|----|
+| `decorated` | `YAY` | Non-adenosine residue detected |
+| `blank` | `MAU` | No signal deviation detected; pure poly(A) signal |
+| `blank` | `MPU` | Signal deviation present but predicted as adenosine only |
+| `unclassified` | `IRL` | Poly(A) tail too short (\< 10 nt) for reliable analysis |
+| `unclassified` | `UNM` | Read unmapped to reference |
+| `unclassified` | `BAC` | Invalid poly(A) coordinates (`poly_tail_start = 0`) |
 
 ### `nonadenosine_residues`
 
@@ -228,15 +232,15 @@ Modification-level detail for `decorated` reads only. Each row is one
 predicted non-adenosine residue. A read may have multiple rows if
 multiple modifications were detected.
 
-| column         | content                                                                                |
-|----------------|----------------------------------------------------------------------------------------|
-| `readname`     | Unique read identifier                                                                 |
-| `contig`       | Reference sequence/transcript                                                          |
-| `prediction`   | Predicted nucleotide type: `C`, `G`, or `U`                                            |
+| column | content |
+|----|----|
+| `readname` | Unique read identifier |
+| `contig` | Reference sequence/transcript |
+| `prediction` | Predicted nucleotide type: `C`, `G`, or `U` |
 | `est_nonA_pos` | Estimated position within the poly(A) tail from the 3’ end (integer, Dorado pipelines) |
-| `polya_length` | Total poly(A) tail length (nt)                                                         |
-| `qc_tag`       | Mapping quality score                                                                  |
-| `tail_type`    | `polyA` or `polyT` — cDNA pipeline only                                                |
+| `polya_length` | Total poly(A) tail length (nt) |
+| `qc_tag` | Mapping quality score |
+| `tail_type` | `polyA` or `polyT` — cDNA pipeline only |
 
 ## Important notes
 

@@ -20,6 +20,7 @@ navigation, see the Signal Viewer tab in the Shiny dashboard:
 Draw the entire signal (squiggle) for a given read from fast5 files:
 
 ``` r
+
 plot <- ninetails::plot_squiggle_fast5(
   readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
   nanopolish = system.file('extdata', 'test_data',
@@ -40,15 +41,15 @@ print(plot)
 
 #### Parameters
 
-| Parameter            | Type                 | Default             | Description                                                |
-|----------------------|----------------------|---------------------|------------------------------------------------------------|
-| `readname`           | character            | *required*          | Unique read identifier                                     |
-| `nanopolish`         | character/data.frame | *required*          | Path to Nanopolish polya output or a pre-loaded data frame |
-| `sequencing_summary` | character/data.frame | *required*          | Path to sequencing summary or a pre-loaded data frame      |
-| `workspace`          | character            | *required*          | Path to directory with multi-fast5 files                   |
-| `basecall_group`     | character            | `"Basecall_1D_000"` | Fast5 hierarchy level for basecall data                    |
-| `moves`              | logical              | `FALSE`             | If `TRUE`, show move transitions as background shading     |
-| `rescale`            | logical              | `TRUE`              | If `TRUE`, scale signal to picoamperes (pA) per second     |
+| Parameter | Type | Default | Description |
+|----|----|----|----|
+| `readname` | character | *required* | Unique read identifier |
+| `nanopolish` | character/data.frame | *required* | Path to Nanopolish polya output or a pre-loaded data frame |
+| `sequencing_summary` | character/data.frame | *required* | Path to sequencing summary or a pre-loaded data frame |
+| `workspace` | character | *required* | Path to directory with multi-fast5 files |
+| `basecall_group` | character | `"Basecall_1D_000"` | Fast5 hierarchy level for basecall data |
+| `moves` | logical | `FALSE` | If `TRUE`, show move transitions as background shading |
+| `rescale` | logical | `TRUE` | If `TRUE`, scale signal to picoamperes (pA) per second |
 
 The plot shows vertical lines marking poly(A) tail boundaries:
 
@@ -67,6 +68,7 @@ Draw the entire signal for a given read from POD5 files (Dorado DRS
 pipeline):
 
 ``` r
+
 plot <- ninetails::plot_squiggle_pod5(
   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
   dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
@@ -81,14 +83,14 @@ print(plot)
 
 #### Parameters
 
-| Parameter        | Type                 | Default    | Description                                                                                                                       |
-|------------------|----------------------|------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `readname`       | character            | *required* | Unique read identifier                                                                                                            |
+| Parameter | Type | Default | Description |
+|----|----|----|----|
+| `readname` | character | *required* | Unique read identifier |
 | `dorado_summary` | character/data.frame | *required* | Path to Dorado summary file or a pre-loaded data frame with `read_id`, `poly_tail_start`, `poly_tail_end`, and `filename` columns |
-| `workspace`      | character            | *required* | Path to directory containing POD5 files                                                                                           |
-| `rescale`        | logical              | `TRUE`     | If `TRUE`, scale signal to picoamperes (pA)                                                                                       |
-| `residue_data`   | data.frame           | `NULL`     | Non-A residue table for overlay highlighting (optional)                                                                           |
-| `nonA_flank`     | numeric              | `250`      | Number of raw signal positions flanking each non-A overlay rectangle                                                              |
+| `workspace` | character | *required* | Path to directory containing POD5 files |
+| `rescale` | logical | `TRUE` | If `TRUE`, scale signal to picoamperes (pA) |
+| `residue_data` | data.frame | `NULL` | Non-A residue table for overlay highlighting (optional) |
+| `nonA_flank` | numeric | `250` | Number of raw signal positions flanking each non-A overlay rectangle |
 
 > **Note:** The `moves` parameter is not available for POD5-based
 > functions. Move data is not stored in POD5 files in a format
@@ -109,6 +111,7 @@ Plot only the poly(A) tail region from fast5 files, with optional
 flanking sequence:
 
 ``` r
+
 plot <- ninetails::plot_tail_range_fast5(
   readname = "0226b5df-f9e5-4774-bbee-7719676f2ceb",
   nanopolish = system.file('extdata', 'test_data',
@@ -142,6 +145,7 @@ Plot only the poly(A) tail region from POD5 files, with configurable
 flanking and optional non-A residue overlay:
 
 ``` r
+
 plot <- ninetails::plot_tail_range_pod5(
   readname = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
   dorado_summary = system.file('extdata', 'test_data', 'pod5_DRS',
@@ -157,15 +161,15 @@ print(plot)
 
 #### Parameters
 
-| Parameter        | Type                 | Default    | Description                                                                  |
-|------------------|----------------------|------------|------------------------------------------------------------------------------|
-| `readname`       | character            | *required* | Unique read identifier                                                       |
-| `dorado_summary` | character/data.frame | *required* | Path to Dorado summary file or pre-loaded data frame                         |
-| `workspace`      | character            | *required* | Path to directory containing POD5 files                                      |
-| `flank`          | numeric              | `150`      | Number of raw signal positions to include on each side of the poly(A) region |
-| `rescale`        | logical              | `TRUE`     | If `TRUE`, scale signal to picoamperes (pA)                                  |
-| `residue_data`   | data.frame           | `NULL`     | Non-A residue table for overlay highlighting (optional)                      |
-| `nonA_flank`     | numeric              | `250`      | Width (in raw positions) of each non-A overlay rectangle                     |
+| Parameter | Type | Default | Description |
+|----|----|----|----|
+| `readname` | character | *required* | Unique read identifier |
+| `dorado_summary` | character/data.frame | *required* | Path to Dorado summary file or pre-loaded data frame |
+| `workspace` | character | *required* | Path to directory containing POD5 files |
+| `flank` | numeric | `150` | Number of raw signal positions to include on each side of the poly(A) region |
+| `rescale` | logical | `TRUE` | If `TRUE`, scale signal to picoamperes (pA) |
+| `residue_data` | data.frame | `NULL` | Non-A residue table for overlay highlighting (optional) |
+| `nonA_flank` | numeric | `250` | Width (in raw positions) of each non-A overlay rectangle |
 
 ![Poly(A) tail region from POD5, rescaled to
 pA](../reference/figures/tail_pod5_rescaled.png)
@@ -194,6 +198,7 @@ center). A letter label (C, G, or U) is placed at the top of each
 rectangle.
 
 ``` r
+
 # Plot with non-A overlay
 plot <- ninetails::plot_tail_range_pod5(
   readname       = "0e8e52dc-3a71-4c33-9a00-e1209ba4d2e9",
@@ -222,6 +227,7 @@ function is mainly useful for debugging the pipeline or understanding
 how individual segments are classified.
 
 ``` r
+
 # First, create tail chunk list using pipeline functions
 tfl <- ninetails::create_tail_feature_list(...)
 tcl <- ninetails::create_tail_chunk_list(tail_feature_list = tfl, num_cores = 2)
@@ -236,10 +242,10 @@ print(plot)
 
 #### Parameters
 
-| Parameter         | Type      | Description                                                                                                         |
-|-------------------|-----------|---------------------------------------------------------------------------------------------------------------------|
-| `chunk_name`      | character | Identifier of the chunk (format: `readname_chunkindex`)                                                             |
-| `tail_chunk_list` | list      | Output from [`create_tail_chunk_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list.md) |
+| Parameter | Type | Description |
+|----|----|----|
+| `chunk_name` | character | Identifier of the chunk (format: `readname_chunkindex`) |
+| `tail_chunk_list` | list | Output from [`create_tail_chunk_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list.md) |
 
 > **Note:** This function shows raw signal only; no scaling to
 > picoamperes is applied.
@@ -259,6 +265,7 @@ image has two channels representing the Gramian Angular Summation Field
 (GASF) and the Gramian Angular Difference Field (GADF).
 
 ``` r
+
 # First, create GAF list using pipeline functions
 gl <- ninetails::create_gaf_list(tail_chunk_list = tcl, num_cores = 2)
 
@@ -272,10 +279,10 @@ print(plot)
 
 #### Parameters
 
-| Parameter  | Type      | Description                                                                                           |
-|------------|-----------|-------------------------------------------------------------------------------------------------------|
-| `gaf_name` | character | Identifier of the GAF (same format as chunk names)                                                    |
-| `gaf_list` | list      | Output from [`create_gaf_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md) |
+| Parameter | Type | Description |
+|----|----|----|
+| `gaf_name` | character | Identifier of the GAF (same format as chunk names) |
+| `gaf_list` | list | Output from [`create_gaf_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md) |
 
 ![Gramian angular field](../reference/figures/gasf.png)
 
@@ -287,6 +294,7 @@ Plot all GAFs in a list. Each plot is saved as an image file in the
 working directory.
 
 ``` r
+
 ninetails::plot_multiple_gaf(
   gaf_list  = gl,
   num_cores = 10
@@ -295,10 +303,10 @@ ninetails::plot_multiple_gaf(
 
 #### Parameters
 
-| Parameter   | Type    | Default    | Description                                                                                           |
-|-------------|---------|------------|-------------------------------------------------------------------------------------------------------|
-| `gaf_list`  | list    | *required* | Output from [`create_gaf_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md) |
-| `num_cores` | integer | `1`        | Number of cores for parallel rendering                                                                |
+| Parameter | Type | Default | Description |
+|----|----|----|----|
+| `gaf_list` | list | *required* | Output from [`create_gaf_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md) |
+| `num_cores` | integer | `1` | Number of cores for parallel rendering |
 
 > **Warning:** Use with caution. GAF lists can be very large, and
 > plotting all at once may overload the system.
@@ -311,15 +319,15 @@ Multiple Gramian angular fields
 
 ## Signal visualization options
 
-| Option            | Description                                   | Applies to           |
-|-------------------|-----------------------------------------------|----------------------|
-| `rescale = FALSE` | Raw signal per position                       | Fast5, POD5          |
-| `rescale = TRUE`  | Signal scaled to picoamperes (pA) per second  | Fast5, POD5          |
-| `moves = FALSE`   | Signal only                                   | Fast5 only           |
-| `moves = TRUE`    | Signal with move transitions in background    | Fast5 only           |
-| `flank`           | Positions flanking tail region (default: 150) | POD5 tail range only |
-| `residue_data`    | Non-A residue overlay highlighting            | POD5 only            |
-| `nonA_flank`      | Width of overlay rectangles (default: 250)    | POD5 only            |
+| Option | Description | Applies to |
+|----|----|----|
+| `rescale = FALSE` | Raw signal per position | Fast5, POD5 |
+| `rescale = TRUE` | Signal scaled to picoamperes (pA) per second | Fast5, POD5 |
+| `moves = FALSE` | Signal only | Fast5 only |
+| `moves = TRUE` | Signal with move transitions in background | Fast5 only |
+| `flank` | Positions flanking tail region (default: 150) | POD5 tail range only |
+| `residue_data` | Non-A residue overlay highlighting | POD5 only |
+| `nonA_flank` | Width of overlay rectangles (default: 250) | POD5 only |
 
 ------------------------------------------------------------------------
 
@@ -346,6 +354,7 @@ For browsing signals interactively with filters, read navigation, and
 non-A overlay, use the Shiny dashboard’s Signal Viewer tab:
 
 ``` r
+
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
   pod5_dir     = "/path/to/pod5/",
@@ -370,12 +379,12 @@ for complete documentation.
 
 ## Summary of signal inspection functions
 
-| Function                                                                                              | Description                                    | Input             |
-|-------------------------------------------------------------------------------------------------------|------------------------------------------------|-------------------|
-| [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md)     | Full read signal                               | Fast5 files       |
-| [`plot_squiggle_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.md)       | Full read signal (+ optional non-A overlay)    | POD5 files        |
-| [`plot_tail_range_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.md) | Poly(A) tail signal only                       | Fast5 files       |
-| [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md)   | Poly(A) tail signal (+ optional non-A overlay) | POD5 files        |
-| [`plot_tail_chunk()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.md)             | Signal segment from segmentation               | Intermediate data |
-| [`plot_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_gaf.md)                           | Single GAF image (GASF + GADF)                 | Intermediate data |
-| [`plot_multiple_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_multiple_gaf.md)         | Batch GAF rendering                            | Intermediate data |
+| Function | Description | Input |
+|----|----|----|
+| [`plot_squiggle_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_fast5.md) | Full read signal | Fast5 files |
+| [`plot_squiggle_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.md) | Full read signal (+ optional non-A overlay) | POD5 files |
+| [`plot_tail_range_fast5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.md) | Poly(A) tail signal only | Fast5 files |
+| [`plot_tail_range_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.md) | Poly(A) tail signal (+ optional non-A overlay) | POD5 files |
+| [`plot_tail_chunk()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.md) | Signal segment from segmentation | Intermediate data |
+| [`plot_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_gaf.md) | Single GAF image (GASF + GADF) | Intermediate data |
+| [`plot_multiple_gaf()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_multiple_gaf.md) | Batch GAF rendering | Intermediate data |

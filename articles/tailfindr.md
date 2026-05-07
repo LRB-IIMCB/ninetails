@@ -27,6 +27,7 @@ Before running the pipeline, convert tailfindR output to
 ninetails-compatible format:
 
 ``` r
+
 converted_tailfindr <- ninetails::convert_tailfindr_output(
   tailfindr_output = '/path/to/tailfindr/output.csv'
 )
@@ -39,6 +40,7 @@ Pass the converted output to
 as the `polya_data` argument:
 
 ``` r
+
 results <- ninetails::check_tails_guppy(
   polya_data = converted_tailfindr,
   sequencing_summary = '/path/to/sequencing_summary.txt',

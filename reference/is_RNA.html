@@ -95,7 +95,7 @@ body, .contents, .contents p, .contents li,
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Check if fast5 file contains RNA reads</h1>
-      <small class="dont-index">Source: <a href="https://github.com/LRB-IIMCB/ninetails/blob/main/R/ninetails_misc_helper_functions.R" class="external-link"><code>R/ninetails_misc_helper_functions.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/LRB-IIMCB/ninetails/blob/v.1.0.78/R/ninetails_misc_helper_functions.R" class="external-link"><code>R/ninetails_misc_helper_functions.R</code></a></small>
       <div class="d-none name"><code>is_RNA.Rd</code></div>
     </div>
 
@@ -132,7 +132,7 @@ by examining the experiment_type attribute in the context_tags group.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Check if a fast5 file contains RNA reads</span></span></span>
 <span class="r-in"><span><span class="va">fast5_path</span> <span class="op">&lt;-</span> <span class="st">"path/to/file.fast5"</span></span></span>
-<span class="r-in"><span><span class="va">file_structure</span> <span class="op">&lt;-</span> <span class="fu">rhdf5</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/rhdf5/man/h5ls.html" class="external-link">h5ls</a></span><span class="op">(</span><span class="va">fast5_path</span>, recursive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">file_structure</span> <span class="op">&lt;-</span> <span class="fu">rhdf5</span><span class="fu">::</span><span class="fu"><a href="https://huber-group-embl.github.io/rhdf5/reference/h5ls.html" class="external-link">h5ls</a></span><span class="op">(</span><span class="va">fast5_path</span>, recursive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">read_id</span> <span class="op">&lt;-</span> <span class="va">file_structure</span><span class="op">$</span><span class="va">name</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="fu">is_RNA</span><span class="op">(</span><span class="va">fast5_path</span>, <span class="va">read_id</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>

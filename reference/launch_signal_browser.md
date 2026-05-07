@@ -127,6 +127,7 @@ Signal Viewer tab requires `summary_file` and `pod5_dir`. Default
 
 The YAML configuration file should have the following structure:
 
+
     samples:
       sample_label_1:
         sample_name: KO_rep1

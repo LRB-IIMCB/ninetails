@@ -16,6 +16,7 @@ Wiki](https://github.com/LRB-IIMCB/ninetails/wiki).
 Install it from GitHub using `devtools`:
 
 ``` r
+
 install.packages("devtools")
 devtools::install_github('LRB-IIMCB/ninetails')
 library(ninetails)
@@ -56,11 +57,11 @@ for detailed instructions.
 
 Ninetails provides three analysis pipelines:
 
-| Pipeline        | Basecaller     | Input format         | Function                                                                                                  | Status            |
-|-----------------|----------------|----------------------|-----------------------------------------------------------------------------------------------------------|-------------------|
-| **Dorado DRS**  | Dorado ≥ 1.0.0 | POD5 + summary       | [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md)   | Recommended       |
+| Pipeline | Basecaller | Input format | Function | Status |
+|----|----|----|----|----|
+| **Dorado DRS** | Dorado ≥ 1.0.0 | POD5 + summary | [`check_tails_dorado_DRS()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_DRS.md) | Recommended |
 | **Dorado cDNA** | Dorado ≥ 1.0.0 | POD5 + BAM + summary | [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md) | Under development |
-| **Guppy**       | Guppy ≤ 6.0.0  | fast5 + Nanopolish   | [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md)             | Legacy            |
+| **Guppy** | Guppy ≤ 6.0.0 | fast5 + Nanopolish | [`check_tails_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_guppy.md) | Legacy |
 
 Choose the pipeline that matches your basecaller and sequencing
 protocol. The Dorado DRS pipeline is recommended for all new analyses.
@@ -70,6 +71,7 @@ protocol. The Dorado DRS pipeline is recommended for all new analyses.
 The recommended pipeline for direct RNA sequencing (DRS) data:
 
 ``` r
+
 results <- ninetails::check_tails_dorado_DRS(
   dorado_summary = "path/to/dorado_summary.txt",
   pod5_dir       = "path/to/pod5_dir/",
@@ -117,6 +119,7 @@ After running the pipeline, use the postprocessing functions to load,
 merge, annotate, and summarize the data:
 
 ``` r
+
 # Load multiple samples
 class_data <- ninetails::read_class_multiple(samples_table)
 residue_data <- ninetails::read_residue_multiple(samples_table)
@@ -144,6 +147,7 @@ Shiny dashboard.
 ### Static plots
 
 ``` r
+
 # Read classification
 ninetails::plot_class_counts(class_data, grouping_factor = "sample_name")
 
@@ -171,6 +175,7 @@ configurable filters, per-sample rug plots, signal visualization, and
 downloadable reports:
 
 ``` r
+
 ninetails::launch_signal_browser(
   class_file   = "/path/to/read_classes.txt",
   residue_file = "/path/to/nonadenosine_residues.txt",
