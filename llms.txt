@@ -534,10 +534,13 @@ Interactive Shiny application for exploring ninetails results. Supports
 single-sample and multi-sample analysis via YAML configuration,
 including read classification, residue composition, poly(A)
 distributions, and raw signal visualization with non-A modification
-overlay.
+overlay. Use launch_signal_browser() for Dorado DRS (POD5) data and
+launch_signal_browser_guppy() for Guppy legacy (fast5) data.
 
 - [`launch_signal_browser()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser.md)
   : Launch the Ninetails Analysis Dashboard
+- [`launch_signal_browser_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser_guppy.md)
+  : Launch the Ninetails Analysis Dashboard (Guppy Legacy)
 
 ## tailfindr compatibility
 
