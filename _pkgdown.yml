@@ -273,9 +273,12 @@ reference:
       Supports single-sample and multi-sample analysis via YAML
       configuration, including read classification, residue composition,
       poly(A) distributions, and raw signal visualization with non-A
-      modification overlay.
+      modification overlay. Use launch_signal_browser() for Dorado DRS
+      (POD5) data and launch_signal_browser_guppy() for Guppy legacy
+      (fast5) data.
     contents:
       - launch_signal_browser
+      - launch_signal_browser_guppy
 
   - title: "tailfindr compatibility"
     desc: >

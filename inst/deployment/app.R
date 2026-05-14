@@ -1,26 +1,27 @@
 ################################################################################
-# Ninetails Dashboard — Shiny Server deployment wrapper
+# Ninetails Dashboard — Universal Shiny Server deployment wrapper
 #
-# Place this file in the Shiny Server app directory alongside config.yml.
-# Shiny Server will run this file directly. It loads data from the YAML
-# config and delegates to the app bundled in the installed ninetails package.
+# Auto-detects whether the YAML config describes Dorado DRS or Guppy legacy
+# data based on the fields present in the first sample entry:
+#   - pod5_dir or dorado_summary  →  Dorado DRS app
+#   - workspace or nanopolish     →  Guppy legacy app
+#
+# Place this file as app.R in the Shiny Server app directory alongside
+# config.yml and a www/ folder with static assets.
 #
 # Directory structure:
-#   /srv/shiny-server/ninetails/
+#   /srv/shiny-server/my_analysis/
 #   ├── app.R           (this file)
-#   ├── config.yml      (your YAML configuration)
-#   └── www/            (static assets — symlink or copy from inst/app/www/)
-#       ├── logo.png
-#       ├── favicon.ico
-#       └── IIMCB_logo.png
+#   ├── config.yml      (YAML configuration)
+#   └── www/            (symlink or copy from inst/app/www/ or inst/app_guppy/www/)
 #
 # Setup:
 #   1. Install ninetails and all Suggests on the server
-#   2. Copy this file + config.yml to the app directory
-#   3. Edit PYTHON_PATH below (required for Signal Viewer tab)
-#   4. Symlink or copy www/ assets:
-#        ln -s $(Rscript -e "cat(system.file('app/www', package='ninetails'))") www
-#   5. Restart Shiny Server or let it auto-detect
+#   2. Copy this file as app.R to the Shiny Server app directory
+#   3. Place config.yml alongside it
+#   4. Copy or symlink www/ assets
+#   5. Edit PYTHON_PATH below if needed (Dorado Signal Viewer only)
+#   6. Restart Shiny Server
 #
 ################################################################################
 
@@ -32,16 +33,13 @@
 # Path to YAML config (relative to this app.R directory)
 config_path <- file.path(getwd(), "config.yml")
 
-# Python environment for signal extraction (Signal Viewer tab).
-# Set this to the Python binary that has the 'pod5' module installed.
-# If Signal Viewer is not needed, leave as NULL.
-#
-# Examples:
-#   PYTHON_PATH <- "/usr/bin/python3"
-#   PYTHON_PATH <- "/home/user/miniconda3/envs/r-reticulate/bin/python"
-#   PYTHON_PATH <- "/home/user/.virtualenvs/ninetails/bin/python"
-#
+# Python environment for signal extraction (Dorado Signal Viewer only).
+# Set to the Python binary with the 'pod5' module installed.
+# Not needed for Guppy pipeline or if Signal Viewer is not used.
 PYTHON_PATH <- NULL
+
+# Basecall group for Guppy fast5 access (ignored for Dorado)
+BASECALL_GROUP <- "Basecall_1D_000"
 
 ################################################################################
 
@@ -50,9 +48,8 @@ library(shiny)
 library(ggplot2)
 library(dplyr)
 library(vroom)
-library(reticulate)
 
-# Apply Python path if specified (must happen before any reticulate calls)
+# Apply Python path if specified
 if (!is.null(PYTHON_PATH) && nzchar(PYTHON_PATH)) {
   Sys.setenv(RETICULATE_PYTHON = PYTHON_PATH)
   cat(paste0("[", Sys.time(), "] Python path set to: ", PYTHON_PATH, "\n"))
@@ -66,12 +63,33 @@ if (!file.exists(config_path)) {
        call. = FALSE)
 }
 
-# ---- Load data (mirrors launch_signal_browser() logic) ----
-
 cfg <- yaml::read_yaml(config_path)
 if (is.null(cfg$samples) || length(cfg$samples) == 0) {
   stop("No samples found in config.yml", call. = FALSE)
 }
+
+# ---- Auto-detect pipeline ----
+
+first_sample <- cfg$samples[[1]]
+is_dorado <- !is.null(first_sample$pod5_dir) || !is.null(first_sample$dorado_summary)
+is_guppy  <- !is.null(first_sample$workspace) || !is.null(first_sample$nanopolish)
+
+if (is_dorado) {
+  pipeline <- "dorado"
+  app_name <- "app"
+  cat(paste0("[", Sys.time(), "] Detected Dorado DRS pipeline\n"))
+} else if (is_guppy) {
+  pipeline <- "guppy"
+  app_name <- "app_guppy"
+  cat(paste0("[", Sys.time(), "] Detected Guppy legacy pipeline\n"))
+} else {
+  # No signal fields — detect from class/residue data only
+  pipeline <- "dorado"
+  app_name <- "app"
+  cat(paste0("[", Sys.time(), "] No signal config detected, defaulting to Dorado app\n"))
+}
+
+# ---- Load data ----
 
 class_list   <- list()
 residue_list <- list()
@@ -106,11 +124,23 @@ for (sid in names(cfg$samples)) {
     })
   }
 
-  if (!is.null(s$dorado_summary) && !is.null(s$pod5_dir)) {
-    signal_config[[sname]] <- list(
-      dorado_summary = s$dorado_summary,
-      pod5_dir = s$pod5_dir
-    )
+  # Build signal config based on pipeline
+  if (pipeline == "dorado") {
+    if (!is.null(s$dorado_summary) && !is.null(s$pod5_dir)) {
+      signal_config[[sname]] <- list(
+        dorado_summary = s$dorado_summary,
+        pod5_dir = s$pod5_dir
+      )
+    }
+  } else {
+    if (!is.null(s$nanopolish) && !is.null(s$sequencing_summary) &&
+        !is.null(s$workspace)) {
+      signal_config[[sname]] <- list(
+        nanopolish_path = s$nanopolish,
+        sequencing_summary_path = s$sequencing_summary,
+        workspace = s$workspace
+      )
+    }
   }
 }
 
@@ -134,8 +164,7 @@ merged_data <- NULL
 if (!is.null(class_data) && !is.null(residue_data) && nrow(residue_data) > 0) {
   tryCatch({
     merged_data <- ninetails::merge_nonA_tables(
-      class_data, residue_data, pass_only = FALSE
-    )
+      class_data, residue_data, pass_only = FALSE)
   }, error = function(e) {
     warning("Could not create merged table: ", e$message, call. = FALSE)
   })
@@ -154,19 +183,22 @@ shiny::shinyOptions(
   ninetails.signal_config = signal_config,
   ninetails.summary_file  = "",
   ninetails.pod5_dir      = "",
-  ninetails.residue_file  = ""
+  ninetails.residue_file  = "",
+  ninetails.basecall_group = BASECALL_GROUP
 )
 
-# ---- Source the app from the installed package ----
+# ---- Source the appropriate app ----
 
-app_dir <- system.file("app", package = "ninetails")
+app_dir <- system.file(app_name, package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {
-  stop("ninetails app not found. Is the package installed?", call. = FALSE)
+  stop("ninetails ", pipeline, " app not found at inst/", app_name,
+       "/. Is the package installed?", call. = FALSE)
 }
 
-# Source into a local environment, extract ui and server
+cat(paste0("[", Sys.time(), "] Launching ", pipeline, " dashboard from: ",
+           app_dir, "\n"))
+
 app_env <- new.env(parent = globalenv())
 source(file.path(app_dir, "app.R"), local = app_env)
 
-# Shiny Server expects shinyApp() as the last expression
 shiny::shinyApp(ui = app_env$ui, server = app_env$server)
