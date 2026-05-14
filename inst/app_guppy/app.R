@@ -7,7 +7,7 @@
 # visualization. No Python dependency required.
 #
 # Location: inst/app_guppy/app.R
-# Launch: ninetails::launch_signal_browser_guppy()
+# Launch:   ninetails::launch_signal_browser_guppy()
 #
 # Tabs:
 #   1. Classification — value boxes, Nanopolish QC, class counts, non-A
@@ -30,7 +30,7 @@ library(ggplot2)
 library(dplyr)
 library(vroom)
 
-options(scipen = 999) # disable scientific notation
+options(scipen = 999)
 
 
 ################################################################################
@@ -208,7 +208,7 @@ ui <- shiny::fluidPage(
     ")) # tags$style
   ), # tags$head
 
-  #  Header
+  # ---- Header ----
   shiny::div(class = "header",
              htmltools::img(src = "logo.png", height = 45, width = 45, alt = "ninetails"),
              shiny::div(
@@ -220,7 +220,7 @@ ui <- shiny::fluidPage(
              )
   ),
 
-  #  Main tabs
+  # ---- Main tabs ----
   shiny::tabsetPanel(id = "main_tabs", type = "tabs",
 
                      ############################################################################
@@ -439,6 +439,10 @@ ui <- shiny::fluidPage(
                                                                            shiny::selectInput("comments_filter", "Decoration status",
                                                                                               choices = c("All", "YAY", "MPU", "MAU", "QCF", "NIN", "IRL"),
                                                                                               selected = "All"),
+                                                                           shiny::selectInput("sig_residue_filter", "Non-A residue type",
+                                                                                              choices = c("All", "C", "G", "U"), selected = "All"),
+                                                                           shiny::uiOutput("genome_filter_ui"),
+                                                                           shiny::uiOutput("mapq_filter_ui"),
                                                                            shiny::checkboxInput("sig_show_moves", "Show moves", FALSE),
                                                                            shiny::checkboxInput("sig_rescale", "Rescale to pA", FALSE)
                                                                 ),
@@ -876,7 +880,7 @@ server <- function(input, output, session) {
     np
   }
 
-  #  Data loading
+  # ---- Data loading ----
   if (length(signal_config) > 0 && names(signal_config)[1] != "single") {
     shiny::observeEvent(input$signal_sample, {
       s <- signal_config[[input$signal_sample]]
@@ -940,7 +944,25 @@ server <- function(input, output, session) {
                       shiny::tags$strong("Loaded: "), format(nrow(np), big.mark = ","), " reads")
   })
 
-  #  Filtered reads
+  # ---- Dynamic filters ----
+  output$genome_filter_ui <- shiny::renderUI({
+    np <- loaded_nanopolish(); shiny::req(np)
+    if ("contig" %in% names(np)) {
+      contigs <- sort(as.character(unique(stats::na.omit(np$contig))))
+      shiny::selectInput("genome_filter", "Aligned transcript",
+                         choices = c("All", contigs), selected = "All")
+    }
+  })
+  output$mapq_filter_ui <- shiny::renderUI({
+    np <- loaded_nanopolish(); shiny::req(np)
+    if ("alignment_mapq" %in% names(np)) {
+      rng <- range(np$alignment_mapq, na.rm = TRUE)
+      shiny::sliderInput("mapq_filter", "Mapping quality range",
+                         min = rng[1], max = rng[2], value = rng, step = 1)
+    }
+  })
+
+  # ---- Filtered reads ----
   sig_filtered_data <- shiny::reactive({
     np <- loaded_nanopolish(); shiny::req(np)
     # Normalize read ID column
@@ -959,13 +981,27 @@ server <- function(input, output, session) {
     if (!is.null(input$comments_filter) && input$comments_filter != "All" &&
         "comments" %in% names(np))
       np <- dplyr::filter(np, comments == input$comments_filter)
+    if (!is.null(input$genome_filter) && input$genome_filter != "All" &&
+        "contig" %in% names(np))
+      np <- dplyr::filter(np, contig == input$genome_filter)
+    if (!is.null(input$mapq_filter) && "alignment_mapq" %in% names(np))
+      np <- dplyr::filter(np, alignment_mapq >= input$mapq_filter[1],
+                          alignment_mapq <= input$mapq_filter[2])
+    # Non-A residue type filter
+    if (!is.null(input$sig_residue_filter) && input$sig_residue_filter != "All" &&
+        has_residue) {
+      rd <- residue_data
+      rn_col <- if ("readname" %in% names(rd)) "readname" else "read_id"
+      rids <- unique(rd[[rn_col]][rd$prediction == input$sig_residue_filter])
+      np <- dplyr::filter(np, readname %in% rids)
+    }
     # Keep only PASS reads with valid coords
     if ("qc_tag" %in% names(np))
       np <- dplyr::filter(np, qc_tag == "PASS")
     np
   })
 
-  #  Read selection
+  # ---- Read selection ----
   output$read_selection_ui <- shiny::renderUI({
     data <- sig_filtered_data()
     if (is.null(data) || nrow(data) == 0) return(shiny::helpText("No reads match filters."))
@@ -1015,7 +1051,7 @@ server <- function(input, output, session) {
                   paste0("Showing ", nrow(data), " of ", nrow(total), " reads"))
   })
 
-  #  Signal plots
+  # ---- Signal plots ----
   output$signal_loaded <- shiny::reactive({
     !is.null(loaded_nanopolish()) && !is.null(input$selected_read_id)
   })
@@ -1060,7 +1096,7 @@ server <- function(input, output, session) {
   output$read_info <- shiny::renderUI({ .render_read_info() })
   output$read_info_explorer <- shiny::renderUI({ .render_read_info() })
 
-  #  Selected residue data for overlay
+  # ---- Selected residue data for overlay ----
   selected_residue <- shiny::reactive({
     shiny::req(input$selected_read_id)
     if (!has_residue) return(NULL)
@@ -1072,7 +1108,7 @@ server <- function(input, output, session) {
     if (nrow(rr) == 0) NULL else rr
   })
 
-  #  Helper: get poly(A) boundaries from nanopolish for selected read
+  # ---- Helper: get poly(A) boundaries from nanopolish for selected read ----
   .get_polya_bounds <- function() {
     np <- loaded_nanopolish(); shiny::req(np, input$selected_read_id)
     id_col <- if ("read_id" %in% names(np)) "read_id" else "readname"
@@ -1086,7 +1122,7 @@ server <- function(input, output, session) {
     list(polya_start = ps, polya_end = pe, polya_length = pl)
   }
 
-  #  Non-A overlay builder (same approach as Dorado app)
+  # ---- Non-A overlay builder (same approach as Dorado app) ----
   .safe_nonA_overlay <- function(read_nonA_data, poly_tail_start,
                                  poly_tail_end, polya_length,
                                  nonA_flank = 250) {
