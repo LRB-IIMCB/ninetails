@@ -203,11 +203,14 @@ samples:
     group: WT
     class_path: /path/to/read_classes.txt
     residue_path: /path/to/nonadenosine_residues.txt
-    nanopolish: /path/to/nanopolish_output.tsv   # optional
-    sequencing_summary: /path/to/sequencing_summary.txt  # optional
+    polya_path: /path/to/nanopolish_output.tsv         # or nanopolish
+    seq_summary: /path/to/sequencing_summary.txt      # or sequencing_summary
     workspace: /path/to/fast5/                        # optional
 </code></pre></div>
 
+<p>Signal viewer fields: <code>polya_path</code> for the Nanopolish polya output
+and <code>seq_summary</code> for the Guppy sequencing summary. The
+<code>nanopolish</code> field is reserved for the software version number.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
