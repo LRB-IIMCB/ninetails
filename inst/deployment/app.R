@@ -55,7 +55,7 @@ if (!is.null(PYTHON_PATH) && nzchar(PYTHON_PATH)) {
   cat(paste0("[", Sys.time(), "] Python path set to: ", PYTHON_PATH, "\n"))
 }
 
-# ---- Validate config ----
+# Validate config
 
 if (!file.exists(config_path)) {
   stop("config.yml not found in app directory: ", getwd(),
@@ -68,11 +68,12 @@ if (is.null(cfg$samples) || length(cfg$samples) == 0) {
   stop("No samples found in config.yml", call. = FALSE)
 }
 
-# ---- Auto-detect pipeline ----
+#  Auto-detect pipeline
 
 first_sample <- cfg$samples[[1]]
 is_dorado <- !is.null(first_sample$pod5_dir) || !is.null(first_sample$dorado_summary)
-is_guppy  <- !is.null(first_sample$workspace) || !is.null(first_sample$nanopolish)
+is_guppy  <- !is.null(first_sample$workspace) || !is.null(first_sample$nanopolish) ||
+  !is.null(first_sample$polya_path) || !is.null(first_sample$seq_summary)
 
 if (is_dorado) {
   pipeline <- "dorado"
@@ -89,7 +90,7 @@ if (is_dorado) {
   cat(paste0("[", Sys.time(), "] No signal config detected, defaulting to Dorado app\n"))
 }
 
-# ---- Load data ----
+# Load data
 
 class_list   <- list()
 residue_list <- list()
@@ -133,12 +134,15 @@ for (sid in names(cfg$samples)) {
       )
     }
   } else {
-    if (!is.null(s$nanopolish) && !is.null(s$sequencing_summary) &&
-        !is.null(s$workspace)) {
+    # Guppy: accept nanopolish/polya_path and sequencing_summary/seq_summary
+    np_val <- if (!is.null(s$nanopolish)) s$nanopolish else if (!is.null(s$polya_path)) s$polya_path else NULL
+    ss_val <- if (!is.null(s$sequencing_summary)) s$sequencing_summary else if (!is.null(s$seq_summary)) s$seq_summary else NULL
+    ws_val <- s$workspace
+    if (!is.null(np_val) && !is.null(ss_val) && !is.null(ws_val)) {
       signal_config[[sname]] <- list(
-        nanopolish_path = s$nanopolish,
-        sequencing_summary_path = s$sequencing_summary,
-        workspace = s$workspace
+        nanopolish_path = np_val,
+        sequencing_summary_path = ss_val,
+        workspace = ws_val
       )
     }
   }
@@ -174,20 +178,20 @@ cat(paste0("[", Sys.time(), "] Loaded ",
            format(nrow(class_data), big.mark = ","), " reads from ",
            length(unique(class_data$sample_name)), " samples.\n"))
 
-# ---- Pass data to app via shinyOptions ----
+# Pass data to app via shinyOptions
 
 shiny::shinyOptions(
-  ninetails.class_data    = class_data,
-  ninetails.residue_data  = residue_data,
-  ninetails.merged_data   = merged_data,
+  ninetails.class_data = class_data,
+  ninetails.residue_data = residue_data,
+  ninetails.merged_data  = merged_data,
   ninetails.signal_config = signal_config,
   ninetails.summary_file  = "",
-  ninetails.pod5_dir      = "",
+  ninetails.pod5_dir = "",
   ninetails.residue_file  = "",
   ninetails.basecall_group = BASECALL_GROUP
 )
 
-# ---- Source the appropriate app ----
+# Source the appropriate app
 
 app_dir <- system.file(app_name, package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {
