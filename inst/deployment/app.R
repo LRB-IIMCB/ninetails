@@ -55,7 +55,7 @@ if (!is.null(PYTHON_PATH) && nzchar(PYTHON_PATH)) {
   cat(paste0("[", Sys.time(), "] Python path set to: ", PYTHON_PATH, "\n"))
 }
 
-# Validate config
+# ---- Validate config ----
 
 if (!file.exists(config_path)) {
   stop("config.yml not found in app directory: ", getwd(),
@@ -68,7 +68,7 @@ if (is.null(cfg$samples) || length(cfg$samples) == 0) {
   stop("No samples found in config.yml", call. = FALSE)
 }
 
-# Auto-detect pipeline
+# ---- Auto-detect pipeline ----
 
 first_sample <- cfg$samples[[1]]
 is_dorado <- !is.null(first_sample$pod5_dir) || !is.null(first_sample$dorado_summary)
@@ -90,7 +90,7 @@ if (is_dorado) {
   cat(paste0("[", Sys.time(), "] No signal config detected, defaulting to Dorado app\n"))
 }
 
-# Load data
+# ---- Load data ----
 
 class_list   <- list()
 residue_list <- list()
@@ -178,7 +178,7 @@ cat(paste0("[", Sys.time(), "] Loaded ",
            format(nrow(class_data), big.mark = ","), " reads from ",
            length(unique(class_data$sample_name)), " samples.\n"))
 
-# Pass data to app via shinyOptions
+# ---- Pass data to app via shinyOptions ----
 
 shiny::shinyOptions(
   ninetails.class_data    = class_data,
@@ -191,7 +191,7 @@ shiny::shinyOptions(
   ninetails.basecall_group = BASECALL_GROUP
 )
 
-# Launch the appropriate app
+# ---- Launch the appropriate app ----
 
 app_dir <- system.file(app_name, package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {
@@ -202,4 +202,6 @@ if (!nzchar(app_dir) || !dir.exists(app_dir)) {
 cat(paste0("[", Sys.time(), "] Launching ", pipeline, " dashboard from: ",
            app_dir, "\n"))
 
-shiny::runApp(app_dir)
+app_env <- new.env(parent = globalenv())
+source(file.path(app_dir, "app.R"), local = app_env)
+shiny::shinyApp(ui = app_env$ui, server = app_env$server)
