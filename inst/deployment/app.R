@@ -68,7 +68,7 @@ if (is.null(cfg$samples) || length(cfg$samples) == 0) {
   stop("No samples found in config.yml", call. = FALSE)
 }
 
-#  Auto-detect pipeline
+# Auto-detect pipeline
 
 first_sample <- cfg$samples[[1]]
 is_dorado <- !is.null(first_sample$pod5_dir) || !is.null(first_sample$dorado_summary)
@@ -181,12 +181,12 @@ cat(paste0("[", Sys.time(), "] Loaded ",
 # Pass data to app via shinyOptions
 
 shiny::shinyOptions(
-  ninetails.class_data = class_data,
-  ninetails.residue_data = residue_data,
-  ninetails.merged_data  = merged_data,
+  ninetails.class_data    = class_data,
+  ninetails.residue_data  = residue_data,
+  ninetails.merged_data   = merged_data,
   ninetails.signal_config = signal_config,
   ninetails.summary_file  = "",
-  ninetails.pod5_dir = "",
+  ninetails.pod5_dir      = "",
   ninetails.residue_file  = "",
   ninetails.basecall_group = BASECALL_GROUP
 )
@@ -202,7 +202,5 @@ if (!nzchar(app_dir) || !dir.exists(app_dir)) {
 cat(paste0("[", Sys.time(), "] Launching ", pipeline, " dashboard from: ",
            app_dir, "\n"))
 
-app_env <- new.env(parent = globalenv())
-source(file.path(app_dir, "app.R"), local = app_env)
-
-shiny::shinyApp(ui = app_env$ui, server = app_env$server)
+# Source app.R directly — it calls shinyApp(ui, server) at the end
+source(file.path(app_dir, "app.R"), local = FALSE)
