@@ -191,7 +191,7 @@ shiny::shinyOptions(
   ninetails.basecall_group = BASECALL_GROUP
 )
 
-# Source the appropriate app
+# Launch the appropriate app
 
 app_dir <- system.file(app_name, package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {
@@ -202,5 +202,4 @@ if (!nzchar(app_dir) || !dir.exists(app_dir)) {
 cat(paste0("[", Sys.time(), "] Launching ", pipeline, " dashboard from: ",
            app_dir, "\n"))
 
-# Source app.R directly — it calls shinyApp(ui, server) at the end
-source(file.path(app_dir, "app.R"), local = FALSE)
+shiny::runApp(app_dir)
