@@ -57,8 +57,8 @@
 #'     group: WT
 #'     class_path: /path/to/read_classes.txt
 #'     residue_path: /path/to/nonadenosine_residues.txt
-#'     nanopolish_path: /path/to/nanopolish_output.tsv   # optional
-#'     sequencing_summary_path: /path/to/sequencing_summary.txt  # optional
+#'     nanopolish: /path/to/nanopolish_output.tsv   # optional
+#'     sequencing_summary: /path/to/sequencing_summary.txt  # optional
 #'     workspace: /path/to/fast5/                        # optional
 #' }
 #'
@@ -154,11 +154,11 @@ launch_signal_browser_guppy <- function(config = NULL,
         })
       }
 
-      if (!is.null(s$nanopolish_path) && !is.null(s$sequencing_summary_path) &&
+      if (!is.null(s$nanopolish) && !is.null(s$sequencing_summary) &&
           !is.null(s$workspace)) {
         signal_config[[sname]] <- list(
-          nanopolish_path = s$nanopolish_path,
-          sequencing_summary_path = s$sequencing_summary_path,
+          nanopolish_path = s$nanopolish,
+          sequencing_summary_path = s$sequencing_summary,
           workspace = s$workspace
         )
       }

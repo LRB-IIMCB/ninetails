@@ -78,8 +78,8 @@ samples:
     group: WT
     class_path: /path/to/read_classes.txt
     residue_path: /path/to/nonadenosine_residues.txt
-    nanopolish_path: /path/to/nanopolish_output.tsv   # optional
-    sequencing_summary_path: /path/to/sequencing_summary.txt  # optional
+    nanopolish: /path/to/nanopolish_output.tsv   # optional
+    sequencing_summary: /path/to/sequencing_summary.txt  # optional
     workspace: /path/to/fast5/                        # optional
 }
 }
