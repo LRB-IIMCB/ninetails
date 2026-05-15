@@ -72,8 +72,8 @@ if (is.null(cfg$samples) || length(cfg$samples) == 0) {
 
 first_sample <- cfg$samples[[1]]
 is_dorado <- !is.null(first_sample$pod5_dir) || !is.null(first_sample$dorado_summary)
-is_guppy  <- !is.null(first_sample$workspace) || !is.null(first_sample$nanopolish) ||
-  !is.null(first_sample$polya_path) || !is.null(first_sample$seq_summary)
+is_guppy  <- !is.null(first_sample$workspace) || !is.null(first_sample$polya_path) ||
+  !is.null(first_sample$seq_summary)
 
 if (is_dorado) {
   pipeline <- "dorado"
@@ -134,9 +134,10 @@ for (sid in names(cfg$samples)) {
       )
     }
   } else {
-    # Guppy: accept nanopolish/polya_path and sequencing_summary/seq_summary
-    np_val <- if (!is.null(s$nanopolish)) s$nanopolish else if (!is.null(s$polya_path)) s$polya_path else NULL
-    ss_val <- if (!is.null(s$sequencing_summary)) s$sequencing_summary else if (!is.null(s$seq_summary)) s$seq_summary else NULL
+    # Guppy: polya_path = nanopolish output, seq_summary = sequencing summary
+    # Note: 'nanopolish' field may contain a version string, not a file path
+    np_val <- if (!is.null(s$polya_path)) s$polya_path else NULL
+    ss_val <- if (!is.null(s$seq_summary)) s$seq_summary else if (!is.null(s$sequencing_summary)) s$sequencing_summary else NULL
     ws_val <- s$workspace
     if (!is.null(np_val) && !is.null(ss_val) && !is.null(ws_val)) {
       signal_config[[sname]] <- list(
