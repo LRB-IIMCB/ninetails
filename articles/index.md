@@ -16,7 +16,7 @@
 - [Visual inspection of
   signals](https://LRB-IIMCB.github.io/ninetails/articles/signal_inspection.md):
 
-### Dorado tools
+### Analysis dashboard
 
 - [Analysis dashboard
   (Shiny)](https://LRB-IIMCB.github.io/ninetails/articles/shiny_app.md):

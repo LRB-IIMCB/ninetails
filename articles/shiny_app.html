@@ -94,7 +94,7 @@ body, .contents, .contents p, .contents li,
     <li><a class="dropdown-item" href="../articles/plotting.html">Plotting ninetails data</a></li>
     <li><a class="dropdown-item" href="../articles/signal_inspection.html">Visual inspection of signals</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Dorado tools</h6></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Analysis dashboard</h6></li>
     <li><a class="dropdown-item" href="../articles/shiny_app.html">Analysis dashboard (Shiny)</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Guppy pipeline (legacy)</h6></li>
@@ -139,7 +139,28 @@ analysis results. The dashboard provides six tabs for classification
 overview, residue composition, poly(A) length distribution, raw signal
 visualization, configurable report download, and package
 information.</p>
-<p>The dashboard supports two usage modes:</p>
+<p>Two launcher functions are available depending on the pipeline
+used:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Launcher</th>
+<th>Pipeline</th>
+<th>Signal input</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="../reference/launch_signal_browser.html">launch_signal_browser()</a></code></td>
+<td>Dorado DRS</td>
+<td>POD5 files</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/launch_signal_browser_guppy.html">launch_signal_browser_guppy()</a></code></td>
+<td>Guppy legacy</td>
+<td>fast5 files</td>
+</tr>
+</tbody>
+</table>
+<p>Both launchers support the same two usage modes:</p>
 <ul>
 <li>
 <strong>Single-sample mode</strong> — provide file paths directly;
@@ -164,19 +185,23 @@ first use:</p>
 <span></span>
 <span><span class="co"># For rug density plots (position distribution):</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"cowplot"</span><span class="op">)</span></span></code></pre></div>
-<p>The Signal Viewer tab additionally requires a working Python
-environment with the <code>pod5</code> package, accessible via
-<code>reticulate</code>. See the <a href="https://github.com/LRB-IIMCB/ninetails/wiki" class="external-link">installation
-guide</a> for details.</p>
+<p>The Signal Viewer tab of <code><a href="../reference/launch_signal_browser.html">launch_signal_browser()</a></code>
+additionally requires a working Python environment with the
+<code>pod5</code> package, accessible via <code>reticulate</code>. See
+the <a href="https://github.com/LRB-IIMCB/ninetails/wiki" class="external-link">installation
+guide</a> for details. <code><a href="../reference/launch_signal_browser_guppy.html">launch_signal_browser_guppy()</a></code> does
+not require Python.</p>
+<hr>
 </div>
 <div class="section level2">
-<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+<h2 id="dorado-drs-dashboard">Dorado DRS dashboard<a class="anchor" aria-label="anchor" href="#dorado-drs-dashboard"></a>
 </h2>
 <div class="section level3">
-<h3 id="single-sample-mode">Single-sample mode<a class="anchor" aria-label="anchor" href="#single-sample-mode"></a>
+<h3 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h3>
-<p>The simplest way to launch the dashboard with results from a single
-ninetails run:</p>
+<div class="section level4">
+<h4 id="single-sample-mode">Single-sample mode<a class="anchor" aria-label="anchor" href="#single-sample-mode"></a>
+</h4>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
 <span>  summary_file <span class="op">=</span> <span class="st">"/path/to/dorado_summary.txt"</span>,</span>
@@ -197,27 +222,17 @@ only the Signal Viewer tab is functional:</p>
 <span>  pod5_dir     <span class="op">=</span> <span class="st">"/path/to/pod5/"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="multi-sample-mode">Multi-sample mode<a class="anchor" aria-label="anchor" href="#multi-sample-mode"></a>
-</h3>
-<p>For comparative analysis across multiple samples and experimental
-conditions, prepare a YAML configuration file and launch with:</p>
+<div class="section level4">
+<h4 id="multi-sample-mode">Multi-sample mode<a class="anchor" aria-label="anchor" href="#multi-sample-mode"></a>
+</h4>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
 <span>  config <span class="op">=</span> <span class="st">"/path/to/config.yml"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
-<div class="section level2">
-<h2 id="yaml-configuration-file">YAML configuration file<a class="anchor" aria-label="anchor" href="#yaml-configuration-file"></a>
-</h2>
-<p>The YAML configuration file defines samples, experimental groups, and
-file paths. Each sample entry must include <code>class_path</code> and
-<code>residue_path</code> (paths to ninetails output files). The
-<code>dorado_summary</code> and <code>pod5_dir</code> fields are
-optional and only needed for the Signal Viewer tab.</p>
 <div class="section level3">
-<h3 id="format">Format<a class="anchor" aria-label="anchor" href="#format"></a>
+<h3 id="yaml-configuration-file">YAML configuration file<a class="anchor" aria-label="anchor" href="#yaml-configuration-file"></a>
 </h3>
 <div class="sourceCode" id="cb5"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">samples</span><span class="kw">:</span></span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="at">  </span><span class="fu">KO_rep1</span><span class="kw">:</span></span>
@@ -228,23 +243,13 @@ optional and only needed for the Signal Viewer tab.</p>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="at">    </span><span class="fu">dorado_summary</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/dorado_summary.txt</span><span class="co">   # optional</span></span>
 <span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="at">    </span><span class="fu">pod5_dir</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/pod5/</span><span class="co">                      # optional</span></span>
 <span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a></span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="at">  </span><span class="fu">KO_rep2</span><span class="kw">:</span></span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="at">    </span><span class="fu">sample_name</span><span class="kw">:</span><span class="at"> KO_rep2</span></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> KO</span></span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="at">    </span><span class="fu">class_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep2/read_classes.txt</span></span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="at">    </span><span class="fu">residue_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep2/nonadenosine_residues.txt</span></span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a></span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="at">  </span><span class="fu">WT_rep1</span><span class="kw">:</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="at">    </span><span class="fu">sample_name</span><span class="kw">:</span><span class="at"> WT_rep1</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> WT</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="at">    </span><span class="fu">class_path</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/read_classes.txt</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="at">    </span><span class="fu">residue_path</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/nonadenosine_residues.txt</span></span>
-<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="at">    </span><span class="fu">dorado_summary</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/dorado_summary.txt</span></span>
-<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="at">    </span><span class="fu">pod5_dir</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/pod5/</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="field-reference">Field reference<a class="anchor" aria-label="anchor" href="#field-reference"></a>
-</h3>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="at">  </span><span class="fu">WT_rep1</span><span class="kw">:</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="at">    </span><span class="fu">sample_name</span><span class="kw">:</span><span class="at"> WT_rep1</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> WT</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="at">    </span><span class="fu">class_path</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/read_classes.txt</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="at">    </span><span class="fu">residue_path</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/nonadenosine_residues.txt</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="at">    </span><span class="fu">dorado_summary</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/dorado_summary.txt</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="at">    </span><span class="fu">pod5_dir</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/pod5/</span></span></code></pre></div>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -289,281 +294,11 @@ optional and only needed for the Signal Viewer tab.</p>
 </tr>
 </tbody>
 </table>
-<p>A config template is included in the package:</p>
+</div>
+<div class="section level3">
+<h3 id="launcher-reference">Launcher reference<a class="anchor" aria-label="anchor" href="#launcher-reference"></a>
+</h3>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"config_template.yml"</span>, package <span class="op">=</span> <span class="st">"ninetails"</span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="dashboard-tabs">Dashboard tabs<a class="anchor" aria-label="anchor" href="#dashboard-tabs"></a>
-</h2>
-<div class="section level3">
-<h3 id="classification">Classification<a class="anchor" aria-label="anchor" href="#classification"></a>
-</h3>
-<p>The first tab provides an overview of the analysis results.</p>
-<p><strong>Value boxes</strong> at the top display five metrics in a row
-of equal-width cards, each with a colored border and matching label:
-number of samples analyzed, number of transcripts found, total read
-count, number of blank reads, and number of decorated reads.</p>
-<p><strong>Read Classification plot</strong> shows the distribution of
-read categories (decorated, blank, unclassified). Three views are
-available via the “Classification view” dropdown:</p>
-<ul>
-<li>
-<strong>Summary (N)</strong> — simplified view with main
-categories</li>
-<li>
-<strong>Detailed (R)</strong> — expanded view with all comment codes
-(YAY, MPU, MAU, IRL, BAC, UNM)</li>
-<li>
-<strong>Decorated (A)</strong> — decorated reads only</li>
-</ul>
-<p><strong>Non-A Abundance plot</strong> shows the frequency of reads
-containing one, two, or three or more separate non-adenosine residues
-per read (<code><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance()</a></code>).</p>
-<p>When the browser window is wide enough (≥1200px), both plots are
-displayed side-by-side in a responsive flex layout. On narrower screens
-they stack vertically.</p>
-<p><strong>Sidebar controls:</strong></p>
-<ul>
-<li>
-<em>Grouping variable</em> — choose between <code>sample_name</code>
-or <code>group</code> (detected dynamically from the data)</li>
-<li>
-<em>Filter by transcript</em> — server-side searchable dropdown for
-transcript-level filtering (uses <code>symbol</code> if annotated,
-otherwise <code>contig</code>)</li>
-<li>
-<em>Show as frequency</em> — toggle between raw counts and
-proportions</li>
-<li>
-<em>Show descriptions</em> — toggle explanatory text below each
-plot, including classification code definitions (YAY, MPU, MAU, IRL,
-BAC, UNM)</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="residues">Residues<a class="anchor" aria-label="anchor" href="#residues"></a>
-</h3>
-<p>The Residues tab provides three views of non-adenosine residue
-composition.</p>
-<p><strong>Residue Counts plot</strong> shows the distribution of C, G,
-and U residues (<code><a href="../reference/plot_residue_counts.html">plot_residue_counts()</a></code>). Toggle between
-counting by read (each read counted once per residue type) or by residue
-(total occurrences).</p>
-<p><strong>Non-A Position Distribution</strong> displays rug density
-plots showing where non-adenosine residues are located along the poly(A)
-tail relative to tail length (<code><a href="../reference/plot_rug_density.html">plot_rug_density()</a></code>). One row
-of three plots (C, G, U) is generated per sample. To keep the display
-readable and rendering fast, each residue type is subsampled to a
-maximum of 1,000 points per sample (without replacement). If fewer than
-1,000 points exist for a given residue type in a sample, all available
-points are plotted. If a residue type is absent from a sample, a “No X
-residues” placeholder is shown.</p>
-<p><strong>Summary Table</strong> (when merged data is available)
-provides per-transcript statistics including read counts, non-A counts
-and hits, and poly(A) length metrics (<code><a href="../reference/summarize_nonA.html">summarize_nonA()</a></code>).
-The table is searchable and sortable via DataTables.</p>
-<p><strong>Sidebar controls:</strong></p>
-<ul>
-<li>
-<em>Grouping variable</em> — <code>sample_name</code> or
-<code>group</code>
-</li>
-<li>
-<em>Filter by transcript</em> — transcript-level filter</li>
-<li>
-<em>Show as frequency</em> — counts vs proportions</li>
-<li>
-<em>Count by read</em> — toggle between by-read and by-residue
-counting</li>
-<li>
-<em>Max tail length (rug plot)</em> — controls rug density plot
-x-axis</li>
-<li>
-<em>Show descriptions</em> — toggle explanatory text below
-plots</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="polya-length">Poly(A) length<a class="anchor" aria-label="anchor" href="#polya-length"></a>
-</h3>
-<p>The Poly(A) length tab shows poly(A) tail length distributions across
-samples or groups (<code><a href="../reference/plot_tail_distribution.html">plot_tail_distribution()</a></code>).</p>
-<p><strong>Sidebar controls:</strong></p>
-<ul>
-<li>
-<em>Grouping variable</em> — <code>sample_name</code> or
-<code>group</code>
-</li>
-<li>
-<em>Filter by transcript</em> — transcript-level filter</li>
-<li>
-<em>Select condition(s)</em> — multi-select dropdown to plot only
-specific conditions (samples or groups). All conditions are selected by
-default. Remove items to compare subsets; changes take effect
-immediately.</li>
-<li>
-<em>Central tendency</em> — overlay mean, median, mode, or none</li>
-<li>
-<em>Max tail length</em> — upper limit for the x-axis (slider,
-0–500)</li>
-<li>
-<em>Normalized density</em> — toggle between raw density and
-normalized density</li>
-<li>
-<em>Color palette</em> — choose from 8 built-in palettes: kanto,
-johto, hoenn, sinnoh, hisui, unova, kalos, alola</li>
-<li>
-<em>Reset all filters</em> — restores every control to its default
-value</li>
-<li>
-<em>Show descriptions</em> — toggle explanatory text below the
-plot</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="signal-viewer">Signal Viewer<a class="anchor" aria-label="anchor" href="#signal-viewer"></a>
-</h3>
-<p>The Signal Viewer tab provides interactive visualization of raw
-nanopore signals from POD5 files. It requires
-<code>dorado_summary</code> and <code>pod5_dir</code> paths (either from
-the launcher or from the YAML config).</p>
-<p>In multi-sample mode, a dropdown at the top selects which sample’s
-signals to browse. In single-sample mode, paths are loaded automatically
-from the launcher arguments.</p>
-<p>Two sub-tabs are available:</p>
-<p><strong>Static Viewer</strong> — renders two ggplot2 plots:</p>
-<ol style="list-style-type: decimal">
-<li>
-<em>Entire Signal</em> — full-length squiggle with colored segments
-(adapter in blue, poly(A) in orange, transcript in black)</li>
-<li>
-<em>Poly(A) Region</em> — zoomed view centered on the poly(A) tail
-with ±250 positions flanking</li>
-</ol>
-<p>Both plots show vertical dashed lines marking the 5’ (red) and 3’
-(navy) boundaries of the poly(A) tail. When non-A residue data is
-available, semi-transparent rectangles highlight the estimated positions
-of detected modifications, colored by residue type (C, G, U) with a
-letter label at the top.</p>
-<p><strong>Dynamic Explorer</strong> — renders an interactive Plotly
-chart of the full signal with zoom, pan, and hover capabilities. Non-A
-highlights are shown as translucent rectangles. Double-click to reset
-the view.</p>
-<p><strong>Signal Viewer sidebar controls:</strong></p>
-<ul>
-<li>
-<em>Minimum poly(A) length</em> — filter reads by tail length</li>
-<li>
-<em>Decoration status</em> — filter by comment code (YAY, MPU, MAU,
-etc.)</li>
-<li>
-<em>Non-A residue type</em> — show only reads with a specific
-residue (C, G, U)</li>
-<li>
-<em>Alignment genome</em> — filter by reference (if available in
-summary)</li>
-<li>
-<em>Mapping quality range</em> — MAPQ slider filter</li>
-<li>
-<em>Select Read ID</em> — server-side searchable dropdown with
-Previous/Next navigation buttons</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="download">Download<a class="anchor" aria-label="anchor" href="#download"></a>
-</h3>
-<p>The Download tab provides a configurable report generator. The report
-is a self-contained HTML file with all plots embedded as base64-encoded
-PNG images, suitable for sharing or archiving without external
-dependencies.</p>
-<p><strong>Report sections</strong> (each controlled by a checkbox):</p>
-<ul>
-<li>
-<em>Classification plot</em> — global read classification
-summary</li>
-<li>
-<em>Non-A abundance</em> — frequency of reads with 1, 2, 3+ non-A
-residues</li>
-<li>
-<em>Residue frequency</em> — distribution of C, G, U residues</li>
-<li>
-<em>Rug density plots</em> — per-sample positional distribution of
-non-A residues with automatic downsampling to 1,000 points and
-annotations indicating whether downsampling was applied</li>
-<li>
-<em>Poly(A) length distribution</em> — density plot with
-configurable central tendency</li>
-<li>
-<em>Example signal plots</em> — for each sample with POD5 access, 5
-randomly selected reads per category (blank, decorated-C, decorated-G,
-decorated-U) are rendered as full-width tail range plots with non-A
-overlay. If a category has fewer than 5 reads, all available reads are
-shown. Categories absent from a sample display a placeholder
-message.</li>
-</ul>
-<p><strong>Plot settings</strong> (apply to all poly(A) plots in the
-report):</p>
-<ul>
-<li>
-<em>Central tendency</em> — mean, median, mode, or none (annotated
-in the report)</li>
-<li>
-<em>Max poly(A) length</em> — upper x-axis limit</li>
-<li>
-<em>Color palette</em> — palette applied to poly(A) density
-curves</li>
-</ul>
-<p><strong>Per-transcript sections</strong> (optional, up to 3
-transcripts):</p>
-<p>Select up to three transcripts for detailed sub-reports. Each
-transcript section includes its own classification, residue frequency,
-and poly(A) length distribution plots, filtered to reads mapping to that
-transcript.</p>
-<p>All plots in the report include descriptive annotations explaining
-what is shown, consistent with the “Show descriptions” text available in
-the interactive tabs.</p>
-</div>
-<div class="section level3">
-<h3 id="about">About<a class="anchor" aria-label="anchor" href="#about"></a>
-</h3>
-<p>The About tab displays the ninetails logo, package version, full
-citation (Gumińska et al., <em>Nat Commun</em> 2025), links to the
-GitHub repository, Wiki documentation, pkgdown website, and Zenodo DOI,
-as well as the IIMCB logo, laboratory information (Laboratory of RNA
-Biology, ERA Chairs Group), and developer contact details.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="annotated-data">Annotated data<a class="anchor" aria-label="anchor" href="#annotated-data"></a>
-</h2>
-<p>When the input data has been annotated with
-<code><a href="../reference/annotate_with_biomart.html">annotate_with_biomart()</a></code> (adding <code>symbol</code> and
-Ensembl transcript ID columns), the dashboard automatically uses
-<code>symbol</code> as the transcript label in all “Filter by
-transcript” dropdowns. Without annotation, the raw <code>contig</code>
-column is used instead.</p>
-<p>This applies to both single-sample and multi-sample modes. Annotation
-should be performed before launching the dashboard:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># After running the ninetails pipeline:</span></span>
-<span><span class="va">class_data_annotated</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span></span>
-<span>  <span class="va">class_data</span>,</span>
-<span>  species <span class="op">=</span> <span class="st">"mmusculus"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">residue_data_annotated</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span></span>
-<span>  <span class="va">residue_data</span>,</span>
-<span>  species <span class="op">=</span> <span class="st">"mmusculus"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Save annotated data, then point the dashboard to the annotated files</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="launcher-reference">Launcher reference<a class="anchor" aria-label="anchor" href="#launcher-reference"></a>
-</h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="op">?</span><span class="fu">ninetails</span><span class="fu">::</span><span class="va"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span></span></code></pre></div>
 <table class="table">
 <thead><tr class="header">
@@ -607,92 +342,424 @@ should be performed before launching the dashboard:</p>
 </tr>
 </tbody>
 </table>
-<p>When <code>config</code> is provided, single-sample arguments are
-ignored. All arguments are optional; the dashboard adapts its active
-tabs based on which data is available.</p>
-<p>Additional <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code> arguments can be passed
-through <code>...</code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Custom port and host</span></span>
-<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
-<span>  config <span class="op">=</span> <span class="st">"config.yml"</span>,</span>
-<span>  port <span class="op">=</span> <span class="fl">8080</span>,</span>
-<span>  host <span class="op">=</span> <span class="st">"0.0.0.0"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Suppress browser launch</span></span>
-<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
-<span>  config <span class="op">=</span> <span class="st">"config.yml"</span>,</span>
-<span>  launch.browser <span class="op">=</span> <span class="cn">FALSE</span></span>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="guppy-legacy-dashboard">Guppy legacy dashboard<a class="anchor" aria-label="anchor" href="#guppy-legacy-dashboard"></a>
+</h2>
+<div class="section level3">
+<h3 id="quick-start-1">Quick start<a class="anchor" aria-label="anchor" href="#quick-start-1"></a>
+</h3>
+<div class="section level4">
+<h4 id="single-sample-mode-1">Single-sample mode<a class="anchor" aria-label="anchor" href="#single-sample-mode-1"></a>
+</h4>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser_guppy.html">launch_signal_browser_guppy</a></span><span class="op">(</span></span>
+<span>  nanopolish_file         <span class="op">=</span> <span class="st">"/path/to/nanopolish_output.tsv"</span>,</span>
+<span>  sequencing_summary_file <span class="op">=</span> <span class="st">"/path/to/sequencing_summary.txt"</span>,</span>
+<span>  workspace               <span class="op">=</span> <span class="st">"/path/to/fast5/"</span>,</span>
+<span>  class_file              <span class="op">=</span> <span class="st">"/path/to/read_classes.txt"</span>,</span>
+<span>  residue_file            <span class="op">=</span> <span class="st">"/path/to/nonadenosine_residues.txt"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>nanopolish_file</code>, <code>sequencing_summary_file</code>,
+and <code>workspace</code> are needed for the Signal Viewer tab.
+<code>class_file</code> and <code>residue_file</code> activate all other
+analysis tabs. All arguments are optional.</p>
+</div>
+<div class="section level4">
+<h4 id="multi-sample-mode-1">Multi-sample mode<a class="anchor" aria-label="anchor" href="#multi-sample-mode-1"></a>
+</h4>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser_guppy.html">launch_signal_browser_guppy</a></span><span class="op">(</span></span>
+<span>  config <span class="op">=</span> <span class="st">"/path/to/config_guppy.yml"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level2">
-<h2 id="static-assets">Static assets<a class="anchor" aria-label="anchor" href="#static-assets"></a>
-</h2>
-<p>The dashboard expects three image files in
-<code>inst/app/www/</code>:</p>
-<ul>
-<li>
-<code>logo.png</code> — ninetails logo (copy from
-<code>man/figures/logo.png</code>)</li>
-<li>
-<code>favicon.ico</code> — browser tab icon (copy from
-<code>pkgdown/favicon/</code>)</li>
-<li>
-<code>IIMCB_logo.png</code> — IIMCB institute logo (displayed in the
-About tab)</li>
-</ul>
 </div>
-<div class="section level2">
-<h2 id="deploying-to-shiny-server">Deploying to Shiny Server<a class="anchor" aria-label="anchor" href="#deploying-to-shiny-server"></a>
-</h2>
-<p>The dashboard can be deployed to Shiny Server (Open Source or Pro)
-for shared access over a network. A deployment wrapper is included in
-the package that handles data loading from a YAML configuration file and
-delegates rendering to the installed ninetails app.</p>
 <div class="section level3">
-<h3 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
+<h3 id="yaml-configuration-file-1">YAML configuration file<a class="anchor" aria-label="anchor" href="#yaml-configuration-file-1"></a>
+</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">samples</span><span class="kw">:</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="at">  </span><span class="fu">KO_rep1</span><span class="kw">:</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="at">    </span><span class="fu">sample_name</span><span class="kw">:</span><span class="at"> KO_rep1</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> KO</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="at">    </span><span class="fu">class_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/read_classes.txt</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="at">    </span><span class="fu">residue_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/nonadenosine_residues.txt</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="at">    </span><span class="fu">nanopolish_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/nanopolish_output.tsv</span><span class="co">   # optional</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="at">    </span><span class="fu">sequencing_summary_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/sequencing_summary.txt</span><span class="co">  # optional</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="at">    </span><span class="fu">workspace</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/fast5/</span><span class="co">                        # optional</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="at">  </span><span class="fu">WT_rep1</span><span class="kw">:</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="at">    </span><span class="fu">sample_name</span><span class="kw">:</span><span class="at"> WT_rep1</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> WT</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="at">    </span><span class="fu">class_path</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/read_classes.txt</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="at">    </span><span class="fu">residue_path</span><span class="kw">:</span><span class="at"> /path/to/WT_rep1/nonadenosine_residues.txt</span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>sample_name</code></td>
+<td>Yes</td>
+<td>Display name used in plots and legends</td>
+</tr>
+<tr class="even">
+<td><code>group</code></td>
+<td>Yes</td>
+<td>Experimental condition for grouping</td>
+</tr>
+<tr class="odd">
+<td><code>class_path</code></td>
+<td>Yes</td>
+<td>Path to <code>read_classes.txt</code> from ninetails</td>
+</tr>
+<tr class="even">
+<td><code>residue_path</code></td>
+<td>Yes</td>
+<td>Path to <code>nonadenosine_residues.txt</code> from ninetails</td>
+</tr>
+<tr class="odd">
+<td><code>nanopolish_path</code></td>
+<td>No</td>
+<td>Path to Nanopolish polya output (for Signal Viewer)</td>
+</tr>
+<tr class="even">
+<td><code>sequencing_summary_path</code></td>
+<td>No</td>
+<td>Path to Guppy sequencing summary (for Signal Viewer)</td>
+</tr>
+<tr class="odd">
+<td><code>workspace</code></td>
+<td>No</td>
+<td>Path to multi-fast5 directory (for Signal Viewer)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="guppy-specific-dashboard-features">Guppy-specific dashboard features<a class="anchor" aria-label="anchor" href="#guppy-specific-dashboard-features"></a>
+</h3>
+<p>The Guppy dashboard provides the same six tabs as the Dorado version,
+with two additions:</p>
+<p><strong>Nanopolish QC</strong> (Classification tab) — an additional
+plot showing the distribution of Nanopolish QC tags (PASS, ADAPTER,
+NOREGION, SUFFCLIP, etc.) produced by
+<code><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc()</a></code>.</p>
+<p><strong>Fast5 Signal Viewer</strong> — uses
+<code><a href="../reference/plot_squiggle_fast5.html">plot_squiggle_fast5()</a></code> and
+<code><a href="../reference/plot_tail_range_fast5.html">plot_tail_range_fast5()</a></code> instead of POD5-based functions.
+Includes a <strong>Moves</strong> toggle to show or hide basecaller move
+transitions in the signal background. No Python dependency is
+required.</p>
+</div>
+<div class="section level3">
+<h3 id="launcher-reference-1">Launcher reference<a class="anchor" aria-label="anchor" href="#launcher-reference-1"></a>
 </h3>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 1. Copy the deployment wrapper to the Shiny Server app directory</span></span>
+<code class="sourceCode R"><span><span class="op">?</span><span class="fu">ninetails</span><span class="fu">::</span><span class="va"><a href="../reference/launch_signal_browser_guppy.html">launch_signal_browser_guppy</a></span></span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Argument</th>
+<th>Type</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>config</code></td>
+<td>character</td>
+<td>Path to YAML config (multi-sample mode)</td>
+</tr>
+<tr class="even">
+<td><code>nanopolish_file</code></td>
+<td>character</td>
+<td>Path to Nanopolish polya output</td>
+</tr>
+<tr class="odd">
+<td><code>sequencing_summary_file</code></td>
+<td>character</td>
+<td>Path to Guppy sequencing summary</td>
+</tr>
+<tr class="even">
+<td><code>workspace</code></td>
+<td>character</td>
+<td>Path to multi-fast5 directory</td>
+</tr>
+<tr class="odd">
+<td><code>class_file</code></td>
+<td>character</td>
+<td>Path to <code>read_classes.txt</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>residue_file</code></td>
+<td>character</td>
+<td>Path to <code>nonadenosine_residues.txt</code>
+</td>
+</tr>
+<tr class="odd">
+<td><code>basecall_group</code></td>
+<td>character</td>
+<td>Fast5 hierarchy level (default: <code>"Basecall_1D_000"</code>)</td>
+</tr>
+<tr class="even">
+<td><code>...</code></td>
+<td></td>
+<td>Additional arguments passed to <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code>
+</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="dashboard-tabs">Dashboard tabs<a class="anchor" aria-label="anchor" href="#dashboard-tabs"></a>
+</h2>
+<p>All tabs described below are available in both launchers unless noted
+otherwise.</p>
+<div class="section level3">
+<h3 id="classification">Classification<a class="anchor" aria-label="anchor" href="#classification"></a>
+</h3>
+<p>The first tab provides an overview of the analysis results.</p>
+<p><strong>Value boxes</strong> at the top display five metrics: number
+of samples analyzed, number of transcripts found, total read count,
+number of blank reads, and number of decorated reads.</p>
+<p><strong>Read Classification plot</strong> shows the distribution of
+read categories (decorated, blank, unclassified). Three views are
+available via the “Classification view” dropdown:</p>
+<ul>
+<li>
+<strong>Summary (N)</strong> — simplified view with main
+categories</li>
+<li>
+<strong>Detailed (R)</strong> — expanded view with all comment codes
+(YAY, MPU, MAU, IRL, BAC, UNM)</li>
+<li>
+<strong>Decorated (A)</strong> — decorated reads only</li>
+</ul>
+<p><strong>Non-A Abundance plot</strong> shows the frequency of reads
+containing one, two, or three or more separate non-adenosine residues
+per read (<code><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance()</a></code>).</p>
+<p><strong>Nanopolish QC plot</strong> <em>(Guppy dashboard only)</em> —
+shows the distribution of Nanopolish QC tags
+(<code><a href="../reference/plot_nanopolish_qc.html">plot_nanopolish_qc()</a></code>).</p>
+<p><strong>Sidebar controls:</strong></p>
+<ul>
+<li>
+<em>Grouping variable</em> — choose between <code>sample_name</code>
+or <code>group</code>
+</li>
+<li>
+<em>Filter by transcript</em> — server-side searchable dropdown</li>
+<li>
+<em>Show as frequency</em> — toggle between raw counts and
+proportions</li>
+<li>
+<em>Show descriptions</em> — toggle explanatory text below each
+plot</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="residues">Residues<a class="anchor" aria-label="anchor" href="#residues"></a>
+</h3>
+<p>The Residues tab provides three views of non-adenosine residue
+composition.</p>
+<p><strong>Residue Counts plot</strong> shows the distribution of C, G,
+and U residues (<code><a href="../reference/plot_residue_counts.html">plot_residue_counts()</a></code>).</p>
+<p><strong>Non-A Position Distribution</strong> displays rug density
+plots showing where non-adenosine residues are located along the poly(A)
+tail relative to tail length (<code><a href="../reference/plot_rug_density.html">plot_rug_density()</a></code>). Each
+residue type is subsampled to a maximum of 1,000 points per sample.</p>
+<p><strong>Summary Table</strong> (when merged data is available)
+provides per-transcript statistics (<code><a href="../reference/summarize_nonA.html">summarize_nonA()</a></code>).</p>
+</div>
+<div class="section level3">
+<h3 id="polya-length">Poly(A) length<a class="anchor" aria-label="anchor" href="#polya-length"></a>
+</h3>
+<p>Shows poly(A) tail length distributions across samples or groups
+(<code><a href="../reference/plot_tail_distribution.html">plot_tail_distribution()</a></code>). Controls include grouping,
+transcript filter, condition selection, central tendency overlay, x-axis
+limit, normalization, and color palette.</p>
+</div>
+<div class="section level3">
+<h3 id="signal-viewer">Signal Viewer<a class="anchor" aria-label="anchor" href="#signal-viewer"></a>
+</h3>
+<p>Provides interactive visualization of raw nanopore signals.</p>
+<p><strong>Dorado dashboard</strong> — reads signals from POD5 files.
+Requires <code>summary_file</code> and <code>pod5_dir</code>.</p>
+<p><strong>Guppy dashboard</strong> — reads signals from multi-fast5
+files. Requires <code>nanopolish_file</code>,
+<code>sequencing_summary_file</code>, and <code>workspace</code>.
+Includes a <strong>Moves</strong> toggle to show basecaller move
+transitions.</p>
+<p>Both versions provide:</p>
+<ul>
+<li>
+<em>Static Viewer</em> — two ggplot2 plots (entire signal and
+poly(A) region with non-A modification overlays)</li>
+<li>
+<em>Dynamic Explorer</em> — interactive Plotly chart with zoom, pan,
+and hover</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="download">Download<a class="anchor" aria-label="anchor" href="#download"></a>
+</h3>
+<p>Configurable report generator producing a self-contained HTML file
+with all plots embedded as base64-encoded PNG images.</p>
+</div>
+<div class="section level3">
+<h3 id="about">About<a class="anchor" aria-label="anchor" href="#about"></a>
+</h3>
+<p>Displays the ninetails logo, citation, links to GitHub, Wiki,
+pkgdown, and Zenodo, and institute information.</p>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="annotated-data">Annotated data<a class="anchor" aria-label="anchor" href="#annotated-data"></a>
+</h2>
+<p>When the input data has been annotated with
+<code><a href="../reference/annotate_with_biomart.html">annotate_with_biomart()</a></code> (adding <code>symbol</code> and
+Ensembl transcript ID columns), the dashboard automatically uses
+<code>symbol</code> as the transcript label in all “Filter by
+transcript” dropdowns.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">class_data_annotated</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span></span>
+<span>  <span class="va">class_data</span>,</span>
+<span>  species <span class="op">=</span> <span class="st">"mmusculus"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">residue_data_annotated</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/annotate_with_biomart.html">annotate_with_biomart</a></span><span class="op">(</span></span>
+<span>  <span class="va">residue_data</span>,</span>
+<span>  species <span class="op">=</span> <span class="st">"mmusculus"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="running-on-a-server">Running on a server<a class="anchor" aria-label="anchor" href="#running-on-a-server"></a>
+</h2>
+<div class="section level3">
+<h3 id="custom-port-and-host">Custom port and host<a class="anchor" aria-label="anchor" href="#custom-port-and-host"></a>
+</h3>
+<p>Pass <code>port</code> and <code>host</code> through <code>...</code>
+to make the app accessible on your network:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Dorado</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser.html">launch_signal_browser</a></span><span class="op">(</span></span>
+<span>  config <span class="op">=</span> <span class="st">"config.yml"</span>,</span>
+<span>  port   <span class="op">=</span> <span class="fl">8080</span>,</span>
+<span>  host   <span class="op">=</span> <span class="st">"0.0.0.0"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Guppy</span></span>
+<span><span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/launch_signal_browser_guppy.html">launch_signal_browser_guppy</a></span><span class="op">(</span></span>
+<span>  config <span class="op">=</span> <span class="st">"config_guppy.yml"</span>,</span>
+<span>  port   <span class="op">=</span> <span class="fl">8080</span>,</span>
+<span>  host   <span class="op">=</span> <span class="st">"0.0.0.0"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="sourcing-the-app-directly">Sourcing the app directly<a class="anchor" aria-label="anchor" href="#sourcing-the-app-directly"></a>
+</h3>
+<p>The app can also be sourced directly from the installed package
+without using the launcher function. This is useful for embedding in
+scripts or for Shiny Server deployments where <code>shinyOptions</code>
+must be set manually:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://LRB-IIMCB.github.io/ninetails/">ninetails</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Set data via shinyOptions before sourcing</span></span>
+<span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyOptions.html" class="external-link">shinyOptions</a></span><span class="op">(</span></span>
+<span>  ninetails.class_data    <span class="op">=</span> <span class="va">class_data</span>,</span>
+<span>  ninetails.residue_data  <span class="op">=</span> <span class="va">residue_data</span>,</span>
+<span>  ninetails.merged_data   <span class="op">=</span> <span class="va">merged_data</span>,</span>
+<span>  ninetails.signal_config <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  ninetails.summary_file  <span class="op">=</span> <span class="st">"/path/to/dorado_summary.txt"</span>,</span>
+<span>  ninetails.pod5_dir      <span class="op">=</span> <span class="st">"/path/to/pod5/"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Source the app into an isolated environment</span></span>
+<span><span class="va">app_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"app"</span>, package <span class="op">=</span> <span class="st">"ninetails"</span><span class="op">)</span>       <span class="co"># Dorado</span></span>
+<span><span class="co"># app_dir &lt;- system.file("app_guppy", package = "ninetails")  # Guppy</span></span>
+<span></span>
+<span><span class="va">app_env</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span>parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">globalenv</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">app_dir</span>, <span class="st">"app.R"</span><span class="op">)</span>, local <span class="op">=</span> <span class="va">app_env</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span>ui <span class="op">=</span> <span class="va">app_env</span><span class="op">$</span><span class="va">ui</span>, server <span class="op">=</span> <span class="va">app_env</span><span class="op">$</span><span class="va">server</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="deploying-to-shiny-server">Deploying to Shiny Server<a class="anchor" aria-label="anchor" href="#deploying-to-shiny-server"></a>
+</h3>
+<p>A unified deployment wrapper is included in the package at
+<code>inst/deployment/app.R</code>. It auto-detects the pipeline (Dorado
+or Guppy) from the YAML configuration and sources the correct app at
+runtime.</p>
+<div class="section level4">
+<h4 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
+</h4>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1. Create the app directory on the server</span></span>
 <span><span class="va">deploy_dir</span> <span class="op">&lt;-</span> <span class="st">"/srv/shiny-server/ninetails"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">deploy_dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># 2. Copy the deployment wrapper</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"deployment"</span>, <span class="st">"app.R"</span>, package <span class="op">=</span> <span class="st">"ninetails"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">deploy_dir</span>, <span class="st">"app.R"</span><span class="op">)</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 2. Copy your YAML configuration</span></span>
+<span><span class="co"># 3. Copy your YAML configuration</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span><span class="st">"config.yml"</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">deploy_dir</span>, <span class="st">"config.yml"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 3. Symlink static assets from the installed package</span></span>
+<span><span class="co"># 4. Copy or symlink static assets</span></span>
+<span><span class="co"># For Dorado app:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.symlink</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"app"</span>, <span class="st">"www"</span>, package <span class="op">=</span> <span class="st">"ninetails"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">deploy_dir</span>, <span class="st">"www"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span><span class="co"># For Guppy app (if config describes Guppy data):</span></span>
+<span><span class="co"># file.symlink(</span></span>
+<span><span class="co">#   system.file("app_guppy", "www", package = "ninetails"),</span></span>
+<span><span class="co">#   file.path(deploy_dir, "www")</span></span>
+<span><span class="co"># )</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="configuring-the-deployment-wrapper">Configuring the deployment wrapper<a class="anchor" aria-label="anchor" href="#configuring-the-deployment-wrapper"></a>
-</h3>
-<p>Before launching, edit the top of the deployed <code>app.R</code> to
-set two variables:</p>
-<ul>
-<li>
-<strong><code>config_path</code></strong> — path to the YAML
-configuration file (default: <code>config.yml</code> in the same
-directory as <code>app.R</code>)</li>
-<li>
-<strong><code>PYTHON_PATH</code></strong> — path to the Python
-binary that has the <code>pod5</code> module installed. Required for the
-Signal Viewer tab. Set to <code>NULL</code> if signal visualization is
-not needed.</li>
-</ul>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="section level4">
+<h4 id="configuring-the-deployment-wrapper">Configuring the deployment wrapper<a class="anchor" aria-label="anchor" href="#configuring-the-deployment-wrapper"></a>
+</h4>
+<p>Edit the top section of the deployed <code>app.R</code> to set three
+variables:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># In /srv/shiny-server/ninetails/app.R:</span></span>
+<span></span>
+<span><span class="co"># Path to the YAML config (relative to app.R)</span></span>
 <span><span class="va">config_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"config.yml"</span><span class="op">)</span></span>
-<span><span class="va">PYTHON_PATH</span> <span class="op">&lt;-</span> <span class="st">"/home/user/miniconda3/envs/r-reticulate/bin/python"</span></span></code></pre></div>
+<span></span>
+<span><span class="co"># Python binary with 'pod5' installed (Dorado Signal Viewer only)</span></span>
+<span><span class="co"># Set to NULL if signal visualization is not needed</span></span>
+<span><span class="va">PYTHON_PATH</span> <span class="op">&lt;-</span> <span class="st">"/home/user/miniconda3/envs/r-reticulate/bin/python"</span></span>
+<span></span>
+<span><span class="co"># Fast5 basecall group (Guppy Signal Viewer only)</span></span>
+<span><span class="va">BASECALL_GROUP</span> <span class="op">&lt;-</span> <span class="st">"Basecall_1D_000"</span></span></code></pre></div>
+<p>The wrapper auto-detects the pipeline from the YAML: if the first
+sample contains <code>pod5_dir</code> or <code>dorado_summary</code>
+fields, the Dorado app is used; if it contains <code>workspace</code> or
+<code>nanopolish</code>, the Guppy app is used.</p>
 <p>Common Python path examples:</p>
 <table class="table">
 <thead><tr class="header">
@@ -718,52 +785,69 @@ not needed.</li>
 </tr>
 </tbody>
 </table>
-<p>You can find the correct path by running <code>which python</code> in
-the environment where <code>pod5</code> is installed.</p>
+<p>Run <code>which python</code> in the environment where
+<code>pod5</code> is installed to find the correct path.</p>
 </div>
-<div class="section level3">
-<h3 id="directory-structure">Directory structure<a class="anchor" aria-label="anchor" href="#directory-structure"></a>
-</h3>
+<div class="section level4">
+<h4 id="directory-structure">Directory structure<a class="anchor" aria-label="anchor" href="#directory-structure"></a>
+</h4>
 <pre><code>/srv/shiny-server/ninetails/
 ├── app.R          # deployment wrapper (from inst/deployment/)
 ├── config.yml     # your YAML configuration
-└── www/           # symlink to inst/app/www/ in the installed package
+└── www/           # symlink to inst/app/www/ or inst/app_guppy/www/
     ├── logo.png
     ├── favicon.ico
     └── IIMCB_logo.png</code></pre>
 </div>
-<div class="section level3">
-<h3 id="requirements-1">Requirements<a class="anchor" aria-label="anchor" href="#requirements-1"></a>
-</h3>
+<div class="section level4">
+<h4 id="requirements-1">Requirements<a class="anchor" aria-label="anchor" href="#requirements-1"></a>
+</h4>
 <ul>
 <li>ninetails and all Suggests dependencies must be installed
 system-wide (accessible to the <code>shiny</code> user)</li>
 <li>All data file paths in <code>config.yml</code> must be readable by
 the <code>shiny</code> user</li>
-<li>For the Signal Viewer tab:
-<ul>
 <li>
-<code>PYTHON_PATH</code> must be set in the deployment wrapper</li>
-<li>The specified Python environment must have the <code>pod5</code>
-module installed (<code>pip install pod5</code>)</li>
-<li>The <code>shiny</code> user must have execute permissions on the
-Python binary and read access to the POD5 files</li>
+<strong>Dorado Signal Viewer</strong>: <code>PYTHON_PATH</code> must
+be set; the specified environment must have <code>pod5</code> installed
+(<code>pip install pod5</code>); the <code>shiny</code> user must have
+execute permissions on the Python binary</li>
+<li>
+<strong>Guppy Signal Viewer</strong>: no Python dependency; the
+<code>shiny</code> user must have read access to the fast5 files and to
+the Nanopolish output</li>
 </ul>
-</li>
-</ul>
-<p>After placing the files, restart Shiny Server:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart shiny-server</span></code></pre></div>
+<p>Restart Shiny Server after placing the files:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">sudo</span> systemctl restart shiny-server</span></code></pre></div>
 <p>The dashboard will be accessible at
 <code>http://your-server:3838/ninetails/</code>.</p>
 <blockquote>
 <p><strong>Note:</strong> When you update the ninetails package, the
 deployed app picks up changes automatically (it sources from the
 installed package at runtime). To change the dataset, edit
-<code>config.yml</code> and restart Shiny Server. To change the Python
-environment, edit <code>PYTHON_PATH</code> in <code>app.R</code> and
-restart.</p>
+<code>config.yml</code> and restart Shiny Server.</p>
 </blockquote>
+<hr>
 </div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="static-assets">Static assets<a class="anchor" aria-label="anchor" href="#static-assets"></a>
+</h2>
+<p>The dashboard expects three image files in <code>inst/app/www/</code>
+(Dorado) or <code>inst/app_guppy/www/</code> (Guppy):</p>
+<ul>
+<li>
+<code>logo.png</code> — ninetails logo (copy from
+<code>man/figures/logo.png</code>)</li>
+<li>
+<code>favicon.ico</code> — browser tab icon (copy from
+<code>pkgdown/favicon/</code>)</li>
+<li>
+<code>IIMCB_logo.png</code> — IIMCB institute logo (displayed in the
+About tab)</li>
+</ul>
+<hr>
 </div>
 <div class="section level2">
 <h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
@@ -772,21 +856,26 @@ restart.</p>
 <code><a href="../reference/plot_rug_density.html">plot_rug_density()</a></code> requires the <code>cowplot</code>
 package. Install it with <code>install.packages("cowplot")</code>.</p>
 <p><strong>Download button produces an error</strong> The report
-generation requires <code>base64enc</code> for embedding plots as base64
-images. Install with <code>install.packages("base64enc")</code>.</p>
-<p><strong>Signal Viewer shows “No POD5 file found”</strong> Ensure the
-<code>pod5_dir</code> path points to the directory containing
-<code>.pod5</code> files (not a parent directory). The app searches
-recursively within that directory.</p>
-<p><strong>Signal Viewer shows “Extraction failed”</strong> The Python
-<code>pod5</code> package must be installed and accessible via
-<code>reticulate</code>. Check with:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+generation requires <code>base64enc</code>. Install with
+<code>install.packages("base64enc")</code>.</p>
+<p><strong>Signal Viewer shows “No POD5 file found”</strong>
+<em>(Dorado)</em> Ensure <code>pod5_dir</code> points to the directory
+containing <code>.pod5</code> files. The app searches recursively within
+that directory.</p>
+<p><strong>Signal Viewer shows “Extraction failed”</strong>
+<em>(Dorado)</em> The Python <code>pod5</code> package must be installed
+and accessible via <code>reticulate</code>. Check with:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">reticulate</span><span class="fu">::</span><span class="fu"><a href="https://rstudio.github.io/reticulate/reference/py_module_available.html" class="external-link">py_module_available</a></span><span class="op">(</span><span class="st">"pod5"</span><span class="op">)</span></span></code></pre></div>
-<p><strong>Classification or Residue plots are blank</strong> If using
-single-sample mode, make sure you provided <code>class_file</code>
-and/or <code>residue_file</code>. These are optional arguments — without
-them, the corresponding tabs show placeholder messages.</p>
+<p><strong>Signal Viewer shows no signal</strong> <em>(Guppy)</em>
+Ensure <code>nanopolish_file</code>,
+<code>sequencing_summary_file</code>, and <code>workspace</code> all
+point to valid paths accessible to the R session. The read ID selected
+must exist in the Nanopolish output.</p>
+<p><strong>Classification or Residue plots are blank</strong> In
+single-sample mode, <code>class_file</code> and/or
+<code>residue_file</code> must be provided. Without them, the
+corresponding tabs show placeholder messages.</p>
 <p><strong>“Column <code>more</code> doesn’t exist” in Non-A Abundance
 plot</strong> This occurs when no reads have 3 or more non-A residues.
 Update <code><a href="../reference/plot_nonA_abundance.html">plot_nonA_abundance()</a></code> to the latest version which
