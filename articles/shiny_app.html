@@ -74,7 +74,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.83</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.84</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -385,9 +385,9 @@ analysis tabs. All arguments are optional.</p>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="at">    </span><span class="fu">group</span><span class="kw">:</span><span class="at"> KO</span></span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="at">    </span><span class="fu">class_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/read_classes.txt</span></span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="at">    </span><span class="fu">residue_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/nonadenosine_residues.txt</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="at">    </span><span class="fu">nanopolish_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/nanopolish_output.tsv</span><span class="co">   # optional</span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="at">    </span><span class="fu">sequencing_summary_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/sequencing_summary.txt</span><span class="co">  # optional</span></span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="at">    </span><span class="fu">workspace</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/fast5/</span><span class="co">                        # optional</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="at">    </span><span class="fu">polya_path</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/nanopolish_output.tsv</span><span class="co">   # optional</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="at">    </span><span class="fu">seq_summary</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/sequencing_summary.txt</span><span class="co"> # optional</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="at">    </span><span class="fu">workspace</span><span class="kw">:</span><span class="at"> /path/to/KO_rep1/fast5/</span><span class="co">                   # optional</span></span>
 <span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a></span>
 <span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="at">  </span><span class="fu">WT_rep1</span><span class="kw">:</span></span>
 <span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="at">    </span><span class="fu">sample_name</span><span class="kw">:</span><span class="at"> WT_rep1</span></span>
@@ -427,12 +427,12 @@ analysis tabs. All arguments are optional.</p>
 <td>Path to <code>nonadenosine_residues.txt</code> from ninetails</td>
 </tr>
 <tr class="odd">
-<td><code>nanopolish_path</code></td>
+<td><code>polya_path</code></td>
 <td>No</td>
 <td>Path to Nanopolish polya output (for Signal Viewer)</td>
 </tr>
 <tr class="even">
-<td><code>sequencing_summary_path</code></td>
+<td><code>seq_summary</code></td>
 <td>No</td>
 <td>Path to Guppy sequencing summary (for Signal Viewer)</td>
 </tr>
@@ -759,7 +759,7 @@ variables:</p>
 <p>The wrapper auto-detects the pipeline from the YAML: if the first
 sample contains <code>pod5_dir</code> or <code>dorado_summary</code>
 fields, the Dorado app is used; if it contains <code>workspace</code> or
-<code>nanopolish</code>, the Guppy app is used.</p>
+<code>polya_path</code>, the Guppy app is used.</p>
 <p>Common Python path examples:</p>
 <table class="table">
 <thead><tr class="header">

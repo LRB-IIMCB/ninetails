@@ -101,13 +101,9 @@ The YAML configuration file should have the following structure:
         group: WT
         class_path: /path/to/read_classes.txt
         residue_path: /path/to/nonadenosine_residues.txt
-        polya_path: /path/to/nanopolish_output.tsv         # or nanopolish
-        seq_summary: /path/to/sequencing_summary.txt      # or sequencing_summary
+        polya_path: /path/to/nanopolish_output.tsv         # optional
+        seq_summary: /path/to/sequencing_summary.txt      # optional
         workspace: /path/to/fast5/                        # optional
-
-Signal viewer fields: `polya_path` for the Nanopolish polya output and
-`seq_summary` for the Guppy sequencing summary. The `nanopolish` field
-is reserved for the software version number.
 
 ## See also
 
