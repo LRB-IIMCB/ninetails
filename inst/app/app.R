@@ -356,7 +356,7 @@ ui <- shiny::fluidPage(
                                                     if (has_residue) {
                                                       shiny::div(class = "card",
                                                                  shiny::h4("Non-A Abundance (reads with 1, 2, 3+ non-As)"),
-                                                                 shiny::plotOutput("nonA_abundance_plot", height = "400px"),
+                                                                 shiny::plotOutput("nonA_abundance_plot", height = "450px"),
                                                                  shiny::conditionalPanel("input.show_class_desc",
                                                                                          shiny::div(class = "plot-desc",
                                                                                                     shiny::HTML(paste0(
