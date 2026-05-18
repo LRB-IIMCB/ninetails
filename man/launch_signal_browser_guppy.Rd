@@ -78,14 +78,10 @@ samples:
     group: WT
     class_path: /path/to/read_classes.txt
     residue_path: /path/to/nonadenosine_residues.txt
-    polya_path: /path/to/nanopolish_output.tsv         # or nanopolish
-    seq_summary: /path/to/sequencing_summary.txt      # or sequencing_summary
+    polya_path: /path/to/nanopolish_output.tsv         # optional
+    seq_summary: /path/to/sequencing_summary.txt      # optional
     workspace: /path/to/fast5/                        # optional
 }
-
-Signal viewer fields: \code{polya_path} for the Nanopolish polya output
-and \code{seq_summary} for the Guppy sequencing summary. The
-\code{nanopolish} field is reserved for the software version number.
 }
 \examples{
 \dontrun{

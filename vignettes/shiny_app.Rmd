@@ -181,9 +181,9 @@ samples:
     group: KO
     class_path: /path/to/KO_rep1/read_classes.txt
     residue_path: /path/to/KO_rep1/nonadenosine_residues.txt
-    nanopolish_path: /path/to/KO_rep1/nanopolish_output.tsv   # optional
-    sequencing_summary_path: /path/to/KO_rep1/sequencing_summary.txt  # optional
-    workspace: /path/to/KO_rep1/fast5/                        # optional
+    polya_path: /path/to/KO_rep1/nanopolish_output.tsv   # optional
+    seq_summary: /path/to/KO_rep1/sequencing_summary.txt # optional
+    workspace: /path/to/KO_rep1/fast5/                   # optional
 
   WT_rep1:
     sample_name: WT_rep1
@@ -198,8 +198,8 @@ samples:
 | `group` | Yes | Experimental condition for grouping |
 | `class_path` | Yes | Path to `read_classes.txt` from ninetails |
 | `residue_path` | Yes | Path to `nonadenosine_residues.txt` from ninetails |
-| `nanopolish_path` | No | Path to Nanopolish polya output (for Signal Viewer) |
-| `sequencing_summary_path` | No | Path to Guppy sequencing summary (for Signal Viewer) |
+| `polya_path` | No | Path to Nanopolish polya output (for Signal Viewer) |
+| `seq_summary` | No | Path to Guppy sequencing summary (for Signal Viewer) |
 | `workspace` | No | Path to multi-fast5 directory (for Signal Viewer) |
 
 ### Guppy-specific dashboard features
@@ -452,7 +452,7 @@ BASECALL_GROUP <- "Basecall_1D_000"
 
 The wrapper auto-detects the pipeline from the YAML: if the first sample
 contains `pod5_dir` or `dorado_summary` fields, the Dorado app is used;
-if it contains `workspace` or `nanopolish`, the Guppy app is used.
+if it contains `workspace` or `polya_path`, the Guppy app is used.
 
 Common Python path examples:
 

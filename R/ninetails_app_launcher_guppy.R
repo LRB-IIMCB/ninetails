@@ -57,14 +57,10 @@
 #'     group: WT
 #'     class_path: /path/to/read_classes.txt
 #'     residue_path: /path/to/nonadenosine_residues.txt
-#'     polya_path: /path/to/nanopolish_output.tsv         # or nanopolish
-#'     seq_summary: /path/to/sequencing_summary.txt      # or sequencing_summary
+#'     polya_path: /path/to/nanopolish_output.tsv         # optional
+#'     seq_summary: /path/to/sequencing_summary.txt      # optional
 #'     workspace: /path/to/fast5/                        # optional
 #' }
-#'
-#' Signal viewer fields: \code{polya_path} for the Nanopolish polya output
-#' and \code{seq_summary} for the Guppy sequencing summary. The
-#' \code{nanopolish} field is reserved for the software version number.
 #'
 #' @return Launches a Shiny application (does not return a value).
 #'
@@ -158,16 +154,12 @@ launch_signal_browser_guppy <- function(config = NULL,
         })
       }
 
-      # Guppy signal config: polya_path = nanopolish output, seq_summary = sequencing summary
-      # Note: 'nanopolish' field may contain a version string, not a file path
-      np_val <- if (!is.null(s$polya_path)) s$polya_path else NULL
-      ss_val <- if (!is.null(s$seq_summary)) s$seq_summary else if (!is.null(s$sequencing_summary)) s$sequencing_summary else NULL
-      ws_val <- s$workspace
-      if (!is.null(np_val) && !is.null(ss_val) && !is.null(ws_val)) {
+      if (!is.null(s$polya_path) && !is.null(s$seq_summary) &&
+          !is.null(s$workspace)) {
         signal_config[[sname]] <- list(
-          nanopolish_path = np_val,
-          sequencing_summary_path = ss_val,
-          workspace = ws_val
+          nanopolish_path = s$polya_path,
+          sequencing_summary_path = s$seq_summary,
+          workspace = s$workspace
         )
       }
     } # for each sample
