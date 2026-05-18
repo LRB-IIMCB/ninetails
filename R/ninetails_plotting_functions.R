@@ -2318,18 +2318,25 @@ plot_panel_characteristics <- function(input_residue_data,
     dplyr::select(-polya_median, -polya_mean) %>%
     dplyr::mutate_if(is.numeric, ~ round(., 3)) %>%
     tidyr::pivot_longer(
-      cols = c(
-        counts_total,
-        counts_blank,
-        counts_nonA,
-        counts_C,
-        counts_G,
-        counts_U
-      ),
+      cols = dplyr::any_of(c(
+        "counts_total",
+        "counts_blank",
+        "counts_nonA",
+        "counts_C",
+        "counts_G",
+        "counts_U"
+      )),
       names_to = "source",
       values_to = "counts"
     )
-  summarized_nonA$cat <- c(rep("main", 3), rep("mods", 3))
+  summarized_nonA <- summarized_nonA %>%
+    dplyr::mutate(
+      cat = dplyr::if_else(
+        source %in% c("counts_total", "counts_blank", "counts_nonA"),
+        "main",
+        "mods"
+      )
+    )
 
   ### divide into 2 separate subplots for general categories & c,g,u preds
   main_metrics <- summarized_nonA %>%
@@ -2343,10 +2350,16 @@ plot_panel_characteristics <- function(input_residue_data,
   cgu_metrics <- summarized_nonA %>%
     dplyr::filter(cat == "mods") %>%
     dplyr::mutate(label = paste0("(n=", counts, ")"))
-  cgu_metrics$source <- factor(
-    cgu_metrics$source,
-    levels = c("counts_C", "counts_G", "counts_U")
+  present_cgu <- intersect(
+    c("counts_C", "counts_G", "counts_U"),
+    unique(cgu_metrics$source)
   )
+  cgu_metrics$source <- factor(cgu_metrics$source, levels = present_cgu)
+
+  full_cgu_palette <- c(counts_C = "#3a424f", counts_G = "#50a675", counts_U = "#b0bdd4")
+  full_cgu_labels  <- c(counts_C = "reads with C", counts_G = "reads with G", counts_U = "reads with U")
+  active_cgu_palette <- full_cgu_palette[present_cgu]
+  active_cgu_labels  <- full_cgu_labels[present_cgu]
 
   # PLOTTING
   ##############################################################################
@@ -2383,8 +2396,8 @@ plot_panel_characteristics <- function(input_residue_data,
   ) +
     ggplot2::geom_bar(stat = "identity") +
     ggplot2::scale_fill_manual(
-      values = c("#3a424f", "#50a675", "#b0bdd4"),
-      labels = c("reads with C", "reads with G", "reads with U")
+      values = active_cgu_palette,
+      labels = active_cgu_labels
     ) +
     ggplot2::theme_bw() +
     ggplot2::scale_x_discrete(
@@ -2767,7 +2780,7 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
     ggplot2::aes(x = !!rlang::sym(grouping_factor), y = value, fill = instances)
   ) +
     ggplot2::geom_bar(stat = "identity", position = "dodge") +
-    ggplot2::labs(y = "frequency", fill = "Non-A occurr/read") +
+    ggplot2::labs(y = "frequency", fill = "Non-A occurr/read", title = "Amount of reads with 1, 2, or \u22653 Non-As") +
     ggplot2::scale_fill_manual(
       values = c("single" = "#91b7db", "two" = "#0978e3", "more" = "#0f304f")
     ) +

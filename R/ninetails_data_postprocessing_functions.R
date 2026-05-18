@@ -963,7 +963,7 @@ summarize_nonA <- function(merged_nonA_tables,
       #summarize counts (number of reads with given non-A residues)
       #and hits (occurences of given residues)
       dplyr::across(
-        c(sum_nonA, prediction_C, prediction_G, prediction_U),
+        c(sum_nonA, dplyr::starts_with("prediction_")),
         list(counts = ~ sum(.x != 0), hits = ~ sum(.x))
       ),
       .groups = 'drop'
