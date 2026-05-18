@@ -82,7 +82,7 @@ navbar:
         - text: Visual inspection of signals
           href: articles/signal_inspection.html
         - text: "---"
-        - text: "Dorado tools"
+        - text: "Analysis dashboard"
         - text: Analysis dashboard (Shiny)
           href: articles/shiny_app.html
         - text: "---"
@@ -120,8 +120,8 @@ articles:
       - postprocessing
       - plotting
       - signal_inspection
-  - title: Dorado tools
-    navbar: Dorado tools
+  - title: Analysis dashboard
+    navbar: Analysis dashboard
     contents:
       - shiny_app
   - title: Guppy pipeline (legacy)
