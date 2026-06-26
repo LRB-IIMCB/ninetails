@@ -45,8 +45,8 @@ submodels are in place.
 \dontrun{
 # Using files on disk
 ninetails::launch_cdna_signal_browser(
-  dorado_summary   = "/path/to/dorado_summary.txt",
-  pod5_dir         = "/path/to/pod5/",
+  dorado_summary = "/path/to/dorado_summary.txt",
+  pod5_dir = "/path/to/pod5/",
   orientation_data = "/path/to/sequence_with_tail_type.tsv"
 )
 
@@ -55,8 +55,8 @@ classified <- ninetails::detect_orientation_multiple(
   sequence_files = my_seq_files, num_cores = 4
 )
 ninetails::launch_cdna_signal_browser(
-  dorado_summary   = "/path/to/dorado_summary.txt",
-  pod5_dir         = "/path/to/pod5/",
+  dorado_summary = "/path/to/dorado_summary.txt",
+  pod5_dir = "/path/to/pod5/",
   orientation_data = classified
 )
 }

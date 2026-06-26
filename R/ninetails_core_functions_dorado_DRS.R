@@ -1475,7 +1475,9 @@ create_outputs_dorado <- function(dorado_summary_dir,
   # HANDLE  PREDICTIONS
   ################################################################################
   # Extract readnames from polya predictions
-  moved_chunks_table$read_id <- sub('_.*', '', moved_chunks_table$chunkname)
+  # chunkname is "<read_id>_<chunk_index>"; strip only the trailing
+  # "_<digits>" so read IDs containing underscores are not truncated
+  moved_chunks_table$read_id <- sub('_[0-9]+$', '', moved_chunks_table$chunkname)
 
   # vectorized substitution of predictions with letter code
   prediction_dict <- c("0" = "A", "1" = "C", "2" = "G", "3" = "U")
@@ -1559,11 +1561,9 @@ create_outputs_dorado <- function(dorado_summary_dir,
   })
 
   non_a_position_list <- dplyr::bind_rows(non_a_position_list)
-  non_a_position_list$chunkname <- sub(
-    '_.*\\*',
-    '',
-    non_a_position_list$chunkname
-  )
+  # NOTE: chunkname must remain "<read_id>_<chunk_index>" here - it is used as
+  # a join key (by = c("read_id", "chunkname")) against moved_chunks_table
+  # below, which also carries the full chunkname. Do not strip it.
 
   # Merge with FILTERED summary data for position calculation (already loaded)
   non_a_position_list <- dplyr::left_join(

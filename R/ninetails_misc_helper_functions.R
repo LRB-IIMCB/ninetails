@@ -1104,7 +1104,7 @@ infer_cdna_layout <- function(poly_tail_start,
     return("ambiguous")
   }
 
-  pre_tail  <- poly_tail_start - 1L
+  pre_tail <- poly_tail_start - 1L
   post_tail <- signal_length - poly_tail_end
 
   if (pre_tail < min_region_samples || post_tail < min_region_samples) {

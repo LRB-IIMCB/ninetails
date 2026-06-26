@@ -141,15 +141,15 @@
 #' # Single-sample: all tabs (classification + residues + signal viewer)
 #' ninetails::launch_signal_browser(
 #'   summary_file = "/path/to/dorado_summary.txt",
-#'   pod5_dir     = "/path/to/pod5/",
-#'   class_file   = "/path/to/read_classes.txt",
+#'   pod5_dir = "/path/to/pod5/",
+#'   class_file = "/path/to/read_classes.txt",
 #'   residue_file = "/path/to/nonadenosine_residues.txt"
 #' )
 #'
 #' # Single-sample: signal viewer only (no analysis tabs)
 #' ninetails::launch_signal_browser(
 #'   summary_file = "/path/to/dorado_summary.txt",
-#'   pod5_dir     = "/path/to/pod5/"
+#'   pod5_dir = "/path/to/pod5/"
 #' )
 #'
 #' # Custom port and host for remote access
@@ -176,9 +176,9 @@ launch_signal_browser <- function(config = NULL,
   }
 
   # Initialize data containers
-  class_data    <- NULL
-  residue_data  <- NULL
-  merged_data   <- NULL
+  class_data <- NULL
+  residue_data <- NULL
+  merged_data <- NULL
   signal_config <- list()
 
   ####### Multi-sample mode (YAML config) ######
@@ -197,15 +197,15 @@ launch_signal_browser <- function(config = NULL,
       stop("No samples found in config file.", call. = FALSE)
     }
 
-    class_list   <- list()
+    class_list <- list()
     residue_list <- list()
 
     cat(paste0("[", Sys.time(), "] Loading ", length(cfg$samples), " samples...\n"))
 
     for (sid in names(cfg$samples)) {
       s <- cfg$samples[[sid]]
-      sname <- s$sample_name %||% sid
-      grp   <- s$group %||% "ungrouped"
+      sname <- if (!is.null(s$sample_name)) s$sample_name else sid
+      grp <- if (!is.null(s$group)) s$group else "ungrouped"
 
       if (!is.null(s$class_path) && file.exists(s$class_path)) {
         tryCatch({
@@ -328,13 +328,13 @@ launch_signal_browser <- function(config = NULL,
 
   # Pass everything via shinyOptions
   shiny::shinyOptions(
-    ninetails.class_data    = class_data,
-    ninetails.residue_data  = residue_data,
-    ninetails.merged_data   = merged_data,
+    ninetails.class_data = class_data,
+    ninetails.residue_data = residue_data,
+    ninetails.merged_data = merged_data,
     ninetails.signal_config = signal_config,
-    ninetails.summary_file  = summary_file %||% "",
-    ninetails.pod5_dir      = pod5_dir %||% "",
-    ninetails.residue_file  = residue_file %||% ""
+    ninetails.summary_file = if (!is.null(summary_file)) summary_file else "",
+    ninetails.pod5_dir = if (!is.null(pod5_dir)) pod5_dir else "",
+    ninetails.residue_file = if (!is.null(residue_file)) residue_file else ""
   )
 
   app_dir <- system.file("app", package = "ninetails")
@@ -387,8 +387,8 @@ launch_signal_browser <- function(config = NULL,
 #' \dontrun{
 #' # Using files on disk
 #' ninetails::launch_cdna_signal_browser(
-#'   dorado_summary   = "/path/to/dorado_summary.txt",
-#'   pod5_dir         = "/path/to/pod5/",
+#'   dorado_summary = "/path/to/dorado_summary.txt",
+#'   pod5_dir = "/path/to/pod5/",
 #'   orientation_data = "/path/to/sequence_with_tail_type.tsv"
 #' )
 #'
@@ -397,8 +397,8 @@ launch_signal_browser <- function(config = NULL,
 #'   sequence_files = my_seq_files, num_cores = 4
 #' )
 #' ninetails::launch_cdna_signal_browser(
-#'   dorado_summary   = "/path/to/dorado_summary.txt",
-#'   pod5_dir         = "/path/to/pod5/",
+#'   dorado_summary = "/path/to/dorado_summary.txt",
+#'   pod5_dir = "/path/to/pod5/",
 #'   orientation_data = classified
 #' )
 #' }
@@ -497,7 +497,7 @@ launch_cdna_signal_browser <- function(dorado_summary,
     sum(joined_df$tail_type == "unidentified", na.rm = TRUE)))
 
   shiny::shinyOptions(
-    ninetails.cdna_data     = joined_df,
+    ninetails.cdna_data = joined_df,
     ninetails.cdna_pod5_dir = pod5_dir
   )
 

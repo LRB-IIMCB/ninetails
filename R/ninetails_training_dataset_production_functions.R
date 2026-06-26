@@ -492,6 +492,14 @@ filter_signal_by_threshold_trainingset <- function(signal) {
       call. = FALSE
     )
   }
+
+  # guard: an empty signal cannot be analysed - the z-score loop below would
+  # iterate backwards and the trim step would index in reverse; return no
+  # pseudomoves so downstream yields no chunks
+  if (length(signal) == 0) {
+    return(numeric(0))
+  }
+
   # reproducibility
   set.seed(123)
 
@@ -548,8 +556,15 @@ filter_signal_by_threshold_trainingset <- function(signal) {
     )
   }
 
-  # trim pseudomoves so they fit actual signal/moves
-  adjusted_pseudomoves <- pseudomoves[101:length(pseudomoves)]
+  # trim pseudomoves so they fit actual signal/moves: drop the synthetic
+  # calibration lead-in prepended above (adaptive_sampling_window points).
+  # guard against signals shorter than the lead-in, where (window + 1):length()
+  # would run backwards
+  if (length(pseudomoves) > adaptive_sampling_window) {
+    adjusted_pseudomoves <- pseudomoves[(adaptive_sampling_window + 1):length(pseudomoves)]
+  } else {
+    adjusted_pseudomoves <- numeric(0)
+  }
 
   # this is to prevent from extracting poor quality ones
   adjusted_pseudomoves <- ninetails::substitute_gaps(adjusted_pseudomoves)
@@ -558,10 +573,12 @@ filter_signal_by_threshold_trainingset <- function(signal) {
   #substitute original terminal values by zeros, so the terminal chunks
   #would be excluded from the prefiltered dataset; this is to prevent
   #potential terminal segmentation errors to be taken into consideration.
-  adjusted_pseudomoves[1:5] <- 0 #beginning
-  adjusted_pseudomoves[
-    (length(adjusted_pseudomoves) - 5):length(adjusted_pseudomoves)
-  ] <- 0 # end
+  # guard short vectors so the index ranges never run backwards / negative
+  n_pm <- length(adjusted_pseudomoves)
+  if (n_pm > 0) {
+    adjusted_pseudomoves[seq_len(min(5L, n_pm))] <- 0 #beginning
+    adjusted_pseudomoves[seq.int(max(1L, n_pm - 5L), n_pm)] <- 0 # end
+  }
 
   return(adjusted_pseudomoves)
 }

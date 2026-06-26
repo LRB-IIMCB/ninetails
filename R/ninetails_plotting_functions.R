@@ -1184,8 +1184,8 @@ plot_class_counts <- function(class_data,
     )
     canonical_order <- c("unclassified", "blank", "decorated")
     present_classes <- unique(as.character(class_counts$class))
-    active_levels   <- intersect(canonical_order, present_classes)
-    active_palette  <- full_palette[active_levels]
+    active_levels <- intersect(canonical_order, present_classes)
+    active_palette <- full_palette[active_levels]
 
     # [bug fix] ungroup() before mutate() to prevent dplyr's grouped_df $<-
     # method from re-asserting the old factor levels baked into the group
@@ -2357,9 +2357,9 @@ plot_panel_characteristics <- function(input_residue_data,
   cgu_metrics$source <- factor(cgu_metrics$source, levels = present_cgu)
 
   full_cgu_palette <- c(counts_C = "#3a424f", counts_G = "#50a675", counts_U = "#b0bdd4")
-  full_cgu_labels  <- c(counts_C = "reads with C", counts_G = "reads with G", counts_U = "reads with U")
+  full_cgu_labels <- c(counts_C = "reads with C", counts_G = "reads with G", counts_U = "reads with U")
   active_cgu_palette <- full_cgu_palette[present_cgu]
-  active_cgu_labels  <- full_cgu_labels[present_cgu]
+  active_cgu_labels <- full_cgu_labels[present_cgu]
 
   # PLOTTING
   ##############################################################################
@@ -3026,7 +3026,7 @@ plot_nonA_abundance <- function(residue_data, grouping_factor = NA) {
 
   for (i in seq_len(nrow(read_nonA_data))) {
     center <- raw_positions[i] * x_scale_factor
-    flank  <- nonA_flank * x_scale_factor
+    flank <- nonA_flank * x_scale_factor
     residue <- as.character(read_nonA_data$prediction[i])
     fill_color <- residue_colors[residue]
 

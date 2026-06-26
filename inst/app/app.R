@@ -60,19 +60,19 @@ options(scipen = 999)
 # DATA FROM LAUNCHER
 ################################################################################
 
-class_data    <- shiny::getShinyOption("ninetails.class_data")
-residue_data  <- shiny::getShinyOption("ninetails.residue_data")
-merged_data   <- shiny::getShinyOption("ninetails.merged_data")
+class_data <- shiny::getShinyOption("ninetails.class_data")
+residue_data <- shiny::getShinyOption("ninetails.residue_data")
+merged_data <- shiny::getShinyOption("ninetails.merged_data")
 signal_config <- shiny::getShinyOption("ninetails.signal_config", list())
 
 default_summary <- shiny::getShinyOption("ninetails.summary_file", default = "")
-default_pod5    <- shiny::getShinyOption("ninetails.pod5_dir", default = "")
+default_pod5 <- shiny::getShinyOption("ninetails.pod5_dir", default = "")
 default_residue <- shiny::getShinyOption("ninetails.residue_file", default = "")
 
-has_class   <- !is.null(class_data) && nrow(class_data) > 0
+has_class <- !is.null(class_data) && nrow(class_data) > 0
 has_residue <- !is.null(residue_data) && nrow(residue_data) > 0
-has_merged  <- !is.null(merged_data) && nrow(merged_data) > 0
-has_signal  <- length(signal_config) > 0 ||
+has_merged <- !is.null(merged_data) && nrow(merged_data) > 0
+has_signal <- length(signal_config) > 0 ||
   nzchar(default_summary) || nzchar(default_pod5)
 
 # Startup diagnostics
@@ -95,13 +95,13 @@ transcript_col <- "contig"
 if (has_class && "symbol" %in% names(class_data)) transcript_col <- "symbol"
 
 # Pre-compute summary stats for value boxes
-n_samples_val     <- if (has_class && "sample_name" %in% names(class_data))
+n_samples_val <- if (has_class && "sample_name" %in% names(class_data))
   length(unique(class_data$sample_name)) else 1
 n_transcripts_val <- if (has_class) length(unique(class_data[[transcript_col]])) else 0
-n_reads_val       <- if (has_class) nrow(class_data) else 0
-n_blank_val       <- if (has_class && "class" %in% names(class_data))
+n_reads_val <- if (has_class) nrow(class_data) else 0
+n_blank_val <- if (has_class && "class" %in% names(class_data))
   sum(class_data$class == "blank", na.rm = TRUE) else 0
-n_decorated_val   <- if (has_class && "class" %in% names(class_data))
+n_decorated_val <- if (has_class && "class" %in% names(class_data))
   sum(class_data$class == "decorated", na.rm = TRUE) else 0
 
 
@@ -110,28 +110,28 @@ n_decorated_val   <- if (has_class && "class" %in% names(class_data))
 ################################################################################
 
 palettes <- list(
-  kanto  = c("#D62728FF", "#1F77B4FF", "#FF7F0EFF", "#2CA02CFF", "#9467BDFF",
+  kanto = c("#D62728FF", "#1F77B4FF", "#FF7F0EFF", "#2CA02CFF", "#9467BDFF",
              "#8C564BFF", "#79AF97FF", "#EFC000FF", "#E377C2FF", "#7F7F7FFF",
              "#bdff17", "#b5004b", "#17BECFFF", "#87bdf5", "#3a424f"),
-  johto  = c("#00468BFF", "#ED0000FF", "#42B540FF", "#0099B4FF", "#EFC000FF",
+  johto = c("#00468BFF", "#ED0000FF", "#42B540FF", "#0099B4FF", "#EFC000FF",
              "#925E9FFF", "#FDAF91FF", "#AD002AFF", "#ADB6B6FF", "#1B1919FF",
              "#8F7700FF", "#EE4C97FF", "#6F99ADFF", "#B09C85FF", "#CD534CFF"),
-  hoenn  = c("#5A9599FF", "#FF6F00FF", "#49a33b", "#8A4198FF", "#84D7E1FF",
+  hoenn = c("#5A9599FF", "#FF6F00FF", "#49a33b", "#8A4198FF", "#84D7E1FF",
              "#FF6348FF", "#3C5488FF", "#FF95A8FF", "#3D3B25FF", "#ADE2D0FF",
              "#CD534CFF", "#FFDC91FF", "#50a675", "#C71000FF", "#008EA0FF"),
   sinnoh = c("#ff1726", "#196abd", "#1fed29", "#ff6200", "#159485",
              "#00aad4", "#db63e6", "#374e55ff", "#87bdf5", "#bdff17",
              "#b5004b", "#fdff70", "#00dbd4", "#ffb300", "#6b43b0"),
-  hisui  = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF", "#7AA6DCFF",
+  hisui = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF", "#7AA6DCFF",
              "#42B540FF", "#003C67FF", "#8F7700FF", "#3B3B3BFF", "#A73030FF",
              "#FDAE61", "#79AF97FF", "#6A6599FF", "#EE4C97FF", "#80796BFF"),
-  unova  = c("#D7191C", "#2C7BB6", "#FDAE61", "#ABD9E9", "#3a424f",
+  unova = c("#D7191C", "#2C7BB6", "#FDAE61", "#ABD9E9", "#3a424f",
              "#50a675", "#b0bdd4", "#fdff70", "#808080", "#00aad4",
              "#1a1a1a", "#cccccc", "#ff6600", "#216778", "#b5004b"),
-  kalos  = c("#E64B35FF", "#4DBBD5FF", "#00A087FF", "#3C5488FF", "#F39B7FFF",
+  kalos = c("#E64B35FF", "#4DBBD5FF", "#00A087FF", "#3C5488FF", "#F39B7FFF",
              "#8491B4FF", "#374E55FF", "#00A1D5FF", "#79AF97FF", "#c7081b",
              "#0559ff", "#3d0101", "#4a0869", "#b03b0c", "#0f05a1"),
-  alola  = c("#ff1726", "#00aad4", "#db63e6", "#ffb300", "#1fed29",
+  alola = c("#ff1726", "#00aad4", "#db63e6", "#ffb300", "#1fed29",
              "#87bdf5", "#196abd", "#b5004b", "#FDAE61", "#3a424f",
              "#216778", "#50a675", "#808080", "#00dbd4", "#6b43b0")
 )
@@ -1121,20 +1121,20 @@ server <- function(input, output, session) {
           }
 
           # Read checkbox states (FALSE if checkbox is absent from UI)
-          want_class     <- isTRUE(input$rpt_classification)
+          want_class <- isTRUE(input$rpt_classification)
           want_abundance <- isTRUE(input$rpt_abundance) && has_residue
-          want_residue   <- isTRUE(input$rpt_residue) && has_residue
-          want_rug       <- isTRUE(input$rpt_rug) && has_residue
-          want_polya     <- isTRUE(input$rpt_polya)
-          want_signals   <- isTRUE(input$rpt_signals) && length(signal_config) > 0
+          want_residue <- isTRUE(input$rpt_residue) && has_residue
+          want_rug <- isTRUE(input$rpt_rug) && has_residue
+          want_polya <- isTRUE(input$rpt_polya)
+          want_signals <- isTRUE(input$rpt_signals) && length(signal_config) > 0
 
           # Report-specific settings
           rpt_center_val <- if (!is.null(input$rpt_center) &&
                                 input$rpt_center != "none") {
             input$rpt_center
           } else { NA }
-          rpt_max_len <- input$rpt_max_length %||% 200
-          rpt_palette <- input$rpt_palette %||% "unova"
+          rpt_max_len <- if (!is.null(input$rpt_max_length)) input$rpt_max_length else 200
+          rpt_palette <- if (!is.null(input$rpt_palette)) input$rpt_palette else "unova"
           rpt_transcripts <- input$rpt_transcripts  # NULL or character vector
 
           # #### HTML header ####
@@ -1515,9 +1515,9 @@ server <- function(input, output, session) {
   # SIGNAL VIEWER TAB
   ##############################################################################
 
-  loaded_signal_data    <- shiny::reactiveVal(NULL)
+  loaded_signal_data <- shiny::reactiveVal(NULL)
   loaded_signal_residue <- shiny::reactiveVal(NULL)
-  signal_error          <- shiny::reactiveVal(NULL)
+  signal_error <- shiny::reactiveVal(NULL)
 
   # #### Data loading ####
 
@@ -1632,9 +1632,9 @@ server <- function(input, output, session) {
       s <- signal_config[[input$signal_sample]]
       if (!is.null(s)) s$pod5_dir else ""
     } else if (length(signal_config) > 0 && names(signal_config)[1] == "single") {
-      signal_config[["single"]]$pod5_dir %||% ""
+      if (!is.null(signal_config[["single"]]$pod5_dir)) signal_config[["single"]]$pod5_dir else ""
     } else {
-      trimws(input$signal_pod5_dir %||% "")
+      trimws(if (!is.null(input$signal_pod5_dir)) input$signal_pod5_dir else "")
     }
   })
 
@@ -1855,7 +1855,7 @@ server <- function(input, output, session) {
 
     for (i in seq_len(nrow(read_nonA_data))) {
       pred <- as.character(read_nonA_data$prediction[i])
-      pos  <- read_nonA_data$est_nonA_pos[i]
+      pos <- read_nonA_data$est_nonA_pos[i]
       if (is.na(pos) || is.na(pred)) next
 
       fc <- rc[pred]
