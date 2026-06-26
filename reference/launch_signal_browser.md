@@ -182,15 +182,15 @@ ninetails::launch_signal_browser(config = "/path/to/config.yml")
 # Single-sample: all tabs (classification + residues + signal viewer)
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
-  pod5_dir     = "/path/to/pod5/",
-  class_file   = "/path/to/read_classes.txt",
+  pod5_dir = "/path/to/pod5/",
+  class_file = "/path/to/read_classes.txt",
   residue_file = "/path/to/nonadenosine_residues.txt"
 )
 
 # Single-sample: signal viewer only (no analysis tabs)
 ninetails::launch_signal_browser(
   summary_file = "/path/to/dorado_summary.txt",
-  pod5_dir     = "/path/to/pod5/"
+  pod5_dir = "/path/to/pod5/"
 )
 
 # Custom port and host for remote access
