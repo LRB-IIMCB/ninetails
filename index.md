@@ -1,8 +1,5 @@
 # ninetails
 
-[![Codecov test
-coverage](https://codecov.io/gh/LRB-IIMCB/ninetails/graph/badge.svg)](https://app.codecov.io/gh/LRB-IIMCB/ninetails)
-
 **An R package for finding non-adenosine residues in poly(A) tails of
 Oxford Nanopore sequencing reads**
 

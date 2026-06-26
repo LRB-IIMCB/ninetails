@@ -170,8 +170,8 @@ processing of POD5 files.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The function performs the following operations:</p><ol><li><p><strong>Input validation</strong>: Checks for required columns and valid data</p></li>
-<li><p><strong>Read filtering</strong>: Excludes reads with:</p><ul><li><p>poly_tail_length â‰¤ 10 (if column exists)</p></li>
-<li><p>poly_tail_start â‰¤ 0 (invalid coordinates)</p></li>
+<li><p><strong>Read filtering</strong>: Excludes reads with:</p><ul><li><p>poly_tail_length &lt;= 10 (if column exists)</p></li>
+<li><p>poly_tail_start &lt;= 0 (invalid coordinates)</p></li>
 </ul></li>
 <li><p><strong>Python subprocess execution</strong>: Delegates extraction to an optimized
         Python script that:</p><ul><li><p>Groups reads by POD5 file for efficient I/O</p></li>

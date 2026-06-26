@@ -4,7 +4,7 @@ Opens an interactive Shiny application for exploring and visualizing
 ninetails poly(A) tail composition analysis results. The dashboard
 provides a comprehensive overview of read classification, non-adenosine
 residue composition, poly(A) tail length distributions, and raw nanopore
-signal inspection — all in a single interface with interactive filters,
+signal inspection - all in a single interface with interactive filters,
 per-sample breakdowns, and a configurable report generator.
 
 ## Usage

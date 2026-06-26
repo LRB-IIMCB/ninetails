@@ -49,8 +49,9 @@ with Dorado ≥ 1.0.0 in POD5 format.
 ## Dorado cDNA pipeline
 
 Functions for processing cDNA sequencing data, including BAM file
-processing, basecalled sequence extraction, and read orientation
-classification (polyA vs polyT).
+processing, basecalled sequence extraction, read orientation
+classification (polyA vs polyT), and an independent layout-based
+cross-check of the orientation calls.
 
 - [`preprocess_inputs_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs_cdna.md)
   : Preprocess Dorado inputs for ninetails cDNA analysis
@@ -64,6 +65,11 @@ classification (polyA vs polyT).
 - [`detect_orientation_multiple()`](https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.md)
   : Classify multiple cDNA read orientations using Dorado-style poly
   tail detection
+- [`infer_cdna_layout()`](https://LRB-IIMCB.github.io/ninetails/reference/infer_cdna_layout.md)
+  : Infer cDNA signal layout from pre- and post-tail region sizes
+- [`cdna_layout_agreement_marker()`](https://LRB-IIMCB.github.io/ninetails/reference/cdna_layout_agreement_marker.md)
+  : Agreement marker between the orientation algorithm and the layout
+  inference
 - [`process_polya_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_reads_cdna.md)
   : Process polyA reads using standard ninetails pipeline
 - [`process_polyt_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polyt_reads_cdna.md)
@@ -254,13 +260,17 @@ Interactive Shiny application for exploring ninetails results. Supports
 single-sample and multi-sample analysis via YAML configuration,
 including read classification, residue composition, poly(A)
 distributions, and raw signal visualization with non-A modification
-overlay. Use launch_signal_browser() for Dorado DRS (POD5) data and
-launch_signal_browser_guppy() for Guppy legacy (fast5) data.
+overlay. Use launch_signal_browser() for Dorado DRS (POD5) data,
+launch_signal_browser_guppy() for Guppy legacy (fast5) data, and
+launch_cdna_signal_browser() for validating cDNA read orientation calls
+against the inferred signal layout.
 
 - [`launch_signal_browser()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser.md)
   : Launch the Ninetails Analysis Dashboard
 - [`launch_signal_browser_guppy()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser_guppy.md)
   : Launch the Ninetails Analysis Dashboard (Guppy Legacy)
+- [`launch_cdna_signal_browser()`](https://LRB-IIMCB.github.io/ninetails/reference/launch_cdna_signal_browser.md)
+  : Launch the cDNA orientation validation browser
 
 ## tailfindr compatibility
 

@@ -123,7 +123,7 @@ ninetails::launch_signal_browser_guppy(config = "config_guppy.yml")
 # Single-sample: all tabs
 ninetails::launch_signal_browser_guppy(
   nanopolish_file = "/path/to/nanopolish_output.tsv",
-  sequencing_summary_file  = "/path/to/sequencing_summary.txt",
+  sequencing_summary_file = "/path/to/sequencing_summary.txt",
   workspace = "/path/to/fast5/",
   class_file = "/path/to/read_classes.txt",
   residue_file = "/path/to/nonadenosine_residues.txt"

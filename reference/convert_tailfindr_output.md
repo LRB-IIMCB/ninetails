@@ -123,7 +123,7 @@ df <- ninetails::convert_tailfindr_output(
 
 # The output can be passed to the ninetails pipeline as the
 # nanopolish argument:
-results <- ninetails::check_tails(
+results <- ninetails::check_tails_guppy(
   nanopolish = df,
   sequencing_summary = '/path/to/sequencing_summary.txt',
   workspace = '/path/to/workspace',

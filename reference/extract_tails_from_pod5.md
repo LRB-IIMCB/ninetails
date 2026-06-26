@@ -75,9 +75,9 @@ The function performs the following operations:
 
 2.  **Read filtering**: Excludes reads with:
 
-    - poly_tail_length â‰¤ 10 (if column exists)
+    - poly_tail_length \<= 10 (if column exists)
 
-    - poly_tail_start â‰¤ 0 (invalid coordinates)
+    - poly_tail_start \<= 0 (invalid coordinates)
 
 3.  **Python subprocess execution**: Delegates extraction to an
     optimized Python script that:

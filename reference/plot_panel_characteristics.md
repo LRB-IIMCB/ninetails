@@ -53,21 +53,21 @@ plot_panel_characteristics(
 
 ## Value
 
-A patchwork-assembled `ggplot` object containing panels A–E.
+A patchwork-assembled `ggplot` object containing panels A-E.
 
 ## Details
 
-The function assembles panels A–E into a patchwork layout:
+The function assembles panels A-E into a patchwork layout:
 
-- **A** – Read categories (blank, non-A containing, total)
+- **A** - Read categories (blank, non-A containing, total)
 
-- **B** – Counts of reads containing C, G, or U residues
+- **B** - Counts of reads containing C, G, or U residues
 
-- **C** – Distribution of poly(A) tail lengths
+- **C** - Distribution of poly(A) tail lengths
 
-- **D** – Normalized distribution of non-A positions
+- **D** - Normalized distribution of non-A positions
 
-- **E** – Raw distribution of non-A positions
+- **E** - Raw distribution of non-A positions
 
 ## Internal column filtering
 

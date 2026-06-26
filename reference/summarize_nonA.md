@@ -72,10 +72,10 @@ A tibble with one row per transcript per group, containing:
 
 The distinction between **counts** and **hits**:
 
-- **counts** — number of reads containing at least one occurrence of a
+- **counts** - number of reads containing at least one occurrence of a
   given non-A residue type.
 
-- **hits** — total number of occurrences of a given non-A residue type
+- **hits** - total number of occurrences of a given non-A residue type
   across all reads (a single read may contribute multiple hits).
 
 ## See also

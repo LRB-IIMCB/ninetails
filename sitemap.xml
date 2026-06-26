@@ -18,6 +18,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/assert_dir_exists.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/assert_file_exists.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/calculate_fisher.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/cdna_layout_agreement_marker.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/check_fast5_filetype.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/check_output_directory.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/check_polya_length_filetype.html</loc></url>
@@ -66,9 +67,11 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/filter_signal_by_threshold_trainingset.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/get_mode.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/index.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/infer_cdna_layout.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/is_RNA.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/is_multifast5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/is_string.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/launch_cdna_signal_browser.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/launch_signal_browser_guppy.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/load_keras_model.html</loc></url>

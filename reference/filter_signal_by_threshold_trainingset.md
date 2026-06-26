@@ -27,15 +27,15 @@ Numeric vector of pseudomoves with values in {-1, 0, 1}:
 
 - 1:
 
-  Signal exceeds baseline (peak) — potential G nucleotide.
+  Signal exceeds baseline (peak) - potential G nucleotide.
 
 - -1:
 
-  Signal falls below baseline (valley) — potential C or U nucleotide.
+  Signal falls below baseline (valley) - potential C or U nucleotide.
 
 - 0:
 
-  Signal within baseline range — homopolymer A region.
+  Signal within baseline range - homopolymer A region.
 
 ## Details
 

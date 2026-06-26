@@ -23,12 +23,12 @@ edit_distance_hw(query, target)
 
 ## Value
 
-Integer. The minimum Damerau–Levenshtein edit distance found across all
+Integer. The minimum Damerau-Levenshtein edit distance found across all
 possible sliding window alignments.
 
 ## Details
 
-Edit distance is computed using the Damerau–Levenshtein distance, as
+Edit distance is computed using the Damerau-Levenshtein distance, as
 implemented by [`adist`](https://rdrr.io/r/utils/adist.html), which
 accounts for insertions, deletions, substitutions, and transpositions.
 

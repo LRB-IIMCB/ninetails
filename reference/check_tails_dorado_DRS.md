@@ -197,7 +197,7 @@ POD5 conversion is not feasible.
 - For datasets \>1M reads, consider batch processing or increased
   `part_size`
 
-- Position estimates are approximate (Â±2-3 nt accuracy); validate
+- Position estimates are approximate (+/-2-3 nt accuracy); validate
   critical findings
 
 ## Pipeline Overview

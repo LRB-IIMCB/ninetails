@@ -146,7 +146,9 @@ containing read_id and sequence columns.</p></dd>
     <p>Data frame/tibble containing all sequences with added tail_type column
 ("polyA", "polyT", or "unidentified") based on Dorado-style edit distance matching
 of SSP and VNP primers with score and separation validation.
-The tail_type column is also written back to the original sequence files for persistence.</p>
+The augmented table (with tail_type) is also written to a sibling
+"&lt;name&gt;_classified.tsv" file for persistence; the original input files are
+left untouched.</p>
     </div>
 
     <div class="section level2">

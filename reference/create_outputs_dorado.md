@@ -149,7 +149,7 @@ Where:
 - `centr_signal_pos`: Mean of chunk start and end positions in signal
   space
 
-- `signal_length`: 0.2 Ã— (poly_tail_end - poly_tail_start) converts
+- `signal_length`: 0.2 x (poly_tail_end - poly_tail_start) converts
   signal coordinates to nucleotide space
 
 - `poly_tail_length`: Total poly(A) tail length from Dorado
