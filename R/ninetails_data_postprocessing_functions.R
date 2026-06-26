@@ -91,7 +91,7 @@ read_class_single <- function(class_path, sample_name = NA) {
 
   ## correct annotation <- if gencode format: create new columns with ensembl IDs
   # else created columns could be easily dropped
-  # this code chunk was originally written by PaweÅ‚ Krawczyk (smaegol) & incorporated in NanoTail package
+  # this code chunk was originally written by Pawel Krawczyk (smaegol) & incorporated in NanoTail package
   transcript_names <- gsub(
     ".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*",
     "\\1",
@@ -383,7 +383,7 @@ read_residue_single <- function(residue_path, sample_name = NA) {
 
   ## correct annotation <- if gencode format: create new columns with ensembl IDs
   # else created columns could be easily dropped
-  # this code chunk was originally written by PaweÅ‚ Krawczyk (smaegol) & incorporated in NanoTail package
+  # this code chunk was originally written by Pawel Krawczyk (smaegol) & incorporated in NanoTail package
 
   transcript_names <- gsub(
     ".*?\\|.*?\\|.*?\\|.*?\\|.*?\\|(.*?)\\|.*",
@@ -863,9 +863,9 @@ merge_nonA_tables <- function(class_data,
 #' @details
 #' The distinction between \strong{counts} and \strong{hits}:
 #' \itemize{
-#'   \item \strong{counts} — number of reads containing at least one
+#'   \item \strong{counts} - number of reads containing at least one
 #'     occurrence of a given non-A residue type.
-#'   \item \strong{hits} — total number of occurrences of a given non-A
+#'   \item \strong{hits} - total number of occurrences of a given non-A
 #'     residue type across all reads (a single read may contribute
 #'     multiple hits).
 #' }

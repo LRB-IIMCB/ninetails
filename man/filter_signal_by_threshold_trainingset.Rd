@@ -16,10 +16,10 @@ poly(A) tail region as delimited by nanopolish polya (stored in
 \value{
 Numeric vector of pseudomoves with values in \{-1, 0, 1\}:
 \describe{
-  \item{1}{Signal exceeds baseline (peak) — potential G nucleotide.}
-  \item{-1}{Signal falls below baseline (valley) — potential C or U
+  \item{1}{Signal exceeds baseline (peak) - potential G nucleotide.}
+  \item{-1}{Signal falls below baseline (valley) - potential C or U
     nucleotide.}
-  \item{0}{Signal within baseline range — homopolymer A region.}
+  \item{0}{Signal within baseline range - homopolymer A region.}
 }
 }
 \description{

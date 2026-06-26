@@ -4,7 +4,7 @@
 #' ninetails poly(A) tail composition analysis results. The dashboard
 #' provides a comprehensive overview of read classification, non-adenosine
 #' residue composition, poly(A) tail length distributions, and raw nanopore
-#' signal inspection — all in a single interface with interactive filters,
+#' signal inspection - all in a single interface with interactive filters,
 #' per-sample breakdowns, and a configurable report generator.
 #'
 #' The dashboard is organized into six tabs:
@@ -340,6 +340,170 @@ launch_signal_browser <- function(config = NULL,
   app_dir <- system.file("app", package = "ninetails")
   if (!nzchar(app_dir) || !dir.exists(app_dir)) {
     stop("App not found. Expected at: inst/app/", call. = FALSE)
+  }
+
+  shiny::runApp(app_dir, ...)
+}
+
+
+#' Launch the cDNA orientation validation browser
+#'
+#' Minimum-useful companion to \code{\link{launch_signal_browser}}
+#' specifically for verifying cDNA orientation classifications against
+#' the raw signal layout. Shows one signal at a time with the algorithm's
+#' \code{tail_type} call, an independent size-ratio-inferred layout
+#' (see \code{\link{infer_cdna_layout}}), and an agreement marker so
+#' disagreements stand out visually.
+#'
+#' Intended as a validation tool while
+#' \code{\link{check_tails_dorado_cDNA}} is still under construction;
+#' will be superseded by a fuller cDNA dashboard once cDNA-native CNN
+#' submodels are in place.
+#'
+#' @param dorado_summary Character string or data frame. Path to a
+#'   Dorado summary file or a data frame with at least \code{read_id},
+#'   \code{filename}, \code{poly_tail_start}, \code{poly_tail_end}
+#'   columns. The Dorado >=1.4.0 \code{input_filename} alias is also
+#'   accepted.
+#' @param pod5_dir Character string. Path to the directory containing
+#'   POD5 files for the run.
+#' @param orientation_data Character string or data frame. Path to a TSV
+#'   produced by \code{\link{detect_orientation_multiple}}, or that
+#'   function's in-memory return value. Must contain \code{read_id} and
+#'   \code{tail_type}; \code{reference} and \code{sequence} are used if
+#'   present.
+#' @param ... Additional arguments passed to \code{\link[shiny]{runApp}}.
+#'
+#' @return Launches a Shiny application (does not return a value).
+#'
+#' @seealso \code{\link{launch_signal_browser}},
+#'   \code{\link{detect_orientation_multiple}},
+#'   \code{\link{infer_cdna_layout}},
+#'   \code{\link{cdna_layout_agreement_marker}}.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Using files on disk
+#' ninetails::launch_cdna_signal_browser(
+#'   dorado_summary   = "/path/to/dorado_summary.txt",
+#'   pod5_dir         = "/path/to/pod5/",
+#'   orientation_data = "/path/to/sequence_with_tail_type.tsv"
+#' )
+#'
+#' # Using an in-memory orientation tibble (e.g. straight out of the pipeline)
+#' classified <- ninetails::detect_orientation_multiple(
+#'   sequence_files = my_seq_files, num_cores = 4
+#' )
+#' ninetails::launch_cdna_signal_browser(
+#'   dorado_summary   = "/path/to/dorado_summary.txt",
+#'   pod5_dir         = "/path/to/pod5/",
+#'   orientation_data = classified
+#' )
+#' }
+launch_cdna_signal_browser <- function(dorado_summary,
+                                       pod5_dir,
+                                       orientation_data,
+                                       ...) {
+
+  for (pkg in c("shiny", "ggplot2")) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      stop("Package '", pkg, "' required. Install with: install.packages('", pkg, "')",
+           call. = FALSE)
+    }
+  }
+
+  # #### pod5_dir ####
+  if (missing(pod5_dir)) {
+    stop("pod5_dir is required.", call. = FALSE)
+  }
+  assert_condition(is_string(pod5_dir),
+                   "pod5_dir must be a character string")
+  assert_dir_exists(pod5_dir, "pod5_dir")
+
+  # #### dorado_summary ####
+  if (missing(dorado_summary)) {
+    stop("dorado_summary is required.", call. = FALSE)
+  }
+  if (is.character(dorado_summary) && length(dorado_summary) == 1) {
+    assert_file_exists(dorado_summary, "dorado_summary")
+    summary_df <- vroom::vroom(dorado_summary, show_col_types = FALSE)
+  } else if (is.data.frame(dorado_summary)) {
+    summary_df <- as.data.frame(dorado_summary)
+  } else {
+    stop("dorado_summary must be a file path or data frame.", call. = FALSE)
+  }
+
+  # Handle Dorado >=1.4.0 column rename: input_filename -> filename
+  if (!"filename" %in% colnames(summary_df) &&
+      "input_filename" %in% colnames(summary_df)) {
+    summary_df$filename <- summary_df$input_filename
+  }
+
+  required_summary_cols <- c("read_id", "filename",
+                             "poly_tail_start", "poly_tail_end")
+  missing_summary_cols <- setdiff(required_summary_cols, colnames(summary_df))
+  if (length(missing_summary_cols) > 0) {
+    stop("dorado_summary is missing required columns: ",
+         paste(missing_summary_cols, collapse = ", "), call. = FALSE)
+  }
+
+  # #### orientation_data ####
+  if (missing(orientation_data)) {
+    stop(
+      "orientation_data is required. Pass a file path or the in-memory ",
+      "output of detect_orientation_multiple().",
+      call. = FALSE)
+  }
+  if (is.character(orientation_data) && length(orientation_data) == 1) {
+    assert_file_exists(orientation_data, "orientation_data")
+    orient_df <- vroom::vroom(orientation_data, show_col_types = FALSE)
+  } else if (is.data.frame(orientation_data)) {
+    orient_df <- as.data.frame(orientation_data)
+  } else {
+    stop("orientation_data must be a file path or data frame.", call. = FALSE)
+  }
+
+  required_orient_cols <- c("read_id", "tail_type")
+  missing_orient_cols <- setdiff(required_orient_cols, colnames(orient_df))
+  if (length(missing_orient_cols) > 0) {
+    stop("orientation_data is missing required columns: ",
+         paste(missing_orient_cols, collapse = ", "), call. = FALSE)
+  }
+
+  optional_cols <- intersect(c("reference", "sequence"), colnames(orient_df))
+  keep_cols <- c("read_id", "tail_type", optional_cols)
+  orient_subset <- orient_df[, keep_cols, drop = FALSE]
+
+  # #### Join ####
+  joined_df <- dplyr::left_join(summary_df, orient_subset, by = "read_id")
+
+  unmatched <- sum(is.na(joined_df$tail_type))
+  if (unmatched > 0) {
+    warning(sprintf(
+      paste0("%d / %d reads in dorado_summary had no matching tail_type ",
+             "in orientation_data; they will be displayed as 'unidentified'."),
+      unmatched, nrow(joined_df)), call. = FALSE)
+    joined_df$tail_type[is.na(joined_df$tail_type)] <- "unidentified"
+  }
+
+  cat(sprintf(
+    "[%s] cDNA browser loaded %s reads (%d polyA, %d polyT, %d unidentified)\n",
+    format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    format(nrow(joined_df), big.mark = ","),
+    sum(joined_df$tail_type == "polyA",        na.rm = TRUE),
+    sum(joined_df$tail_type == "polyT",        na.rm = TRUE),
+    sum(joined_df$tail_type == "unidentified", na.rm = TRUE)))
+
+  shiny::shinyOptions(
+    ninetails.cdna_data     = joined_df,
+    ninetails.cdna_pod5_dir = pod5_dir
+  )
+
+  app_dir <- system.file("app_cdna", package = "ninetails")
+  if (!nzchar(app_dir) || !dir.exists(app_dir)) {
+    stop("App not found. Expected at: inst/app_cdna/", call. = FALSE)
   }
 
   shiny::runApp(app_dir, ...)

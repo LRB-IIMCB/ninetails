@@ -872,7 +872,9 @@ detect_orientation_single <- function(sequence) {
 #' @return Data frame/tibble containing all sequences with added tail_type column
 #' ("polyA", "polyT", or "unidentified") based on Dorado-style edit distance matching
 #' of SSP and VNP primers with score and separation validation.
-#' The tail_type column is also written back to the original sequence files for persistence.
+#' The augmented table (with tail_type) is also written to a sibling
+#' "<name>_classified.tsv" file for persistence; the original input files are
+#' left untouched.
 #' @export
 #'
 #' @examples
@@ -959,9 +961,16 @@ detect_orientation_multiple <- function(sequence_files,
       cli_log(sprintf("Classification complete: %d polyA, %d polyT, %d unidentified",
                       file_polya, file_polyt, file_unidentified), "INFO")
 
-      # Write back to original file with tail_type column
-      vroom::vroom_write(sequence_data, current_file, delim = "\t")
-      cli_log(sprintf("Updated %s with tail_type column", basename(current_file)), "INFO")
+      # Persist results WITHOUT mutating the input: write the augmented table
+      # (with tail_type) to a sibling "<name>_classified.tsv". Overwriting the
+      # original sequence file risks corrupting user inputs on partial failure
+      # and makes re-runs non-idempotent (re-classifying an already-tagged file)
+      classified_file <- file.path(
+        dirname(current_file),
+        paste0(tools::file_path_sans_ext(basename(current_file)), "_classified.tsv")
+      )
+      vroom::vroom_write(sequence_data, classified_file, delim = "\t")
+      cli_log(sprintf("Wrote classified sequences to %s", basename(classified_file)), "INFO")
 
       # Add to collection
       all_classified_sequences <- dplyr::bind_rows(all_classified_sequences, sequence_data)
@@ -1668,9 +1677,6 @@ create_outputs_dorado_cdna <- function(dorado_summary_dir,
       moved_chunks_table <- moved_chunks_table[!is.na(moved_chunks_table$centr_signal_pos), ]
 
       if (nrow(moved_chunks_table) > 0) {
-        # Clean chunkname
-        moved_chunks_table$chunkname <- gsub("chunk_\\d+\\*", "", moved_chunks_table$chunkname)
-
         # Create position list and merge with summary
         non_a_position_list <- moved_chunks_table[, c("read_id", "chunkname")]
         non_a_position_list <- merge(non_a_position_list,
@@ -1863,7 +1869,7 @@ merge_cdna_results <- function(polya_results = NULL,
       polya_classes$tail_type <- "polyA"
     }
 
-    merged_read_classes <- rbind(merged_read_classes, polya_classes)
+    merged_read_classes <- dplyr::bind_rows(merged_read_classes, polya_classes)
     cli_log(sprintf("Added %d polyA read classifications", nrow(polya_classes)), "INFO")
   } else {
     cli_log("No polyA read classifications to merge", "INFO")
@@ -1878,7 +1884,7 @@ merge_cdna_results <- function(polya_results = NULL,
       polyt_classes$tail_type <- "polyT"
     }
 
-    merged_read_classes <- rbind(merged_read_classes, polyt_classes)
+    merged_read_classes <- dplyr::bind_rows(merged_read_classes, polyt_classes)
     cli_log(sprintf("Added %d polyT read classifications", nrow(polyt_classes)), "INFO")
   } else {
     cli_log("No polyT read classifications to merge", "INFO")
@@ -1902,7 +1908,7 @@ merge_cdna_results <- function(polya_results = NULL,
       polya_mods$tail_type <- "polyA"
     }
 
-    merged_modifications <- rbind(merged_modifications, polya_mods)
+    merged_modifications <- dplyr::bind_rows(merged_modifications, polya_mods)
     cli_log(sprintf("Added %d polyA modifications", nrow(polya_mods)), "INFO")
   } else {
     cli_log("No polyA modifications to merge", "INFO")
@@ -1917,7 +1923,7 @@ merge_cdna_results <- function(polya_results = NULL,
       polyt_mods$tail_type <- "polyT"
     }
 
-    merged_modifications <- rbind(merged_modifications, polyt_mods)
+    merged_modifications <- dplyr::bind_rows(merged_modifications, polyt_mods)
     cli_log(sprintf("Added %d polyT modifications", nrow(polyt_mods)), "INFO")
   } else {
     cli_log("No polyT modifications to merge", "INFO")

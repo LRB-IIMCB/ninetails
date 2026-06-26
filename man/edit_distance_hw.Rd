@@ -13,7 +13,7 @@ edit_distance_hw(query, target)
 within.}
 }
 \value{
-Integer. The minimum Damerau–Levenshtein edit distance found across
+Integer. The minimum Damerau-Levenshtein edit distance found across
   all possible sliding window alignments.
 }
 \description{
@@ -23,7 +23,7 @@ The query is aligned to all possible substrings of the target of equal
 length, and the minimum distance across all alignments is returned.
 }
 \details{
-Edit distance is computed using the Damerau–Levenshtein distance, as
+Edit distance is computed using the Damerau-Levenshtein distance, as
 implemented by \code{\link[utils]{adist}}, which accounts for insertions,
 deletions, substitutions, and transpositions.
 

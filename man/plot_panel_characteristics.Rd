@@ -35,7 +35,7 @@ are reported from the 5' end of the poly(A) tail. If \code{FALSE},
 positions are recalculated relative to the 3' end.}
 }
 \value{
-A patchwork-assembled \code{ggplot} object containing panels A–E.
+A patchwork-assembled \code{ggplot} object containing panels A-E.
 }
 \description{
 Generates a five-panel summary visualization describing read categories,
@@ -45,13 +45,13 @@ characterization of a given pool of reads (representing particular transcript
 or set of transcripts, respectively).
 }
 \details{
-The function assembles panels A–E into a patchwork layout:
+The function assembles panels A-E into a patchwork layout:
 \itemize{
-  \item \strong{A} – Read categories (blank, non-A containing, total)
-  \item \strong{B} – Counts of reads containing C, G, or U residues
-  \item \strong{C} – Distribution of poly(A) tail lengths
-  \item \strong{D} – Normalized distribution of non-A positions
-  \item \strong{E} – Raw distribution of non-A positions
+  \item \strong{A} - Read categories (blank, non-A containing, total)
+  \item \strong{B} - Counts of reads containing C, G, or U residues
+  \item \strong{C} - Distribution of poly(A) tail lengths
+  \item \strong{D} - Normalized distribution of non-A positions
+  \item \strong{E} - Raw distribution of non-A positions
 }
 }
 \section{Internal column filtering}{

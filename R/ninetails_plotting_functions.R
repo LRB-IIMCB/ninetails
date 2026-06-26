@@ -1844,13 +1844,13 @@ plot_tail_distribution <- function(input_data,
 #' characterization of a given pool of reads (representing particular transcript
 #' or set of transcripts, respectively).
 #'
-#' The function assembles panels A–E into a patchwork layout:
+#' The function assembles panels A-E into a patchwork layout:
 #' \itemize{
-#'   \item \strong{A} – Read categories (blank, non-A containing, total)
-#'   \item \strong{B} – Counts of reads containing C, G, or U residues
-#'   \item \strong{C} – Distribution of poly(A) tail lengths
-#'   \item \strong{D} – Normalized distribution of non-A positions
-#'   \item \strong{E} – Raw distribution of non-A positions
+#'   \item \strong{A} - Read categories (blank, non-A containing, total)
+#'   \item \strong{B} - Counts of reads containing C, G, or U residues
+#'   \item \strong{C} - Distribution of poly(A) tail lengths
+#'   \item \strong{D} - Normalized distribution of non-A positions
+#'   \item \strong{E} - Raw distribution of non-A positions
 #' }
 #'
 #' @section Internal column filtering:
@@ -1959,7 +1959,7 @@ plot_tail_distribution <- function(input_data,
 #' are reported from the 5' end of the poly(A) tail. If \code{FALSE},
 #' positions are recalculated relative to the 3' end.
 #'
-#' @return A patchwork-assembled \code{ggplot} object containing panels A–E.
+#' @return A patchwork-assembled \code{ggplot} object containing panels A-E.
 #'
 #' @seealso
 #' \code{\link{merge_nonA_tables}},
@@ -2562,7 +2562,7 @@ plot_panel_characteristics <- function(input_residue_data,
   EE
   "
 
-  #in ggplot2 ≥ 4.0.0, + is now S7-based, and patchwork no longer hijacks it
+  #in ggplot2 >= 4.0.0, + is now S7-based, and patchwork no longer hijacks it
   # the same way unless explicitly attached
   final <- patchwork::wrap_plots(
     general_read_categories,

@@ -6,7 +6,6 @@
 <a href="https://www.microsoft.com/" title="Go to Microsoft homepage"><img src="https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white" alt="OS - Windows"></a>
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13309819.svg)](https://doi.org/10.5281/zenodo.13309819)
 [![pkgdown](https://img.shields.io/badge/docs-pkgdown-blue)](https://LRB-IIMCB.github.io/ninetails/)
-
 [![Codecov test coverage](https://codecov.io/gh/LRB-IIMCB/ninetails/graph/badge.svg)](https://app.codecov.io/gh/LRB-IIMCB/ninetails)
 <!-- badges: end -->
 

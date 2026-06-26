@@ -1,19 +1,19 @@
 ################################################################################
-# Ninetails Dashboard — Universal Shiny Server deployment wrapper
+# Ninetails Dashboard - Universal Shiny Server deployment wrapper
 #
 # Auto-detects whether the YAML config describes Dorado DRS or Guppy legacy
 # data based on the fields present in the first sample entry:
-#   - pod5_dir or dorado_summary  →  Dorado DRS app
-#   - workspace or nanopolish     →  Guppy legacy app
+#   - pod5_dir or dorado_summary  ->  Dorado DRS app
+#   - workspace or nanopolish     ->  Guppy legacy app
 #
 # Place this file as app.R in the Shiny Server app directory alongside
 # config.yml and a www/ folder with static assets.
 #
 # Directory structure:
 #   /srv/shiny-server/my_analysis/
-#   ├── app.R           (this file)
-#   ├── config.yml      (YAML configuration)
-#   └── www/            (symlink or copy from inst/app/www/ or inst/app_guppy/www/)
+#   +-- app.R           (this file)
+#   +-- config.yml      (YAML configuration)
+#   +-- www/            (symlink or copy from inst/app/www/ or inst/app_guppy/www/)
 #
 # Setup:
 #   1. Install ninetails and all Suggests on the server
@@ -27,7 +27,7 @@
 
 
 ################################################################################
-# DEPLOYMENT CONFIGURATION — edit these before launching
+# DEPLOYMENT CONFIGURATION - edit these before launching
 ################################################################################
 
 # Path to YAML config (relative to this app.R directory)
@@ -55,7 +55,7 @@ if (!is.null(PYTHON_PATH) && nzchar(PYTHON_PATH)) {
   cat(paste0("[", Sys.time(), "] Python path set to: ", PYTHON_PATH, "\n"))
 }
 
-# ---- Validate config ----
+# #### Validate config ####
 
 if (!file.exists(config_path)) {
   stop("config.yml not found in app directory: ", getwd(),
@@ -68,7 +68,7 @@ if (is.null(cfg$samples) || length(cfg$samples) == 0) {
   stop("No samples found in config.yml", call. = FALSE)
 }
 
-# ---- Auto-detect pipeline ----
+# #### Auto-detect pipeline ####
 
 first_sample <- cfg$samples[[1]]
 is_dorado <- !is.null(first_sample$pod5_dir) || !is.null(first_sample$dorado_summary)
@@ -83,13 +83,13 @@ if (is_dorado) {
   app_name <- "app_guppy"
   cat(paste0("[", Sys.time(), "] Detected Guppy legacy pipeline\n"))
 } else {
-  # No signal fields — detect from class/residue data only
+  # No signal fields - detect from class/residue data only
   pipeline <- "dorado"
   app_name <- "app"
   cat(paste0("[", Sys.time(), "] No signal config detected, defaulting to Dorado app\n"))
 }
 
-# ---- Load data ----
+# #### Load data ####
 
 class_list   <- list()
 residue_list <- list()
@@ -174,7 +174,7 @@ cat(paste0("[", Sys.time(), "] Loaded ",
            format(nrow(class_data), big.mark = ","), " reads from ",
            length(unique(class_data$sample_name)), " samples.\n"))
 
-# ---- Pass data to app via shinyOptions ----
+# #### Pass data to app via shinyOptions ####
 
 shiny::shinyOptions(
   ninetails.class_data    = class_data,
@@ -187,7 +187,7 @@ shiny::shinyOptions(
   ninetails.basecall_group = BASECALL_GROUP
 )
 
-# ---- Source the appropriate app ----
+# #### Source the appropriate app ####
 
 app_dir <- system.file(app_name, package = "ninetails")
 if (!nzchar(app_dir) || !dir.exists(app_dir)) {

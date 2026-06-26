@@ -78,7 +78,7 @@
 #' # Single-sample: all tabs
 #' ninetails::launch_signal_browser_guppy(
 #'   nanopolish_file = "/path/to/nanopolish_output.tsv",
-#'   sequencing_summary_file  = "/path/to/sequencing_summary.txt",
+#'   sequencing_summary_file = "/path/to/sequencing_summary.txt",
 #'   workspace = "/path/to/fast5/",
 #'   class_file = "/path/to/read_classes.txt",
 #'   residue_file = "/path/to/nonadenosine_residues.txt"
@@ -124,7 +124,7 @@ launch_signal_browser_guppy <- function(config = NULL,
       stop("No samples found in config file.", call. = FALSE)
     }
 
-    class_list   <- list()
+    class_list <- list()
     residue_list <- list()
 
     cat(paste0("[", Sys.time(), "] Loading ", length(cfg$samples), " samples...\n"))
@@ -132,7 +132,7 @@ launch_signal_browser_guppy <- function(config = NULL,
     for (sid in names(cfg$samples)) {
       s <- cfg$samples[[sid]]
       sname <- if (!is.null(s$sample_name)) s$sample_name else sid
-      grp   <- if (!is.null(s$group)) s$group else "ungrouped"
+      grp <- if (!is.null(s$group)) s$group else "ungrouped"
 
       if (!is.null(s$class_path) && file.exists(s$class_path)) {
         tryCatch({
@@ -253,7 +253,7 @@ launch_signal_browser_guppy <- function(config = NULL,
   # Pass everything via shinyOptions
   shiny::shinyOptions(
     ninetails.class_data = class_data,
-    ninetails.residue_data  = residue_data,
+    ninetails.residue_data = residue_data,
     ninetails.merged_data = merged_data,
     ninetails.signal_config = signal_config,
     ninetails.basecall_group = basecall_group

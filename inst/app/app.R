@@ -20,21 +20,21 @@
 # Docs:     vignette("shiny_app", package = "ninetails")
 #
 # Tabs:
-#   1. Classification — value boxes (samples, transcripts, reads,
+#   1. Classification - value boxes (samples, transcripts, reads,
 #      blank, decorated) + plot_class_counts + plot_nonA_abundance
 #      in responsive flex layout with togglable descriptions
-#   2. Residues — plot_residue_counts + per-sample rug density plots
+#   2. Residues - plot_residue_counts + per-sample rug density plots
 #      (C/G/U, max 1000 points each) + summary DT table
-#   3. Poly(A) length — plot_tail_distribution with condition filter,
+#   3. Poly(A) length - plot_tail_distribution with condition filter,
 #      palette picker, central tendency, reset button, and summary
 #      statistics table (n, mean, median, SD, SEM)
-#   4. Signal Viewer — sub-tabs: Static Viewer (ggplot2) / Dynamic
+#   4. Signal Viewer - sub-tabs: Static Viewer (ggplot2) / Dynamic
 #      Explorer (plotly) with non-A residue overlay, read navigation,
 #      and filterable read list
-#   5. Download — configurable report generator with section checkboxes,
+#   5. Download - configurable report generator with section checkboxes,
 #      plot settings, per-transcript sub-reports (up to 3), and signal
 #      plots (5 random reads per category per sample)
-#   6. About — package info, citation, IIMCB logo, links, credits
+#   6. About - package info, citation, IIMCB logo, links, credits
 #
 # Static assets (inst/app/www/):
 #   - logo.png      (copy from man/figures/logo.png)
@@ -273,7 +273,7 @@ ui <- shiny::fluidPage(
     ")) # tags$style
   ), # tags$head
 
-  # ---- Header bar ----
+  # #### Header bar ####
   shiny::div(class = "header",
              htmltools::img(src = "logo.png", height = 45, width = 45, alt = "ninetails"),
              shiny::div(
@@ -285,7 +285,7 @@ ui <- shiny::fluidPage(
              ) # div title
   ), # div header
 
-  # ---- Main tabs ----
+  # #### Main tabs ####
   shiny::tabsetPanel(
     id = "main_tabs", type = "tabs",
 
@@ -510,7 +510,7 @@ ui <- shiny::fluidPage(
     shiny::tabPanel("Signal Viewer", shiny::br(),
                     shiny::fluidRow(
 
-                      # ---- Left panel ----
+                      # #### Left panel ####
                       shiny::column(3,
                                     shiny::div(class = "card",
                                                shiny::h4("Data"),
@@ -555,7 +555,7 @@ ui <- shiny::fluidPage(
                                     ) # div card filters
                       ), # column 3
 
-                      # ---- Right panel with sub-tabs ----
+                      # #### Right panel with sub-tabs ####
                       shiny::column(9,
                                     shiny::tabsetPanel(id = "signal_sub_tabs", type = "tabs",
 
@@ -1137,7 +1137,7 @@ server <- function(input, output, session) {
           rpt_palette <- input$rpt_palette %||% "unova"
           rpt_transcripts <- input$rpt_transcripts  # NULL or character vector
 
-          # ---- HTML header ----
+          # #### HTML header ####
           html <- c(
             "<!DOCTYPE html><html><head>",
             "<meta charset='UTF-8'>",
@@ -1171,7 +1171,7 @@ server <- function(input, output, session) {
 
           shiny::incProgress(0.05, detail = "Global plots...")
 
-          # ---- Report descriptions (reusable) ----
+          # #### Report descriptions (reusable) ####
           desc_class <- paste0(
             "Read classification summary. Reads are categorized as ",
             "<b>decorated</b> (containing non-adenosine residues), ",
@@ -1200,7 +1200,7 @@ server <- function(input, output, session) {
             "Density distribution of poly(A) tail lengths across samples ",
             "or experimental conditions.")
 
-          # ---- Global classification ----
+          # #### Global classification ####
           if (want_class) {
             html <- .add_plot_section(html, "Read Classification",
                                       ninetails::plot_class_counts(class_data = class_data,
@@ -1209,7 +1209,7 @@ server <- function(input, output, session) {
             html <- c(html, paste0("<div class='note'>", desc_class, "</div>"))
           }
 
-          # ---- Global abundance ----
+          # #### Global abundance ####
           if (want_abundance) {
             html <- .add_plot_section(html, "Non-A Abundance",
                                       ninetails::plot_nonA_abundance(residue_data = residue_data,
@@ -1217,7 +1217,7 @@ server <- function(input, output, session) {
             html <- c(html, paste0("<div class='note'>", desc_abundance, "</div>"))
           }
 
-          # ---- Global residue frequency ----
+          # #### Global residue frequency ####
           if (want_residue) {
             html <- .add_plot_section(html, "Residue Frequency",
                                       ninetails::plot_residue_counts(residue_data = residue_data,
@@ -1225,7 +1225,7 @@ server <- function(input, output, session) {
             html <- c(html, paste0("<div class='note'>", desc_residue, "</div>"))
           }
 
-          # ---- Global rug density plots ----
+          # #### Global rug density plots ####
           if (want_rug) {
             shiny::incProgress(0.10, detail = "Rug density plots...")
 
@@ -1285,7 +1285,7 @@ server <- function(input, output, session) {
             } # for sn
           } # want_rug
 
-          # ---- Global poly(A) distribution ----
+          # #### Global poly(A) distribution ####
           if (want_polya) {
             shiny::incProgress(0.05, detail = "Poly(A) distribution...")
 
@@ -1311,7 +1311,7 @@ server <- function(input, output, session) {
             }, error = function(e) NULL)
           }
 
-          # ---- Per-transcript sections ----
+          # #### Per-transcript sections ####
           if (!is.null(rpt_transcripts) && length(rpt_transcripts) > 0) {
             shiny::incProgress(0.10, detail = "Per-transcript sections...")
 
@@ -1380,7 +1380,7 @@ server <- function(input, output, session) {
             } # for tr
           } # per-transcript
 
-          # ---- Signal plots (one per row, full width) ----
+          # #### Signal plots (one per row, full width) ####
           if (want_signals) {
             shiny::incProgress(0.15, detail = "Signal plots...")
 
@@ -1519,7 +1519,7 @@ server <- function(input, output, session) {
   loaded_signal_residue <- shiny::reactiveVal(NULL)
   signal_error          <- shiny::reactiveVal(NULL)
 
-  # ---- Data loading ----
+  # #### Data loading ####
 
   # Helper: enrich dorado summary with class and comments from class_data
   # (dorado summary lacks these columns; needed for decoration status filter)
@@ -1626,7 +1626,7 @@ server <- function(input, output, session) {
     })
   }
 
-  # ---- Active pod5 dir ----
+  # #### Active pod5 dir ####
   active_pod5_dir <- shiny::reactive({
     if (length(signal_config) > 0 && names(signal_config)[1] != "single") {
       s <- signal_config[[input$signal_sample]]
@@ -1638,7 +1638,7 @@ server <- function(input, output, session) {
     }
   })
 
-  # ---- Status display ----
+  # #### Status display ####
   output$signal_data_status <- shiny::renderUI({
     err <- signal_error(); data <- loaded_signal_data()
     if (!is.null(err))
@@ -1649,7 +1649,7 @@ server <- function(input, output, session) {
                       shiny::tags$strong("Loaded: "), format(nrow(data), big.mark = ","), " reads")
   })
 
-  # ---- Dynamic filters ----
+  # #### Dynamic filters ####
   output$genome_filter_ui <- shiny::renderUI({
     data <- loaded_signal_data(); shiny::req(data)
     if ("alignment_genome" %in% names(data)) {
@@ -1667,7 +1667,7 @@ server <- function(input, output, session) {
     }
   })
 
-  # ---- Filtered reads ----
+  # #### Filtered reads ####
   sig_filtered_data <- shiny::reactive({
     data <- loaded_signal_data(); shiny::req(data)
     if (!is.null(input$polya_length_range) && "poly_tail_length" %in% names(data))
@@ -1692,7 +1692,7 @@ server <- function(input, output, session) {
                   poly_tail_start > 0, poly_tail_end > poly_tail_start)
   })
 
-  # ---- Read selection ----
+  # #### Read selection ####
   output$read_selection_ui <- shiny::renderUI({
     data <- sig_filtered_data()
     if (is.null(data) || nrow(data) == 0) return(shiny::helpText("No reads match filters."))
@@ -1710,7 +1710,7 @@ server <- function(input, output, session) {
                                   selected = as.character(data$read_id[1]), server = TRUE)
   })
 
-  # ---- Navigation ----
+  # #### Navigation ####
   output$read_nav_buttons <- shiny::renderUI({
     data <- sig_filtered_data()
     if (is.null(data) || nrow(data) == 0) return(NULL)
@@ -1744,7 +1744,7 @@ server <- function(input, output, session) {
                   paste0("Showing ", nrow(data), " of ", nrow(total), " reads"))
   })
 
-  # ---- Selected read + residue ----
+  # #### Selected read + residue ####
   selected_read <- shiny::reactive({
     data <- sig_filtered_data(); shiny::req(data, input$selected_read_id)
     ri <- dplyr::filter(data, read_id == input$selected_read_id)
@@ -1760,7 +1760,7 @@ server <- function(input, output, session) {
     if (nrow(rr) == 0) NULL else rr
   })
 
-  # ---- Signal extraction ----
+  # #### Signal extraction ####
   signal_data <- shiny::reactive({
     ri <- selected_read(); shiny::req(ri)
     pd <- active_pod5_dir()
@@ -1796,7 +1796,7 @@ server <- function(input, output, session) {
   output$signal_loaded <- shiny::reactive({ !is.null(signal_data()) })
   shiny::outputOptions(output, "signal_loaded", suspendWhenHidden = FALSE)
 
-  # ---- Read info helper ----
+  # #### Read info helper ####
   .render_read_info <- function(df, read_res) {
     cc <- attr(df, "comments"); ct <- NULL
     if (!is.null(cc) && length(cc) == 1 && !is.na(cc)) {
@@ -1836,7 +1836,7 @@ server <- function(input, output, session) {
   output$read_info_explorer <- shiny::renderUI({
     df <- signal_data(); shiny::req(df); .render_read_info(df, selected_residue()) })
 
-  # ---- Static plots ----
+  # #### Static plots ####
 
   # Helper: build non-A overlay layers without relying on internal function
   # (avoids alpha/RGB issues on some server graphics devices)
@@ -1927,7 +1927,7 @@ server <- function(input, output, session) {
         plot.subtitle = ggplot2::element_text(color = "#666666", size = 11))
   })
 
-  # ---- Plotly explorer ----
+  # #### Plotly explorer ####
   output$interactive_signal_plot <- plotly::renderPlotly({
     df <- signal_data(); shiny::req(df)
     ps <- attr(df, "polya_start"); pe <- attr(df, "polya_end")

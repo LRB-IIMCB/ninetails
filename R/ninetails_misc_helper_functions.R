@@ -697,7 +697,7 @@ filter_dorado_summary <- function(dorado_summary) {
   }
 
   #These are the reads that fulfill the quality criteria for classification by Ninetails:
-  #(I) they are mapped to the reference (the alignment has a direction, either + or –, not a placeholder *),
+  #(I) they are mapped to the reference (the alignment has a direction, either + or -, not a placeholder *),
   #(II) the mapping quality is greater than 0,
   #(III) poly(A) tail coordinates are correctly indicated (the poly(A) start
   #cannot be 0 in the signal because, in DRS, the adapter region passes through the pore first),
@@ -990,7 +990,7 @@ reverse_complement <- function(sequence) {
 #' The query is aligned to all possible substrings of the target of equal
 #' length, and the minimum distance across all alignments is returned.
 #'
-#' Edit distance is computed using the Damerau–Levenshtein distance, as
+#' Edit distance is computed using the Damerau-Levenshtein distance, as
 #' implemented by \code{\link[utils]{adist}}, which accounts for insertions,
 #' deletions, substitutions, and transpositions.
 #'
@@ -1003,7 +1003,7 @@ reverse_complement <- function(sequence) {
 #' @param target Character string. The target sequence window to search
 #'   within.
 #'
-#' @return Integer. The minimum Damerau–Levenshtein edit distance found across
+#' @return Integer. The minimum Damerau-Levenshtein edit distance found across
 #'   all possible sliding window alignments.
 #'
 #' @seealso
@@ -1056,4 +1056,110 @@ edit_distance_hw <- function(query, target) {
   min_dist <- min(min_dist, full_dist)
 
   return(min_dist)
+}
+
+
+#' Infer cDNA signal layout from pre- and post-tail region sizes
+#'
+#' Independent visual cross-check of the orientation algorithm
+#' (\code{\link{detect_orientation_single}}). Compares the sizes of the
+#' pre-tail and post-tail regions of the raw signal; the larger side is
+#' assumed to be the transcript body. Per the empirical orientation
+#' finding, cDNA polyA reads carry the transcript body before the tail
+#' (body-first), while cDNA polyT reads carry it after (adapter-first).
+#'
+#' Returns \code{"ambiguous"} when either region is shorter than a minimum
+#' size guard, or when the larger / smaller ratio is below a strictness
+#' threshold. Both guards are deliberate - the function is intended as a
+#' strict secondary check, so borderline reads are flagged for manual
+#' review rather than silently committed to one orientation.
+#'
+#' Used by \code{\link{launch_cdna_signal_browser}} to colour signal
+#' regions and surface algorithm-vs-layout disagreements.
+#'
+#' @param poly_tail_start Integer. 1-based start index of the poly tail in
+#'   signal coordinates.
+#' @param poly_tail_end Integer. 1-based end index of the poly tail in
+#'   signal coordinates.
+#' @param signal_length Integer. Total length of the raw signal vector.
+#' @param min_region_samples Integer. Minimum acceptable pre- or post-tail
+#'   region size in samples. Defaults to 100.
+#' @param strictness_ratio Numeric. Required ratio of larger to smaller
+#'   region for a non-ambiguous call. Defaults to 1.5.
+#'
+#' @return Character string: \code{"polyA_layout"} (body | tail | adapter),
+#'   \code{"polyT_layout"} (adapter | tail | body), or \code{"ambiguous"}.
+#'
+#' @seealso \code{\link{cdna_layout_agreement_marker}},
+#'   \code{\link{launch_cdna_signal_browser}}.
+#'
+#' @export
+infer_cdna_layout <- function(poly_tail_start,
+                              poly_tail_end,
+                              signal_length,
+                              min_region_samples = 100L,
+                              strictness_ratio = 1.5) {
+
+  if (is.na(poly_tail_start) || is.na(poly_tail_end) || is.na(signal_length)) {
+    return("ambiguous")
+  }
+
+  pre_tail  <- poly_tail_start - 1L
+  post_tail <- signal_length - poly_tail_end
+
+  if (pre_tail < min_region_samples || post_tail < min_region_samples) {
+    return("ambiguous")
+  }
+
+  ratio <- max(pre_tail, post_tail) / min(pre_tail, post_tail)
+  if (ratio < strictness_ratio) {
+    return("ambiguous")
+  }
+
+  if (pre_tail > post_tail) {
+    return("polyA_layout")
+  } else {
+    return("polyT_layout")
+  }
+}
+
+
+#' Agreement marker between the orientation algorithm and the layout inference
+#'
+#' Pairs the \code{tail_type} call from
+#' \code{\link{detect_orientation_single}} with the layout call from
+#' \code{\link{infer_cdna_layout}} and returns a single-character marker
+#' so disagreements stand out in the cDNA validation browser.
+#'
+#' @param algo_tail_type Character. The \code{tail_type} value from the
+#'   orientation algorithm: \code{"polyA"}, \code{"polyT"}, or
+#'   \code{"unidentified"}.
+#' @param inferred_layout Character. The value returned by
+#'   \code{\link{infer_cdna_layout}}: \code{"polyA_layout"},
+#'   \code{"polyT_layout"}, or \code{"ambiguous"}.
+#'
+#' @return Single-character string. One of: check mark
+#'   (Unicode U+2713) for agreement, not-equal sign (U+2260) for
+#'   disagreement, question mark for layout ambiguity, or em dash
+#'   (U+2014) for unidentified. Returned as Unicode escapes in source
+#'   (\code{"\\u2713"}, \code{"\\u2260"}, \code{"\\u2014"}) for ASCII
+#'   portability.
+#'
+#' @seealso \code{\link{infer_cdna_layout}},
+#'   \code{\link{launch_cdna_signal_browser}}.
+#'
+#' @export
+cdna_layout_agreement_marker <- function(algo_tail_type, inferred_layout) {
+
+  if (is.na(algo_tail_type) || algo_tail_type == "unidentified") {
+    return("-")  # em dash
+  }
+  if (is.na(inferred_layout) || inferred_layout == "ambiguous") {
+    return("?")
+  }
+  if ((algo_tail_type == "polyA" && inferred_layout == "polyA_layout") ||
+      (algo_tail_type == "polyT" && inferred_layout == "polyT_layout")) {
+    return("=")  # check mark
+  }
+  return("x")    # not equal
 }

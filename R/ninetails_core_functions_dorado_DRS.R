@@ -188,8 +188,8 @@ process_dorado_summary <- function(
 #'   \item \strong{Input validation}: Checks for required columns and valid data
 #'   \item \strong{Read filtering}: Excludes reads with:
 #'     \itemize{
-#'       \item poly_tail_length â‰¤ 10 (if column exists)
-#'       \item poly_tail_start â‰¤ 0 (invalid coordinates)
+#'       \item poly_tail_length <= 10 (if column exists)
+#'       \item poly_tail_start <= 0 (invalid coordinates)
 #'     }
 #'   \item \strong{Python subprocess execution}: Delegates extraction to an optimized
 #'         Python script that:
@@ -808,14 +808,14 @@ create_tail_features_list_dorado <- function(signal_list, num_cores) {
 #'   * retrieving them from BAM files is computationally expensive
 #'   * processing is non-intuitive
 #'
-#' Instead, only pseudomoves are considered. As a safeguard against Doradoâ€™s
+#' Instead, only pseudomoves are considered. As a safeguard against Dorado's
 #' tendency to extend poly(A) boundaries into the transcript body, the last
 #' 3 pseudomove values are forced to 0. This prevents misclassification of
 #' transcript nucleotides as part of the tail.
 #'
 #' Candidate modification regions are detected by:
 #'   * run-length encoding (RLE) of the pseudomove vector
-#'   * filtering runs of pseudomoves with length â‰¥ 5
+#'   * filtering runs of pseudomoves with length >= 5
 #'
 #' Extracted fragments are padded/imputed if they extend beyond signal boundaries:
 #'   * upstream/downstream missing values (NAs) are replaced
@@ -914,7 +914,7 @@ split_tail_centered_dorado <- function(readname, tail_feature_list) {
   # For each valid run:
   # - Compute its starting position
   # - Compute chunk boundaries centered on the middle of the run
-  # - Each chunk has a fixed window size of 100 bases (Â±50 around center)
+  # - Each chunk has a fixed window size of 100 bases (+/-50 around center)
   first_filtered_positions <- cumsum(c(1, utils::head(mod_rle$lengths, -1)))[
     condition
   ]
@@ -1211,7 +1211,7 @@ create_tail_chunk_list_dorado <- function(tail_feature_list, num_cores) {
 #'   \itemize{
 #'     \item \code{centr_signal_pos}: Mean of chunk start and end positions
 #'       in signal space
-#'     \item \code{signal_length}: 0.2 Ã— (poly_tail_end - poly_tail_start)
+#'     \item \code{signal_length}: 0.2 x (poly_tail_end - poly_tail_start)
 #'       converts signal coordinates to nucleotide space
 #'     \item \code{poly_tail_length}: Total poly(A) tail length from Dorado
 #'   }
@@ -1351,7 +1351,7 @@ create_outputs_dorado <- function(dorado_summary_dir,
   # Load filtered dorado summary parts and reuse it
   ################################################################################
   # these contain only reads that fulfill classification criteria by Ninetails
-  # (I) they are mapped to the reference (the alignment has a direction, either + or â€“, not a placeholder *),
+  # (I) they are mapped to the reference (the alignment has a direction, either + or -, not a placeholder *),
   # (II) the mapping quality is greater than 0,
   # (III) poly(A) tail coordinates are correctly indicated (the poly(A) start cannot be 0 in the signal
   # because, in DRS, the adapter region passes through the pore first),

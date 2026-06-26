@@ -48,9 +48,9 @@ user-defined factors (e.g. sample, condition).
 \details{
 The distinction between \strong{counts} and \strong{hits}:
 \itemize{
-  \item \strong{counts} — number of reads containing at least one
+  \item \strong{counts} - number of reads containing at least one
     occurrence of a given non-A residue type.
-  \item \strong{hits} — total number of occurrences of a given non-A
+  \item \strong{hits} - total number of occurrences of a given non-A
     residue type across all reads (a single read may contribute
     multiple hits).
 }

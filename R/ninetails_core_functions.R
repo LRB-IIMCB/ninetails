@@ -697,6 +697,13 @@ filter_signal_by_threshold <- function(signal) {
     "Signal must be numeric. Please provide a valid argument."
   )
 
+  # guard: an empty signal cannot be analysed - the z-score loop below would
+  # iterate backwards ((window + 1):length(adjusted_signal)) and the trim step
+  # would index in reverse; return no pseudomoves so downstream yields no chunks
+  if (length(signal) == 0) {
+    return(numeric(0))
+  }
+
   # reproducibility
   set.seed(123)
 
@@ -751,8 +758,15 @@ filter_signal_by_threshold <- function(signal) {
     )
   }
 
-  # trim pseudomoves so they fit actual signal/moves
-  adjusted_pseudomoves <- pseudomoves[101:length(pseudomoves)]
+  # trim pseudomoves so they fit actual signal/moves: drop the synthetic
+  # calibration lead-in prepended above (adaptive_sampling_window points).
+  # guard against signals shorter than the lead-in, where (window + 1):length()
+  # would run backwards
+  if (length(pseudomoves) > adaptive_sampling_window) {
+    adjusted_pseudomoves <- pseudomoves[(adaptive_sampling_window + 1):length(pseudomoves)]
+  } else {
+    adjusted_pseudomoves <- numeric(0)
+  }
 
   #temporary hotfix for terminal false-positives (resegmentation model
   #- work in progress); current model was not trained on the terminal position,
@@ -760,7 +774,10 @@ filter_signal_by_threshold <- function(signal) {
   #adaptor-tail border, data at the very beginning are currently going to be
   #ignored; this is just a temporary solution, introduced to reduce
   #the bias which would be handled in more elegant way in the future releases
-  adjusted_pseudomoves[1:5] <- 0
+  n_lead <- min(5L, length(adjusted_pseudomoves))
+  if (n_lead > 0) {
+    adjusted_pseudomoves[seq_len(n_lead)] <- 0
+  }
 
   adjusted_pseudomoves <- ninetails::substitute_gaps(adjusted_pseudomoves)
 
@@ -894,6 +911,8 @@ split_tail_centered <- function(readname, tail_feature_list) {
   most_freq_vals <- as.numeric(names(sort(table(signal), decreasing = TRUE)[
     1:5
   ]))
+  # reproducibility: the imputation draws random values, so fix the seed
+  set.seed(123)
   list_1 <- lapply(list_1, function(n) {
     replace(n, is.na(n), sample(most_freq_vals, sum(is.na(n)), TRUE))
   })
@@ -1757,10 +1776,12 @@ create_outputs <- function(tail_feature_list,
   # coerce to df, add names
   non_a_position_list <- do.call("rbind.data.frame", non_a_position_list)
   chunknames <- purrr::map_depth(tail_chunk_list, 1, names) %>%
-    unlist(use.names = F)
+    unlist(use.names = FALSE)
   non_a_position_list$chunkname <- chunknames
+  # chunkname is "<readname>_<chunk_index>"; strip only the trailing
+  # "_<digits>" so read IDs containing underscores are not truncated
   non_a_position_list <- non_a_position_list %>%
-    dplyr::mutate(readname = gsub('_.*', '', chunkname))
+    dplyr::mutate(readname = sub('_[0-9]+$', '', chunkname))
   colnames(non_a_position_list)[1] <- c("centr_signal_pos")
 
   #merge data from feature list with nanopolish estimations
