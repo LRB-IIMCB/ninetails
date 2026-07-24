@@ -845,6 +845,10 @@ detect_orientation_single <- function(sequence) {
     }
 
   }, error = function(e) {
+    warning(
+      "detect_orientation_single failed on a sequence - returning 'unknown': ",
+      conditionMessage(e)
+    )
     return("unknown")
   })
 }

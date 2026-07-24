@@ -440,7 +440,7 @@ substitute_gaps <- function(pseudomoves) {
   indx <- rle_pseudomoves$lengths < 2 &
     rle_pseudomoves$values == 0 &
     c(Inf, rle_pseudomoves$values[-length(rle_pseudomoves$values)]) ==
-      c(rle_pseudomoves$values[-1], Inf)
+    c(rle_pseudomoves$values[-1], Inf)
   if (any(indx)) {
     rle_pseudomoves$values[indx] <- rle_pseudomoves$values[which(indx) - 1]
   }
@@ -1039,20 +1039,18 @@ edit_distance_hw <- function(query, target) {
     return(query_len)
   }
 
-  # Simulate HW mode by sliding query across target
+  # Simulate HW mode by sliding query across target (vectorized)
   min_dist <- .Machine$integer.max
 
-  # Slide query across target
+  # Slide query across target: all windows scored in a single adist call
   if (target_len >= query_len) {
-    for (i in 1:(target_len - query_len + 1)) {
-      window <- substr(target, i, i + query_len - 1)
-      dist <- utils::adist(query, window)[1, 1]
-      min_dist <- min(min_dist, dist)
-    }
+    starts <- seq_len(target_len - query_len + 1L)
+    windows <- substring(target, starts, starts + query_len - 1L)
+    min_dist <- min(utils::adist(query, windows)[1, ])
   }
 
-  # Also try full alignment
-  full_dist <- adist(query, target)[1, 1]
+  # Also try full alignment (covers target shorter than query)
+  full_dist <- utils::adist(query, target)[1, 1]
   min_dist <- min(min_dist, full_dist)
 
   return(min_dist)
