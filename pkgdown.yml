@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   detection: detection.html
@@ -10,7 +10,7 @@ articles:
   shiny_app: shiny_app.html
   signal_inspection: signal_inspection.html
   tailfindr: tailfindr.html
-last_built: 2026-06-26T13:21Z
+last_built: 2026-07-24T01:28Z
 urls:
   reference: https://LRB-IIMCB.github.io/ninetails/reference
   article: https://LRB-IIMCB.github.io/ninetails/articles
