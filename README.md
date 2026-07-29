@@ -16,7 +16,10 @@
 
 ## Introduction
 
-**Ninetails** detects and characterises non-adenosine nucleotides embedded within poly(A) tails of Oxford Nanopore sequencing reads. It currently supports three pipelines:
+**Ninetails** detects and characterises non-adenosine nucleotides embedded within poly(A) tails of Oxford Nanopore sequencing reads.
+It is compatible with both DRS-dedicated **SQK-RNA002** and **SQK-RNA004** chemistries. Support for cDNA is under development.
+
+Ninetails currently offers three pipelines:
 
 **WARNING! cDNA pipeline under construction! Please do not use it for now!**
 
