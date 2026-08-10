@@ -195,10 +195,3 @@ the manuscript.
 *Released 2022-08-23.*
 
 - Prerelease with major updates.
-
-------------------------------------------------------------------------
-
-*Entries for 1.0.78 and earlier were reconstructed from the published
-GitHub release notes at
-<https://github.com/LRB-IIMCB/ninetails/releases> and are necessarily
-coarser than the development section above.*
