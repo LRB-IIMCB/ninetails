@@ -1,5 +1,41 @@
 # ninetails 1.0.84 (development)
 
+## cDNA pipeline: training-set production
+
+The cDNA pipeline still runs the DRS model on both read orientations, because no
+cDNA training data existed. The Guppy training-set functions cannot produce
+them: they read multi-fast5 files and nanopolish tables, and they hardcode the
+pseudomove polarity of every residue (G peak, C/U valley), which has not been
+established for the DNA chemistry. Two sets are needed, one per orientation,
+since polyT reads carry the tail as its complement.
+
+* **`extract_tail_signals_trainingset_cdna()`** filters the Dorado summary with
+  `filter_dorado_summary()`, optionally keeps only the contigs of the labelled
+  spike-in constructs, extracts basecalled sequences from the BAM, calls the
+  orientation with `detect_orientation_single()`, and extracts winsorized,
+  downsampled tail signals from POD5 with `extract_tails_from_pod5()`. Signals
+  are returned split into `polya_signals` and `polyt_signals`, together with a
+  `read_annotation` lookup table (contig, tail type, tail length, signal
+  length). No signal reversal is applied; the orientations train separate
+  models.
+* **`create_tail_feature_list_trainingset_cdna()`** computes pseudomoves with
+  `filter_signal_by_threshold_trainingset()` and applies the residue-specific
+  retention criterion of the Guppy routine (`nucleotide = "A"` keeps reads
+  without a qualifying run, `"C"`/`"G"`/`"U"` keep reads with one). It keeps
+  the four-slot per-read layout of `extract_tail_data_trainingset()` (with
+  `NA` in the fast5 and moves slots), so `create_tail_chunk_list_trainingset()`,
+  `create_tail_chunk_list_A()`, `filter_nonA_chunks_trainingset()`,
+  `create_gaf_list()`, and `create_gaf_list_A()` are reused unchanged.
+* **`count_pseudomove_runs_trainingset_cdna()`** and
+  **`plot_tail_features_trainingset_cdna()`** are the lookups used to establish
+  the pseudomove polarity of a labelled dataset before filtering, and to inspect
+  single reads.
+* **`prepare_trainingset_cdna()`** mirrors `prepare_trainingset()` for one
+  nucleotide and one orientation; the polarity is passed explicitly as `value`
+  instead of being hardcoded.
+* The step-by-step notebook with all lookups lives in
+  `training/prepare_trainingset_cdna.Rmd` (excluded from the package build).
+
 ## cDNA pipeline: independent validation of orientation calls
 
 The cDNA pipeline classifies each read as `polyA`, `polyT` or `unidentified` by
