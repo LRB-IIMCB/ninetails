@@ -21,5 +21,10 @@ Useful links:
 \author{
 \strong{Maintainer}: Natalia Gumińska \email{nguminska@iimcb.gov.pl} (\href{https://orcid.org/0000-0002-4599-2897}{ORCID})
 
+Authors:
+\itemize{
+  \item Natalia Gumińska \email{nguminska@iimcb.gov.pl} (\href{https://orcid.org/0000-0002-4599-2897}{ORCID})
+}
+
 }
 \keyword{internal}
