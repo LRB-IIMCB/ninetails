@@ -15,7 +15,7 @@ assert_condition <- function(cond, msg = "Assertion failed") {
   if (!isTRUE(cond)) {
     stop(msg, call. = FALSE)
   }
-  invisible(TRUE)
+  return(invisible(TRUE))
 }
 
 #' Test if x is a single non-empty character string
