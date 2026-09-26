@@ -93,6 +93,7 @@ accept either spelling, normalising to `filename` internally.
   with the Guppy pipeline marked legacy throughout.
 * Vignettes covering detection, postprocessing, plotting, signal inspection, the
   Shiny dashboard and tailfindr compatibility.
+* License changed from MIT to GPL (>= 3).
 
 ---
 

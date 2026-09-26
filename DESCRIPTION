@@ -12,7 +12,7 @@ Maintainer: <nguminska@iimcb.gov.pl>
 Description: Finds noncanonical (nonadenosine) nucleotides 
     in poly(A) tails of Oxford Nanopore direct RNA sequencing reads
     using convolutional neural network based on raw current signal.
-License: MIT + file LICENSE
+License: GPL (>= 3)
 URL: https://LRB-IIMCB.github.io/ninetails/, https://github.com/LRB-IIMCB/ninetails
 Encoding: UTF-8
 LazyData: true
