@@ -1,6 +1,6 @@
 <!-- badges: start -->
 <a href="https://github.com/LRB-IIMCB/ninetails/releases/"><img src="https://img.shields.io/github/tag/LRB-IIMCB/ninetails?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
-<a href="https://github.com/LRB-IIMCB/ninetails/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
+<a href="https://github.com/LRB-IIMCB/ninetails/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/License-GPL%20(%3E%3D%203)-blue" alt="License: GPL (>= 3)"></a>
 <img src="https://img.shields.io/badge/maintained-yes-blue" alt="maintained - yes">
 <a href="https://www.linux.org/" title="Go to Linux homepage"><img src="https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white" alt="OS - Linux"></a>
 <a href="https://www.microsoft.com/" title="Go to Microsoft homepage"><img src="https://img.shields.io/badge/OS-Windows-blue?logo=windows&logoColor=white" alt="OS - Windows"></a>
