@@ -2,6 +2,58 @@
 
 ## ninetails 1.0.84 (development)
 
+### cDNA pipeline: training-set production
+
+The cDNA pipeline still runs the DRS model on both read orientations,
+because no cDNA training data existed. The Guppy training-set functions
+cannot produce them: they read multi-fast5 files and nanopolish tables,
+and they hardcode the pseudomove polarity of every residue (G peak, C/U
+valley), which has not been established for the DNA chemistry. Two sets
+are needed, one per orientation, since polyT reads carry the tail as its
+complement.
+
+- **[`extract_tail_signals_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_trainingset_cdna.md)**
+  filters the Dorado summary with
+  [`filter_dorado_summary()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_dorado_summary.md),
+  optionally keeps only the contigs of the labelled spike-in constructs,
+  extracts basecalled sequences from the BAM, calls the orientation with
+  [`detect_orientation_single()`](https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.md),
+  and extracts winsorized, downsampled tail signals from POD5 with
+  [`extract_tails_from_pod5()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tails_from_pod5.md).
+  Signals are returned split into `polya_signals` and `polyt_signals`,
+  together with a `read_annotation` lookup table (contig, tail type,
+  tail length, signal length). No signal reversal is applied; the
+  orientations train separate models.
+- **[`create_tail_feature_list_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset_cdna.md)**
+  computes pseudomoves with
+  [`filter_signal_by_threshold_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_signal_by_threshold_trainingset.md)
+  and applies the residue-specific retention criterion of the Guppy
+  routine (`nucleotide = "A"` keeps reads without a qualifying run,
+  `"C"`/`"G"`/`"U"` keep reads with one). It keeps the four-slot
+  per-read layout of
+  [`extract_tail_data_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data_trainingset.md)
+  (with `NA` in the fast5 and moves slots), so
+  [`create_tail_chunk_list_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list_trainingset.md),
+  [`create_tail_chunk_list_A()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_chunk_list_A.md),
+  [`filter_nonA_chunks_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/filter_nonA_chunks_trainingset.md),
+  [`create_gaf_list()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.md),
+  and
+  [`create_gaf_list_A()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list_A.md)
+  are reused unchanged.
+- **[`count_pseudomove_runs_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/count_pseudomove_runs_trainingset_cdna.md)**
+  and
+  **[`plot_tail_features_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_features_trainingset_cdna.md)**
+  are the lookups used to establish the pseudomove polarity of a
+  labelled dataset before filtering, and to inspect single reads.
+- **[`prepare_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset_cdna.md)**
+  mirrors
+  [`prepare_trainingset()`](https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset.md)
+  for one nucleotide and one orientation; the polarity is passed
+  explicitly as `value` instead of being hardcoded.
+- The step-by-step notebook with all lookups lives in
+  `training/prepare_trainingset_cdna.Rmd` (excluded from the package
+  build).
+
 ### cDNA pipeline: independent validation of orientation calls
 
 The cDNA pipeline classifies each read as `polyA`, `polyT` or

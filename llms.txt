@@ -431,6 +431,21 @@ convolutional neural network (CNN) model.
 - [`create_gaf_list_A()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list_A.md)
   : Produces list of GAFs containing exclusively A-nucleotides for
   neural network training.
+- [`prepare_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset_cdna.md)
+  : Produces GAF training data of a given nucleotide and read
+  orientation from Dorado cDNA data.
+- [`extract_tail_signals_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_trainingset_cdna.md)
+  : Extracts poly(A)/poly(T) tail signals of Dorado cDNA reads for
+  training-set preparation, split by read orientation.
+- [`create_tail_feature_list_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset_cdna.md)
+  : Creates the training-set feature list (signal + pseudomoves) from
+  Dorado cDNA tail signals of a single orientation.
+- [`count_pseudomove_runs_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/count_pseudomove_runs_trainingset_cdna.md)
+  : Counts peak and valley pseudomove runs per read in a training-set
+  feature list (lookup for the cDNA training data).
+- [`plot_tail_features_trainingset_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_features_trainingset_cdna.md)
+  : Draws the downsampled tail signal of a single training-set read with
+  pseudomove runs highlighted.
 
 ## Data postprocessing
 

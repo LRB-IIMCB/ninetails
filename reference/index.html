@@ -470,6 +470,41 @@ body, .contents, .contents p, .contents li,
 
         </dt>
         <dd>Produces list of GAFs containing exclusively A-nucleotides for neural network training.</dd>
+
+        <dt>
+
+          <code><a href="prepare_trainingset_cdna.html">prepare_trainingset_cdna()</a></code>
+
+        </dt>
+        <dd>Produces GAF training data of a given nucleotide and read orientation from Dorado cDNA data.</dd>
+
+        <dt>
+
+          <code><a href="extract_tail_signals_trainingset_cdna.html">extract_tail_signals_trainingset_cdna()</a></code>
+
+        </dt>
+        <dd>Extracts poly(A)/poly(T) tail signals of Dorado cDNA reads for training-set preparation, split by read orientation.</dd>
+
+        <dt>
+
+          <code><a href="create_tail_feature_list_trainingset_cdna.html">create_tail_feature_list_trainingset_cdna()</a></code>
+
+        </dt>
+        <dd>Creates the training-set feature list (signal + pseudomoves) from Dorado cDNA tail signals of a single orientation.</dd>
+
+        <dt>
+
+          <code><a href="count_pseudomove_runs_trainingset_cdna.html">count_pseudomove_runs_trainingset_cdna()</a></code>
+
+        </dt>
+        <dd>Counts peak and valley pseudomove runs per read in a training-set feature list (lookup for the cDNA training data).</dd>
+
+        <dt>
+
+          <code><a href="plot_tail_features_trainingset_cdna.html">plot_tail_features_trainingset_cdna()</a></code>
+
+        </dt>
+        <dd>Draws the downsampled tail signal of a single training-set read with pseudomove runs highlighted.</dd>
       </dl></div><div class="section level2">
       <h2 id="data-postprocessing">Data postprocessing<a class="anchor" aria-label="anchor" href="#data-postprocessing"></a></h2>
 

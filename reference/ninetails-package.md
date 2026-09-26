@@ -16,3 +16,8 @@ Useful links:
 
 **Maintainer**: Natalia Gumińska <nguminska@iimcb.gov.pl>
 ([ORCID](https://orcid.org/0000-0002-4599-2897))
+
+Authors:
+
+- Natalia Gumińska <nguminska@iimcb.gov.pl>
+  ([ORCID](https://orcid.org/0000-0002-4599-2897))

@@ -33,6 +33,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/correct_residue_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_class.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_nonA_abundance.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_pseudomove_runs_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_residues.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_trailing_chars.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_gaf.html</loc></url>
@@ -48,6 +49,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_A.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_features_list_dorado.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.html</loc></url>
@@ -61,6 +63,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_polya_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data_trainingset.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tails_from_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/filter_dorado_summary.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/filter_nonA_chunks_trainingset.html</loc></url>
@@ -95,10 +98,12 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_squiggle_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_chunk.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_distribution.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_features_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/predict_gaf_classes.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/process_dorado_signal_files.html</loc></url>
