@@ -1,0 +1,749 @@
+---
+title: "Training dataset preparation for the cDNA models"
+author: "Natalia Guminska"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Configuration
+
+```{r, load libs, message = FALSE, include=FALSE}
+
+library(vroom)
+library(reticulate)
+library(dplyr)
+library(ggplot2)
+library(ninetails)
+library(keras)
+library(tensorflow)
+
+```
+
+
+```{r message = FALSE, echo=FALSE}
+# use virtualenv to communicate ninetails with correct python version
+# depends on configuration; the pod5 module must be installed there
+reticulate::use_condaenv("r-reticulate")
+
+# number of cores for processing
+num_cores <- 30
+
+# output directory for intermediate objects
+out_dir <- "/home/nagumi/CNN_spikes_cdna"
+if (!dir.exists(out_dir)) {
+  dir.create(out_dir, recursive = TRUE)
+}
+
+```
+
+
+# Rationale
+
+The cDNA pipeline needs two models, one per read orientation, because the
+two orientations see different signals:
+
+- polyA reads (sense strand): transcript body | poly(A) tail | VNP (rc). The
+  tail signal runs from the transcript body towards the 3' end, so it is
+  reversed with respect to the DRS convention (3' end first). Residues are
+  observed as themselves (C, G, T in a dA background).
+- polyT reads (antisense strand): VNP | poly(T) tail | transcript body (rc).
+  The tail signal runs from the 3' end of the original tail towards the body
+  and every residue is observed as its complement (C -> G, G -> C, U -> A) in
+  a dT background.
+
+No signal reversal is applied anywhere (the production pipeline feeds the
+signals as extracted, so the training data must match). Class labels always
+refer to the residue in the original RNA tail, known from the experimental
+design of the spike-in constructs, not to the base actually read in polyT
+orientation.
+
+The polarity of the signal deviation (peak or valley) caused by each residue
+was hardcoded in the DRS routine (G = peak, C/U = valley). It is unknown for
+the DNA chemistry and may differ between orientations, therefore it is
+established here from the labelled data (lookup 2) before the chunks are
+filtered.
+
+
+# Input definition
+
+One entry per labelled dataset. Each construct carries a single residue type
+inserted into the tail (or none, for the A control). The `contig` field selects
+the reads mapping to the construct of interest, so reads from other references
+present in the same run are excluded. Use the same name for the contig as in
+the `alignment_genome` column of the Dorado summary.
+
+```{r inputs}
+spikein_inputs <- list(
+  C = list(
+    dorado_summary = "/path/to/C_Rluc_cdna/dorado_summary.txt",
+    bam_file       = "/path/to/C_Rluc_cdna/aligned.bam",
+    pod5_dir       = "/path/to/C_Rluc_cdna/pod5/",
+    contig         = "RlucB"
+  ),
+  G = list(
+    dorado_summary = "/path/to/G_Rluc_cdna/dorado_summary.txt",
+    bam_file       = "/path/to/G_Rluc_cdna/aligned.bam",
+    pod5_dir       = "/path/to/G_Rluc_cdna/pod5/",
+    contig         = "Rluc-sh"
+  ),
+  U = list(
+    dorado_summary = "/path/to/U_Rluc_cdna/dorado_summary.txt",
+    bam_file       = "/path/to/U_Rluc_cdna/aligned.bam",
+    pod5_dir       = "/path/to/U_Rluc_cdna/pod5/",
+    contig         = "RlucA"
+  ),
+  A = list(
+    dorado_summary = "/path/to/A_Rluc_cdna/dorado_summary.txt",
+    bam_file       = "/path/to/A_Rluc_cdna/aligned.bam",
+    pod5_dir       = "/path/to/A_Rluc_cdna/pod5/",
+    contig         = "RlucD"
+  )
+)
+
+nucleotides <- names(spikein_inputs)
+tail_types <- c("polyA", "polyT")
+```
+
+
+# Step 1: signal extraction and orientation split
+
+Each class is processed separately. The function filters the summary
+(mapped, MAPQ > 0, valid coordinates, tail >= 10 nt), keeps the selected
+contig, classifies the orientation from the basecalled sequences and
+extracts the winsorized, downsampled (20%) tail signals from POD5.
+
+```{r extract signals}
+extracted <- list()
+
+for (nt in nucleotides) {
+  cat("\n=== ", nt, " ===\n")
+  extracted[[nt]] <- ninetails::extract_tail_signals_trainingset_cdna(
+    dorado_summary = spikein_inputs[[nt]]$dorado_summary,
+    bam_file = spikein_inputs[[nt]]$bam_file,
+    pod5_dir = spikein_inputs[[nt]]$pod5_dir,
+    num_cores = num_cores,
+    contig = spikein_inputs[[nt]]$contig
+  )
+}
+
+save(extracted, file = file.path(out_dir, "extracted_signals_cdna.RData"))
+```
+
+
+## Lookup 1: are the reads what they should be?
+
+Every read in the annotation must map to the expected contig, and both
+orientations should be reasonably populated. A high share of unidentified
+reads points to truncated reads or wrong primers. The signal length after
+downsampling should scale with the tail length (roughly 0.2 x samples per nt
+x tail length); reads far off the trend deserve a look.
+
+```{r lookup 1 orientation and contig}
+for (nt in nucleotides) {
+  cat("\n=== ", nt, " ===\n")
+  annotation <- extracted[[nt]]$read_annotation
+  print(table(contig = annotation$contig, tail_type = annotation$tail_type))
+  cat("\npoly(A) length summary by orientation:\n")
+  print(tapply(annotation$poly_tail_length, annotation$tail_type, summary))
+  cat("\nsignal length (data points) summary by orientation:\n")
+  print(tapply(annotation$signal_length, annotation$tail_type, summary))
+}
+```
+
+
+```{r lookup 1 tail length vs signal length, fig.width=10, fig.height=4}
+annotation_all <- dplyr::bind_rows(
+  lapply(nucleotides, function(nt) {
+    dplyr::mutate(extracted[[nt]]$read_annotation, nucleotide = nt)
+  })
+)
+
+length_check <- ggplot2::ggplot(
+  data = annotation_all[annotation_all$tail_type != "unidentified", ],
+  ggplot2::aes(x = poly_tail_length, y = signal_length, color = tail_type)
+) +
+  ggplot2::geom_point(alpha = .3, size = .8) +
+  ggplot2::facet_wrap(~nucleotide, ncol = 4) +
+  ggplot2::scale_color_manual(values = c("polyA" = "#f56042", "polyT" = "#089bcc")) +
+  ggplot2::labs(
+    title = "Downsampled signal length versus Dorado tail length",
+    x = "\npoly(A) length [nt]",
+    y = "signal length [data points]\n"
+  ) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(legend.position = "top", legend.title = ggplot2::element_blank())
+
+print(length_check)
+```
+
+
+# Step 2: feature lists (pseudomoves) per class and orientation
+
+The retention criterion follows the original routine: C/G/U reads must
+contain at least one non-zero pseudomove run of length >= 4, A reads must
+contain none.
+
+```{r feature lists}
+features <- list()
+
+for (nt in nucleotides) {
+  for (tt in tail_types) {
+    cat("\n=== ", nt, tt, " ===\n")
+    signal_list <- if (tt == "polyA") {
+      extracted[[nt]]$polya_signals
+    } else {
+      extracted[[nt]]$polyt_signals
+    }
+    if (length(signal_list) == 0) {
+      cat("no reads, skipping\n")
+      next
+    }
+    features[[nt]][[tt]] <- ninetails::create_tail_feature_list_trainingset_cdna(
+      signal_list = signal_list,
+      num_cores = num_cores,
+      nucleotide = nt
+    )
+    cat(sprintf(
+      "retained %d reads, discarded %d\n",
+      length(features[[nt]][[tt]]$tail_feature_list),
+      length(features[[nt]][[tt]]$discarded_readnames)
+    ))
+  }
+}
+
+save(features, file = file.path(out_dir, "features_cdna.RData"))
+```
+
+
+## Lookup 2: pseudomove polarity
+
+For every labelled class and orientation, count the peak (+1) and valley
+(-1) runs. The dominant polarity is the `value` passed to
+`filter_nonA_chunks_trainingset()` in step 4. Expect one polarity to
+dominate clearly; if the two columns are comparable, the residue-induced
+distortion is not captured by the z-score filter in this orientation and
+the data should be inspected before proceeding. The A class is listed only
+as a sanity check (its retained reads have no qualifying runs by
+construction).
+
+```{r lookup 2 polarity table}
+polarity_table <- dplyr::bind_rows(
+  lapply(nucleotides, function(nt) {
+    dplyr::bind_rows(lapply(names(features[[nt]]), function(tt) {
+      run_counts <- ninetails::count_pseudomove_runs_trainingset_cdna(
+        features[[nt]][[tt]]
+      )
+      data.frame(
+        nucleotide = nt,
+        tail_type = tt,
+        reads = nrow(run_counts),
+        peak_runs = sum(run_counts$peak_runs),
+        valley_runs = sum(run_counts$valley_runs),
+        reads_with_peak_only = sum(run_counts$peak_runs > 0 & run_counts$valley_runs == 0),
+        reads_with_valley_only = sum(run_counts$valley_runs > 0 & run_counts$peak_runs == 0),
+        reads_with_both = sum(run_counts$peak_runs > 0 & run_counts$valley_runs > 0),
+        stringsAsFactors = FALSE
+      )
+    }))
+  })
+)
+
+print(polarity_table)
+```
+
+
+```{r lookup 2 polarity decision}
+# polarity per class and orientation, read off the table above
+# fill in after inspection: 1 = peak, -1 = valley
+polarity <- list(
+  C = c(polyA = NA, polyT = NA),
+  G = c(polyA = NA, polyT = NA),
+  U = c(polyA = NA, polyT = NA)
+)
+
+# suggested values (dominant polarity); verify visually before accepting
+for (nt in c("C", "G", "U")) {
+  for (tt in names(features[[nt]])) {
+    row <- polarity_table[polarity_table$nucleotide == nt & polarity_table$tail_type == tt, ]
+    polarity[[nt]][[tt]] <- ifelse(row$peak_runs >= row$valley_runs, 1, -1)
+  }
+}
+
+print(polarity)
+```
+
+
+## Lookup 2b: visual inspection of single reads
+
+A few randomly drawn reads per class and orientation, with the qualifying
+pseudomove runs highlighted. The highlighted regions are the future chunk
+centres. Genuine residue-induced distortions are short, localised
+excursions from the flat homopolymer baseline; extended noisy stretches or
+runs at the very ends indicate segmentation errors.
+
+```{r lookup 2b example reads, fig.width=15, fig.height=4}
+set.seed(123)
+
+for (nt in nucleotides) {
+  for (tt in names(features[[nt]])) {
+    readnames <- names(features[[nt]][[tt]]$tail_feature_list)
+    if (length(readnames) == 0) {
+      next
+    }
+    for (rn in sample(readnames, min(3, length(readnames)))) {
+      example <- ninetails::plot_tail_features_trainingset_cdna(
+        readname = rn,
+        tail_feature_list = features[[nt]][[tt]]
+      ) +
+        ggplot2::labs(title = paste0(nt, " / ", tt, " / read ", rn))
+      print(example)
+    }
+  }
+}
+```
+
+
+# Step 3: chunk extraction
+
+Reuses the Guppy training-set chunkers: modification-centred 100-point
+chunks for C/G/U, overlapping 100-point windows (50-point overlap) for A.
+
+```{r chunks}
+chunks <- list()
+
+for (nt in nucleotides) {
+  for (tt in names(features[[nt]])) {
+    cat("\n=== ", nt, tt, " ===\n")
+    if (nt == "A") {
+      chunks[[nt]][[tt]] <- ninetails::create_tail_chunk_list_A(
+        features[[nt]][[tt]],
+        num_cores
+      )
+    } else {
+      chunks[[nt]][[tt]] <- ninetails::create_tail_chunk_list_trainingset(
+        features[[nt]][[tt]],
+        num_cores
+      )
+    }
+  }
+}
+
+save(chunks, file = file.path(out_dir, "chunks_cdna.RData"))
+```
+
+
+## Lookup 3: chunk structure
+
+All chunks must be exactly 100 data points long and contain no NAs (the
+GAF transformation requires it). The number of chunks per read is reported
+per class and orientation.
+
+```{r lookup 3 chunk structure}
+for (nt in nucleotides) {
+  for (tt in names(chunks[[nt]])) {
+    chunk_list <- chunks[[nt]][[tt]]
+    if (nt == "A") {
+      chunk_lengths <- unlist(lapply(chunk_list, function(x) sapply(x, length)))
+      chunk_nas <- unlist(lapply(chunk_list, function(x) sapply(x, function(y) any(is.na(y)))))
+    } else {
+      chunk_lengths <- unlist(lapply(chunk_list, function(x) sapply(x, function(y) length(y$chunk_sequence))))
+      chunk_nas <- unlist(lapply(chunk_list, function(x) sapply(x, function(y) any(is.na(y$chunk_sequence)))))
+    }
+    cat(sprintf(
+      "%s / %s: %d reads, %d chunks, all length 100: %s, no NAs: %s\n",
+      nt, tt,
+      length(chunk_list),
+      length(chunk_lengths),
+      all(chunk_lengths == 100),
+      !any(chunk_nas)
+    ))
+    print(summary(sapply(chunk_list, length)))
+  }
+}
+```
+
+
+```{r lookup 3 example chunk, fig.width=8, fig.height=3}
+set.seed(123)
+
+# one random modification-centred chunk per class and orientation
+for (nt in c("C", "G", "U")) {
+  for (tt in names(chunks[[nt]])) {
+    chunk_list <- chunks[[nt]][[tt]]
+    readname <- sample(names(chunk_list), 1)
+    chunk_name <- sample(names(chunk_list[[readname]]), 1)
+    example_chunk <- ninetails::plot_tail_chunk(
+      chunk_name = chunk_name,
+      tail_chunk_list = chunk_list
+    ) +
+      ggplot2::labs(title = paste0(nt, " / ", tt, " / chunk ", chunk_name))
+    print(example_chunk)
+  }
+}
+```
+
+
+# Step 4: filtering of residue-containing chunks (C, G, U)
+
+Chunks are retained if their pseudomoves contain a run of the established
+polarity (>= 4) and their start position is non-negative (no left padding).
+
+```{r filter chunks}
+filtered_chunks <- list()
+
+for (nt in c("C", "G", "U")) {
+  for (tt in names(chunks[[nt]])) {
+    cat("\n=== ", nt, tt, " (value = ", polarity[[nt]][[tt]], ") ===\n")
+    if (is.na(polarity[[nt]][[tt]])) {
+      stop("Polarity not established for ", nt, " / ", tt, ". See lookup 2.")
+    }
+    filtered_chunks[[nt]][[tt]] <- ninetails::filter_nonA_chunks_trainingset(
+      chunks[[nt]][[tt]],
+      value = polarity[[nt]][[tt]],
+      num_cores = num_cores
+    )
+  }
+}
+
+# A chunks are not filtered
+filtered_chunks[["A"]] <- chunks[["A"]]
+
+save(filtered_chunks, file = file.path(out_dir, "filtered_chunks_cdna.RData"))
+```
+
+
+## Lookup 4: retained fraction after filtering
+
+A very low retained fraction (a few percent) suggests the polarity was
+chosen wrongly or the distortions are too weak to be captured.
+
+```{r lookup 4 retained fraction}
+for (nt in c("C", "G", "U")) {
+  for (tt in names(chunks[[nt]])) {
+    n_before <- sum(sapply(chunks[[nt]][[tt]], length))
+    n_after <- sum(sapply(filtered_chunks[[nt]][[tt]], length))
+    cat(sprintf(
+      "%s / %s: %d -> %d chunks retained (%.1f%%), %d -> %d reads\n",
+      nt, tt, n_before, n_after, 100 * n_after / max(n_before, 1),
+      length(chunks[[nt]][[tt]]), length(filtered_chunks[[nt]][[tt]])
+    ))
+  }
+}
+```
+
+
+# Step 5: GASF + GADF datasets
+
+```{r gafs}
+gafs <- list()
+
+for (nt in nucleotides) {
+  for (tt in names(filtered_chunks[[nt]])) {
+    cat("\n=== ", nt, tt, " ===\n")
+    if (nt == "A") {
+      gafs[[nt]][[tt]] <- ninetails::create_gaf_list_A(filtered_chunks[[nt]][[tt]], num_cores)
+    } else {
+      gafs[[nt]][[tt]] <- ninetails::create_gaf_list(filtered_chunks[[nt]][[tt]], num_cores)
+    }
+  }
+}
+
+save(gafs, file = file.path(out_dir, "GADF_GASF_cdna.RData"))
+```
+
+
+## Lookup 5: GAF structure and class sizes
+
+Every element must be a 100 x 100 x 2 array with values in [0, 1] and a
+unique `<readname>_<index>` name. The class sizes per orientation decide the
+sampling size in step 6.
+
+```{r lookup 5 gaf structure}
+gaf_sizes <- list()
+
+for (nt in nucleotides) {
+  for (tt in names(gafs[[nt]])) {
+    gaf_list <- gafs[[nt]][[tt]]
+    dims_ok <- all(sapply(gaf_list, function(x) identical(dim(x), c(100L, 100L, 2L))))
+    range_ok <- all(sapply(gaf_list, function(x) min(x) >= 0 && max(x) <= 1))
+    names_ok <- !is.null(names(gaf_list)) && !any(duplicated(names(gaf_list)))
+    gaf_sizes[[tt]][[nt]] <- length(gaf_list)
+    cat(sprintf(
+      "%s / %s: %d GAFs, dims ok: %s, range ok: %s, unique names: %s\n",
+      nt, tt, length(gaf_list), dims_ok, range_ok, names_ok
+    ))
+  }
+}
+
+print(gaf_sizes)
+```
+
+
+```{r lookup 5 example gaf, fig.width=4, fig.height=4}
+set.seed(123)
+
+for (nt in nucleotides) {
+  for (tt in names(gafs[[nt]])) {
+    gaf_name <- sample(names(gafs[[nt]][[tt]]), 1)
+    example_gaf <- ninetails::plot_gaf(gaf_name = gaf_name, gaf_list = gafs[[nt]][[tt]])
+    print(example_gaf)
+  }
+}
+```
+
+
+# Step 6 and 7: sampling, splitting and conversion to keras arrays
+
+Same procedure as in the DRS routine, applied separately to each
+orientation: equal number of GAFs per class (A, C, G, U), 90:10 split into
+training and validation, shuffle, encoding A = 0, C = 1, G = 2, U = 3,
+conversion to a 4-D array (n x 100 x 100 x 2).
+
+```{r dataset builder}
+# builds train and validation lists for one orientation
+# gaf_by_class: named list (A, C, G, U) of GAF lists
+build_cnn_dataset <- function(gaf_by_class, n_per_class, seed = 123456) {
+
+  #setting seed for reprex
+  set.seed(seed)
+
+  # first, random sample the same number of GAFs from each class
+  sampled <- lapply(gaf_by_class, function(x) sample(x, size = n_per_class))
+
+  # extract names of each selected gafs group (needed for encoding)
+  class_names <- lapply(sampled, names)
+
+  # split dataset for training and validation data (90:10)
+  n_train <- floor(0.9 * n_per_class)
+  train_set <- lapply(sampled, function(x) x[1:n_train])
+  valid_set <- lapply(sampled, function(x) x[(n_train + 1):n_per_class])
+
+  # encoding: A = 0, C = 1, G = 2, U = 3
+  encode_labels <- function(gaf_list) {
+    ifelse(names(gaf_list) %in% class_names$C, 1,
+           ifelse(names(gaf_list) %in% class_names$G, 2,
+                  ifelse(names(gaf_list) %in% class_names$U, 3, 0)))
+  }
+
+  # merge, shuffle and encode
+  to_cnn_input <- function(set_list) {
+    merged <- c(set_list$A, set_list$C, set_list$G, set_list$U)
+    merged <- sample(merged, size = length(merged), replace = FALSE)
+    labels <- encode_labels(merged)
+    chunk_names <- names(merged)
+    # transform into keras array
+    names(merged) <- NULL
+    merged <- simplify2array(merged)
+    merged <- aperm(merged, c(4, 1, 2, 3))
+    out <- list()
+    out[["x"]] <- merged
+    out[["y"]] <- labels
+    out[["chunk_names"]] <- chunk_names
+    return(out)
+  }
+
+  dataset <- list()
+  dataset[["train"]] <- to_cnn_input(train_set)
+  dataset[["validation"]] <- to_cnn_input(valid_set)
+  return(dataset)
+}
+```
+
+
+```{r build datasets}
+cnn_datasets <- list()
+
+for (tt in tail_types) {
+  gaf_by_class <- lapply(nucleotides, function(nt) gafs[[nt]][[tt]])
+  names(gaf_by_class) <- nucleotides
+  if (any(sapply(gaf_by_class, is.null))) {
+    cat(tt, ": missing class, skipping\n")
+    next
+  }
+  # class size: the smallest class; lower it manually to prevent overfitting
+  # (9440 per class was used for the DRS model)
+  n_per_class <- min(sapply(gaf_by_class, length))
+  cat(sprintf("%s: %d GAFs per class\n", tt, n_per_class))
+  cnn_datasets[[tt]] <- build_cnn_dataset(gaf_by_class, n_per_class)
+}
+
+train_cnn_polyA <- cnn_datasets$polyA$train
+validation_cnn_polyA <- cnn_datasets$polyA$validation
+train_cnn_polyT <- cnn_datasets$polyT$train
+validation_cnn_polyT <- cnn_datasets$polyT$validation
+
+save(train_cnn_polyA, validation_cnn_polyA,
+     file = file.path(out_dir, "cnn_dataset_polyA.RData"))
+save(train_cnn_polyT, validation_cnn_polyT,
+     file = file.path(out_dir, "cnn_dataset_polyT.RData"))
+
+rm(gafs, filtered_chunks, chunks)
+gc()
+```
+
+
+## Lookup 6: dataset sanity
+
+Dimensions, class balance, label consistency (re-derived from the chunk
+names against the stored labels), and read-level leakage between training
+and validation. The original DRS routine split by chunk, so chunks of the
+same read may land on both sides; the leakage figure quantifies it so the
+decision to split by read instead can be taken knowingly.
+
+```{r lookup 6 dataset sanity}
+for (tt in names(cnn_datasets)) {
+  for (part in c("train", "validation")) {
+    dataset <- cnn_datasets[[tt]][[part]]
+    cat(sprintf("\n=== %s / %s ===\n", tt, part))
+    cat("x dims:", dim(dataset$x), "\n")
+    cat("y length:", length(dataset$y), "\n")
+    print(table(dataset$y))
+    stopifnot(dim(dataset$x)[1] == length(dataset$y))
+    stopifnot(length(dataset$chunk_names) == length(dataset$y))
+    # label consistency: chunk names must belong to the class they are labelled with
+    readnames <- sub("_[0-9]+$", "", dataset$chunk_names)
+    class_of_read <- lapply(nucleotides, function(nt) {
+      extracted[[nt]]$read_annotation$read_id
+    })
+    names(class_of_read) <- nucleotides
+    expected <- ifelse(readnames %in% class_of_read$C, 1,
+                       ifelse(readnames %in% class_of_read$G, 2,
+                              ifelse(readnames %in% class_of_read$U, 3, 0)))
+    cat("labels consistent with source dataset:", all(expected == dataset$y), "\n")
+  }
+  # read-level leakage between training and validation
+  train_reads <- unique(sub("_[0-9]+$", "", cnn_datasets[[tt]]$train$chunk_names))
+  valid_reads <- unique(sub("_[0-9]+$", "", cnn_datasets[[tt]]$validation$chunk_names))
+  shared <- intersect(train_reads, valid_reads)
+  cat(sprintf(
+    "%s: %d of %d validation reads also contribute chunks to training (%.1f%%)\n",
+    tt, length(shared), length(valid_reads), 100 * length(shared) / max(length(valid_reads), 1)
+  ))
+}
+```
+
+
+# Model training (one model per orientation)
+
+Architecture of the DRS model (`gasf_gadf_combined_model_refiltered_accuracy93`).
+The `chunk_names` element is dropped before fitting.
+
+```{r model definition}
+build_model <- function() {
+  model <- keras::keras_model_sequential() %>%
+    keras::layer_conv_2d(filters = 32, kernel_size = c(5, 5), activation = "linear",
+                         input_shape = c(100, 100, 2), kernel_initializer = "he_normal",
+                         padding = "valid") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_conv_2d(filters = 32, kernel_size = c(5, 5), activation = "linear",
+                         kernel_initializer = "he_normal", padding = "valid") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "linear",
+                         kernel_initializer = "he_normal", padding = "same") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "linear",
+                         kernel_initializer = "he_normal", padding = "same") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_flatten() %>%
+    keras::layer_dense(units = 4, activation = "softmax")
+
+  model %>% keras::compile(
+    optimizer = "adam",
+    loss = "sparse_categorical_crossentropy",
+    metrics = "accuracy"
+  )
+  return(model)
+}
+
+# print dot for every epoch to check that it is actually working (for debug purposes)
+print_dot_callback <- keras::callback_lambda(
+  on_epoch_end = function(epoch, logs) {
+    if (epoch %% 80 == 0) cat("\n")
+    cat(".")
+  }
+)
+
+# define when to stop the training if validation loss stops decreasing
+early_stop <- keras::callback_early_stopping(monitor = "val_loss", patience = 3)
+
+#define how many epochs use to train this thing
+epochs <- 20
+```
+
+
+```{r train polyA}
+model_polyA <- build_model()
+
+history_polyA <- model_polyA %>% keras::fit(
+  x = train_cnn_polyA$x,
+  y = train_cnn_polyA$y,
+  epochs = epochs,
+  validation_split = 0.2,
+  batch_size = 50,
+  callbacks = list(early_stop, print_dot_callback,
+                   keras::callback_reduce_lr_on_plateau(factor = 0.05))
+)
+
+plot(history_polyA)
+
+keras::save_model_hdf5(
+  model_polyA,
+  file.path(out_dir, paste0("gasf_gadf_cdna_polyA_model_", format(Sys.Date(), "%Y%m%d"), ".h5")),
+  include_optimizer = TRUE
+)
+```
+
+
+```{r train polyT}
+model_polyT <- build_model()
+
+history_polyT <- model_polyT %>% keras::fit(
+  x = train_cnn_polyT$x,
+  y = train_cnn_polyT$y,
+  epochs = epochs,
+  validation_split = 0.2,
+  batch_size = 50,
+  callbacks = list(early_stop, print_dot_callback,
+                   keras::callback_reduce_lr_on_plateau(factor = 0.05))
+)
+
+plot(history_polyT)
+
+keras::save_model_hdf5(
+  model_polyT,
+  file.path(out_dir, paste0("gasf_gadf_cdna_polyT_model_", format(Sys.Date(), "%Y%m%d"), ".h5")),
+  include_optimizer = TRUE
+)
+```
+
+
+## Lookup 7: validation confusion matrices
+
+```{r validation}
+library(caret)
+
+for (tt in names(cnn_datasets)) {
+  model <- if (tt == "polyA") model_polyA else model_polyT
+  validation <- cnn_datasets[[tt]]$validation
+  test_prediction <- model %>% predict(validation$x) %>% keras::k_argmax()
+  test_prediction <- as.numeric(test_prediction)
+  cat("\n=== ", tt, " ===\n")
+  print(caret::confusionMatrix(as.factor(test_prediction), as.factor(validation$y)))
+}
+```

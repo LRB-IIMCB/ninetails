@@ -213,6 +213,11 @@ reference:
       - filter_nonA_chunks_trainingset
       - filter_signal_by_threshold_trainingset
       - create_gaf_list_A
+      - prepare_trainingset_cdna
+      - extract_tail_signals_trainingset_cdna
+      - create_tail_feature_list_trainingset_cdna
+      - count_pseudomove_runs_trainingset_cdna
+      - plot_tail_features_trainingset_cdna
 
   - title: "Data postprocessing"
     desc: >
