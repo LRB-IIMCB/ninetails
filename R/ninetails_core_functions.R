@@ -71,14 +71,14 @@ extract_polya_data <- function(nanopolish,
   if (missing(nanopolish)) {
     stop(
       "Nanopolish polya output is missing. Please provide a valid nanopolish argument.",
-      call. = FALSE
+      .call = FALSE
     )
   }
 
   if (missing(sequencing_summary)) {
     stop(
       "Sequencing summary file is missing. Please provide a valid sequencing_summary argument.",
-      call. = FALSE
+      .call = FALSE
     )
   }
 
@@ -106,14 +106,14 @@ extract_polya_data <- function(nanopolish,
     # make sure that nanopolish is an object with rows
     if (!is.data.frame(nanopolish) || nrow(nanopolish) == 0) {
       stop(
-        "Empty data frame provided as an input (nanopolish). Please provide valid input",
-        call. = FALSE
+        "Empty data frame provided as an input (nanopolish). Please provide valid input"
       )
     }
 
-    # coerce to tibble, as names assigned to a column of a plain data.frame
-    # (names(df$filename) <- ...) are dropped so the read name -> fast5 lookup
-    # in extract_tail_data() would return NA for in-memory input
+    # coerce to tibble, as vroom returns in the file branch: names assigned
+    # to a column of a plain data.frame (names(df$filename) <- ...) are
+    # dropped, so the read name -> fast5 file lookup in extract_tail_data()
+    # returned NA for in-memory input
     nanopolish_polya_table <- tibble::as_tibble(nanopolish[, c(
       "readname",
       "polya_start",
@@ -135,8 +135,7 @@ extract_polya_data <- function(nanopolish,
   } else {
     if (!is.data.frame(sequencing_summary) || nrow(sequencing_summary) == 0) {
       stop(
-        "Empty data frame provided as an input (sequencing_summary). Please provide valid input",
-        call. = FALSE
+        "Empty data frame provided as an input (sequencing_summary). Please provide valid input"
       )
     }
 
@@ -148,7 +147,7 @@ extract_polya_data <- function(nanopolish,
     names(sequencing_summary_table) == "read_id"
   ] <- "readname"
 
-  # Add filtering criterion: select only pass or pass & suffclip
+  # Add filtering criterion: select only pass or pass $ suffclip
   if (pass_only == TRUE) {
     polya_summary <- dplyr::left_join(
       nanopolish_polya_table[which(nanopolish_polya_table$qc_tag == "PASS"), ],
@@ -176,7 +175,6 @@ extract_polya_data <- function(nanopolish,
 
   return(polya_summary)
 }
-
 
 #' Extract tail features of a single RNA read from a multi-Fast5 file
 #'
@@ -1848,7 +1846,7 @@ create_outputs <- function(tail_feature_list,
     !nanopolish_polya_table$readname %in% moved_chunks_table$readname,
   ]
 
-  # Add filtering criterion: select only pass or pass $ suffclip
+  # Add filtering criterion: select only pass or pass & suffclip
   if (pass_only == TRUE) {
     discarded_reads <- discarded_reads %>%
       dplyr::filter(!readname %in% moved_chunks_table$readname) %>%
