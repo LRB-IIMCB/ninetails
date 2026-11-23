@@ -1,10 +1,8 @@
-# Process polyA reads using standard ninetails pipeline
+# Process poly(A) reads with the cDNA poly(A) model
 
-This function processes reads that have been classified as
-polyA-containing through the cDNA classification pipeline. Updated to
-work with tibble input instead of separate files. It applies the
-standard ninetails analysis pipeline to identify non-adenosine residues
-within polyA tails.
+Classifies the tail signals of reads sequenced in the poly(A)
+orientation (tail at the 3' end of the read) with the dedicated cDNA
+model and creates the ninetails output tables for them.
 
 ## Usage
 
@@ -24,17 +22,19 @@ process_polya_reads_cdna(
 
 - polya_sequences:
 
-  Data frame/tibble. PolyA-classified sequences with read_id and
-  tail_type columns.
+  Data frame/tibble. Poly(A) reads with their tail coordinates:
+  `read_id`, `tail_start`, `tail_end`, `polya_length` and optionally
+  `contig` and `qc_tag` (see `read_tail_coordinates_cdna`).
 
 - signal_files:
 
-  Character vector. Paths to signal files containing poly(A) tail
-  signals extracted from POD5 files.
+  Character vector. Paths to the `.rds` files with raw flanked tail
+  signals (see `extract_tail_signals_cdna`).
 
 - num_cores:
 
-  Integer. Number of CPU cores to use for parallel processing.
+  Integer. Number of CPU cores (currently unused; the classification is
+  parallelised by TensorFlow).
 
 - qc:
 
@@ -42,11 +42,12 @@ process_polya_reads_cdna(
 
 - save_dir:
 
-  Character. Directory where processing results will be saved.
+  Character. Output directory. Intermediate files are written to its
+  `polya_processing_dir` (or `polyt_processing_dir`) subdirectory.
 
 - prefix:
 
-  Character. Optional prefix for output file names.
+  Character. Optional prefix for intermediate file names.
 
 - cli_log:
 
@@ -54,30 +55,40 @@ process_polya_reads_cdna(
 
 ## Value
 
-List containing polyA processing results:
+List containing poly(A) processing results:
 
 - read_classes:
 
-  Data frame with read classification results (with tail_type preserved)
+  Data frame with read classification results
 
 - nonadenosine_residues:
 
-  Data frame with predicted modifications (with tail_type preserved)
+  Data frame with predicted non-adenosines
 
 - processing_stats:
 
-  Summary statistics for polyA processing
+  Summary statistics for poly(A) processing
 
 - tail_type:
 
   Character indicating this is "polyA" data
 
+## Details
+
+Signals are classified with `predict_nonA_cdna`, one signal file at a
+time. The calls of each file are written to disk, so memory usage does
+not grow with the size of the sequencing run. The tables are then built
+from these files by
+[`create_outputs_dorado_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado_cdna.md).
+Reads with invalid coordinates, tails shorter than 10 nt or (with
+`qc = TRUE`) a Lachesis QC tag other than `PASS` are not classified.
+
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-polya_results <- process_polya_reads_cdna(
-  polya_sequences = polya_tibble,
+polya_results <- ninetails::process_polya_reads_cdna(
+  polya_sequences = polya_coordinates,
   signal_files = c("polya_signal_part1.rds"),
   num_cores = 4,
   qc = TRUE,

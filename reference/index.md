@@ -71,11 +71,11 @@ cross-check of the orientation calls.
   : Agreement marker between the orientation algorithm and the layout
   inference
 - [`process_polya_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_reads_cdna.md)
-  : Process polyA reads using standard ninetails pipeline
+  : Process poly(A) reads with the cDNA poly(A) model
 - [`process_polyt_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polyt_reads_cdna.md)
-  : Process polyT reads using ninetails pipeline
+  : Process poly(T) reads with the cDNA poly(T) model
 - [`create_outputs_dorado_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado_cdna.md)
-  : Create Ninetails output tables for Dorado cDNA pipeline
+  : Create ninetails output tables for the cDNA pipeline
 - [`merge_cdna_results()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.md)
   : Merge polyA and polyT processing results for cDNA analysis
 - [`save_cdna_outputs()`](https://LRB-IIMCB.github.io/ninetails/reference/save_cdna_outputs.md)

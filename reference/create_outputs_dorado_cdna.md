@@ -1,9 +1,12 @@
-# Create Ninetails output tables for Dorado cDNA pipeline
+# Create ninetails output tables for the cDNA pipeline
 
-This function extends create_outputs_dorado to handle cDNA data with
-additional tail_type information. It produces the same output structure
-as the DRS pipeline but preserves the tail_type column for read
-orientation information.
+Combines the tail coordinates with the non-adenosine calls of
+`predict_nonA_cdna` into the two standard ninetails outputs: per-read
+classes and non-adenosine residues with their estimated positions.
+Inputs are read from the intermediate directories written by
+[`process_polya_reads_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_reads_cdna.md)
+or
+[`process_polyt_reads_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/process_polyt_reads_cdna.md).
 
 ## Usage
 
@@ -21,63 +24,78 @@ create_outputs_dorado_cdna(
 
 - dorado_summary_dir:
 
-  Character string. Path to a directory containing Dorado summary files
-  (.txt, .tsv, or .csv) with per-read poly(A) tail information and
-  tail_type.
+  Character string. Path to a directory with the tail coordinate tables
+  (.txt, .tsv or .csv) of the reads of one orientation. Required
+  columns: `read_id`, `contig`, `polya_length`, `qc_tag` and
+  `tail_type`.
 
 - nonA_temp_dir:
 
-  Character string. Path to a directory containing non-adenosine
-  prediction RDS files, generated from temporary models.
+  Character string. Path to a directory with the per-part RDS files of
+  non-adenosine calls. Each file holds a list with `nonA_calls` (output
+  of `predict_nonA_cdna`) and `classified_reads` (IDs of the reads whose
+  signals were classified).
 
 - polya_chunks_dir:
 
-  Character string. Path to a directory containing poly(A) chunk RDS
-  files used for position inference of predictions.
+  Character string. Kept for compatibility with the DRS pipeline
+  (currently unused; the cDNA model does not produce chunk files).
 
 - num_cores:
 
-  Integer. Number of cores to use for parallelized file loading and
-  processing. Must be a positive integer. Default is 1.
+  Integer \[1\]. Number of cores used for loading the files.
 
 - qc:
 
-  Logical. Whether to apply quality control filtering of terminal
-  predictions (removing predictions near the ends of poly(A) tails).
-  Default is TRUE.
+  Logical \[TRUE\]. Whether to discard terminal calls and reads failing
+  the Lachesis QC.
 
 ## Value
 
-A named list with two data frames (identical to DRS output + tail_type):
+A named list:
 
 - read_classes:
 
-  Data frame with per-read classification results, including columns for
-  read name, contig, poly(A) length, QC tag, class, comments, and
-  tail_type.
+  Data frame with columns `readname`, `contig`, `polya_length`,
+  `qc_tag`, `class`, `comments`, `tail_type`
 
 - nonadenosine_residues:
 
-  Data frame with per-chunk predictions of non-adenosine residues,
-  including read name, contig, predicted base, estimated position within
-  the poly(A) tail, poly(A) length, QC tag, and tail_type.
+  Data frame with columns `readname`, `contig`, `prediction` (residue in
+  the RNA tail), `est_nonA_pos` (position from the 3' end of the tail),
+  `polya_length`, `qc_tag`, `tail_type`
+
+## Read classes
+
+- `decorated`, `YAY`: at least one non-adenosine residue
+
+- `blank`, `MAU`: no non-adenosine residue detected
+
+- `blank`, `MPU`: only terminal calls, discarded by `qc` (closer than 2
+  nt to either end of the tail)
+
+- `unclassified`, `IRL`: tail shorter than 10 nt
+
+- `unclassified`, `BAC`: invalid tail coordinates or no signal available
+
+- `unclassified`, `QCF`: Lachesis QC tag other than `PASS` (only with
+  `qc = TRUE`)
+
+## See also
+
+`predict_nonA_cdna`,
+[`merge_cdna_results`](https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-results <- create_outputs_dorado_cdna(
-dorado_summary_dir = "data/dorado_summaries",
-nonA_temp_dir = "data/nonA_predictions",
-polya_chunks_dir = "data/polya_chunks",
-num_cores = 4,
-qc = TRUE
+outputs <- ninetails::create_outputs_dorado_cdna(
+  dorado_summary_dir = "polya_processing_dir/dorado_summary_dir",
+  nonA_temp_dir = "polya_processing_dir/nonA_temp_dir",
+  polya_chunks_dir = "polya_processing_dir/polya_chunks_dir",
+  num_cores = 4,
+  qc = TRUE
 )
-
-# Access read classifications with tail_type
-head(results$read_classes)
-
-# Access non-adenosine residues with tail_type
-head(results$nonadenosine_residues)
 } # }
 ```

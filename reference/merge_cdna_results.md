@@ -1,6 +1,6 @@
 # Merge polyA and polyT processing results for cDNA analysis
 
-This function combines the results from separate polyA and polyT
+This function combines the results from separate poly(A) and poly(T)
 processing paths into a unified output in standard ninetails format.
 Updated to work with the simplified approach using tibbles instead of
 files.
@@ -22,13 +22,13 @@ merge_cdna_results(
 
 - polya_results:
 
-  List. Results from polyA processing (from process_polya_reads_cdna).
+  List. Results from poly(A) processing (from process_polya_reads_cdna).
   Can be NULL if no polyA reads were found.
 
 - polyt_results:
 
-  List. Results from polyT processing (from process_polyt_reads_cdna).
-  Can be NULL if no polyT reads were found.
+  List. Results from poly(T) processing (from process_polyt_reads_cdna).
+  Can be NULL if no poly(T) reads were found.
 
 - unidentified_reads:
 
