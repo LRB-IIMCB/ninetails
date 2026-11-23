@@ -1,3 +1,40 @@
+# ninetails 2.0.0 (major release)
+
+## cDNA pipeline: dedicated poly(A) and poly(T) models
+
+The cDNA runs the dedicated double-model pipeline. Each read orientation has its
+own model, trained on IVT beta-gal spike-ins with a single C, G, or U in a 60 nt
+poly(A) tail. Predictions are reported as residues of the RNA tail. The pipeline
+is a new feature and will be improved. Feedback much appreciated.
+
+* **`check_tails_dorado_cDNA()`** accepts Lachesis output (`lachesis`
+  argument, recommended). The Dorado route (BAM + summary) is still available.
+* Tail signals are no longer winsorised or downsampled, and the whole tail is
+  scanned with sliding windows. New functions: `read_tail_coordinates_cdna()`,
+  `extract_tail_signals_cdna()`, `normalise_tail_cdna()`,
+  `create_tail_windows_cdna()`, `create_gaf_cdna()`, `predict_nonA_cdna()`,
+  `call_nonA_cdna()`.
+* Calls of each signal part are written to disk, so memory usage does not grow
+  with the size of the run.
+* Reads failing the Lachesis QC are reported as `unclassified` (`QCF`).
+* Added cDNA test data (`inst/extdata/test_data/pod5_cDNA/`) with expected
+  outputs, and unit tests for the cDNA functions.
+
+## Bug fixes
+
+* Reverse-strand reads are now reverse-complemented in
+  `extract_data_from_bam()`.
+* Dorado summaries with `input_filename` or `alignment_mapping_quality` are
+  accepted in the DRS and cDNA pipelines (`filter_dorado_summary()`,
+  `create_outputs_dorado()`, `extract_data_from_bam()`).
+
+## Documentation
+
+* README and `vignette("detection")` describe the cDNA route, with a scheme of
+  the pipeline (`man/figures/cdna_pipeline.png`).
+* Added the notebook for DRS training-set preparation,
+  `training/prepare_trainingset_drs.Rmd`.
+
 # ninetails 1.0.84 (development)
 
 ## cDNA pipeline: training-set production

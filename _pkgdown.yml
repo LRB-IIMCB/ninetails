@@ -172,6 +172,13 @@ reference:
       - detect_orientation_multiple
       - infer_cdna_layout
       - cdna_layout_agreement_marker
+      - read_tail_coordinates_cdna
+      - extract_tail_signals_cdna
+      - normalise_tail_cdna
+      - create_tail_windows_cdna
+      - create_gaf_cdna
+      - call_nonA_cdna
+      - predict_nonA_cdna
       - process_polya_reads_cdna
       - process_polyt_reads_cdna
       - create_outputs_dorado_cdna
