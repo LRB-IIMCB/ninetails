@@ -572,3 +572,35 @@ test_that("check_output_directory accepts 'continue' as full word", {
 
 
 
+
+
+test_that("filter_dorado_summary accepts the alignment_mapping_quality column name", {
+  skip_if_not_installed("dplyr")
+  summary_data <- data.frame(
+    read_id = c("r1", "r2"),
+    poly_tail_length = c(50, 50),
+    poly_tail_start = c(100, 100),
+    alignment_direction = c("+", "+"),
+    alignment_mapping_quality = c(60, 0),
+    stringsAsFactors = FALSE
+  )
+
+  result <- filter_dorado_summary(summary_data)
+
+  expect_equal(result$read_id, "r1")
+  expect_true("alignment_mapq" %in% colnames(result))
+})
+
+test_that(".standardise_dorado_columns accepts old and new dorado column names", {
+  new_names <- data.frame(read_id = "r1", input_filename = "a.pod5", alignment_mapping_quality = 60,
+                          stringsAsFactors = FALSE)
+  old_names <- data.frame(read_id = "r1", filename = "a.pod5", alignment_mapq = 60,
+                          stringsAsFactors = FALSE)
+
+  expect_equal(ninetails:::.standardise_dorado_columns(new_names), old_names)
+  # old names are left untouched
+  expect_equal(ninetails:::.standardise_dorado_columns(old_names), old_names)
+  # an existing old name is never overwritten by its alias
+  both <- cbind(old_names, alignment_mapping_quality = 0)
+  expect_equal(ninetails:::.standardise_dorado_columns(both)$alignment_mapq, 60)
+})
