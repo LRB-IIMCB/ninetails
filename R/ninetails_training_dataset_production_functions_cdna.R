@@ -169,10 +169,8 @@ extract_tail_signals_trainingset_cdna <- function(dorado_summary,
     )
   }
 
-  # From dorado 1.4.0, column name for pod5 files is "input_filename"
-  if (!"filename" %in% colnames(dorado_summary) && "input_filename" %in% colnames(dorado_summary)) {
-    colnames(dorado_summary)[colnames(dorado_summary) == "input_filename"] <- "filename"
-  }
+  # accept both old and new dorado column names
+  dorado_summary <- .standardise_dorado_columns(dorado_summary)
 
   required_cols <- c(
     "read_id",
