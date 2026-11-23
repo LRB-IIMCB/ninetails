@@ -809,3 +809,166 @@ test_that("save_cdna_outputs returns empty data frames when outputs have NULL co
   expect_equal(nrow(result$read_classes), 0L)
   expect_equal(nrow(result$nonadenosine_residues), 0L)
 })
+
+
+################################################################################
+# .is_qc_failed_cdna
+################################################################################
+
+test_that(".is_qc_failed_cdna flags only Lachesis tags other than PASS", {
+  result <- ninetails:::.is_qc_failed_cdna(c("PASS", "NOTFLAT", "SUFFCLIP", NA, "60", "0"))
+  # numeric tags (dorado mapping quality) and NA are not QC failures
+  expect_equal(result, c(FALSE, TRUE, TRUE, FALSE, FALSE, FALSE))
+})
+
+
+################################################################################
+# create_outputs_dorado_cdna
+################################################################################
+
+#' Write the intermediate directories read by create_outputs_dorado_cdna
+#' @keywords internal
+create_cdna_intermediates <- function(coordinates, nonA_calls, classified_reads, n_parts = 1) {
+  base_dir <- tempfile("cdna_outputs_")
+  dirs <- list(dorado_summary_dir = file.path(base_dir, "dorado_summary_dir"),
+               nonA_temp_dir = file.path(base_dir, "nonA_temp_dir"),
+               polya_chunks_dir = file.path(base_dir, "polya_chunks_dir"))
+  for (dir in dirs) {
+    dir.create(dir, recursive = TRUE)
+  }
+  vroom::vroom_write(coordinates, file.path(dirs$dorado_summary_dir, "polya_summary_part1.txt"),
+                     delim = "\t")
+  part <- rep(seq_len(n_parts), length.out = length(classified_reads))
+  for (i in seq_len(n_parts)) {
+    reads <- classified_reads[part == i]
+    saveRDS(list(nonA_calls = nonA_calls[nonA_calls$read_id %in% reads, ],
+                 classified_reads = reads),
+            file.path(dirs$nonA_temp_dir, sprintf("polya_nonA_part%d.rds", i)))
+  }
+  return(dirs)
+}
+
+#' Coordinates and calls covering every read class
+#' @keywords internal
+create_cdna_coordinates <- function() {
+  return(data.frame(
+    read_id = c("deco", "blank", "terminal", "short", "qcfail", "nosignal"),
+    contig = rep("beta_gal", 6),
+    tail_start = rep(1000, 6),
+    tail_end = rep(1700, 6),
+    polya_length = c(60, 60, 60, 7, 60, 60),
+    qc_tag = c("PASS", "PASS", "PASS", "PASS", "NOTFLAT", "PASS"),
+    tail_type = rep("polyA", 6),
+    stringsAsFactors = FALSE
+  ))
+}
+
+create_cdna_calls <- function() {
+  return(data.frame(
+    read_id = c("deco", "deco", "terminal"),
+    prediction = c("G", "U", "C"),
+    est_nonA_pos = c(30, 59.5, 0.8),
+    score = c(0.99, 0.99, 0.99),
+    stringsAsFactors = FALSE
+  ))
+}
+
+test_that("create_outputs_dorado_cdna errors on missing arguments", {
+  expect_error(create_outputs_dorado_cdna(nonA_temp_dir = tempdir(), polya_chunks_dir = tempdir()),
+               "Dorado summary directory is missing")
+  expect_error(create_outputs_dorado_cdna(dorado_summary_dir = tempdir(), polya_chunks_dir = tempdir()),
+               "Non-A predictions directory is missing")
+  expect_error(create_outputs_dorado_cdna(dorado_summary_dir = tempdir(), nonA_temp_dir = tempdir()),
+               "Poly\\(A\\) chunks directory is missing")
+})
+
+test_that("create_outputs_dorado_cdna errors on invalid num_cores and qc", {
+  expect_error(create_outputs_dorado_cdna(tempdir(), tempdir(), tempdir(), num_cores = 0),
+               "Number of cores must be a positive integer")
+  expect_error(create_outputs_dorado_cdna(tempdir(), tempdir(), tempdir(), qc = "yes"),
+               "QC must be a logical value")
+})
+
+test_that("create_outputs_dorado_cdna errors when no summary files are present", {
+  empty_dir <- tempfile("cdna_empty_")
+  dir.create(empty_dir)
+  expect_error(create_outputs_dorado_cdna(empty_dir, empty_dir, empty_dir),
+               "No summary files found in dorado_summary_dir")
+})
+
+test_that("create_outputs_dorado_cdna errors when required columns are missing", {
+  skip_if_not_installed("vroom")
+  coordinates <- create_cdna_coordinates()
+  coordinates$tail_type <- NULL
+  dirs <- create_cdna_intermediates(coordinates, create_cdna_calls(), c("deco", "blank"))
+
+  expect_error(create_outputs_dorado_cdna(dirs$dorado_summary_dir, dirs$nonA_temp_dir, dirs$polya_chunks_dir),
+               "Required columns missing: tail_type")
+})
+
+test_that("create_outputs_dorado_cdna assigns classes and comments with qc", {
+  skip_if_not_installed("vroom")
+  dirs <- create_cdna_intermediates(create_cdna_coordinates(), create_cdna_calls(),
+                                    classified_reads = c("deco", "blank", "terminal"))
+
+  result <- create_outputs_dorado_cdna(dirs$dorado_summary_dir, dirs$nonA_temp_dir,
+                                       dirs$polya_chunks_dir, qc = TRUE)
+
+  expect_type(result, "list")
+  expect_true(all(c("read_classes", "nonadenosine_residues") %in% names(result)))
+  expect_equal(colnames(result$read_classes),
+               c("readname", "contig", "polya_length", "qc_tag", "class", "comments", "tail_type"))
+  expect_equal(colnames(result$nonadenosine_residues),
+               c("readname", "contig", "prediction", "est_nonA_pos", "polya_length", "qc_tag", "tail_type"))
+
+  classes <- result$read_classes
+  comments <- stats::setNames(classes$comments, classes$readname)
+  expect_equal(unname(comments[c("deco", "blank", "terminal", "short", "qcfail", "nosignal")]),
+               c("YAY", "MAU", "MPU", "IRL", "QCF", "BAC"))
+  expect_equal(classes$class[classes$readname == "deco"], "decorated")
+  expect_equal(classes$class[classes$readname == "terminal"], "blank")
+  expect_equal(classes$class[classes$readname == "short"], "unclassified")
+
+  # terminal calls (closer than 2 nt to either end) are discarded
+  expect_equal(nrow(result$nonadenosine_residues), 1L)
+  expect_equal(result$nonadenosine_residues$prediction, "G")
+})
+
+test_that("create_outputs_dorado_cdna keeps terminal calls without qc", {
+  skip_if_not_installed("vroom")
+  dirs <- create_cdna_intermediates(create_cdna_coordinates(), create_cdna_calls(),
+                                    classified_reads = c("deco", "blank", "terminal"))
+
+  result <- create_outputs_dorado_cdna(dirs$dorado_summary_dir, dirs$nonA_temp_dir,
+                                       dirs$polya_chunks_dir, qc = FALSE)
+
+  expect_equal(nrow(result$nonadenosine_residues), 3L)
+  classes <- result$read_classes
+  expect_equal(classes$comments[classes$readname == "terminal"], "YAY")
+  expect_equal(classes$comments[classes$readname == "qcfail"], "BAC")
+})
+
+test_that("create_outputs_dorado_cdna gives the same result for one and several part files", {
+  skip_if_not_installed("vroom")
+  classified_reads <- c("deco", "blank", "terminal")
+  one <- create_cdna_intermediates(create_cdna_coordinates(), create_cdna_calls(), classified_reads)
+  many <- create_cdna_intermediates(create_cdna_coordinates(), create_cdna_calls(), classified_reads,
+                                    n_parts = 3)
+
+  result_one <- create_outputs_dorado_cdna(one$dorado_summary_dir, one$nonA_temp_dir, one$polya_chunks_dir)
+  result_many <- create_outputs_dorado_cdna(many$dorado_summary_dir, many$nonA_temp_dir, many$polya_chunks_dir)
+
+  expect_equal(result_one$read_classes, result_many$read_classes)
+  expect_equal(result_one$nonadenosine_residues, result_many$nonadenosine_residues)
+})
+
+test_that("create_outputs_dorado_cdna handles reads without any call", {
+  skip_if_not_installed("vroom")
+  coordinates <- create_cdna_coordinates()[1:2, ]
+  dirs <- create_cdna_intermediates(coordinates, create_cdna_calls()[0, ], c("deco", "blank"))
+
+  result <- create_outputs_dorado_cdna(dirs$dorado_summary_dir, dirs$nonA_temp_dir, dirs$polya_chunks_dir)
+
+  expect_equal(nrow(result$nonadenosine_residues), 0L)
+  expect_true(all(result$read_classes$comments == "MAU"))
+})
