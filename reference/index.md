@@ -70,6 +70,21 @@ cross-check of the orientation calls.
 - [`cdna_layout_agreement_marker()`](https://LRB-IIMCB.github.io/ninetails/reference/cdna_layout_agreement_marker.md)
   : Agreement marker between the orientation algorithm and the layout
   inference
+- [`read_tail_coordinates_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/read_tail_coordinates_cdna.md)
+  : Read poly(A)/poly(T) tail coordinates for the cDNA pipeline
+- [`extract_tail_signals_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_cdna.md)
+  : Extract raw poly(A)/poly(T) tail signals with flanks from POD5 files
+  (cDNA)
+- [`normalise_tail_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/normalise_tail_cdna.md)
+  : Normalise a raw cDNA tail signal
+- [`create_tail_windows_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_tail_windows_cdna.md)
+  : Split a normalized cDNA tail signal into sliding windows
+- [`create_gaf_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_cdna.md)
+  : Create gramian angular fields from cDNA signal windows
+- [`call_nonA_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/call_nonA_cdna.md)
+  : Call non-adenosine residues from window-wise cDNA predictions
+- [`predict_nonA_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.md)
+  : Predict non-adenosine residues in cDNA tails
 - [`process_polya_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_reads_cdna.md)
   : Process poly(A) reads with the cDNA poly(A) model
 - [`process_polyt_reads_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/process_polyt_reads_cdna.md)
@@ -77,7 +92,7 @@ cross-check of the orientation calls.
 - [`create_outputs_dorado_cdna()`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado_cdna.md)
   : Create ninetails output tables for the cDNA pipeline
 - [`merge_cdna_results()`](https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.md)
-  : Merge polyA and polyT processing results for cDNA analysis
+  : Merge poly(A) and poly(T) processing results for cDNA analysis
 - [`save_cdna_outputs()`](https://LRB-IIMCB.github.io/ninetails/reference/save_cdna_outputs.md)
   : Save cDNA pipeline outputs in standard ninetails format
 

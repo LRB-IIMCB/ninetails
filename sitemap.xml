@@ -18,6 +18,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/assert_dir_exists.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/assert_file_exists.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/calculate_fisher.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/call_nonA_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/cdna_layout_agreement_marker.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/check_fast5_filetype.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/check_output_directory.html</loc></url>
@@ -36,6 +37,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_residues.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/count_trailing_chars.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_gaf.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_gaf_list_A.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_outputs.html</loc></url>
@@ -50,6 +52,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_feature_list_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_features_list_dorado.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/create_tail_windows_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_multiple.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/detect_orientation_single.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/dot-build_nonA_overlay.html</loc></url>
@@ -62,6 +65,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_polya_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_data_trainingset.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/extract_tails_from_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/filter_dorado_summary.html</loc></url>
@@ -84,6 +88,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/ninetails-package.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/no_na.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/nonA_fisher.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/normalise_tail_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/pipe.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_class_counts.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_gaf.html</loc></url>
@@ -101,6 +106,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_fast5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/plot_tail_range_pod5.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/predict_gaf_classes.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/prepare_trainingset_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/preprocess_inputs.html</loc></url>
@@ -115,6 +121,7 @@
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/read_class_single.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/read_residue_multiple.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/read_residue_single.html</loc></url>
+<url><loc>https://LRB-IIMCB.github.io/ninetails/reference/read_tail_coordinates_cdna.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/reclassify_ninetails_data.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/reverse_complement.html</loc></url>
 <url><loc>https://LRB-IIMCB.github.io/ninetails/reference/save_cdna_outputs.html</loc></url>

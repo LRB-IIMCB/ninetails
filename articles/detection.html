@@ -73,7 +73,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.84</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -304,9 +304,9 @@ tables</li>
 <p>Two tab-separated files are saved in <code>save_dir</code>:</p>
 <ul>
 <li>
-<code>{prefix}read_classes.txt</code> — one row per read</li>
+<code>{prefix}read_classes.txt</code> - one row per read</li>
 <li>
-<code>{prefix}nonadenosine_residues.txt</code> — one row per
+<code>{prefix}nonadenosine_residues.txt</code> - one row per
 detected non-A residue (decorated reads only)</li>
 </ul>
 <p>The function also returns both tables as a named list:</p>
@@ -317,86 +317,291 @@ detected non-A residue (decorated reads only)</li>
 </div>
 </div>
 <div class="section level2">
-<h2 id="dorado-cdna-pipeline-under-development">Dorado cDNA Pipeline (Under Development)<a class="anchor" aria-label="anchor" href="#dorado-cdna-pipeline-under-development"></a>
+<h2 id="dorado-cdna-pipeline-experimental">Dorado cDNA Pipeline (Experimental)<a class="anchor" aria-label="anchor" href="#dorado-cdna-pipeline-experimental"></a>
 </h2>
 <blockquote>
 <p><strong>Warning</strong></p>
-<p>This pipeline is currently under construction. Please do not use it
-for production analyses.</p>
+<p>The cDNA pipeline is experimental. The models were trained and tested
+on synthetic spike-ins only (see <em>Validation</em> below), so results
+on biological samples should be interpreted with caution.</p>
 </blockquote>
-<p><code><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code> extends the DRS pipeline for
-complementary DNA (cDNA) sequencing data with BAM file processing and
-automatic read orientation classification.</p>
+<p><code><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code> detects non-adenosine residues
+in ONT cDNA reads. A cDNA read carries the tail either as poly(A) at its
+3’ end or as poly(T) at its 5’ end, depending on the strand that was
+sequenced. Each orientation is classified with a dedicated model, and
+the predictions are always reported as residues of the original RNA tail
+(C, G, or U).</p>
+<p>Tail coordinates can be provided in two ways. We recommend the
+Lachesis output, because the models were trained on Lachesis
+coordinates.</p>
+<div class="section level3">
+<h3 id="lachesis-input-recommended">Lachesis input (recommended)<a class="anchor" aria-label="anchor" href="#lachesis-input-recommended"></a>
+</h3>
+<p>The Lachesis table provides the tail coordinates, the tail length,
+the QC tag, and the read orientation (<code>strand</code>), so no BAM
+file is needed.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">test_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>, <span class="st">'pod5_cDNA'</span>,</span>
+<span>                        package <span class="op">=</span> <span class="st">'ninetails'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA</a></span><span class="op">(</span></span>
+<span>  lachesis  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">test_dir</span>, <span class="st">'lachesis_polya.tsv'</span><span class="op">)</span>,</span>
+<span>  pod5_dir  <span class="op">=</span> <span class="va">test_dir</span>,</span>
+<span>  num_cores <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  qc        <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  save_dir  <span class="op">=</span> <span class="st">'~/output/'</span>,</span>
+<span>  prefix    <span class="op">=</span> <span class="st">'experiment1'</span>,</span>
+<span>  part_size <span class="op">=</span> <span class="fl">40000</span>,</span>
+<span>  cleanup   <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="dorado-input">Dorado input<a class="anchor" aria-label="anchor" href="#dorado-input"></a>
+</h3>
+<p>Without Lachesis, the coordinates are taken from the Dorado summary
+and the orientation is determined from the basecalled sequences in the
+BAM file (SSP/VNP primer matching).</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA</a></span><span class="op">(</span></span>
-<span>  bam_file       <span class="op">=</span> <span class="st">"path/to/aligned_cdna.bam"</span>,</span>
-<span>  dorado_summary <span class="op">=</span> <span class="st">"path/to/dorado_summary.txt"</span>,</span>
-<span>  pod5_dir       <span class="op">=</span> <span class="st">"path/to/pod5_dir/"</span>,</span>
+<span>  bam_file       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">test_dir</span>, <span class="st">'example_cDNA_dorado.bam'</span><span class="op">)</span>,</span>
+<span>  dorado_summary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">test_dir</span>, <span class="st">'dorado_summary.txt'</span><span class="op">)</span>,</span>
+<span>  pod5_dir       <span class="op">=</span> <span class="va">test_dir</span>,</span>
 <span>  num_cores      <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  qc             <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  save_dir       <span class="op">=</span> <span class="st">"~/output/"</span>,</span>
-<span>  prefix         <span class="op">=</span> <span class="st">"experiment1"</span>,</span>
+<span>  save_dir       <span class="op">=</span> <span class="st">'~/output/'</span>,</span>
+<span>  prefix         <span class="op">=</span> <span class="st">'experiment1'</span>,</span>
 <span>  part_size      <span class="op">=</span> <span class="fl">40000</span>,</span>
 <span>  cleanup        <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p>Both examples run on the test data shipped with the package (26 reads
+of the beta-gal spike-ins, 13 per orientation). The expected output
+tables are stored next to the data as <code>test_cDNA_*.tsv</code>
+(Lachesis input) and <code>test_cDNA_dorado_*.tsv</code> (Dorado
+input).</p>
+</div>
 <div class="section level3">
-<h3 id="additional-parameter-vs-drs">Additional parameter (vs DRS)<a class="anchor" aria-label="anchor" href="#additional-parameter-vs-drs"></a>
+<h3 id="parameters-1">Parameters<a class="anchor" aria-label="anchor" href="#parameters-1"></a>
 </h3>
 <table class="table">
 <colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
 </colgroup>
 <thead><tr class="header">
 <th>Parameter</th>
 <th>Type</th>
+<th>Default</th>
 <th>Description</th>
 </tr></thead>
-<tbody><tr class="odd">
+<tbody>
+<tr class="odd">
+<td><code>lachesis</code></td>
+<td>character/data.frame</td>
+<td><code>NULL</code></td>
+<td>Lachesis poly(A) output. Must contain: <code>readname</code>,
+<code>contig</code>, <code>adapter_end</code>, <code>polya_end</code>,
+<code>polya_length</code>, <code>qc_tag</code>, <code>strand</code>. If
+provided, <code>bam_file</code> and <code>dorado_summary</code> are not
+used</td>
+</tr>
+<tr class="even">
 <td><code>bam_file</code></td>
 <td>character</td>
-<td>Path to BAM file containing aligned cDNA reads with basecalled
-sequences</td>
-</tr></tbody>
+<td>
+<em>required without</em> <code>lachesis</code>
+</td>
+<td>Path to BAM file with basecalled cDNA reads</td>
+</tr>
+<tr class="odd">
+<td><code>dorado_summary</code></td>
+<td>character/data.frame</td>
+<td>
+<em>required without</em> <code>lachesis</code>
+</td>
+<td>Path to Dorado summary file with poly(A) tail estimates</td>
+</tr>
+<tr class="even">
+<td><code>pod5_dir</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Path to directory containing POD5 files</td>
+</tr>
+<tr class="odd">
+<td><code>num_cores</code></td>
+<td>integer</td>
+<td><code>1</code></td>
+<td>Number of CPU cores for parallel processing</td>
+</tr>
+<tr class="even">
+<td><code>qc</code></td>
+<td>logical</td>
+<td><code>TRUE</code></td>
+<td>Apply quality control filtering (see below)</td>
+</tr>
+<tr class="odd">
+<td><code>save_dir</code></td>
+<td>character</td>
+<td><em>required</em></td>
+<td>Output directory for results files</td>
+</tr>
+<tr class="even">
+<td><code>prefix</code></td>
+<td>character</td>
+<td><code>""</code></td>
+<td>Optional prefix for output filenames</td>
+</tr>
+<tr class="odd">
+<td><code>part_size</code></td>
+<td>integer</td>
+<td><code>40000</code></td>
+<td>Maximum reads per processing chunk (reduce if memory limited)</td>
+</tr>
+<tr class="even">
+<td><code>cleanup</code></td>
+<td>logical</td>
+<td><code>FALSE</code></td>
+<td>Remove intermediate files after completion</td>
+</tr>
+</tbody>
 </table>
-<p>All other parameters are identical to
-<code><a href="../reference/check_tails_dorado_DRS.html">check_tails_dorado_DRS()</a></code>.</p>
 </div>
 <div class="section level3">
-<h3 id="cdna-specific-processing">cDNA-specific processing<a class="anchor" aria-label="anchor" href="#cdna-specific-processing"></a>
+<h3 id="quality-control-qc-true-1">Quality control (<code>qc = TRUE</code>)<a class="anchor" aria-label="anchor" href="#quality-control-qc-true-1"></a>
 </h3>
-<p>The cDNA pipeline includes additional steps not present in the DRS
-pipeline:</p>
+<ul>
+<li>Reads with a Lachesis QC tag other than <code>PASS</code> are
+classified as <code>QCF</code> and excluded from signal processing</li>
+<li>Reads with a tail shorter than 10 nt are classified as
+<code>IRL</code>
+</li>
+<li>Reads with invalid tail coordinates, or without a signal, are
+classified as <code>BAC</code>
+</li>
+<li>Calls closer than 2 nt to either end of the tail are discarded; a
+read left without any call is reported as <code>blank</code> with code
+<code>MPU</code>
+</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="pipeline-steps-1">Pipeline steps<a class="anchor" aria-label="anchor" href="#pipeline-steps-1"></a>
+</h3>
 <ol style="list-style-type: decimal">
 <li>
-<strong>BAM splitting</strong> (<code><a href="../reference/split_bam_file_cdna.html">split_bam_file_cdna()</a></code>):
-Splits the BAM file into manageable chunks</li>
+<strong>Tail coordinates</strong>
+(<code><a href="../reference/read_tail_coordinates_cdna.html">read_tail_coordinates_cdna()</a></code>): Converts the Lachesis
+output or the Dorado summary to a common table. With Dorado input, the
+BAM file is split (<code><a href="../reference/split_bam_file_cdna.html">split_bam_file_cdna()</a></code>), sequences are
+extracted (<code><a href="../reference/extract_data_from_bam.html">extract_data_from_bam()</a></code>), and the orientation is
+detected (<code><a href="../reference/detect_orientation_multiple.html">detect_orientation_multiple()</a></code>)</li>
 <li>
-<strong>Sequence extraction</strong>
-(<code><a href="../reference/extract_data_from_bam.html">extract_data_from_bam()</a></code>): Extracts basecalled sequences
-from BAM records</li>
+<strong>Signal extraction</strong>
+(<code><a href="../reference/extract_tail_signals_cdna.html">extract_tail_signals_cdna()</a></code>): Extracts the raw tail signal
+with 100 samples of flank on each side. Unlike the DRS pipeline, the
+signal is neither winsorised nor downsampled, because a nucleotide spans
+only about 11 samples in cDNA</li>
 <li>
-<strong>Orientation detection</strong>
-(<code><a href="../reference/detect_orientation_single.html">detect_orientation_single()</a></code> /
-<code><a href="../reference/detect_orientation_multiple.html">detect_orientation_multiple()</a></code>): Classifies each read as
-<code>polyA</code>, <code>polyT</code>, or <code>unidentified</code>
-using Dorado-style SSP/VNP primer matching against basecalled
-sequences</li>
+<strong>Normalisation</strong> (<code><a href="../reference/normalise_tail_cdna.html">normalise_tail_cdna()</a></code>):
+Centres the signal on the tail median, scales it by a noise estimate,
+and compresses it to the interval (-1, 1)</li>
 <li>
-<strong>Separate processing</strong>: Poly(A) and poly(T) reads are
-processed independently through the signal analysis pipeline</li>
+<strong>Sliding windows</strong>
+(<code><a href="../reference/create_tail_windows_cdna.html">create_tail_windows_cdna()</a></code>): Cuts 100-sample windows every
+25 samples along the whole tail. No candidate positions are
+preselected</li>
 <li>
-<strong>Result merging</strong> (<code><a href="../reference/merge_cdna_results.html">merge_cdna_results()</a></code>):
-Combines poly(A) and poly(T) results into unified output tables</li>
+<strong>GAF creation</strong> (<code><a href="../reference/create_gaf_cdna.html">create_gaf_cdna()</a></code>):
+Converts each window to a two-channel Gramian Angular Field</li>
+<li>
+<strong>CNN classification</strong>
+(<code><a href="../reference/predict_nonA_cdna.html">predict_nonA_cdna()</a></code>): Applies the poly(A) or the poly(T)
+model to every window</li>
+<li>
+<strong>Calling</strong> (<code><a href="../reference/call_nonA_cdna.html">call_nonA_cdna()</a></code>): Reports a
+non-adenosine where at least two consecutive windows exceed the
+threshold; stricter thresholds apply near the tail boundaries of poly(A)
+reads</li>
+<li>
+<strong>Output creation</strong>
+(<code><a href="../reference/create_outputs_dorado_cdna.html">create_outputs_dorado_cdna()</a></code>,
+<code><a href="../reference/merge_cdna_results.html">merge_cdna_results()</a></code>): Aggregates the calls into per-read
+classifications for both orientations</li>
 </ol>
+<p>As in the DRS pipeline, reads are processed in parts of
+<code>part_size</code> reads and the intermediate results of each part
+are written to <code>save_dir</code>, so memory usage does not grow with
+the size of the run.</p>
 </div>
 <div class="section level3">
 <h3 id="output">Output<a class="anchor" aria-label="anchor" href="#output"></a>
 </h3>
-<p>Output tables include an additional <code>tail_type</code> column
-(<code>polyA</code> or <code>polyT</code>) indicating the read
-orientation.</p>
+<p>The output tables have the same structure as in the DRS pipeline (see
+<em>Output structure</em> below), with an additional
+<code>tail_type</code> column (<code>polyA</code> or <code>polyT</code>)
+indicating the read orientation.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">class_data</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">read_classes</span></span>
+<span><span class="va">residue_data</span> <span class="op">&lt;-</span> <span class="va">results</span><span class="op">$</span><span class="va">nonadenosine_residues</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">residue_data</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                               readname   contig prediction est_nonA_pos polya_length qc_tag tail_type</span></span>
+<span><span class="co">#&gt; 1 00520674-3559-4dd2-a7dc-d5449c15806c beta_gal          G        31.72        69.94   PASS     polyA</span></span>
+<span><span class="co">#&gt; 2 144f3bab-764b-492f-a235-f9787e5ce905 beta_gal          U        35.26        64.64   PASS     polyA</span></span>
+<span><span class="co">#&gt; 3 16624e6e-c846-4f5f-b28e-26e6646d15b9 beta_gal          C        33.61        66.25   PASS     polyA</span></span></code></pre></div>
+<p><code>est_nonA_pos</code> is computed from the position of the call
+in the signal and the provided tail length, so it inherits any error of
+the tail length estimate. Positions are resolved in steps of about 2
+nt.</p>
+</div>
+<div class="section level3">
+<h3 id="validation">Validation<a class="anchor" aria-label="anchor" href="#validation"></a>
+</h3>
+<p>The models were trained on in vitro transcribed beta-gal spike-ins
+carrying a single C, G, or U in the middle of a 60 nt poly(A) tail
+(SQK-PCB114-24, 5 kHz, Dorado hac v6.0, Lachesis coordinates). On reads
+from sequencing channels not used for training:</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>Orientation</th>
+<th>Recall</th>
+<th>Residue accuracy</th>
+<th>False-positive reads on pure poly(A) tails</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>poly(A)</td>
+<td>0.92</td>
+<td>0.90</td>
+<td>0.039</td>
+</tr>
+<tr class="even">
+<td>poly(T)</td>
+<td>0.86</td>
+<td>0.80</td>
+<td>0.023</td>
+</tr>
+</tbody>
+</table>
+<p>Keep in mind the limits of this validation:</p>
+<ul>
+<li>Only one tail length (60 nt) and one non-A position (the middle of
+the tail) were available for training</li>
+<li>False-positive rates were measured on a pure poly(A) control with
+tails of 10–200 nt; for poly(T) reads, tails longer than about 65 nt
+could not be assessed</li>
+<li>Calls close to the ends of tails shorter than 45 nt are less
+reliable</li>
+<li>Processing is considerably slower than in the DRS pipeline, because
+every window of every tail is classified</li>
+</ul>
 <hr>
 </div>
 </div>
@@ -412,7 +617,7 @@ For new analyses, use the Dorado DRS pipeline.</p>
 <p><code><a href="../reference/check_tails_guppy.html">check_tails_guppy()</a></code> is the legacy function for DRS data
 basecalled with Guppy using fast5 format and Nanopolish poly(A)
 coordinates.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">ninetails</span><span class="fu">::</span><span class="fu"><a href="../reference/check_tails_guppy.html">check_tails_guppy</a></span><span class="op">(</span></span>
 <span>  polya_data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>, <span class="st">'test_data'</span>,</span>
 <span>                           <span class="st">'nanopolish_output.tsv'</span>,</span>
@@ -429,7 +634,7 @@ coordinates.</p>
 <span>  save_dir <span class="op">=</span> <span class="st">'~/output/'</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
-<h3 id="parameters-1">Parameters<a class="anchor" aria-label="anchor" href="#parameters-1"></a>
+<h3 id="parameters-2">Parameters<a class="anchor" aria-label="anchor" href="#parameters-2"></a>
 </h3>
 <table class="table">
 <colgroup>
@@ -661,8 +866,15 @@ residue.</p>
 <td><code>BAC</code></td>
 <td>Invalid coordinates (<code>poly_tail_start = 0</code>)</td>
 </tr>
+<tr class="odd">
+<td><code>unclassified</code></td>
+<td><code>QCF</code></td>
+<td>Lachesis QC failed (cDNA pipeline with Lachesis input only)</td>
+</tr>
 </tbody>
 </table>
+<p>In the cDNA pipeline, <code>MPU</code> marks reads whose only calls
+were terminal and discarded by <code>qc</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="guppy-legacy-pipeline-1">Guppy legacy pipeline<a class="anchor" aria-label="anchor" href="#guppy-legacy-pipeline-1"></a>
@@ -763,18 +975,18 @@ I/O bottlenecks during signal extraction.</li>
 <ol style="list-style-type: decimal">
 <li>
 <strong>Postprocess</strong>: Load, annotate, merge, and summarize
-results — <code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code>
+results - <code><a href="../articles/postprocessing.html">vignette("postprocessing")</a></code>
 </li>
 <li>
-<strong>Visualize</strong>: Generate static plots —
+<strong>Visualize</strong>: Generate static plots -
 <code><a href="../articles/plotting.html">vignette("plotting")</a></code>
 </li>
 <li>
-<strong>Inspect signals</strong>: Examine raw squiggles —
+<strong>Inspect signals</strong>: Examine raw squiggles -
 <code><a href="../articles/signal_inspection.html">vignette("signal_inspection")</a></code>
 </li>
 <li>
-<strong>Explore interactively</strong>: Launch the Shiny dashboard —
+<strong>Explore interactively</strong>: Launch the Shiny dashboard -
 <code><a href="../articles/shiny_app.html">vignette("shiny_app")</a></code>
 </li>
 </ol>

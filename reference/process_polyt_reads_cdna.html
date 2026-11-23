@@ -63,7 +63,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.84</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -135,12 +135,12 @@ they are directly comparable with the poly(A) orientation.</p>
 <dd><p>Data frame/tibble. Poly(T) reads with their tail
 coordinates: <code>read_id</code>, <code>tail_start</code>, <code>tail_end</code>,
 <code>polya_length</code> and optionally <code>contig</code> and <code>qc_tag</code>
-(see <code>read_tail_coordinates_cdna</code>).</p></dd>
+(see <code><a href="read_tail_coordinates_cdna.html">read_tail_coordinates_cdna</a></code>).</p></dd>
 
 
 <dt id="arg-signal-files">signal_files<a class="anchor" aria-label="anchor" href="#arg-signal-files"></a></dt>
 <dd><p>Character vector. Paths to the <code>.rds</code> files with
-raw flanked tail signals (see <code>extract_tail_signals_cdna</code>).</p></dd>
+raw flanked tail signals (see <code><a href="extract_tail_signals_cdna.html">extract_tail_signals_cdna</a></code>).</p></dd>
 
 
 <dt id="arg-num-cores">num_cores<a class="anchor" aria-label="anchor" href="#arg-num-cores"></a></dt>
@@ -184,7 +184,7 @@ subdirectory.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Signals are classified with <code>predict_nonA_cdna</code>, one signal
+    <p>Signals are classified with <code><a href="predict_nonA_cdna.html">predict_nonA_cdna</a></code>, one signal
 file at a time. The calls of each file are written to disk, so memory usage
 does not grow with the size of the sequencing run. The tables are then
 built from these files by <code><a href="create_outputs_dorado_cdna.html">create_outputs_dorado_cdna</a></code>. Reads with invalid

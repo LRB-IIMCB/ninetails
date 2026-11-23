@@ -1,4 +1,4 @@
-# Merge polyA and polyT processing results for cDNA analysis
+# Merge poly(A) and poly(T) processing results for cDNA analysis
 
 This function combines the results from separate poly(A) and poly(T)
 processing paths into a unified output in standard ninetails format.
@@ -23,7 +23,7 @@ merge_cdna_results(
 - polya_results:
 
   List. Results from poly(A) processing (from process_polya_reads_cdna).
-  Can be NULL if no polyA reads were found.
+  Can be NULL if no poly(A) reads were found.
 
 - polyt_results:
 
@@ -32,8 +32,8 @@ merge_cdna_results(
 
 - unidentified_reads:
 
-  Data frame/tibble. Reads that could not be classified as polyA or
-  polyT (with tail_type = "unidentified").
+  Data frame/tibble. Reads that could not be classified as poly(A) or
+  poly(T) (with tail_type = "unidentified").
 
 - save_dir:
 

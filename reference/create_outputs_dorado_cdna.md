@@ -1,9 +1,10 @@
 # Create ninetails output tables for the cDNA pipeline
 
 Combines the tail coordinates with the non-adenosine calls of
-`predict_nonA_cdna` into the two standard ninetails outputs: per-read
-classes and non-adenosine residues with their estimated positions.
-Inputs are read from the intermediate directories written by
+[`predict_nonA_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.md)
+into the two standard ninetails outputs: per-read classes and
+non-adenosine residues with their estimated positions. Inputs are read
+from the intermediate directories written by
 [`process_polya_reads_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/process_polya_reads_cdna.md)
 or
 [`process_polyt_reads_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/process_polyt_reads_cdna.md).
@@ -33,8 +34,10 @@ create_outputs_dorado_cdna(
 
   Character string. Path to a directory with the per-part RDS files of
   non-adenosine calls. Each file holds a list with `nonA_calls` (output
-  of `predict_nonA_cdna`) and `classified_reads` (IDs of the reads whose
-  signals were classified).
+  of
+  [`predict_nonA_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.md))
+  and `classified_reads` (IDs of the reads whose signals were
+  classified).
 
 - polya_chunks_dir:
 
@@ -83,7 +86,7 @@ A named list:
 
 ## See also
 
-`predict_nonA_cdna`,
+[`predict_nonA_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.md),
 [`merge_cdna_results`](https://LRB-IIMCB.github.io/ninetails/reference/merge_cdna_results.md)
 
 ## Examples

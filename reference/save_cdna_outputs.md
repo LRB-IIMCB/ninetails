@@ -3,7 +3,8 @@
 This function takes the merged cDNA results and formats them as the
 standard ninetails output format (same as create_outputs_dorado) with
 two tables: read_classes and nonadenosine_residues. The key difference
-from DRS is the additional tail_type column indicating polyA or polyT.
+from DRS is the additional tail_type column indicating poly(A) or
+poly(T).
 
 ## Usage
 

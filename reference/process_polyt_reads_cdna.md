@@ -26,12 +26,14 @@ process_polyt_reads_cdna(
 
   Data frame/tibble. Poly(T) reads with their tail coordinates:
   `read_id`, `tail_start`, `tail_end`, `polya_length` and optionally
-  `contig` and `qc_tag` (see `read_tail_coordinates_cdna`).
+  `contig` and `qc_tag` (see
+  [`read_tail_coordinates_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/read_tail_coordinates_cdna.md)).
 
 - signal_files:
 
   Character vector. Paths to the `.rds` files with raw flanked tail
-  signals (see `extract_tail_signals_cdna`).
+  signals (see
+  [`extract_tail_signals_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/extract_tail_signals_cdna.md)).
 
 - num_cores:
 
@@ -77,10 +79,11 @@ List containing poly(T) processing results:
 
 ## Details
 
-Signals are classified with `predict_nonA_cdna`, one signal file at a
-time. The calls of each file are written to disk, so memory usage does
-not grow with the size of the sequencing run. The tables are then built
-from these files by
+Signals are classified with
+[`predict_nonA_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.md),
+one signal file at a time. The calls of each file are written to disk,
+so memory usage does not grow with the size of the sequencing run. The
+tables are then built from these files by
 [`create_outputs_dorado_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/create_outputs_dorado_cdna.md).
 Reads with invalid coordinates, tails shorter than 10 nt or (with
 `qc = TRUE`) a Lachesis QC tag other than `PASS` are not classified.

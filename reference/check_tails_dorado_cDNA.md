@@ -117,7 +117,8 @@ A named list containing the final analysis results:
     from POD5 files
 
 3.  **Classification**: sliding windows of each tail are classified with
-    the poly(A) or poly(T) cDNA model (see `predict_nonA_cdna`)
+    the poly(A) or poly(T) cDNA model (see
+    [`predict_nonA_cdna`](https://LRB-IIMCB.github.io/ninetails/reference/predict_nonA_cdna.md))
 
 4.  **Output with Tail Types**: Produces standard read_classes and
     nonadenosine_residues with tail_type information

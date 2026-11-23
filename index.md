@@ -8,12 +8,12 @@ Oxford Nanopore sequencing reads**
 **Ninetails** detects and characterises non-adenosine nucleotides
 embedded within poly(A) tails of Oxford Nanopore sequencing reads. It is
 compatible with both DRS-dedicated **SQK-RNA002** and **SQK-RNA004**
-chemistries. Support for cDNA is under development.
+chemistries. Support for cDNA is now implemented (validated on
+**SQK-PCB114-24** and **SQK-PCS114**).
 
 Ninetails currently offers three pipelines:
 
-**WARNING! cDNA pipeline under construction! Please do not use it for
-now!**
+**Ninetails 2.0.0 now supports non-adenosine detection in cDNA data!**
 
 | Pipeline | Basecaller | Input format | Function |
 |----|----|----|----|
@@ -31,8 +31,8 @@ The software is still under active development. All suggestions for
 improvement are welcome. Please note that the code may change
 frequently, so use it with caution.
 
-**Ninetails** has been tested on Linux Mint 20.3, Ubuntu 20.04.3 and
-Windows 11 with R 4.1.2, R 4.2.0 and R 4.2.1.
+**Ninetails** has been tested on Linux Mint 20.3, Ubuntu 20.04.3, Ubuntu
+20.04.3 and Windows 11 with R 4.1.2, R 4.2.x and R 4.4.2.
 
 ## Documentation
 

@@ -33,7 +33,7 @@ detect_orientation_multiple(sequence_files, num_cores = 1, cli_log = message)
 ## Value
 
 Data frame/tibble containing all sequences with added tail_type column
-("polyA", "polyT", or "unidentified") based on Dorado-style edit
+("polyA", "poly(T)", or "unidentified") based on Dorado-style edit
 distance matching of SSP and VNP primers with score and separation
 validation. The augmented table (with tail_type) is also written to a
 sibling "\<name\>\_classified.tsv" file for persistence; the original

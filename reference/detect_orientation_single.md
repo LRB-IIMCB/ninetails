@@ -19,8 +19,8 @@ detect_orientation_single(sequence)
 
 ## Value
 
-Character string: "A" for polyA orientation, "T" for polyT orientation,
-or "unknown" for unclassified sequences
+Character string: "A" for polyA orientation, "T" for poly(T)
+orientation, or "unknown" for unclassified sequences
 
 ## Examples
 

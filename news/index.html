@@ -55,7 +55,7 @@ body, .contents, .contents p, .contents li,
 
     <a class="navbar-brand me-2" href="../index.html">ninetails</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.84</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,6 +97,29 @@ body, .contents, .contents p, .contents li,
       <small>Source: <a href="https://github.com/LRB-IIMCB/ninetails/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.0.0" id="ninetails-200-major-release">ninetails 2.0.0 (major release)<a class="anchor" aria-label="anchor" href="#ninetails-200-major-release"></a></h2>
+<div class="section level3">
+<h3 id="cdna-pipeline-dedicated-polya-and-polyt-models-2-0-0">cDNA pipeline: dedicated poly(A) and poly(T) models<a class="anchor" aria-label="anchor" href="#cdna-pipeline-dedicated-polya-and-polyt-models-2-0-0"></a></h3>
+<p>The cDNA runs the dedicated double-model pipeline. Each read orientation has its own model, trained on IVT beta-gal spike-ins with a single C, G, or U in a 60 nt poly(A) tail. Predictions are reported as residues of the RNA tail. The pipeline is a new feature and will be improved. Feedback much appreciated.</p>
+<ul><li>
+<strong><code><a href="../reference/check_tails_dorado_cDNA.html">check_tails_dorado_cDNA()</a></code></strong> accepts Lachesis output (<code>lachesis</code> argument, recommended). The Dorado route (BAM + summary) is still available.</li>
+<li>Tail signals are no longer winsorised or downsampled, and the whole tail is scanned with sliding windows. New functions: <code><a href="../reference/read_tail_coordinates_cdna.html">read_tail_coordinates_cdna()</a></code>, <code><a href="../reference/extract_tail_signals_cdna.html">extract_tail_signals_cdna()</a></code>, <code><a href="../reference/normalise_tail_cdna.html">normalise_tail_cdna()</a></code>, <code><a href="../reference/create_tail_windows_cdna.html">create_tail_windows_cdna()</a></code>, <code><a href="../reference/create_gaf_cdna.html">create_gaf_cdna()</a></code>, <code><a href="../reference/predict_nonA_cdna.html">predict_nonA_cdna()</a></code>, <code><a href="../reference/call_nonA_cdna.html">call_nonA_cdna()</a></code>.</li>
+<li>Calls of each signal part are written to disk, so memory usage does not grow with the size of the run.</li>
+<li>Reads failing the Lachesis QC are reported as <code>unclassified</code> (<code>QCF</code>).</li>
+<li>Added cDNA test data (<code>inst/extdata/test_data/pod5_cDNA/</code>) with expected outputs, and unit tests for the cDNA functions.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-2-0-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-2-0-0"></a></h3>
+<ul><li>Reverse-strand reads are now reverse-complemented in <code><a href="../reference/extract_data_from_bam.html">extract_data_from_bam()</a></code>.</li>
+<li>Dorado summaries with <code>input_filename</code> or <code>alignment_mapping_quality</code> are accepted in the DRS and cDNA pipelines (<code><a href="../reference/filter_dorado_summary.html">filter_dorado_summary()</a></code>, <code><a href="../reference/create_outputs_dorado.html">create_outputs_dorado()</a></code>, <code><a href="../reference/extract_data_from_bam.html">extract_data_from_bam()</a></code>).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-2-0-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-2-0-0"></a></h3>
+<ul><li>README and <code><a href="../articles/detection.html">vignette("detection")</a></code> describe the cDNA route, with a scheme of the pipeline (<code>man/figures/cdna_pipeline.png</code>).</li>
+<li>Added the notebook for DRS training-set preparation, <code>training/prepare_trainingset_drs.Rmd</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.84" id="ninetails-1084-development">ninetails 1.0.84 (development)<a class="anchor" aria-label="anchor" href="#ninetails-1084-development"></a></h2>
 <div class="section level3">
