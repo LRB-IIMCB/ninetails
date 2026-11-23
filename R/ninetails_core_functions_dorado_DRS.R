@@ -1,3 +1,7 @@
+################################################################################
+# Core functions for Dorado DRS pipeline enabling pod5 file handling,
+# facilitating batch processing & logging
+################################################################################
 #' Process and split Dorado summary file into smaller parts
 #'
 #' Splits a Dorado summary file or data frame (in-memory file) into multiple
@@ -26,10 +30,10 @@
 #' )
 #' }
 process_dorado_summary <- function(
-  dorado_summary,
-  save_dir,
-  part_size,
-  cli_log) {
+    dorado_summary,
+    save_dir,
+    part_size,
+    cli_log) {
 
   # Assertions
   if (missing(part_size)) {
@@ -415,14 +419,14 @@ extract_tails_from_pod5 <- function(polya_data, pod5_dir, num_cores = 1) {
 #' )
 #' }
 preprocess_inputs <- function(
-  dorado_summary,
-  pod5_dir,
-  num_cores,
-  qc,
-  save_dir,
-  prefix,
-  part_size,
-  cli_log) {
+    dorado_summary,
+    pod5_dir,
+    num_cores,
+    qc,
+    save_dir,
+    prefix,
+    part_size,
+    cli_log) {
 
   # Input validation and configuration
   cli_log("Validating input parameters", "INFO", "Validating Inputs")
@@ -1386,17 +1390,20 @@ create_outputs_dorado <- function(dorado_summary_dir,
   # keep only columns of interest
   if (is.character(original_summary)) {
     cat("Loading original dorado summary for complete read classification...\n")
+    # accept both old and new dorado column names
     dorado_summary <- vroom::vroom(
       original_summary,
       show_col_types = FALSE,
-      col_select = tidyselect::all_of(selected_cols)
+      col_select = tidyselect::any_of(c(selected_cols, names(.dorado_column_aliases)))
     )
+    dorado_summary <- .standardise_dorado_columns(dorado_summary)
+    dorado_summary <- dorado_summary[, selected_cols, drop = FALSE]
     cat(sprintf(
       "Loaded %d total reads from original summary\n",
       nrow(dorado_summary)
     ))
   } else if (is.data.frame(original_summary)) {
-    dorado_summary <- original_summary[, selected_cols, drop = FALSE]
+    dorado_summary <- .standardise_dorado_columns(original_summary)[, selected_cols, drop = FALSE]
   } else {
     stop("original_summary must be a file path or data frame")
   }
