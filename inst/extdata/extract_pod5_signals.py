@@ -10,7 +10,7 @@ Dorado summary file.
 """
 
 import argparse
-import pandas as pd
+import csv
 import pod5
 import numpy as np
 from multiprocessing import Pool
@@ -93,23 +93,112 @@ def process_pod5_file(args):
     
     return signals
 
+def process_pod5_file_raw(args):
+    """Extract raw (unprocessed) tail signals with flanks from a single POD5 file.
+
+    Used by the cDNA pipeline (--raw): no winsorization, no interpolation.
+    The returned slice is signal[max(0, start - flank):min(len, end + flank)].
+    """
+    filename, wanted, pod5_dir, flank = args
+    pod5_path = os.path.join(pod5_dir, filename)
+
+    if not os.path.exists(pod5_path):
+        print(f"Warning: POD5 file not found: {pod5_path}", file=sys.stderr)
+        return {}
+
+    signals = {}
+
+    try:
+        with pod5.Reader(pod5_path) as reader:
+            for read in reader.reads():
+                read_id = str(read.read_id).strip()
+                if read_id not in wanted:
+                    continue
+
+                start_idx, end_idx = wanted[read_id]
+                signal = read.signal
+
+                if 0 < start_idx < end_idx <= len(signal):
+                    lower = max(0, start_idx - flank)
+                    upper = min(len(signal), end_idx + flank)
+                    signals[read_id] = signal[lower:upper].tolist()
+
+    except Exception as e:
+        print(f"Error processing {pod5_path}: {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+
+    return signals
+
 def main():
     parser = argparse.ArgumentParser(description="Extract polyA signals from POD5 files")
     parser.add_argument("--input", required=True, help="Input CSV file with read information")
     parser.add_argument("--pod5_dir", required=True, help="Directory containing POD5 files")
     parser.add_argument("--output", required=True, help="Output pickle file for signals")
     parser.add_argument("--num_cores", type=int, default=1, help="Number of CPU cores to use")
-    
+    parser.add_argument("--raw", action="store_true", default=False,
+                        help="Return raw tail signals (no winsorization/interpolation); cDNA pipeline")
+    parser.add_argument("--flank", type=int, default=0,
+                        help="Samples kept on each side of the tail (only with --raw)")
+
     args = parser.parse_args()
     
     # Read input data
     print(f"Reading input data from {args.input}")
+
+    # Raw mode (cDNA pipeline): flanked, unprocessed tail signals
+    # (standard library only; pandas is not needed here)
+    if args.raw:
+        with open(args.input, newline="") as f:
+            rows = list(csv.DictReader(f))
+        print(f"Found {len(rows)} reads to process")
+
+        def coords_of(table):
+            return {str(row["read_id"]).strip(): (int(float(row["poly_tail_start"])),
+                                                  int(float(row["poly_tail_end"])))
+                    for row in table}
+
+        if rows and all(row.get("filename") not in (None, "", "NA") for row in rows):
+            by_file = {}
+            for row in rows:
+                by_file.setdefault(row["filename"], []).append(row)
+            process_args = [(filename, coords_of(group), args.pod5_dir, args.flank)
+                            for filename, group in by_file.items()]
+        else:
+            # no read-to-file mapping (e.g. Lachesis input): scan every POD5 file
+            wanted = coords_of(rows)
+            process_args = [(filename, wanted, args.pod5_dir, args.flank)
+                            for filename in sorted(os.listdir(args.pod5_dir))
+                            if filename.endswith(".pod5")]
+
+        print(f"Processing {len(process_args)} POD5 files with {args.num_cores} cores")
+
+        if args.num_cores > 1:
+            with Pool(args.num_cores) as pool:
+                results = pool.map(process_pod5_file_raw, process_args)
+        else:
+            results = [process_pod5_file_raw(arg) for arg in process_args]
+
+        all_signals = {}
+        for result in results:
+            all_signals.update(result)
+
+        print(f"Extracted signals for {len(all_signals)} reads")
+
+        with open(args.output, "wb") as f:
+            pickle.dump(all_signals, f)
+
+        print(f"Results saved to {args.output}")
+        return
+
+    import pandas as pd  # only the DRS path needs pandas
+
     polya_data = pd.read_csv(args.input)
     print(f"Found {len(polya_data)} reads to process")
-    
+
     # Ensure read_id is string type
     polya_data["read_id"] = polya_data["read_id"].astype(str)
-    
+
     # Group by filename
     grouped = polya_data.groupby("filename")
     file_count = len(grouped)
