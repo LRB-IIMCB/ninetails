@@ -125,7 +125,8 @@ as the DRS pipeline, but with automatic classification of read orientations.</p>
 <span>  <span class="va">save_dir</span>,</span>
 <span>  prefix <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  part_size <span class="op">=</span> <span class="fl">40000</span>,</span>
-<span>  cleanup <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  cleanup <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  lachesis <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -181,6 +182,13 @@ Adjust based on available system memory.</p></dd>
 <dd><p>Logical [FALSE]. Whether to remove intermediate files after successful
 pipeline completion. When FALSE, all intermediate files are preserved for inspection.</p></dd>
 
+
+<dt id="arg-lachesis">lachesis<a class="anchor" aria-label="anchor" href="#arg-lachesis"></a></dt>
+<dd><p>Character string or data frame [NULL]. Path to the Lachesis
+output file (or the same table in memory). When provided, the tail coordinates
+and read orientation (<code>strand</code> column) are based on Lachesis predictions.
+If that is the case, <code>bam_file</code> and <code>dorado_summary</code> are not required.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -191,7 +199,9 @@ pipeline completion. When FALSE, all intermediate files are preserved for inspec
   <dt>nonadenosine_residues</dt>
 <dd><p>Data frame with predicted non-adenosine positions
     within poly(A)/poly(T) tails including readname, contig, prediction,
-    estimated position, poly(A) length, QC tag, and tail_type</p></dd>
+    estimated position, poly(A) length, QC tag, and tail_type. Predictions
+    refer to the residue present in the original RNA tail (C, G or U) and
+    positions are counted from the 3' end of the tail, in both orientations</p></dd>
 
 
 </dl></div>
@@ -199,17 +209,21 @@ pipeline completion. When FALSE, all intermediate files are preserved for inspec
     <h2 id="pipeline-overview">Pipeline Overview<a class="anchor" aria-label="anchor" href="#pipeline-overview"></a></h2>
 
 
-<p>The cDNA pipeline follows the same analysis flow as check_tails_dorado_DRS with these additions:</p><ol><li><p><strong>BAM Processing</strong>: Extracts basecalled sequences from BAM file (required for cDNA data)</p></li>
-<li><p><strong>Dorado-Style Read Classification</strong>: Classifies reads as polyA, polyT, or unidentified using edit distance matching</p></li>
-<li><p><strong>Standard Processing</strong>: Processes reads using the same signal processing and analysis as DRS pipeline</p></li>
+<ol><li><p><strong>Tail coordinates and orientation</strong>: taken from Lachesis (<code>lachesis</code> param),
+  or from Dorado summary with orientation classified from the basecalled sequences in the BAM file
+  (based on SSP/VNP primer matching)</p></li>
+<li><p><strong>Signal extraction</strong>: raw tail signals with flanks are extracted from POD5 files</p></li>
+<li><p><strong>Classification</strong>: sliding windows of each tail are classified with the poly(A)
+  or poly(T) cDNA model (see <code>predict_nonA_cdna</code>)</p></li>
 <li><p><strong>Output with Tail Types</strong>: Produces standard read_classes and nonadenosine_residues with tail_type information</p></li>
 </ol></div>
     <div class="section level2">
     <h2 id="input-requirements">Input Requirements<a class="anchor" aria-label="anchor" href="#input-requirements"></a></h2>
 
 
-<p>This pipeline requires specific input formats:</p><ul><li><p><strong>Dorado Summary</strong>: Must contain standard columns for read information</p></li>
-<li><p><strong>BAM File</strong>: Aligned cDNA reads with basecalled sequences</p></li>
+<p>This pipeline requires specific input formats:</p><ul><li><p><strong>Lachesis output</strong>: tail coordinates and read orientation from Lachesis software (recommended) or</p></li>
+<li><p><strong>Dorado Summary</strong>: Must contain standard columns for read information (<code>--estimate-poly-a</code>; Dorado &gt;=1.0.0)</p></li>
+<li><p><strong>BAM File</strong>: Aligned cDNA reads with basecalled, untrimmed sequences (<code>--no-trim</code>)</p></li>
 <li><p><strong>POD5 Files</strong>: Raw signal files corresponding to reads in summary</p></li>
 </ul></div>
     <div class="section level2">
@@ -217,7 +231,9 @@ pipeline completion. When FALSE, all intermediate files are preserved for inspec
 
 
 <ul><li><p><strong>BAM Input</strong>: Additional BAM file input for sequence extraction since cDNA data requires basecalled sequences</p></li>
-<li><p><strong>Dorado-Style Read Orientation Classification</strong>: Uses edit distance matching of SSP/VNP primers to classify reads as polyA, polyT, or unidentified before processing</p></li>
+<li><p><strong>Dorado-Style Read Orientation Classification</strong>: matching of SSP/VNP primers to classify reads as polyA, polyT, or unidentified before processing</p></li>
+<li><p><strong>Separate models</strong>: poly(A) and poly(T) reads are classified with dedicated cDNA models working on the raw (not downsampled, nor winsorized) signal</p></li>
+<li><p><strong>RNA-level reporting</strong>: predictions refer to the residues of the original RNA tail in both orientations</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -246,7 +262,8 @@ pipeline completion. When FALSE, all intermediate files are preserved for inspec
 <span class="r-in"><span>  save_dir <span class="op">=</span> <span class="st">"/results/experiment1/"</span>,</span></span>
 <span class="r-in"><span>  prefix <span class="op">=</span> <span class="st">"exp1_sample_A"</span>,</span></span>
 <span class="r-in"><span>  part_size <span class="op">=</span> <span class="fl">20000</span>,  <span class="co"># Smaller chunks for limited memory</span></span></span>
-<span class="r-in"><span>  cleanup <span class="op">=</span> <span class="cn">TRUE</span>      <span class="co"># Remove intermediate files</span></span></span>
+<span class="r-in"><span>  cleanup <span class="op">=</span> <span class="cn">TRUE</span>,  <span class="co"># Remove intermediate files</span></span></span>
+<span class="r-in"><span>  lachesis <span class="op">=</span> <span class="cn">NULL</span> <span class="co"># use Dorado input</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>

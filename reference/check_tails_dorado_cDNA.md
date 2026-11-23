@@ -20,7 +20,8 @@ check_tails_dorado_cDNA(
   save_dir,
   prefix = "",
   part_size = 40000,
-  cleanup = FALSE
+  cleanup = FALSE,
+  lachesis = NULL
 )
 ```
 
@@ -79,6 +80,14 @@ check_tails_dorado_cDNA(
   successful pipeline completion. When FALSE, all intermediate files are
   preserved for inspection.
 
+- lachesis:
+
+  Character string or data frame \[NULL\]. Path to the Lachesis output
+  file (or the same table in memory). When provided, the tail
+  coordinates and read orientation (`strand` column) are based on
+  Lachesis predictions. If that is the case, `bam_file` and
+  `dorado_summary` are not required.
+
 ## Value
 
 A named list containing the final analysis results:
@@ -92,21 +101,23 @@ A named list containing the final analysis results:
 
   Data frame with predicted non-adenosine positions within
   poly(A)/poly(T) tails including readname, contig, prediction,
-  estimated position, poly(A) length, QC tag, and tail_type
+  estimated position, poly(A) length, QC tag, and tail_type. Predictions
+  refer to the residue present in the original RNA tail (C, G or U) and
+  positions are counted from the 3' end of the tail, in both
+  orientations
 
 ## Pipeline Overview
 
-The cDNA pipeline follows the same analysis flow as
-check_tails_dorado_DRS with these additions:
+1.  **Tail coordinates and orientation**: taken from Lachesis
+    (`lachesis` param), or from Dorado summary with orientation
+    classified from the basecalled sequences in the BAM file (based on
+    SSP/VNP primer matching)
 
-1.  **BAM Processing**: Extracts basecalled sequences from BAM file
-    (required for cDNA data)
+2.  **Signal extraction**: raw tail signals with flanks are extracted
+    from POD5 files
 
-2.  **Dorado-Style Read Classification**: Classifies reads as polyA,
-    polyT, or unidentified using edit distance matching
-
-3.  **Standard Processing**: Processes reads using the same signal
-    processing and analysis as DRS pipeline
+3.  **Classification**: sliding windows of each tail are classified with
+    the poly(A) or poly(T) cDNA model (see `predict_nonA_cdna`)
 
 4.  **Output with Tail Types**: Produces standard read_classes and
     nonadenosine_residues with tail_type information
@@ -115,9 +126,14 @@ check_tails_dorado_DRS with these additions:
 
 This pipeline requires specific input formats:
 
-- **Dorado Summary**: Must contain standard columns for read information
+- **Lachesis output**: tail coordinates and read orientation from
+  Lachesis software (recommended) or
 
-- **BAM File**: Aligned cDNA reads with basecalled sequences
+- **Dorado Summary**: Must contain standard columns for read information
+  (`--estimate-poly-a`; Dorado \>=1.0.0)
+
+- **BAM File**: Aligned cDNA reads with basecalled, untrimmed sequences
+  (`--no-trim`)
 
 - **POD5 Files**: Raw signal files corresponding to reads in summary
 
@@ -126,9 +142,16 @@ This pipeline requires specific input formats:
 - **BAM Input**: Additional BAM file input for sequence extraction since
   cDNA data requires basecalled sequences
 
-- **Dorado-Style Read Orientation Classification**: Uses edit distance
-  matching of SSP/VNP primers to classify reads as polyA, polyT, or
-  unidentified before processing
+- **Dorado-Style Read Orientation Classification**: matching of SSP/VNP
+  primers to classify reads as polyA, polyT, or unidentified before
+  processing
+
+- **Separate models**: poly(A) and poly(T) reads are classified with
+  dedicated cDNA models working on the raw (not downsampled, nor
+  winsorized) signal
+
+- **RNA-level reporting**: predictions refer to the residues of the
+  original RNA tail in both orientations
 
 ## Examples
 
@@ -157,7 +180,8 @@ results <- ninetails::check_tails_dorado_cDNA(
   save_dir = "/results/experiment1/",
   prefix = "exp1_sample_A",
   part_size = 20000,  # Smaller chunks for limited memory
-  cleanup = TRUE      # Remove intermediate files
+  cleanup = TRUE,  # Remove intermediate files
+  lachesis = NULL # use Dorado input
 )
 } # }
 ```
