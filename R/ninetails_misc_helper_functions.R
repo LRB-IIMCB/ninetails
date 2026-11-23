@@ -15,7 +15,7 @@ assert_condition <- function(cond, msg = "Assertion failed") {
   if (!isTRUE(cond)) {
     stop(msg, call. = FALSE)
   }
-  return(invisible(TRUE))
+  invisible(TRUE)
 }
 
 #' Test if x is a single non-empty character string
@@ -626,6 +626,25 @@ correct_labels <- function(df) {
 ################################################################################
 # REQUIRED BY DORADO-DEPENDENT PIPELINES
 ################################################################################
+# Internal: dorado changed two summary column names over time
+# ("filename" -> "input_filename" from 1.4.0, "alignment_mapq" ->
+# "alignment_mapping_quality" from 2.x). Both spellings are accepted; the
+# old names are used throughout the package.
+.dorado_column_aliases <- c(input_filename = "filename",
+                            alignment_mapping_quality = "alignment_mapq")
+
+.standardise_dorado_columns <- function(dorado_summary) {
+  for (new_name in names(.dorado_column_aliases)) {
+    old_name <- .dorado_column_aliases[[new_name]]
+    if (!old_name %in% names(dorado_summary) && new_name %in% names(dorado_summary)) {
+      names(dorado_summary)[names(dorado_summary) == new_name] <- old_name
+    }
+  }
+  return(dorado_summary)
+} # .standardise_dorado_columns
+
+
+
 #' Filter Dorado summary for reads fulfilling ninetails quality criteria
 #'
 #' Takes a Dorado summary file (from ONT Dorado basecaller) or a data frame
@@ -695,6 +714,9 @@ filter_dorado_summary <- function(dorado_summary) {
       paste(missing_cols, collapse = ", ")
     ))
   }
+
+  # accept both old and new dorado column names
+  dorado_summary <- .standardise_dorado_columns(dorado_summary)
 
   #These are the reads that fulfill the quality criteria for classification by Ninetails:
   #(I) they are mapped to the reference (the alignment has a direction, either + or -, not a placeholder *),

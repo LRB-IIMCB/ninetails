@@ -10,7 +10,7 @@ detect_orientation_single(sequence)
 \item{sequence}{Character string containing the DNA sequence to classify}
 }
 \value{
-Character string: "A" for polyA orientation, "T" for polyT orientation,
+Character string: "A" for polyA orientation, "T" for poly(T) orientation,
   or "unknown" for unclassified sequences
 }
 \description{

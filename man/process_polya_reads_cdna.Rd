@@ -42,7 +42,7 @@ List containing poly(A) processing results:
     \item{read_classes}{Data frame with read classification results}
     \item{nonadenosine_residues}{Data frame with predicted non-adenosines}
     \item{processing_stats}{Summary statistics for poly(A) processing}
-    \item{tail_type}{Character indicating this is "polyA" data}
+    \item{tail_type}{Character indicating this is "poly(A)" data}
   }
 }
 \description{
