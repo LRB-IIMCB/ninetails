@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions_dorado_cDNA.R
 \name{merge_cdna_results}
 \alias{merge_cdna_results}
-\title{Merge polyA and polyT processing results for cDNA analysis}
+\title{Merge poly(A) and poly(T) processing results for cDNA analysis}
 \usage{
 merge_cdna_results(
   polya_results = NULL,
@@ -14,14 +14,14 @@ merge_cdna_results(
 )
 }
 \arguments{
-\item{polya_results}{List. Results from polyA processing (from process_polya_reads_cdna).
-Can be NULL if no polyA reads were found.}
+\item{polya_results}{List. Results from poly(A) processing (from process_polya_reads_cdna).
+Can be NULL if no poly(A) reads were found.}
 
-\item{polyt_results}{List. Results from polyT processing (from process_polyt_reads_cdna).
-Can be NULL if no polyT reads were found.}
+\item{polyt_results}{List. Results from poly(T) processing (from process_polyt_reads_cdna).
+Can be NULL if no poly(T) reads were found.}
 
 \item{unidentified_reads}{Data frame/tibble. Reads that could not be classified
-as polyA or polyT (with tail_type = "unidentified").}
+as poly(A) or poly(T) (with tail_type = "unidentified").}
 
 \item{save_dir}{Character. Directory where merged results will be saved.}
 
@@ -37,7 +37,7 @@ List containing merged cDNA results in standard ninetails format:
   }
 }
 \description{
-This function combines the results from separate polyA and polyT processing
+This function combines the results from separate poly(A) and poly(T) processing
 paths into a unified output in standard ninetails format. Updated to work
 with the simplified approach using tibbles instead of files.
 }

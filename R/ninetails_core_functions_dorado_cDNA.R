@@ -324,7 +324,7 @@ extract_data_from_bam <- function(bam_file, summary_file, seq_only = TRUE, cli_l
     }
     primary_count <- primary_count + 1
 
-    # Get polyA length from pt tag
+    # Get poly(A) length from pt tag
     poly_tail_length <- bam_data$tag$pt[[i]]
     pt_tag_count <- pt_tag_count + 1
 
@@ -793,7 +793,7 @@ preprocess_inputs_cdna <- function(bam_file,
 #'
 #' @param sequence Character string containing the DNA sequence to classify
 #'
-#' @return Character string: "A" for polyA orientation, "T" for polyT orientation,
+#' @return Character string: "A" for polyA orientation, "T" for poly(T) orientation,
 #'   or "unknown" for unclassified sequences
 #' @export
 #'
@@ -893,7 +893,7 @@ detect_orientation_single <- function(sequence) {
 #' @param cli_log Function for logging messages and progress.
 #'
 #' @return Data frame/tibble containing all sequences with added tail_type column
-#' ("polyA", "polyT", or "unidentified") based on Dorado-style edit distance matching
+#' ("polyA", "poly(T)", or "unidentified") based on Dorado-style edit distance matching
 #' of SSP and VNP primers with score and separation validation.
 #' The augmented table (with tail_type) is also written to a sibling
 #' "<name>_classified.tsv" file for persistence; the original input files are
@@ -1031,7 +1031,7 @@ detect_orientation_multiple <- function(sequence_files,
   cli_log(sprintf("Total reads processed: %d", classification_stats$total_reads), bullet = TRUE)
   cli_log(sprintf("PolyA reads: %d (%.2f%%)",
                   classification_stats$polya_reads, classification_stats$polya_percentage), bullet = TRUE)
-  cli_log(sprintf("PolyT reads: %d (%.2f%%)",
+  cli_log(sprintf("poly(T) reads: %d (%.2f%%)",
                   classification_stats$polyt_reads, classification_stats$polyt_percentage), bullet = TRUE)
   cli_log(sprintf("Unidentified reads: %d (%.2f%%)",
                   classification_stats$unidentified_reads, classification_stats$unidentified_percentage), bullet = TRUE)
@@ -1045,7 +1045,7 @@ detect_orientation_multiple <- function(sequence_files,
 
 
 ################################################################################
-# POLYA / POLYT READS PROCESSING FUNCTIONS FOR cDNA
+# POLY(A)/POLY(T) READS PROCESSING FUNCTIONS FOR cDNA
 ################################################################################
 
 # Internal: Lachesis QC tags other than PASS mark unreliable tail coordinates.
@@ -1261,7 +1261,7 @@ detect_orientation_multiple <- function(sequence_files,
 #'     \item{read_classes}{Data frame with read classification results}
 #'     \item{nonadenosine_residues}{Data frame with predicted non-adenosines}
 #'     \item{processing_stats}{Summary statistics for poly(A) processing}
-#'     \item{tail_type}{Character indicating this is "polyA" data}
+#'     \item{tail_type}{Character indicating this is "poly(A)" data}
 #'   }
 #' @export
 #'
@@ -1585,18 +1585,18 @@ create_outputs_dorado_cdna <- function(dorado_summary_dir,
 # RESULTS MERGING FUNCTION FOR cDNA (UPDATED FOR SIMPLIFIED APPROACH)
 ################################################################################
 
-#' Merge polyA and polyT processing results for cDNA analysis
+#' Merge poly(A) and poly(T) processing results for cDNA analysis
 #'
-#' This function combines the results from separate polyA and polyT processing
+#' This function combines the results from separate poly(A) and poly(T) processing
 #' paths into a unified output in standard ninetails format. Updated to work
 #' with the simplified approach using tibbles instead of files.
 #'
-#' @param polya_results List. Results from polyA processing (from process_polya_reads_cdna).
-#' Can be NULL if no polyA reads were found.
-#' @param polyt_results List. Results from polyT processing (from process_polyt_reads_cdna).
-#' Can be NULL if no polyT reads were found.
+#' @param polya_results List. Results from poly(A) processing (from process_polya_reads_cdna).
+#' Can be NULL if no poly(A) reads were found.
+#' @param polyt_results List. Results from poly(T) processing (from process_polyt_reads_cdna).
+#' Can be NULL if no poly(T) reads were found.
 #' @param unidentified_reads Data frame/tibble. Reads that could not be classified
-#' as polyA or polyT (with tail_type = "unidentified").
+#' as poly(A) or poly(T) (with tail_type = "unidentified").
 #' @param save_dir Character. Directory where merged results will be saved.
 #' @param prefix Character. Optional prefix for output file names.
 #' @param cli_log Function for logging messages and progress.
@@ -1639,7 +1639,7 @@ merge_cdna_results <- function(polya_results = NULL,
 
   # Check if we have any results to merge
   if (is.null(polya_results) && is.null(polyt_results)) {
-    cli_log("WARNING: No polyA or polyT results provided for merging", "WARNING")
+    cli_log("WARNING: No poly(A) or poly(T) results provided for merging", "WARNING")
   }
 
   ################################################################################
@@ -1651,7 +1651,7 @@ merge_cdna_results <- function(polya_results = NULL,
   # Initialize empty data frame with expected structure
   merged_read_classes <- data.frame()
 
-  # Add polyA read classes
+  # Add poly(A) read classes
   if (!is.null(polya_results) && !is.null(polya_results$read_classes)) {
     polya_classes <- polya_results$read_classes
 
@@ -1663,10 +1663,10 @@ merge_cdna_results <- function(polya_results = NULL,
     merged_read_classes <- dplyr::bind_rows(merged_read_classes, polya_classes)
     cli_log(sprintf("Added %d polyA read classifications", nrow(polya_classes)), "INFO")
   } else {
-    cli_log("No polyA read classifications to merge", "INFO")
+    cli_log("No poly(A) read classifications to merge", "INFO")
   }
 
-  # Add polyT read classes
+  # Add poly(T) read classes
   if (!is.null(polyt_results) && !is.null(polyt_results$read_classes)) {
     polyt_classes <- polyt_results$read_classes
 
@@ -1676,9 +1676,9 @@ merge_cdna_results <- function(polya_results = NULL,
     }
 
     merged_read_classes <- dplyr::bind_rows(merged_read_classes, polyt_classes)
-    cli_log(sprintf("Added %d polyT read classifications", nrow(polyt_classes)), "INFO")
+    cli_log(sprintf("Added %d poly(T) read classifications", nrow(polyt_classes)), "INFO")
   } else {
-    cli_log("No polyT read classifications to merge", "INFO")
+    cli_log("No poly(T) read classifications to merge", "INFO")
   }
 
   ################################################################################
@@ -1690,7 +1690,7 @@ merge_cdna_results <- function(polya_results = NULL,
   # Initialize empty data frame for modifications
   merged_modifications <- data.frame()
 
-  # Add polyA modifications
+  # Add poly(A) modifications
   if (!is.null(polya_results) && !is.null(polya_results$nonadenosine_residues)) {
     polya_mods <- polya_results$nonadenosine_residues
 
@@ -1700,12 +1700,12 @@ merge_cdna_results <- function(polya_results = NULL,
     }
 
     merged_modifications <- dplyr::bind_rows(merged_modifications, polya_mods)
-    cli_log(sprintf("Added %d polyA modifications", nrow(polya_mods)), "INFO")
+    cli_log(sprintf("Added %d poly(A) modifications", nrow(polya_mods)), "INFO")
   } else {
-    cli_log("No polyA modifications to merge", "INFO")
+    cli_log("No poly(A) modifications to merge", "INFO")
   }
 
-  # Add polyT modifications
+  # Add poly(T) modifications
   if (!is.null(polyt_results) && !is.null(polyt_results$nonadenosine_residues)) {
     polyt_mods <- polyt_results$nonadenosine_residues
 
@@ -1715,9 +1715,9 @@ merge_cdna_results <- function(polya_results = NULL,
     }
 
     merged_modifications <- dplyr::bind_rows(merged_modifications, polyt_mods)
-    cli_log(sprintf("Added %d polyT modifications", nrow(polyt_mods)), "INFO")
+    cli_log(sprintf("Added %d poly(T) modifications", nrow(polyt_mods)), "INFO")
   } else {
-    cli_log("No polyT modifications to merge", "INFO")
+    cli_log("No poly(T) modifications to merge", "INFO")
   }
 
   ################################################################################
@@ -1736,9 +1736,9 @@ merge_cdna_results <- function(polya_results = NULL,
 
   cli_log("Merging Summary", "INFO", "Merging Summary")
   cli_log(sprintf("Total reads in dataset: %d", grand_total), bullet = TRUE)
-  cli_log(sprintf("- PolyA reads processed: %d (%.2f%%)",
+  cli_log(sprintf("- poly(A) reads processed: %d (%.2f%%)",
                   polya_count, if (grand_total > 0) polya_count / grand_total * 100 else 0), bullet = TRUE)
-  cli_log(sprintf("- PolyT reads processed: %d (%.2f%%)",
+  cli_log(sprintf("- poly(T) reads processed: %d (%.2f%%)",
                   polyt_count, if (grand_total > 0) polyt_count / grand_total * 100 else 0), bullet = TRUE)
   cli_log(sprintf("- Unidentified reads: %d (%.2f%%)",
                   unidentified_count, if (grand_total > 0) unidentified_count / grand_total * 100 else 0), bullet = TRUE)
@@ -1768,7 +1768,7 @@ merge_cdna_results <- function(polya_results = NULL,
 #' This function takes the merged cDNA results and formats them as the standard
 #' ninetails output format (same as create_outputs_dorado) with two tables:
 #' read_classes and nonadenosine_residues. The key difference from DRS is the
-#' additional tail_type column indicating polyA or polyT.
+#' additional tail_type column indicating poly(A) or poly(T).
 #'
 #' @param outputs List. Merged results from merge_cdna_results().
 #' @param save_dir Character string. Directory where outputs will be saved.
