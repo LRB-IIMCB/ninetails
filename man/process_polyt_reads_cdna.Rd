@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions_dorado_cDNA.R
 \name{process_polyt_reads_cdna}
 \alias{process_polyt_reads_cdna}
-\title{Process polyT reads using ninetails pipeline}
+\title{Process poly(T) reads with the cDNA poly(T) model}
 \usage{
 process_polyt_reads_cdna(
   polyt_sequences,
@@ -15,42 +15,55 @@ process_polyt_reads_cdna(
 )
 }
 \arguments{
-\item{polyt_sequences}{Data frame/tibble. PolyT-classified sequences with
-read_id and tail_type columns.}
+\item{polyt_sequences}{Data frame/tibble. Poly(T) reads with their tail
+coordinates: \code{read_id}, \code{tail_start}, \code{tail_end},
+\code{polya_length} and optionally \code{contig} and \code{qc_tag}
+(see \code{\link{read_tail_coordinates_cdna}}).}
 
-\item{signal_files}{Character vector. Paths to signal files containing
-poly(A) tail signals extracted from POD5 files (will be filtered for polyT reads).}
+\item{signal_files}{Character vector. Paths to the \code{.rds} files with
+raw flanked tail signals (see \code{\link{extract_tail_signals_cdna}}).}
 
-\item{num_cores}{Integer. Number of CPU cores to use for parallel processing.}
+\item{num_cores}{Integer. Number of CPU cores (currently unused; the
+classification is parallelised by TensorFlow).}
 
 \item{qc}{Logical. Whether to apply quality control filtering.}
 
-\item{save_dir}{Character. Directory where processing results will be saved.}
+\item{save_dir}{Character. Output directory. Intermediate files are
+written to its \code{polya_processing_dir} (or \code{polyt_processing_dir})
+subdirectory.}
 
-\item{prefix}{Character. Optional prefix for output file names.}
+\item{prefix}{Character. Optional prefix for intermediate file names.}
 
 \item{cli_log}{Function for logging messages and progress.}
 }
 \value{
-List containing polyT processing results:
+List containing poly(T) processing results:
   \describe{
-    \item{read_classes}{Data frame with read classification results (with tail_type preserved)}
-    \item{nonadenosine_residues}{Data frame with predicted modifications (with tail_type preserved)}
-    \item{processing_stats}{Summary statistics for polyT processing}
+    \item{read_classes}{Data frame with read classification results}
+    \item{nonadenosine_residues}{Data frame with predicted non-adenosines}
+    \item{processing_stats}{Summary statistics for poly(T) processing}
     \item{tail_type}{Character indicating this is "polyT" data}
   }
 }
 \description{
-This function processes reads that have been classified as polyT-containing
-through the cDNA classification pipeline. Updated to work with tibble input
-instead of separate files. It applies the ninetails analysis pipeline to
-identify non-thymidine residues within polyT tails. Currently uses the same
-model as polyA processing until a polyT-specific model is trained.
+Classifies the tail signals of reads sequenced in the poly(T) orientation
+(tail at the 5' end of the read, read as its complement) with the
+dedicated cDNA model and creates the ninetails output tables for them.
+Predictions refer to the residues of the original RNA tail (C, G, U), so
+they are directly comparable with the poly(A) orientation.
+}
+\details{
+Signals are classified with \code{\link{predict_nonA_cdna}}, one signal
+file at a time. The calls of each file are written to disk, so memory usage
+does not grow with the size of the sequencing run. The tables are then
+built from these files by \code{\link{create_outputs_dorado_cdna}}. Reads with invalid
+coordinates, tails shorter than 10 nt or (with \code{qc = TRUE}) a
+Lachesis QC tag other than \code{PASS} are not classified.
 }
 \examples{
 \dontrun{
-polyt_results <- process_polyt_reads_cdna(
-  polyt_sequences = polyt_tibble,
+polyt_results <- ninetails::process_polyt_reads_cdna(
+  polyt_sequences = polyt_coordinates,
   signal_files = c("polya_signal_part1.rds"),
   num_cores = 4,
   qc = TRUE,

@@ -14,11 +14,11 @@ merge_cdna_results(
 )
 }
 \arguments{
-\item{polya_results}{List. Results from polyA processing (from process_polya_reads_cdna).
+\item{polya_results}{List. Results from poly(A) processing (from process_polya_reads_cdna).
 Can be NULL if no polyA reads were found.}
 
-\item{polyt_results}{List. Results from polyT processing (from process_polyt_reads_cdna).
-Can be NULL if no polyT reads were found.}
+\item{polyt_results}{List. Results from poly(T) processing (from process_polyt_reads_cdna).
+Can be NULL if no poly(T) reads were found.}
 
 \item{unidentified_reads}{Data frame/tibble. Reads that could not be classified
 as polyA or polyT (with tail_type = "unidentified").}
@@ -37,7 +37,7 @@ List containing merged cDNA results in standard ninetails format:
   }
 }
 \description{
-This function combines the results from separate polyA and polyT processing
+This function combines the results from separate poly(A) and poly(T) processing
 paths into a unified output in standard ninetails format. Updated to work
 with the simplified approach using tibbles instead of files.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/ninetails_core_functions_dorado_cDNA.R
 \name{create_outputs_dorado_cdna}
 \alias{create_outputs_dorado_cdna}
-\title{Create Ninetails output tables for Dorado cDNA pipeline}
+\title{Create ninetails output tables for the cDNA pipeline}
 \usage{
 create_outputs_dorado_cdna(
   dorado_summary_dir,
@@ -13,50 +13,72 @@ create_outputs_dorado_cdna(
 )
 }
 \arguments{
-\item{dorado_summary_dir}{Character string. Path to a directory containing Dorado
-summary files (.txt, .tsv, or .csv) with per-read poly(A) tail information and tail_type.}
+\item{dorado_summary_dir}{Character string. Path to a directory with the
+tail coordinate tables (.txt, .tsv or .csv) of the reads of one
+orientation. Required columns: \code{read_id}, \code{contig},
+\code{polya_length}, \code{qc_tag} and \code{tail_type}.}
 
-\item{nonA_temp_dir}{Character string. Path to a directory containing non-adenosine
-prediction RDS files, generated from temporary models.}
+\item{nonA_temp_dir}{Character string. Path to a directory with the
+per-part RDS files of non-adenosine calls. Each file holds a list with
+\code{nonA_calls} (output of \code{\link{predict_nonA_cdna}}) and
+\code{classified_reads} (IDs of the reads whose signals were classified).}
 
-\item{polya_chunks_dir}{Character string. Path to a directory containing poly(A) chunk
-RDS files used for position inference of predictions.}
+\item{polya_chunks_dir}{Character string. Kept for compatibility with the
+DRS pipeline (currently unused; the cDNA model does not produce chunk
+files).}
 
-\item{num_cores}{Integer. Number of cores to use for parallelized file loading
-and processing. Must be a positive integer. Default is 1.}
+\item{num_cores}{Integer [1]. Number of cores used for loading the files.}
 
-\item{qc}{Logical. Whether to apply quality control filtering of terminal
-predictions (removing predictions near the ends of poly(A) tails). Default is TRUE.}
+\item{qc}{Logical [TRUE]. Whether to discard terminal calls and reads
+failing the Lachesis QC.}
 }
 \value{
-A named list with two data frames (identical to DRS output + tail_type):
+A named list:
 \describe{
-\item{read_classes}{Data frame with per-read classification results, including
-columns for read name, contig, poly(A) length, QC tag, class, comments, and tail_type.}
-\item{nonadenosine_residues}{Data frame with per-chunk predictions of
-non-adenosine residues, including read name, contig, predicted base,
-estimated position within the poly(A) tail, poly(A) length, QC tag, and tail_type.}
+  \item{read_classes}{Data frame with columns \code{readname},
+    \code{contig}, \code{polya_length}, \code{qc_tag}, \code{class},
+    \code{comments}, \code{tail_type}}
+  \item{nonadenosine_residues}{Data frame with columns \code{readname},
+    \code{contig}, \code{prediction} (residue in the RNA tail),
+    \code{est_nonA_pos} (position from the 3' end of the tail),
+    \code{polya_length}, \code{qc_tag}, \code{tail_type}}
 }
 }
 \description{
-This function extends create_outputs_dorado to handle cDNA data with additional
-tail_type information. It produces the same output structure as the DRS pipeline
-but preserves the tail_type column for read orientation information.
+Combines the tail coordinates with the non-adenosine calls of
+\code{\link{predict_nonA_cdna}} into the two standard ninetails outputs:
+per-read classes and non-adenosine residues with their estimated positions.
+Inputs are read from the intermediate directories written by
+\code{\link{process_polya_reads_cdna}} or
+\code{\link{process_polyt_reads_cdna}}.
 }
+\section{Read classes}{
+
+\itemize{
+  \item \code{decorated}, \code{YAY}: at least one non-adenosine residue
+  \item \code{blank}, \code{MAU}: no non-adenosine residue detected
+  \item \code{blank}, \code{MPU}: only terminal calls, discarded by
+    \code{qc} (closer than 2 nt to either end of the tail)
+  \item \code{unclassified}, \code{IRL}: tail shorter than 10 nt
+  \item \code{unclassified}, \code{BAC}: invalid tail coordinates or no
+    signal available
+  \item \code{unclassified}, \code{QCF}: Lachesis QC tag other than
+    \code{PASS} (only with \code{qc = TRUE})
+}
+}
+
 \examples{
 \dontrun{
-results <- create_outputs_dorado_cdna(
-dorado_summary_dir = "data/dorado_summaries",
-nonA_temp_dir = "data/nonA_predictions",
-polya_chunks_dir = "data/polya_chunks",
-num_cores = 4,
-qc = TRUE
+outputs <- ninetails::create_outputs_dorado_cdna(
+  dorado_summary_dir = "polya_processing_dir/dorado_summary_dir",
+  nonA_temp_dir = "polya_processing_dir/nonA_temp_dir",
+  polya_chunks_dir = "polya_processing_dir/polya_chunks_dir",
+  num_cores = 4,
+  qc = TRUE
 )
-
-# Access read classifications with tail_type
-head(results$read_classes)
-
-# Access non-adenosine residues with tail_type
-head(results$nonadenosine_residues)
 }
+}
+\seealso{
+\code{\link{predict_nonA_cdna}},
+  \code{\link{merge_cdna_results}}
 }
