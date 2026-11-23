@@ -10,26 +10,31 @@
 #' as the DRS pipeline, but with automatic classification of read orientations.
 #'
 #' @section Pipeline Overview:
-#' The cDNA pipeline follows the same analysis flow as check_tails_dorado_DRS with these additions:
 #' \enumerate{
-#'   \item \strong{BAM Processing}: Extracts basecalled sequences from BAM file (required for cDNA data)
-#'   \item \strong{Dorado-Style Read Classification}: Classifies reads as polyA, polyT, or unidentified using edit distance matching
-#'   \item \strong{Standard Processing}: Processes reads using the same signal processing and analysis as DRS pipeline
+#'   \item \strong{Tail coordinates and orientation}: taken from Lachesis (\code{lachesis} param),
+#'   or from Dorado summary with orientation classified from the basecalled sequences in the BAM file
+#'   (based on SSP/VNP primer matching)
+#'   \item \strong{Signal extraction}: raw tail signals with flanks are extracted from POD5 files
+#'   \item \strong{Classification}: sliding windows of each tail are classified with the poly(A)
+#'   or poly(T) cDNA model (see \code{\link{predict_nonA_cdna}})
 #'   \item \strong{Output with Tail Types}: Produces standard read_classes and nonadenosine_residues with tail_type information
 #' }
 #'
 #' @section Input Requirements:
 #' This pipeline requires specific input formats:
 #' \itemize{
-#'   \item \strong{Dorado Summary}: Must contain standard columns for read information
-#'   \item \strong{BAM File}: Aligned cDNA reads with basecalled sequences
+#'   \item \strong{Lachesis output}: tail coordinates and read orientation from Lachesis software (recommended) or
+#'   \item \strong{Dorado Summary}: Must contain standard columns for read information (\code{--estimate-poly-a}; Dorado >=1.0.0)
+#'   \item \strong{BAM File}: Aligned cDNA reads with basecalled, untrimmed sequences (\code{--no-trim})
 #'   \item \strong{POD5 Files}: Raw signal files corresponding to reads in summary
 #' }
 #'
 #' @section Key Differences from DRS Pipeline:
 #' \itemize{
 #'   \item \strong{BAM Input}: Additional BAM file input for sequence extraction since cDNA data requires basecalled sequences
-#'   \item \strong{Dorado-Style Read Orientation Classification}: Uses edit distance matching of SSP/VNP primers to classify reads as polyA, polyT, or unidentified before processing
+#'   \item \strong{Dorado-Style Read Orientation Classification}: matching of SSP/VNP primers to classify reads as polyA, polyT, or unidentified before processing
+#'   \item \strong{Separate models}: poly(A) and poly(T) reads are classified with dedicated cDNA models working on the raw (not downsampled, nor winsorized) signal
+#'   \item \strong{RNA-level reporting}: predictions refer to the residues of the original RNA tail in both orientations
 #' }
 #'
 #' @param bam_file Character string. Path to the BAM file containing aligned cDNA reads
@@ -63,13 +68,20 @@
 #' @param cleanup Logical [FALSE]. Whether to remove intermediate files after successful
 #' pipeline completion. When FALSE, all intermediate files are preserved for inspection.
 #'
+#' @param lachesis Character string or data frame [NULL]. Path to the Lachesis
+#' output file (or the same table in memory). When provided, the tail coordinates
+#' and read orientation (\code{strand} column) are based on Lachesis predictions.
+#' If that is the case, \code{bam_file} and \code{dorado_summary} are not required.
+#'
 #' @return A named list containing the final analysis results:
 #' \describe{
 #'   \item{read_classes}{Data frame with per-read classification results including
 #'     readname, contig, poly(A) length, QC tag, class, comments, and tail_type}
 #'   \item{nonadenosine_residues}{Data frame with predicted non-adenosine positions
 #'     within poly(A)/poly(T) tails including readname, contig, prediction,
-#'     estimated position, poly(A) length, QC tag, and tail_type}
+#'     estimated position, poly(A) length, QC tag, and tail_type. Predictions
+#'     refer to the residue present in the original RNA tail (C, G or U) and
+#'     positions are counted from the 3' end of the tail, in both orientations}
 #' }
 #'
 #' @export
@@ -99,7 +111,8 @@
 #'   save_dir = "/results/experiment1/",
 #'   prefix = "exp1_sample_A",
 #'   part_size = 20000,  # Smaller chunks for limited memory
-#'   cleanup = TRUE      # Remove intermediate files
+#'   cleanup = TRUE,  # Remove intermediate files
+#'   lachesis = NULL # use Dorado input
 #' )
 #' }
 check_tails_dorado_cDNA <- function(bam_file,
@@ -110,10 +123,12 @@ check_tails_dorado_cDNA <- function(bam_file,
                                     save_dir,
                                     prefix = "",
                                     part_size = 40000,
-                                    cleanup = FALSE) {
+                                    cleanup = FALSE,
+                                    lachesis = NULL) {
 
   # Initialize warning flag
   warn_message <- FALSE
+
 
   ################################################################################
   # SETUP AND VALIDATION
@@ -212,9 +227,14 @@ check_tails_dorado_cDNA <- function(bam_file,
     # Configuration logging display
     #####################################################
     cli_log("Configuration", "INFO", "Configuration")
-    cli_log(sprintf("BAM file:                    %s", bam_file), bullet = TRUE)
-    cli_log(sprintf("Dorado summary:              %s",
-                    if(!is.object(dorado_summary)) dorado_summary else deparse(substitute(dorado_summary))), bullet = TRUE)
+    if (!is.null(lachesis)) {
+      cli_log(sprintf("Lachesis output:             %s",
+                      if(!is.object(lachesis)) lachesis else deparse(substitute(lachesis))), bullet = TRUE)
+    } else {
+      cli_log(sprintf("BAM file:                    %s", bam_file), bullet = TRUE)
+      cli_log(sprintf("Dorado summary:              %s",
+                      if(!is.object(dorado_summary)) dorado_summary else deparse(substitute(dorado_summary))), bullet = TRUE)
+    }
     cli_log(sprintf("Pod5 files directory:        %s", pod5_dir), bullet = TRUE)
     cli_log(sprintf("Number of cores:             %d", num_cores), bullet = TRUE)
     cli_log(sprintf("Output quality control:      %s", qc), bullet = TRUE)
@@ -226,59 +246,121 @@ check_tails_dorado_cDNA <- function(bam_file,
     # INPUT PREPROCESSING AND BAM PROCESSING
     ################################################################################
 
-    # Preprocess input files including BAM processing and sequence extraction
-    processed_files <- ninetails::preprocess_inputs_cdna(
-      bam_file = bam_file,
-      dorado_summary = dorado_summary,
-      pod5_dir = pod5_dir,
-      num_cores = num_cores,
-      qc = qc,
-      save_dir = save_dir,
-      prefix = prefix,
-      part_size = part_size,
-      cli_log = cli_log
-    )
+    if (!is.null(lachesis)) {
+
+      ################################################################################
+      # LACHESIS INPUT: COORDINATES AND READ ORIENTATION FROM LACHESIS
+      ################################################################################
+
+      assert_condition(is.numeric(num_cores) && num_cores > 0,
+                       "Number of cores must be a positive numeric value")
+      assert_condition(is.numeric(part_size) && part_size > 0,
+                       "Part size must be a positive numeric value")
+      assert_condition(is.logical(qc),
+                       "qc must be logical [TRUE/FALSE]")
+      assert_dir_exists(pod5_dir, "Pod5 files")
+
+      cli_log("Reading tail coordinates from Lachesis output...", "INFO", "Tail Coordinates")
+      tail_coordinates <- ninetails::read_tail_coordinates_cdna(lachesis, source = "lachesis")
+
+      # Extract chunked raw tail signals (memory management)
+      polya_signal_dir <- file.path(save_dir, "polya_signal_dir")
+      if (!dir.exists(polya_signal_dir)) {
+        dir.create(polya_signal_dir, recursive = TRUE)
+      }
+
+      read_parts <- split(seq_len(nrow(tail_coordinates)),
+                          ceiling(seq_len(nrow(tail_coordinates)) / part_size))
+      signal_files <- character(0)
+
+      for (i in seq_along(read_parts)) {
+        cli_log(sprintf("Extracting signals from POD5 for part %d/%d", i, length(read_parts)), "INFO")
+
+        signal_list <- ninetails::extract_tail_signals_cdna(
+          tail_coordinates = tail_coordinates[read_parts[[i]], ],
+          pod5_dir = pod5_dir,
+          num_cores = num_cores
+        )
+
+        if (length(signal_list) > 0) {
+          output_file <- file.path(polya_signal_dir,
+                                   sprintf("%spolya_signal_part%d.rds",
+                                           ifelse(nchar(prefix) > 0, paste0(prefix, "_"), ""),
+                                           i))
+          saveRDS(signal_list, output_file)
+          signal_files <- c(signal_files, output_file)
+        }
+
+        rm(signal_list)
+        gc()
+      }
+
+    } else {
+
+      # Preprocess input files - BAM processing and sequence extraction
+      processed_files <- ninetails::preprocess_inputs_cdna(
+        bam_file = bam_file,
+        dorado_summary = dorado_summary,
+        pod5_dir = pod5_dir,
+        num_cores = num_cores,
+        qc = qc,
+        save_dir = save_dir,
+        prefix = prefix,
+        part_size = part_size,
+        cli_log = cli_log
+      )
+
+      ################################################################################
+      # SEQUENCE CLASSIFICATION (polyA/polyT/unidentified)
+      ################################################################################
+
+      cli_log("Starting Dorado-style poly tail classification...", "INFO", "Sequence Classification")
+      cli_log("Using SSP/VNP primer edit distance matching with score and separation validation", "INFO")
+
+      # Classify read orientations and add tail_type column
+      classified_sequences <- ninetails::detect_orientation_multiple(
+        sequence_files = processed_files$sequence_files,
+        num_cores = num_cores,
+        cli_log = cli_log
+      )
+
+      cli_log(sprintf("Classification completed: %d total sequences with tail_type column",
+                      nrow(classified_sequences)), "SUCCESS")
+
+      # Tail coordinates from the Dorado summary, orientation from the classification
+      tail_coordinates <- do.call(rbind, lapply(processed_files$summary_files, function(x) {
+        ninetails::read_tail_coordinates_cdna(x, source = "dorado")
+      }))
+      tail_coordinates$tail_type <- classified_sequences$tail_type[
+        match(tail_coordinates$read_id, classified_sequences$read_id)]
+      tail_coordinates$tail_type[is.na(tail_coordinates$tail_type)] <- "unidentified"
+
+      signal_files <- processed_files$polya_signal_files
+    }
 
     ################################################################################
-    # SEQUENCE CLASSIFICATION (polyA/polyT/unidentified)
+    # DUAL PROCESSING: POLYA AND POLYT (SEPARATE MODELS)
     ################################################################################
 
-    cli_log("Starting Dorado-style poly tail classification...", "INFO", "Sequence Classification")
-    cli_log("Using SSP/VNP primer edit distance matching with score and separation validation", "INFO")
-
-    # Classify read orientations and add tail_type column
-    classified_sequences <- ninetails::detect_orientation_multiple(
-      sequence_files = processed_files$sequence_files,
-      num_cores = num_cores,
-      cli_log = cli_log
-    )
-
-    cli_log(sprintf("Classification completed: %d total sequences with tail_type column",
-                    nrow(classified_sequences)), "SUCCESS")
-
-    ################################################################################
-    # DUAL PROCESSING: POLYA AND POLYT (SEPARATE FUNCTIONS)
-    ################################################################################
-
-    # Filter reads by tail type from classified sequences
-    polya_reads <- classified_sequences[classified_sequences$tail_type == "polyA", ]
-    polyt_reads <- classified_sequences[classified_sequences$tail_type == "polyT", ]
-    unidentified_reads <- classified_sequences[classified_sequences$tail_type == "unidentified", ]
+    # Split reads by tail type
+    polya_reads <- tail_coordinates[tail_coordinates$tail_type == "polyA", ]
+    polyt_reads <- tail_coordinates[tail_coordinates$tail_type == "polyT", ]
+    unidentified_reads <- tail_coordinates[tail_coordinates$tail_type == "unidentified", ]
 
     cli_log(sprintf("Read distribution: %d polyA, %d polyT, %d unidentified",
                     nrow(polya_reads), nrow(polyt_reads), nrow(unidentified_reads)), "INFO")
 
     # Note: Both processing functions use the same signal files since signal extraction
-    # happens before classification. The processing functions filter signals internally
-    # based on the read IDs in their input sequence tibbles.
+    # preceeds split by orientation. Processing functions filter signals internally
+    # based on read IDs in their input tables.
 
-    # Process polyA reads with standard ninetails model
+    # Process poly(A) reads with the cDNA poly(A) model
     polya_results <- NULL
-    if (nrow(polya_reads) > 0) {
+    if (nrow(polya_reads) > 0 && length(signal_files) > 0) {
       cli_log("Processing polyA reads...", "INFO", "PolyA Processing", bullet = TRUE)
       polya_results <- ninetails::process_polya_reads_cdna(
         polya_sequences = polya_reads,
-        signal_files = processed_files$polya_signal_files,  # All signal files (filtering happens in processing function)
+        signal_files = signal_files,  # All signal files (filtering in processing function)
         num_cores = num_cores,
         qc = qc,
         save_dir = save_dir,
@@ -287,13 +369,13 @@ check_tails_dorado_cDNA <- function(bam_file,
       )
     }
 
-    # Process polyT reads with polyT-specific model (temporarily same model)
+    # Process poly(T) reads with the cDNA poly(T) model
     polyt_results <- NULL
-    if (nrow(polyt_reads) > 0) {
+    if (nrow(polyt_reads) > 0 && length(signal_files) > 0) {
       cli_log("Processing polyT reads...", "INFO", "PolyT Processing", bullet = TRUE)
       polyt_results <- ninetails::process_polyt_reads_cdna(
         polyt_sequences = polyt_reads,
-        signal_files = processed_files$polya_signal_files,  # All signal files (filtering happens in processing function)
+        signal_files = signal_files,  # All signal files (filtering in processing function)
         num_cores = num_cores,
         qc = qc,
         save_dir = save_dir,
@@ -317,7 +399,7 @@ check_tails_dorado_cDNA <- function(bam_file,
       cli_log = cli_log
     )
 
-    # Validate output format - should be a list with read_classes and nonadenosine_residues (same as DRS)
+    # Validate output format - a list with read_classes and nonadenosine_residues (same as DRS)
     if (!is.list(outputs)) {
       stop("merge_cdna_results must return a list", call. = FALSE)
     }
@@ -329,7 +411,7 @@ check_tails_dorado_cDNA <- function(bam_file,
       cli_log(paste(names(outputs), collapse = ", "), "WARNING")
     }
 
-    # Save final outputs using standard function (same as DRS pipeline)
+    # Save final outputs using standard Ninetails function (same as DRS pipeline)
     cli_log("Saving final outputs...", "INFO", "Saving Results", bullet = TRUE)
     ninetails::save_outputs(outputs, save_dir, prefix)
 
@@ -346,6 +428,8 @@ check_tails_dorado_cDNA <- function(bam_file,
         file.path(save_dir, "bam_parts_dir"),
         file.path(save_dir, "sequence_files_dir"),
         file.path(save_dir, "polya_signal_dir"),
+        file.path(save_dir, "polya_processing_dir"),
+        file.path(save_dir, "polyt_processing_dir"),
         file.path(save_dir, "polya_temp_dir"),
         file.path(save_dir, "polyt_temp_dir"),
         file.path(save_dir, "polya_chunks_dir"),
@@ -443,4 +527,7 @@ check_tails_dorado_cDNA <- function(bam_file,
     cli::cli_alert_danger("Ninetails cDNA pipeline aborted")
     return(invisible(NULL))
   })
+
 }
+
+
