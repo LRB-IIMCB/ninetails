@@ -1,0 +1,570 @@
+---
+title: "Training dataset preparation for the DRS model"
+author: "Natalia Guminska"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Configuration
+
+```{r, load libs, message = FALSE, include=FALSE}
+
+library(vroom)
+library(reticulate)
+library(dplyr)
+library(ggplot2)
+library(ninetails)
+library(keras)
+library(tensorflow)
+
+```
+
+
+```{r message = FALSE, echo=FALSE}
+# use virtualenv to communicate ninetails with correct python version
+# depends on configuration
+reticulate::use_condaenv("r-reticulate")
+
+# number of cores for processing
+num_cores <- 30
+
+# fast5 hierarchy level with the basecalls (moves)
+basecall_group <- "Basecall_1D_000"
+
+# output directory for intermediate objects
+out_dir <- "/home/nagumi/CNN_spikes_drs"
+if (!dir.exists(out_dir)) {
+  dir.create(out_dir, recursive = TRUE)
+}
+
+```
+
+
+# Rationale
+
+This is the markdown containing the description of training set preparation for the DRS model. In direct RNA sequencing every read enters the pore with its 3' end first. The tail is always read from its 3' end towards the transcript body and residues are seen as themselves (C, G, U among As).
+
+The training-set functions work with Guppy output: multi-fast5 files with moves, Nanopolish poly(A) coordinates and the sequencing summary. There are no such functions for DRS data in POD5 format basecalled with Dorado. For cDNA see `prepare_trainingset_cdna.Rmd`.
+
+Labels mean the residue present in the tail of the spike-in construct (known from its design). Each construct has one type of residue in the tail (or none in case of the A control).
+
+The polarity of the signal distortion is hardcoded in the DRS routine: G produce a peak (pseudomove +1), C and U give a valley (pseudomove -1). This was found on the original training data. It can be checked on a new dataset in lookup 2 before chunk filtering.
+
+All steps for one class can be also run with a single call of `ninetails::prepare_trainingset()`. Here they are run one by one, because the lookups need the intermediate objects.
+
+
+# Input definition
+
+One entry per labelled dataset. All reads from the Nanopolish table are used, so it should contain only reads of the given construct.
+
+```{r inputs}
+spikein_inputs <- list(
+  C = list(
+    nanopolish         = "/path/to/C_spike_drs/nanopolish_output.tsv",
+    sequencing_summary = "/path/to/C_spike_drs/sequencing_summary.txt",
+    workspace          = "/path/to/C_spike_drs/workspace/"
+  ),
+  G = list(
+    nanopolish         = "/path/to/G_spike_drs/nanopolish_output.tsv",
+    sequencing_summary = "/path/to/G_spike_drs/sequencing_summary.txt",
+    workspace          = "/path/to/G_spike_drs/workspace/"
+  ),
+  U = list(
+    nanopolish         = "/path/to/U_spike_drs/nanopolish_output.tsv",
+    sequencing_summary = "/path/to/U_spike_drs/sequencing_summary.txt",
+    workspace          = "/path/to/U_spike_drs/workspace/"
+  ),
+  A = list(
+    nanopolish         = "/path/to/A_spike_drs/nanopolish_output.tsv",
+    sequencing_summary = "/path/to/A_spike_drs/sequencing_summary.txt",
+    workspace          = "/path/to/A_spike_drs/workspace/"
+  )
+)
+
+nucleotides <- names(spikein_inputs)
+```
+
+
+## Lookup 1: are the reads what they should be?
+
+Nanopolish QC tags and tail lengths per class. With `pass_only = TRUE` only `PASS` reads are used. Tail lengths should fit the design of the construct. A
+wide or shifted distribution means degraded RNA or a wrong reference.
+
+```{r lookup 1 nanopolish}
+for (nt in nucleotides) {
+  cat("\n=== ", nt, " ===\n")
+  nanopolish <- vroom::vroom(spikein_inputs[[nt]]$nanopolish, show_col_types = FALSE)
+  print(table(contig = nanopolish$contig, qc_tag = nanopolish$qc_tag))
+  cat("\npoly(A) length summary (PASS reads):\n")
+  print(summary(nanopolish$polya_length[nanopolish$qc_tag == "PASS"]))
+}
+```
+
+
+# Step 1: signal extraction and feature lists (pseudomoves)
+
+Each class is processed separately. Tail signals are extracted from fast5 (winsorized, downsampled to 20%) and pseudomoves are computed. C/G/U reads must have at least one non-zero pseudomove run of length >= 4. A reads must have none, and no moves reported by Guppy within the tail.
+
+```{r feature lists}
+features <- list()
+
+for (nt in nucleotides) {
+  cat("\n=== ", nt, " ===\n")
+  if (nt == "A") {
+    features[[nt]] <- ninetails::create_tail_feature_list_A(
+      nanopolish = spikein_inputs[[nt]]$nanopolish,
+      sequencing_summary = spikein_inputs[[nt]]$sequencing_summary,
+      workspace = spikein_inputs[[nt]]$workspace,
+      num_cores = num_cores,
+      basecall_group = basecall_group,
+      pass_only = TRUE
+    )
+  } else {
+    features[[nt]] <- ninetails::create_tail_feature_list_trainingset(
+      nanopolish = spikein_inputs[[nt]]$nanopolish,
+      sequencing_summary = spikein_inputs[[nt]]$sequencing_summary,
+      workspace = spikein_inputs[[nt]]$workspace,
+      num_cores = num_cores,
+      basecall_group = basecall_group,
+      pass_only = TRUE
+    )
+  }
+  cat(sprintf(
+    "retained %d reads, discarded %d\n",
+    length(features[[nt]][[1]]),
+    sum(lengths(features[[nt]][-1]))
+  ))
+}
+
+save(features, file = file.path(out_dir, "features_drs.RData"))
+```
+
+
+## Lookup 2: pseudomove polarity
+
+Peak (+1) and valley (-1) runs of length >= 4 are counted in the retained reads of every class. The dominant one should agree with the hardcoded value
+(G = 1, C = -1, U = -1). If it does not, or if both are similar, the data need a closer lookup.
+
+```{r lookup 2 polarity table}
+# number of runs of a given pseudomove value with length >= 4
+count_runs <- function(pseudomoves, value) {
+  runs <- rle(pseudomoves)
+  sum(runs$values == value & runs$lengths >= 4)
+}
+
+polarity_table <- dplyr::bind_rows(
+  lapply(c("C", "G", "U"), function(nt) {
+    # pseudomoves are stored in the 4th slot of each read
+    peak_runs <- sapply(features[[nt]][[1]], function(x) count_runs(x[[4]], 1))
+    valley_runs <- sapply(features[[nt]][[1]], function(x) count_runs(x[[4]], -1))
+    data.frame(
+      nucleotide = nt,
+      reads = length(peak_runs),
+      peak_runs = sum(peak_runs),
+      valley_runs = sum(valley_runs),
+      reads_with_peak_only = sum(peak_runs > 0 & valley_runs == 0),
+      reads_with_valley_only = sum(valley_runs > 0 & peak_runs == 0),
+      reads_with_both = sum(peak_runs > 0 & valley_runs > 0),
+      stringsAsFactors = FALSE
+    )
+  })
+)
+
+print(polarity_table)
+
+# polarity used by the DRS routine: 1 = peak, -1 = valley
+polarity <- c(C = -1, G = 1, U = -1)
+```
+
+
+## Lookup 2b: visual inspection of single reads
+
+A few random reads per class, tail region with moves. A real distortion is short and local. Long noisy stretches or distortions at the very ends of the tail suggest wrong segmentation.
+
+```{r lookup 2b example reads, fig.width=15, fig.height=4}
+set.seed(123)
+
+for (nt in nucleotides) {
+  readnames <- names(features[[nt]][[1]])
+  if (length(readnames) == 0) {
+    next
+  }
+  for (rn in sample(readnames, min(3, length(readnames)))) {
+    example <- ninetails::plot_tail_range_fast5(
+      readname = rn,
+      nanopolish = spikein_inputs[[nt]]$nanopolish,
+      sequencing_summary = spikein_inputs[[nt]]$sequencing_summary,
+      workspace = spikein_inputs[[nt]]$workspace,
+      basecall_group = basecall_group,
+      moves = TRUE,
+      rescale = TRUE
+    ) +
+      ggplot2::labs(title = paste0(nt, " / read ", rn))
+    print(example)
+  }
+}
+```
+
+
+# Step 2: chunk extraction
+
+100-point chunks centred on the modification for C/G/U, overlapping 100-point windows (50-point overlap) for A.
+
+```{r chunks}
+chunks <- list()
+
+for (nt in nucleotides) {
+  cat("\n=== ", nt, " ===\n")
+  if (nt == "A") {
+    chunks[[nt]] <- ninetails::create_tail_chunk_list_A(features[[nt]], num_cores)
+  } else {
+    chunks[[nt]] <- ninetails::create_tail_chunk_list_trainingset(features[[nt]], num_cores)
+  }
+}
+
+save(chunks, file = file.path(out_dir, "chunks_drs.RData"))
+```
+
+
+## Lookup 3: chunk structure
+
+All chunks must have exactly 100 data points and no NAs (required for GAF computation). The number of chunks per read is also shown.
+
+```{r lookup 3 chunk structure}
+for (nt in nucleotides) {
+  chunk_list <- chunks[[nt]]
+  if (nt == "A") {
+    chunk_lengths <- unlist(lapply(chunk_list, function(x) sapply(x, length)))
+    chunk_nas <- unlist(lapply(chunk_list, function(x) sapply(x, function(y) any(is.na(y)))))
+  } else {
+    chunk_lengths <- unlist(lapply(chunk_list, function(x) sapply(x, function(y) length(y$chunk_sequence))))
+    chunk_nas <- unlist(lapply(chunk_list, function(x) sapply(x, function(y) any(is.na(y$chunk_sequence)))))
+  }
+  cat(sprintf(
+    "%s: %d reads, %d chunks, all length 100: %s, no NAs: %s\n",
+    nt,
+    length(chunk_list),
+    length(chunk_lengths),
+    all(chunk_lengths == 100),
+    !any(chunk_nas)
+  ))
+  print(summary(sapply(chunk_list, length)))
+}
+```
+
+
+```{r lookup 3 example chunk, fig.width=8, fig.height=3}
+set.seed(123)
+
+# one random modification-centred chunk per class
+for (nt in c("C", "G", "U")) {
+  chunk_list <- chunks[[nt]]
+  readname <- sample(names(chunk_list), 1)
+  chunk_name <- sample(names(chunk_list[[readname]]), 1)
+  example_chunk <- ninetails::plot_tail_chunk(
+    chunk_name = chunk_name,
+    tail_chunk_list = chunk_list
+  ) +
+    ggplot2::labs(title = paste0(nt, " / chunk ", chunk_name))
+  print(example_chunk)
+}
+```
+
+
+# Step 3: filtering of residue-containing chunks (C, G, U)
+
+Chunks are kept if their pseudomoves contain a run of the expected polarity (>= 4) and their start position is not negative (no left padding).
+
+```{r filter chunks}
+filtered_chunks <- list()
+
+for (nt in c("C", "G", "U")) {
+  cat("\n=== ", nt, " (value = ", polarity[[nt]], ") ===\n")
+  filtered_chunks[[nt]] <- ninetails::filter_nonA_chunks_trainingset(
+    chunks[[nt]],
+    value = polarity[[nt]],
+    num_cores = num_cores
+  )
+}
+
+# A chunks are not filtered
+filtered_chunks[["A"]] <- chunks[["A"]]
+
+save(filtered_chunks, file = file.path(out_dir, "filtered_chunks_drs.RData"))
+```
+
+
+## Lookup 4: retained fraction after filtering
+
+If only a few percent of chunks are retained, the polarity probably does not hold for this dataset or the distortions are too weak to be detected.
+
+```{r lookup 4 retained fraction}
+for (nt in c("C", "G", "U")) {
+  n_before <- sum(sapply(chunks[[nt]], length))
+  n_after <- sum(sapply(filtered_chunks[[nt]], length))
+  cat(sprintf(
+    "%s: %d -> %d chunks retained (%.1f%%), %d -> %d reads\n",
+    nt, n_before, n_after, 100 * n_after / max(n_before, 1),
+    length(chunks[[nt]]), length(filtered_chunks[[nt]])
+  ))
+}
+```
+
+
+# Step 4: GASF + GADF datasets
+
+```{r gafs}
+gafs <- list()
+
+for (nt in nucleotides) {
+  cat("\n=== ", nt, " ===\n")
+  if (nt == "A") {
+    gafs[[nt]] <- ninetails::create_gaf_list_A(filtered_chunks[[nt]], num_cores)
+  } else {
+    gafs[[nt]] <- ninetails::create_gaf_list(filtered_chunks[[nt]], num_cores)
+  }
+}
+
+save(gafs, file = file.path(out_dir, "GADF_GASF_drs.RData"))
+```
+
+
+## Lookup 5: GAF structure and class sizes
+
+Every element must be a 100 x 100 x 2 array with values in [0, 1] and a unique `<readname>_<index>` name. Class sizes are needed to set the sampling size in step 5.
+
+```{r lookup 5 gaf structure}
+gaf_sizes <- list()
+
+for (nt in nucleotides) {
+  gaf_list <- gafs[[nt]]
+  dims_ok <- all(sapply(gaf_list, function(x) identical(dim(x), c(100L, 100L, 2L))))
+  range_ok <- all(sapply(gaf_list, function(x) min(x) >= 0 && max(x) <= 1))
+  names_ok <- !is.null(names(gaf_list)) && !any(duplicated(names(gaf_list)))
+  gaf_sizes[[nt]] <- length(gaf_list)
+  cat(sprintf(
+    "%s: %d GAFs, dims ok: %s, range ok: %s, unique names: %s\n",
+    nt, length(gaf_list), dims_ok, range_ok, names_ok
+  ))
+}
+
+print(gaf_sizes)
+```
+
+
+```{r lookup 5 example gaf, fig.width=4, fig.height=4}
+set.seed(123)
+
+for (nt in nucleotides) {
+  gaf_name <- sample(names(gafs[[nt]]), 1)
+  example_gaf <- ninetails::plot_gaf(gaf_name = gaf_name, gaf_list = gafs[[nt]])
+  print(example_gaf)
+}
+```
+
+
+# Step 5 and 6: sampling, splitting and conversion to keras arrays
+
+The same number of GAFs per class (A, C, G, U), 90:10 split into training and validation, shuffling, encoding A = 0, C = 1, G = 2, U = 3 and conversion to a 4-D tensor (n x 100 x 100 x 2).
+
+```{r dataset builder}
+# builds train and validation lists
+# gaf_by_class: named list (A, C, G, U) of GAF lists
+build_cnn_dataset <- function(gaf_by_class, n_per_class, seed = 123456) {
+
+  #setting seed for reprex
+  set.seed(seed)
+
+  # first, random sample the same number of GAFs from each class
+  sampled <- lapply(gaf_by_class, function(x) sample(x, size = n_per_class))
+
+  # extract names of each selected gafs group (needed for encoding)
+  class_names <- lapply(sampled, names)
+
+  # split dataset for training and validation data (90:10)
+  n_train <- floor(0.9 * n_per_class)
+  train_set <- lapply(sampled, function(x) x[1:n_train])
+  valid_set <- lapply(sampled, function(x) x[(n_train + 1):n_per_class])
+
+  # encoding: A = 0, C = 1, G = 2, U = 3
+  encode_labels <- function(gaf_list) {
+    ifelse(names(gaf_list) %in% class_names$C, 1,
+           ifelse(names(gaf_list) %in% class_names$G, 2,
+                  ifelse(names(gaf_list) %in% class_names$U, 3, 0)))
+  }
+
+  # merge, shuffle and encode
+  to_cnn_input <- function(set_list) {
+    merged <- c(set_list$A, set_list$C, set_list$G, set_list$U)
+    merged <- sample(merged, size = length(merged), replace = FALSE)
+    labels <- encode_labels(merged)
+    chunk_names <- names(merged)
+    # transform into keras array
+    names(merged) <- NULL
+    merged <- simplify2array(merged)
+    merged <- aperm(merged, c(4, 1, 2, 3))
+    out <- list()
+    out[["x"]] <- merged
+    out[["y"]] <- labels
+    out[["chunk_names"]] <- chunk_names
+    return(out)
+  }
+
+  dataset <- list()
+  dataset[["train"]] <- to_cnn_input(train_set)
+  dataset[["validation"]] <- to_cnn_input(valid_set)
+  return(dataset)
+}
+```
+
+```{r build datasets}
+# class size is the smallest class, lower it manually to prevent overfitting
+# (9440 per class was used for the DRS model)
+n_per_class <- min(sapply(gafs, length))
+cat(sprintf("%d GAFs per class\n", n_per_class))
+
+cnn_dataset <- build_cnn_dataset(gafs[c("A", "C", "G", "U")], n_per_class)
+
+train_cnn <- cnn_dataset$train
+validation_cnn <- cnn_dataset$validation
+
+save(train_cnn, validation_cnn, file = file.path(out_dir, "cnn_dataset_drs.RData"))
+
+rm(gafs, filtered_chunks, chunks)
+gc()
+```
+
+
+## Lookup 6: dataset sanity
+
+Dimensions, class balance and label consistency (labels re-derived from chunk names and compared with the stored ones). It also shows how many validation reads have chunks in the training set. The routine splits by chunk, so this can happen. Splitting by read would prevent it.
+
+```{r lookup 6 dataset sanity}
+# reads of each class, taken from the feature lists
+class_of_read <- lapply(nucleotides, function(nt) names(features[[nt]][[1]]))
+names(class_of_read) <- nucleotides
+
+for (part in c("train", "validation")) {
+  dataset <- cnn_dataset[[part]]
+  cat(sprintf("\n=== %s ===\n", part))
+  cat("x dims:", dim(dataset$x), "\n")
+  cat("y length:", length(dataset$y), "\n")
+  print(table(dataset$y))
+  stopifnot(dim(dataset$x)[1] == length(dataset$y))
+  stopifnot(length(dataset$chunk_names) == length(dataset$y))
+  # label consistency: chunk names must belong to the class they are labelled with
+  readnames <- sub("_[0-9]+$", "", dataset$chunk_names)
+  expected <- ifelse(readnames %in% class_of_read$C, 1,
+                     ifelse(readnames %in% class_of_read$G, 2,
+                            ifelse(readnames %in% class_of_read$U, 3, 0)))
+  cat("labels consistent with source dataset:", all(expected == dataset$y), "\n")
+}
+
+# read-level leakage between training and validation
+train_reads <- unique(sub("_[0-9]+$", "", cnn_dataset$train$chunk_names))
+valid_reads <- unique(sub("_[0-9]+$", "", cnn_dataset$validation$chunk_names))
+shared <- intersect(train_reads, valid_reads)
+cat(sprintf(
+  "%d of %d validation reads also contribute chunks to training (%.1f%%)\n",
+  length(shared), length(valid_reads), 100 * length(shared) / max(length(valid_reads), 1)
+))
+```
+
+
+# Model training
+
+Architecture of the DRS model (`gasf_gadf_combined_model_refiltered_accuracy93`). The `chunk_names` element is not passed to the model.
+
+```{r model definition}
+build_model <- function() {
+  model <- keras::keras_model_sequential() %>%
+    keras::layer_conv_2d(filters = 32, kernel_size = c(5, 5), activation = "linear",
+                         input_shape = c(100, 100, 2), kernel_initializer = "he_normal",
+                         padding = "valid") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_conv_2d(filters = 32, kernel_size = c(5, 5), activation = "linear",
+                         kernel_initializer = "he_normal", padding = "valid") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_conv_2d(filters = 64, kernel_size = c(3, 3), activation = "linear",
+                         kernel_initializer = "he_normal", padding = "same") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_conv_2d(filters = 128, kernel_size = c(3, 3), activation = "linear",
+                         kernel_initializer = "he_normal", padding = "same") %>%
+    keras::layer_batch_normalization() %>%
+    keras::layer_activation_relu() %>%
+    keras::layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_flatten() %>%
+    keras::layer_dense(units = 4, activation = "softmax")
+
+  model %>% keras::compile(
+    optimizer = "adam",
+    loss = "sparse_categorical_crossentropy",
+    metrics = "accuracy"
+  )
+  return(model)
+}
+
+# print dot for every epoch to check that it is actually working (for debug purposes)
+print_dot_callback <- keras::callback_lambda(
+  on_epoch_end = function(epoch, logs) {
+    if (epoch %% 80 == 0) cat("\n")
+    cat(".")
+  }
+)
+
+# define when to stop the training if validation loss stops decreasing
+early_stop <- keras::callback_early_stopping(monitor = "val_loss", patience = 3)
+
+#define how many epochs use to train this thing
+epochs <- 20
+```
+
+
+```{r train}
+model <- build_model()
+
+history <- model %>% keras::fit(
+  x = train_cnn$x,
+  y = train_cnn$y,
+  epochs = epochs,
+  validation_split = 0.2,
+  batch_size = 50,
+  callbacks = list(early_stop, print_dot_callback,
+                   keras::callback_reduce_lr_on_plateau(factor = 0.05))
+)
+
+plot(history)
+
+keras::save_model_hdf5(
+  model,
+  file.path(out_dir, paste0("gasf_gadf_drs_model_", format(Sys.Date(), "%Y%m%d"), ".h5")),
+  include_optimizer = TRUE
+)
+```
+
+
+## Lookup 7: validation confusion matrix
+
+```{r validation}
+library(caret)
+
+test_prediction <- model %>% predict(validation_cnn$x) %>% keras::k_argmax()
+test_prediction <- as.numeric(test_prediction)
+print(caret::confusionMatrix(as.factor(test_prediction), as.factor(validation_cnn$y)))
+```
+
+

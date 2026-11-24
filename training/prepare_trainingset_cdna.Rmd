@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 # Configuration
 
 ```{r, load libs, message = FALSE, include=FALSE}
@@ -26,7 +27,7 @@ library(tensorflow)
 
 ```{r message = FALSE, echo=FALSE}
 # use virtualenv to communicate ninetails with correct python version
-# depends on configuration; the pod5 module must be installed there
+# depends on configuration, pod5 module must be installed there
 reticulate::use_condaenv("r-reticulate")
 
 # number of cores for processing
@@ -43,38 +44,19 @@ if (!dir.exists(out_dir)) {
 
 # Rationale
 
-The cDNA pipeline needs two models, one per read orientation, because the
-two orientations see different signals:
+This is the markdown containing the description of training set preparation for the cDNA models. Two models are needed, one per read orientation, because the signal looks different in each of them:
 
-- polyA reads (sense strand): transcript body | poly(A) tail | VNP (rc). The
-  tail signal runs from the transcript body towards the 3' end, so it is
-  reversed with respect to the DRS convention (3' end first). Residues are
-  observed as themselves (C, G, T in a dA background).
-- polyT reads (antisense strand): VNP | poly(T) tail | transcript body (rc).
-  The tail signal runs from the 3' end of the original tail towards the body
-  and every residue is observed as its complement (C -> G, G -> C, U -> A) in
-  a dT background.
+- poly(A) reads (sense strand): transcript body | poly(A) tail | VNP (rc). The tail is read from the body side towards the 3' end, so it is reversed compared to DRS. Residues are seen as themselves (C, G, T among As).
+- poly(T) reads (antisense strand): VNP | poly(T) tail | transcript body (rc). The tail is read from its 3' end towards the body and every residue is seen as its complement (C -> G, G -> C, U -> A) among Ts.
 
-No signal reversal is applied anywhere (the production pipeline feeds the
-signals as extracted, so the training data must match). Class labels always
-refer to the residue in the original RNA tail, known from the experimental
-design of the spike-in constructs, not to the base actually read in polyT
-orientation.
+Signals are not reversed at any point, because the production pipeline uses them as extracted and the training data must look the same. Labels always mean the residue in the original RNA tail (known from the design of the spike-ins), not the base read in polyT orientation.
 
-The polarity of the signal deviation (peak or valley) caused by each residue
-was hardcoded in the DRS routine (G = peak, C/U = valley). It is unknown for
-the DNA chemistry and may differ between orientations, therefore it is
-established here from the labelled data (lookup 2) before the chunks are
-filtered.
+In DRS the polarity of the signal distortion was hardcoded (G = peak, C/U = valley). For the DNA chemistry it is not known and may differ between orientations. It is checked on the labeled data (lookup 2) before chunk filtering.
 
 
 # Input definition
 
-One entry per labelled dataset. Each construct carries a single residue type
-inserted into the tail (or none, for the A control). The `contig` field selects
-the reads mapping to the construct of interest, so reads from other references
-present in the same run are excluded. Use the same name for the contig as in
-the `alignment_genome` column of the Dorado summary.
+One entry per labelled dataset. Each construct has one type of residue in the tail (or none in case of the A control). The `contig` field selects reads mapping to the given construct, so reads from other references in the same run are skipped. The name must be the same as in the `alignment_genome` column of the Dorado summary.
 
 ```{r inputs}
 spikein_inputs <- list(
@@ -111,10 +93,10 @@ tail_types <- c("polyA", "polyT")
 
 # Step 1: signal extraction and orientation split
 
-Each class is processed separately. The function filters the summary
-(mapped, MAPQ > 0, valid coordinates, tail >= 10 nt), keeps the selected
-contig, classifies the orientation from the basecalled sequences and
-extracts the winsorized, downsampled (20%) tail signals from POD5.
+Each class is processed separately. The summary is filtered (mapped, MAPQ > 0,
+valid coordinates, tail >= 10 nt) and only reads of the selected contig are
+kept. Then the orientation is called from basecalled sequences and tail
+signals (winsorized, downsampled to 20%) are extracted from POD5.
 
 ```{r extract signals}
 extracted <- list()
@@ -136,11 +118,7 @@ save(extracted, file = file.path(out_dir, "extracted_signals_cdna.RData"))
 
 ## Lookup 1: are the reads what they should be?
 
-Every read in the annotation must map to the expected contig, and both
-orientations should be reasonably populated. A high share of unidentified
-reads points to truncated reads or wrong primers. The signal length after
-downsampling should scale with the tail length (roughly 0.2 x samples per nt
-x tail length); reads far off the trend deserve a look.
+All reads should map to the expected contig and both orientations should have a reasonable number of reads. Many unidentified reads mean truncated reads or wrong primers. Signal length after downsampling should grow with tail length (roughly 0.2 x samples per nt x tail length). Reads far from this trend should be inspected.
 
 ```{r lookup 1 orientation and contig}
 for (nt in nucleotides) {
@@ -183,9 +161,7 @@ print(length_check)
 
 # Step 2: feature lists (pseudomoves) per class and orientation
 
-The retention criterion follows the original routine: C/G/U reads must
-contain at least one non-zero pseudomove run of length >= 4, A reads must
-contain none.
+Same criterion as in the original routine: C/G/U reads must have at least one non-zero pseudomove run of length >= 4, A reads must have none.
 
 ```{r feature lists}
 features <- list()
@@ -221,14 +197,7 @@ save(features, file = file.path(out_dir, "features_cdna.RData"))
 
 ## Lookup 2: pseudomove polarity
 
-For every labelled class and orientation, count the peak (+1) and valley
-(-1) runs. The dominant polarity is the `value` passed to
-`filter_nonA_chunks_trainingset()` in step 4. Expect one polarity to
-dominate clearly; if the two columns are comparable, the residue-induced
-distortion is not captured by the z-score filter in this orientation and
-the data should be inspected before proceeding. The A class is listed only
-as a sanity check (its retained reads have no qualifying runs by
-construction).
+Peak (+1) and valley (-1) runs are counted for every class and orientation. The dominant one is the `value` passed to `filter_nonA_chunks_trainingset()` in step 4. One polarity should clearly dominate. If both are similar, the pseudomove filter does not catch this residue in this orientation and the data need a closer inspection. The A class is shown only as a sanity check (it has no qualifying runs by definition).
 
 ```{r lookup 2 polarity table}
 polarity_table <- dplyr::bind_rows(
@@ -265,7 +234,7 @@ polarity <- list(
   U = c(polyA = NA, polyT = NA)
 )
 
-# suggested values (dominant polarity); verify visually before accepting
+# suggested values (dominant polarity), check the plots before accepting
 for (nt in c("C", "G", "U")) {
   for (tt in names(features[[nt]])) {
     row <- polarity_table[polarity_table$nucleotide == nt & polarity_table$tail_type == tt, ]
@@ -279,11 +248,10 @@ print(polarity)
 
 ## Lookup 2b: visual inspection of single reads
 
-A few randomly drawn reads per class and orientation, with the qualifying
-pseudomove runs highlighted. The highlighted regions are the future chunk
-centres. Genuine residue-induced distortions are short, localised
-excursions from the flat homopolymer baseline; extended noisy stretches or
-runs at the very ends indicate segmentation errors.
+A few random reads per class and orientation, with the qualifying pseudomove
+runs highlighted. These regions will become the chunk centres. A real
+distortion is short and local. Long noisy stretches or runs at the very ends
+of the tail suggest wrong segmentation.
 
 ```{r lookup 2b example reads, fig.width=15, fig.height=4}
 set.seed(123)
@@ -309,8 +277,9 @@ for (nt in nucleotides) {
 
 # Step 3: chunk extraction
 
-Reuses the Guppy training-set chunkers: modification-centred 100-point
-chunks for C/G/U, overlapping 100-point windows (50-point overlap) for A.
+The Guppy training-set functions are reused here: 100-point chunks centred on
+the modification for C/G/U, overlapping 100-point windows (50-point overlap)
+for A.
 
 ```{r chunks}
 chunks <- list()
@@ -338,9 +307,8 @@ save(chunks, file = file.path(out_dir, "chunks_cdna.RData"))
 
 ## Lookup 3: chunk structure
 
-All chunks must be exactly 100 data points long and contain no NAs (the
-GAF transformation requires it). The number of chunks per read is reported
-per class and orientation.
+All chunks must have exactly 100 data points and no NAs (required for GAF
+computation). The number of chunks per read is also shown.
 
 ```{r lookup 3 chunk structure}
 for (nt in nucleotides) {
@@ -389,8 +357,8 @@ for (nt in c("C", "G", "U")) {
 
 # Step 4: filtering of residue-containing chunks (C, G, U)
 
-Chunks are retained if their pseudomoves contain a run of the established
-polarity (>= 4) and their start position is non-negative (no left padding).
+Chunks are kept if their pseudomoves contain a run of the established polarity
+(>= 4) and their start position is not negative (no left padding).
 
 ```{r filter chunks}
 filtered_chunks <- list()
@@ -418,8 +386,8 @@ save(filtered_chunks, file = file.path(out_dir, "filtered_chunks_cdna.RData"))
 
 ## Lookup 4: retained fraction after filtering
 
-A very low retained fraction (a few percent) suggests the polarity was
-chosen wrongly or the distortions are too weak to be captured.
+If only a few percent of chunks are retained, the polarity is probably wrong
+or the distortions are too weak to be detected.
 
 ```{r lookup 4 retained fraction}
 for (nt in c("C", "G", "U")) {
@@ -458,9 +426,8 @@ save(gafs, file = file.path(out_dir, "GADF_GASF_cdna.RData"))
 
 ## Lookup 5: GAF structure and class sizes
 
-Every element must be a 100 x 100 x 2 array with values in [0, 1] and a
-unique `<readname>_<index>` name. The class sizes per orientation decide the
-sampling size in step 6.
+Every element must be a 100 x 100 x 2 array with values in [0, 1] and a unique `<readname>_<index>` name. Class sizes are needed to set the sampling size in
+step 6.
 
 ```{r lookup 5 gaf structure}
 gaf_sizes <- list()
@@ -498,10 +465,7 @@ for (nt in nucleotides) {
 
 # Step 6 and 7: sampling, splitting and conversion to keras arrays
 
-Same procedure as in the DRS routine, applied separately to each
-orientation: equal number of GAFs per class (A, C, G, U), 90:10 split into
-training and validation, shuffle, encoding A = 0, C = 1, G = 2, U = 3,
-conversion to a 4-D array (n x 100 x 100 x 2).
+Same as in the DRS routine, but done for each orientation separately: the same number of GAFs per class (A, C, G, U), 90:10 split into training and validation, shuffling, encoding A = 0, C = 1, G = 2, U = 3 and conversion to a 4-D array (n x 100 x 100 x 2).
 
 ```{r dataset builder}
 # builds train and validation lists for one orientation
@@ -564,7 +528,7 @@ for (tt in tail_types) {
     cat(tt, ": missing class, skipping\n")
     next
   }
-  # class size: the smallest class; lower it manually to prevent overfitting
+  # class size is the smallest class, lower it manually to prevent overfitting
   # (9440 per class was used for the DRS model)
   n_per_class <- min(sapply(gaf_by_class, length))
   cat(sprintf("%s: %d GAFs per class\n", tt, n_per_class))
@@ -588,11 +552,7 @@ gc()
 
 ## Lookup 6: dataset sanity
 
-Dimensions, class balance, label consistency (re-derived from the chunk
-names against the stored labels), and read-level leakage between training
-and validation. The original DRS routine split by chunk, so chunks of the
-same read may land on both sides; the leakage figure quantifies it so the
-decision to split by read instead can be taken knowingly.
+Dimensions, class balance and label consistency (labels re-derived from chunk names and compared with the stored ones). It also shows how many validation reads have chunks in the training set. The original DRS routine splits by chunk, so this can happen. Splitting by read would prevent it.
 
 ```{r lookup 6 dataset sanity}
 for (tt in names(cnn_datasets)) {
@@ -629,8 +589,7 @@ for (tt in names(cnn_datasets)) {
 
 # Model training (one model per orientation)
 
-Architecture of the DRS model (`gasf_gadf_combined_model_refiltered_accuracy93`).
-The `chunk_names` element is dropped before fitting.
+Architecture of the DRS model (`gasf_gadf_combined_model_refiltered_accuracy93`). The `chunk_names` element is not passed to the model.
 
 ```{r model definition}
 build_model <- function() {
@@ -733,7 +692,7 @@ keras::save_model_hdf5(
 ```
 
 
-## Lookup 7: validation confusion matrices
+## Lookup 7: validation confusion matrixes
 
 ```{r validation}
 library(caret)
