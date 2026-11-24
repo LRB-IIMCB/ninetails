@@ -125,13 +125,12 @@ residue_data <- results$nonadenosine_residues
 
 ------------------------------------------------------------------------
 
-## Dorado cDNA Pipeline (Experimental)
+## Dorado cDNA Pipeline (NEW)
 
 > **Warning**
 >
-> The cDNA pipeline is experimental. The models were trained and tested
-> on synthetic spike-ins only (see *Validation* below), so results on
-> biological samples should be interpreted with caution.
+> The cDNA pipeline is new feature, please expect improvement. The
+> results should be interpreted with caution.
 
 [`check_tails_dorado_cDNA()`](https://LRB-IIMCB.github.io/ninetails/reference/check_tails_dorado_cDNA.md)
 detects non-adenosine residues in ONT cDNA reads. A cDNA read carries
@@ -145,8 +144,11 @@ output, because the models were trained on Lachesis coordinates.
 
 ### Lachesis input (recommended)
 
-The Lachesis table provides the tail coordinates, the tail length, the
-QC tag, and the read orientation (`strand`), so no BAM file is needed.
+Lachesis is poly(A) tail delimitation software developed in our team. We
+recommend it over Dorado.
+
+Lachesis output table provides tail coordinates, length, QC tag, and
+read orientation (`strand`), so no BAM file is needed.
 
 ``` r
 
@@ -167,9 +169,9 @@ results <- ninetails::check_tails_dorado_cDNA(
 
 ### Dorado input
 
-Without Lachesis, the coordinates are taken from the Dorado summary and
-the orientation is determined from the basecalled sequences in the BAM
-file (SSP/VNP primer matching).
+Without Lachesis, the coordinates are taken from Dorado summary and the
+orientation is determined from the basecalled sequences in the BAM file
+(SSP/VNP primer matching).
 
 ``` r
 
