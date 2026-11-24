@@ -3,6 +3,8 @@
 **An R package for finding non-adenosine residues in poly(A) tails of
 Oxford Nanopore sequencing reads**
 
+**Ninetails 2.0.0 now supports non-adenosine detection in cDNA data!**
+
 ## Introduction
 
 **Ninetails** detects and characterises non-adenosine nucleotides
@@ -12,8 +14,6 @@ chemistries. Support for cDNA is now implemented (validated on
 **SQK-PCB114-24** and **SQK-PCS114**).
 
 Ninetails currently offers three pipelines:
-
-**Ninetails 2.0.0 now supports non-adenosine detection in cDNA data!**
 
 | Pipeline | Basecaller | Input format | Function |
 |----|----|----|----|
@@ -27,12 +27,11 @@ uridines (U).
 
 ![](https://github.com/LRB-IIMCB/ninetails/assets/68285258/5e110a7a-b00f-4e64-903f-1e5c11db6172)
 
-The software is still under active development. All suggestions for
-improvement are welcome. Please note that the code may change
-frequently, so use it with caution.
-
 **Ninetails** has been tested on Linux Mint 20.3, Ubuntu 20.04.3, Ubuntu
 20.04.3 and Windows 11 with R 4.1.2, R 4.2.x and R 4.4.2.
+
+**With release 2.0.0 Ninetails reached its final form. From now on, no
+major features, only bug fixes will be provided.**
 
 ## Documentation
 
