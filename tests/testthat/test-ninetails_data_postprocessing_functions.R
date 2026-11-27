@@ -1179,3 +1179,34 @@ test_that("count_nonA_abundance works with sample_name grouping", {
   expect_s3_class(result, "tbl_df")
   expect_true("sample_name" %in% colnames(result))
 })
+
+test_that("count_nonA_abundance counts unique reads per bin rather than residue rows", {
+  skip_if_not_installed("dplyr")
+
+  residue_df <- data.frame(
+    readname = c(
+      "r1",
+      "r2", "r2",
+      "r3", "r3", "r3",
+      "r4", "r4", "r4", "r4",
+      "r5", "r5"
+    ),
+    group = c(rep("WT", 10), rep("KO", 2)),
+    stringsAsFactors = FALSE
+  )
+
+  res_grouped <- count_nonA_abundance(residue_df, grouping_factor = "group")
+  wt <- res_grouped[res_grouped$group == "WT", ]
+  ko <- res_grouped[res_grouped$group == "KO", ]
+
+  expect_equal(wt$count[wt$instances == "single"], 1L)
+  expect_equal(wt$count[wt$instances == "two"], 1L)
+  expect_equal(wt$count[wt$instances == "more"], 2L)
+  expect_equal(ko$count[ko$instances == "two"], 1L)
+
+  res_ungrouped <- count_nonA_abundance(residue_df)
+  expect_equal(colnames(res_ungrouped), c("instances", "count"))
+  expect_equal(res_ungrouped$count[res_ungrouped$instances == "single"], 1L)
+  expect_equal(res_ungrouped$count[res_ungrouped$instances == "two"], 2L)
+  expect_equal(res_ungrouped$count[res_ungrouped$instances == "more"], 2L)
+})

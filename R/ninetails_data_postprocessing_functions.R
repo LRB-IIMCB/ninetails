@@ -1672,24 +1672,35 @@ count_nonA_abundance <- function(residue_data, grouping_factor = NA) {
       grouping_factor %in% colnames(residue_data),
       paste0(grouping_factor, " is not a column of input dataset")
     )
-  }
 
-  nonA_counts <- residue_data %>%
-    dplyr::select(!!rlang::sym(grouping_factor), readname) %>%
-    dplyr::group_by(!!rlang::sym(grouping_factor), readname) %>%
-    dplyr::mutate(
-      instances = ifelse(
-        dplyr::n() == 1,
-        "single",
-        ifelse(dplyr::n() == 2, "two", "more")
-      )
-    ) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(!!rlang::sym(grouping_factor), instances) %>%
-    dplyr::mutate(count = dplyr::n()) %>%
-    dplyr::select(-readname) %>%
-    dplyr::distinct() %>%
-    dplyr::ungroup()
+    nonA_counts <- residue_data %>%
+      dplyr::select(!!rlang::sym(grouping_factor), readname) %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor), readname) %>%
+      dplyr::summarise(
+        instances = ifelse(
+          dplyr::n() == 1,
+          "single",
+          ifelse(dplyr::n() == 2, "two", "more")
+        ),
+        .groups = "drop"
+      ) %>%
+      dplyr::group_by(!!rlang::sym(grouping_factor), instances) %>%
+      dplyr::summarise(count = dplyr::n(), .groups = "drop")
+  } else {
+    nonA_counts <- residue_data %>%
+      dplyr::select(readname) %>%
+      dplyr::group_by(readname) %>%
+      dplyr::summarise(
+        instances = ifelse(
+          dplyr::n() == 1,
+          "single",
+          ifelse(dplyr::n() == 2, "two", "more")
+        ),
+        .groups = "drop"
+      ) %>%
+      dplyr::group_by(instances) %>%
+      dplyr::summarise(count = dplyr::n(), .groups = "drop")
+  }
 
   return(nonA_counts)
 }
